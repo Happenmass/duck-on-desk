@@ -7,10 +7,7 @@
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const {
-  APPIMAGE_HOOK_MARKER_FILE,
-  discoverClawdPort,
-} = require("./server-config");
+const { discoverClawdPort } = require("./server-config");
 const { buildElectronLaunchConfig } = require("./shared-process");
 
 const INITIAL_DISCOVER_TIMEOUT_MS = 300;
@@ -79,31 +76,6 @@ function resolveMacBundleExecutable(appBundle, options = {}) {
   return path.posix.join(appBundle, "Contents", "MacOS", executableName);
 }
 
-function resolveAppImageExecutable(hooksDir, options = {}) {
-  const fsApi = options.fs || fs;
-  const candidates = [];
-  try {
-    candidates.push(
-      fsApi.readFileSync(path.posix.join(hooksDir, APPIMAGE_HOOK_MARKER_FILE), "utf8")
-    );
-  } catch {}
-  // APPIMAGE belongs to the running AppImage process, not arbitrary source
-  // shells. Only trust the environment fallback while executing from the
-  // packaged asar tree; materialized hooks use the adjacent marker above.
-  if (hooksDir.includes("app.asar")) {
-    const env = options.env || process.env;
-    candidates.push(
-      typeof options.appImagePath === "string" ? options.appImagePath : "",
-      env && typeof env.APPIMAGE === "string" ? env.APPIMAGE : ""
-    );
-  }
-  for (const value of candidates) {
-    const candidate = String(value || "").trim();
-    if (candidate && path.posix.isAbsolute(candidate)) return candidate;
-  }
-  return null;
-}
-
 function spawnDetached(spawnProcess, command, args, options, onError) {
   const child = spawnProcess(command, args, options);
   if (child && typeof child.once === "function") {
@@ -146,10 +118,7 @@ function launchApp(options = {}) {
   });
   const isWin = platform === "win32";
   const isMac = platform === "darwin";
-  const appImage = platform === "linux"
-    ? resolveAppImageExecutable(hooksDir, options)
-    : null;
-  const isPackaged = hooksDir.includes("app.asar") || !!appImage;
+  const isPackaged = hooksDir.includes("app.asar");
 
   try {
     if (isPackaged) {
@@ -183,31 +152,6 @@ function launchApp(options = {}) {
           { detached: true, stdio: "ignore" },
           onSpawnError
         );
-      } else {
-        // Linux packaged app:
-        // AppImage: process.env.APPIMAGE holds the .AppImage file path.
-        // deb/dir:  executable is <install>/clawd-on-desk, same depth as Windows.
-        //   __dirname: <install>/resources/app.asar.unpacked/hooks
-        //   install:   3 levels up
-        if (appImage) {
-          spawnDetached(
-            spawnProcess,
-            appImage,
-            [],
-            { detached: true, stdio: "ignore" },
-            onSpawnError
-          );
-        } else {
-          const installDir = path.posix.resolve(hooksDir, "..", "..", "..");
-          const exe = path.posix.join(installDir, "clawd-on-desk");
-          spawnDetached(
-            spawnProcess,
-            exe,
-            [],
-            { detached: true, stdio: "ignore" },
-            onSpawnError
-          );
-        }
       }
     } else {
       // Source / development mode: start Electron directly so Windows does not
@@ -242,7 +186,6 @@ module.exports = {
   STARTUP_DISCOVER_TIMEOUT_MS,
   STARTUP_POLL_INTERVAL_MS,
   waitForClawdPort,
-  resolveAppImageExecutable,
   resolveMacBundleExecutable,
   launchApp,
   main,

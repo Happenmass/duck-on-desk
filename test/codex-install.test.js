@@ -17,7 +17,6 @@ const {
   buildCodexHookCommand,
   buildStableCodexHookCommand,
   inspectStableCodexHookCommand,
-  materializeAppImageHookScript,
   materializeStableCodexHookLauncher,
   readStableCodexHookManifest,
   removeStableCodexHookLauncher,
@@ -127,85 +126,6 @@ describe("Codex official hook installer", () => {
     assert.strictEqual(result.launcherRemoved, 1);
     assert.strictEqual(fs.existsSync(stable.legacyWindowsLauncherPath), false);
     assert.strictEqual(fs.existsSync(stable.stableDir), false);
-  });
-
-  it("materializes AppImage hook closure outside the transient FUSE mount", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-appimage-hook-"));
-    tempDirs.push(tmpDir);
-    const sourceDir = path.join(tmpDir, ".mount_Clawd", "hooks");
-    const materializedRoot = path.join(tmpDir, "stable-hooks");
-    fs.mkdirSync(sourceDir, { recursive: true });
-    fs.writeFileSync(path.join(sourceDir, "entry.js"), 'require("./dep");\n', "utf8");
-    fs.writeFileSync(path.join(sourceDir, "dep.js"), 'require("node:path");\n', "utf8");
-    fs.writeFileSync(path.join(sourceDir, "runtime-helper.js"), 'require("./runtime-dep");\n', "utf8");
-    fs.writeFileSync(path.join(sourceDir, "runtime-dep.js"), 'module.exports = true;\n', "utf8");
-
-    const target = materializeAppImageHookScript(path.join(sourceDir, "entry.js"), {
-      appImagePath: "/opt/Clawd-on-Desk.AppImage",
-      materializedRoot,
-      extraEntryPaths: [path.join(sourceDir, "runtime-helper.js")],
-    });
-
-    assert.ok(target.startsWith(`${materializedRoot}${path.sep}`));
-    assert.ok(!target.includes(".mount_Clawd"));
-    assert.strictEqual(fs.readFileSync(target, "utf8"), 'require("./dep");\n');
-    assert.strictEqual(fs.readFileSync(path.join(path.dirname(target), "dep.js"), "utf8"), 'require("node:path");\n');
-    assert.strictEqual(
-      fs.readFileSync(path.join(path.dirname(target), "runtime-helper.js"), "utf8"),
-      'require("./runtime-dep");\n'
-    );
-    assert.strictEqual(
-      fs.readFileSync(path.join(path.dirname(target), "runtime-dep.js"), "utf8"),
-      "module.exports = true;\n"
-    );
-    assert.strictEqual(
-      fs.readFileSync(path.join(path.dirname(target), ".clawd-appimage-path"), "utf8"),
-      "/opt/Clawd-on-Desk.AppImage\n"
-    );
-    assert.strictEqual(materializeAppImageHookScript(path.join(sourceDir, "entry.js"), {
-      appImagePath: "/opt/Clawd-on-Desk.AppImage",
-      materializedRoot,
-      extraEntryPaths: [path.join(sourceDir, "runtime-helper.js")],
-    }), target);
-
-    fs.rmSync(path.join(path.dirname(target), "runtime-helper.js"));
-    assert.strictEqual(materializeAppImageHookScript(path.join(sourceDir, "entry.js"), {
-      appImagePath: "/opt/Clawd-on-Desk.AppImage",
-      materializedRoot,
-      extraEntryPaths: [path.join(sourceDir, "runtime-helper.js")],
-    }), target);
-    assert.ok(fs.existsSync(path.join(path.dirname(target), "runtime-helper.js")));
-  });
-
-  it("registers an AppImage Codex hook from the materialized stable path", () => {
-    const codexDir = makeTempCodexDir({});
-    const materializedRoot = path.join(path.dirname(codexDir), "stable-hooks");
-    const result = registerCodexHooks({
-      silent: true,
-      codexDir,
-      nodeBin: "/usr/bin/node",
-      platform: "linux",
-      processEnv: { APPIMAGE: "/opt/Clawd-on-Desk.AppImage" },
-      materializedRoot,
-    });
-
-    const command = readJson(path.join(codexDir, "hooks.json"))
-      .hooks.SessionStart[0].hooks[0].command;
-    const stablePaths = stableCodexHookPaths(codexDir, { platform: "linux" });
-    assert.strictEqual(command, buildStableCodexHookCommand(stablePaths.launcherPath, "linux"));
-    assert.ok(!command.includes("app.asar.unpacked"));
-    assert.strictEqual(command.split("codex-hook.js.sh").length - 1, 1);
-    const stableHook = result.stableLauncher.target;
-    assert.ok(stableHook.includes(materializedRoot));
-    assert.ok(fs.existsSync(result.stableLauncher.launcherPath));
-    assert.ok(fs.existsSync(stableHook));
-    const stableAutoStart = path.join(path.dirname(stableHook), "auto-start.js");
-    assert.ok(fs.existsSync(stableAutoStart));
-    assert.doesNotThrow(() => require(stableAutoStart));
-    assert.strictEqual(
-      fs.readFileSync(path.join(path.dirname(stableHook), ".clawd-appimage-path"), "utf8"),
-      "/opt/Clawd-on-Desk.AppImage\n"
-    );
   });
 
   it("registers official hook events on fresh install including PermissionRequest", () => {

@@ -12,16 +12,13 @@
     "build:mac": "electron-builder --mac",
     "build:mac:x64": "electron-builder --mac dmg:x64 zip:x64",
     "build:mac:arm64": "electron-builder --mac dmg:arm64 zip:arm64",
-    "build:linux": "electron-builder --linux",
-    "build:linux:x64": "electron-builder --linux AppImage:x64 deb:x64",
-    "build:all": "electron-builder --win --mac --linux",
+    "build:all": "electron-builder --mac --win",
     "verify:electron": "node scripts/verify-electron-install.js",
     "postinstall": "node scripts/verify-electron-install.js --context postinstall",
     "test": "node test/run-tests.js",
     "audit:assets": "node scripts/audit-repository-assets.js",
     "audit:native-package": "node scripts/audit-packaged-native.js",
     "verify:updater-metadata": "node scripts/verify-updater-metadata.js",
-    "verify:winget-arch": "node scripts/verify-winget-arch-contract.js",
     "verify:release": "node scripts/verify-release-version.js && node scripts/verify-release-contributors.js",
     "create-theme": "node scripts/create-theme.js",
     "export-agent-icons": "node scripts/export-agent-icons.js",
@@ -44,21 +41,21 @@
   "license": "AGPL-3.0-only",
   "type": "commonjs",
   "build": {
-    "appId": "com.clawd.on-desk",
-    "productName": "Clawd on Desk",
+    "appId": "com.guhappen.duck-on-desk",
+    "productName": "Duck on Desk",
     "afterPack": "scripts/after-pack-koffi.js",
     "protocols": [
       {
-        "name": "Clawd Import Protocol",
+        "name": "Duck Import Protocol",
         "schemes": [
-          "clawd"
+          "duck"
         ]
       }
     ],
     "mac": {
       "icon": "assets/icon.png",
       "identity": "-",
-      "artifactName": "Clawd-on-Desk-${version}-${arch}.${ext}",
+      "artifactName": "Duck-on-Desk-${version}-${arch}.${ext}",
       "target": [
         {
           "target": "dmg",
@@ -82,33 +79,13 @@
     },
     "win": {
       "icon": "assets/icon.ico",
-      "artifactName": "Clawd-on-Desk-Setup-${version}-${arch}.${ext}",
+      "artifactName": "Duck-on-Desk-Setup-${version}-${arch}.${ext}",
       "target": [
         {
           "target": "nsis",
           "arch": [
             "x64",
             "arm64"
-          ]
-        }
-      ]
-    },
-    "linux": {
-      "maintainer": "rullerzhou-afk <rullerzhou-afk@users.noreply.github.com>",
-      "icon": "assets/icons",
-      "category": "Utility",
-      "artifactName": "Clawd-on-Desk-${version}-${arch}.${ext}",
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
           ]
         }
       ]
@@ -127,7 +104,6 @@
       "src/**/*",
       "assets/icon.png",
       "assets/icons/**/*",
-      "assets/icons/agents/**/*",
       "assets/svg/**/*",
       "assets/accessories/**/*",
       "assets/sounds/**/*",
@@ -156,8 +132,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "rullerzhou-afk",
-        "repo": "clawd-on-desk"
+        "owner": "guhappen",
+        "repo": "duck-on-desk"
       }
     ]
   },

@@ -17,7 +17,6 @@ const CODEX_AUTO_START_GATE_FILENAME = "codex-auto-start.json";
 const CODEX_AUTO_START_GATE_VERSION = 1;
 const CODEX_WSL_INTEROP_ARG = "--clawd-wsl-interop";
 const CODEX_WINDOWS_STABLE_ARG = "--clawd-windows-stable";
-const APPIMAGE_HOOK_MARKER_FILE = ".clawd-appimage-path";
 const ROUTING_NONCE_HEADER = "x-clawd-routing-nonce";
 const ROUTING_NONCE_RE = /^[a-f0-9]{32}$/;
 
@@ -1165,7 +1164,6 @@ async function resolveNodeBinAsync(options = {}) {
 }
 
 module.exports = {
-  APPIMAGE_HOOK_MARKER_FILE,
   CLAWD_SERVER_HEADER,
   CLAWD_SERVER_ID,
   CODEX_AUTO_START_GATE_FILENAME,

@@ -8,7 +8,6 @@ const {
   INITIAL_DISCOVER_TIMEOUT_MS,
   STARTUP_DISCOVER_TIMEOUT_MS,
   waitForClawdPort,
-  resolveAppImageExecutable,
   resolveMacBundleExecutable,
   launchApp,
   main,
@@ -179,41 +178,6 @@ test("macOS executable resolution fails closed to the stable product executable"
       },
     },
 }), "/tmp/Renamed.app/Contents/MacOS/Clawd on Desk");
-});
-
-test("materialized AppImage hooks launch the persistent on-disk AppImage", () => {
-  const hooksDir = "/home/user/.clawd/appimage-hooks/release";
-  const appImagePath = "/home/user/Applications/Clawd-on-Desk.AppImage";
-  const calls = [];
-  const fsApi = {
-    readFileSync(filePath, encoding) {
-      assert.strictEqual(filePath, `${hooksDir}/.clawd-appimage-path`);
-      assert.strictEqual(encoding, "utf8");
-      return `${appImagePath}\n`;
-    },
-  };
-
-  assert.strictEqual(resolveAppImageExecutable(hooksDir, {
-    env: {},
-    fs: fsApi,
-  }), appImagePath);
-
-  launchApp({
-    platform: "linux",
-    hooksDir,
-    env: {},
-    fs: fsApi,
-    spawn(command, args, options) {
-      calls.push({ command, args, options });
-      return { unref() {} };
-    },
-  });
-
-  assert.deepStrictEqual(calls, [{
-    command: appImagePath,
-    args: [],
-    options: { detached: true, stdio: "ignore" },
-  }]);
 });
 
 test("detached app launch handles asynchronous spawn errors", () => {

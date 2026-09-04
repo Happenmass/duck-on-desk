@@ -85,8 +85,8 @@ describe("package build config", () => {
 
   it("ships agent session icons in packaged builds", () => {
     assert.ok(
-      pkg.build.files.includes("assets/icons/agents/**/*"),
-      "build.files should include assets/icons/agents/**/*"
+      matchedByAnyGlob(pkg.build.files, "assets/icons/agents/claude-code.png"),
+      "build.files globs must still cover assets/icons/agents/**"
     );
   });
 
@@ -444,27 +444,6 @@ describe("package build config", () => {
     });
   });
 
-  describe("Linux artifact targets", () => {
-    it("uses Linux artifact names without spaces so latest-linux.yml URLs match uploaded assets", () => {
-      const artifactName = pkg.build.linux && pkg.build.linux.artifactName;
-      assert.strictEqual(
-        typeof artifactName,
-        "string",
-        "build.linux.artifactName should be a string"
-      );
-      assert.match(
-        artifactName,
-        /\$\{arch\}/,
-        "Linux artifactName should include ${arch} so architecture-specific assets stay explicit"
-      );
-      assert.doesNotMatch(
-        artifactName,
-        /\s/,
-        "Linux artifactName should not contain spaces so latest-linux.yml URLs match uploaded assets"
-      );
-    });
-  });
-
   // Windows shell consumers need a physical icon resource outside app.asar.
   // extraResources provides that canonical runtime copy; the packaged EXE
   // embeds the same build.win.icon and is the fallback if the copy is missing.
@@ -533,11 +512,15 @@ describe("package build config", () => {
       assert.deepEqual(pkg.build.extraResources, [{ from: "assets/icon.ico", to: "icon.ico" }]);
     });
 
-    it("declares the asar inspector directly and keeps five target build commands", () => {
+    it("declares the asar inspector directly and keeps the macOS + Windows build commands", () => {
       assert.match(pkg.devDependencies["@electron/asar"], /^\^3\./);
       assert.strictEqual(pkg.scripts["build:mac:x64"], "electron-builder --mac dmg:x64 zip:x64");
       assert.strictEqual(pkg.scripts["build:mac:arm64"], "electron-builder --mac dmg:arm64 zip:arm64");
-      assert.strictEqual(pkg.scripts["build:linux:x64"], "electron-builder --linux AppImage:x64 deb:x64");
+      assert.strictEqual(pkg.scripts["build:all"], "electron-builder --mac --win");
+      for (const key of ["build:linux", "build:linux:x64"]) {
+        assert.equal(pkg.scripts[key], undefined, key);
+      }
+      assert.equal(pkg.build.linux, undefined, "Linux is no longer a build target");
     });
 
     it("release CI carries no retired sidecar fetch or assertion steps", () => {

@@ -29,14 +29,14 @@ test("main wires clawd:// protocol dispatch through the Codex Pet importer", () 
   assert.ok(runtimeSource.includes('setThemeSelection", { themeId: generated.themeId }'));
 });
 
-test("package metadata registers the clawd protocol and exposes dev registration", () => {
+test("package metadata registers the duck protocol and exposes dev registration", () => {
   const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON, "utf8"));
   const launchSource = fs.readFileSync(LAUNCH, "utf8");
   const sharedProcessSource = fs.readFileSync(SHARED_PROCESS, "utf8");
   const protocols = (((pkg || {}).build || {}).protocols || []);
 
   assert.ok(pkg.scripts["register-protocol:dev"].includes("--register-protocol"));
-  assert.ok(protocols.some((entry) => Array.isArray(entry.schemes) && entry.schemes.includes("clawd")));
+  assert.ok(protocols.some((entry) => Array.isArray(entry.schemes) && entry.schemes.includes("duck")));
   assert.ok(launchSource.includes("process.argv.slice(2)"));
   assert.ok(launchSource.includes("buildElectronLaunchConfig(__dirname, { forwardedArgs })"));
   assert.ok(sharedProcessSource.includes("...forwardedArgs"));
