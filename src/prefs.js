@@ -46,7 +46,7 @@ const {
   PET_MOUTH_ACCESSORY_IDS,
 } = require("./pet-customization-catalog");
 
-const CURRENT_VERSION = 19;
+const CURRENT_VERSION = 20;
 const DEFAULT_INTEGRATION_INSTALLED_IDS = Object.freeze(["claude-code", "codex"]);
 const DEFAULT_INTEGRATION_INSTALLED_SET = new Set(DEFAULT_INTEGRATION_INSTALLED_IDS);
 
@@ -744,6 +744,16 @@ function migrate(raw) {
   }
   if (out.version < 19) {
     out.version = 19;
+  }
+  // v19 -> v20: this fork dropped the Telegram / Feishu / Slack / Discord,
+  // Remote SSH, recap, Kimi quota, mobile preview and tutorial subsystems.
+  // Their persisted keys are no longer in SCHEMA, so drop them here instead
+  // of carrying dead state forward in the on-disk file.
+  if (out.version < 20) {
+    for (const k of ["telegramMigrationLastNotified", "feishuApprovalMigrationLastNotified", "recapEnabled",
+      "kimiQuotaCollectionEnabled", "mobilePreviewEnabled", "remoteSsh", "discordPresence", "feishuApproval",
+      "slackNotify", "tutorialSeen"]) delete out[k];
+    out.version = 20;
   }
   // Field-level migration also covers development snapshots that already have
   // the current schema. Preserve the old effective Codex timeout only when no

@@ -1649,22 +1649,22 @@ describe("prefs.load", () => {
     }
   });
 
-  it("accepts the current v19 schema and locks an explicit v20 file", () => {
-    const currentPath = makeTempPath("v19.json");
-    fs.writeFileSync(currentPath, JSON.stringify({ version: 19, lang: "zh" }), "utf8");
+  it("accepts the current v20 schema and locks an explicit v21 file", () => {
+    const currentPath = makeTempPath("v20.json");
+    fs.writeFileSync(currentPath, JSON.stringify({ version: 20, lang: "zh" }), "utf8");
     const current = prefs.load(currentPath);
     assert.strictEqual(current.locked, false);
-    assert.strictEqual(current.snapshot.version, 19);
+    assert.strictEqual(current.snapshot.version, 20);
     assert.strictEqual(current.snapshot.lang, "zh");
 
-    const futurePath = makeTempPath("v20.json");
-    fs.writeFileSync(futurePath, JSON.stringify({ version: 20, lang: "zh-TW" }), "utf8");
+    const futurePath = makeTempPath("v21.json");
+    fs.writeFileSync(futurePath, JSON.stringify({ version: 21, lang: "zh-TW" }), "utf8");
     const originalWarn = console.warn;
     console.warn = () => {};
     try {
       const future = prefs.load(futurePath);
       assert.strictEqual(future.locked, true);
-      assert.strictEqual(future.snapshot.version, 20);
+      assert.strictEqual(future.snapshot.version, 21);
       assert.strictEqual(future.snapshot.lang, "zh-TW");
     } finally {
       console.warn = originalWarn;
