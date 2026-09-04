@@ -2043,8 +2043,8 @@ function isPermissionEntryLive(permEntry) {
   if (permEntry._sessionTrustLifecycleCancelled === true) return false;
   if (isPassiveNotifyEntry(permEntry)) return false;
 
-  // opencode/MiMo ACK the inbound HTTP request immediately and reply through a
-  // reverse bridge. Until that adapter exposes a positive, request-specific
+  // The opencode family ACKs the inbound HTTP request immediately and replies
+  // through a reverse bridge. Until that adapter exposes a positive, request-specific
   // bridge-liveness signal, membership in pendingPermissions is not enough to
   // prove that an automated decision can still reach the real request.
   if (isOpencodeFamilyEntry(permEntry)) return false;

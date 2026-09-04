@@ -176,7 +176,7 @@ describe("createPidResolver() — POSIX non-Node command-line probe", () => {
       if (invocation === "ps -o command= -p 610") {
         onCommandProbe();
         return "/Applications/WorkBuddy AI.app/Contents/MacOS/Electron "
-          + "/Applications/WorkBuddy AI.app/Contents/Resources/app.asar.unpacked/cli/bin/codebuddy "
+          + "/Applications/Some Agent.app/Contents/Resources/app.asar.unpacked/cli/bin/agentcli "
           + "--serve --session-id session-1\n";
       }
       const err = new Error(`unexpected command: ${invocation}`);
@@ -196,7 +196,7 @@ describe("createPidResolver() — POSIX non-Node command-line probe", () => {
         ...LIVE_GATE,
         platformConfig: mod.getPlatformConfig(),
         startPid: 610,
-        agentCmdlineCheck: (cmdline) => cmdline.includes("/cli/bin/codebuddy")
+        agentCmdlineCheck: (cmdline) => cmdline.includes("/cli/bin/agentcli")
           && cmdline.includes("--session-id"),
         agentCmdlineNames: new Set(["electron"]),
       });
@@ -658,11 +658,11 @@ describe("createPidResolver() — Windows PowerShell path", { skip: process.plat
     const resolve = createPidResolver({ ...LIVE_GATE,
       platformConfig: cfg,
       startPid: 610,
-      agentCmdlineCheck: (cmdline) => cmdline.includes("/cli/bin/codebuddy --serve --session-id"),
+      agentCmdlineCheck: (cmdline) => cmdline.includes("/cli/bin/agentcli --serve --session-id"),
       agentCmdlineNames: new Set(["electron.exe"]),
     });
     withMockedExec(() => snapshotJson([
-      { pid: 610, name: "electron.exe", ppid: 0, cmd: "C:/WorkBuddy/Electron C:/WorkBuddy/cli/bin/codebuddy --serve --session-id s-1" },
+      { pid: 610, name: "electron.exe", ppid: 0, cmd: "C:/SomeAgent/Electron C:/SomeAgent/cli/bin/agentcli --serve --session-id s-1" },
     ]), () => {
       const { agentPid, agentCommandLine } = resolve();
       assert.strictEqual(agentPid, 610);

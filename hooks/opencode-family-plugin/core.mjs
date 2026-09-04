@@ -1,11 +1,11 @@
 // Clawd on Desk — opencode-family plugin core
 //
-// Shared runtime for opencode-derived hosts (opencode, mimocode, …). Runs
+// Shared runtime for opencode-derived hosts. Runs
 // inside the host process (Bun CLI/TUI or Node-based Desktop sidecar) and forwards session/tool events to
 // the Clawd HTTP server (127.0.0.1:23333-23337).
 //
 // This module is IMPORTED by the thin per-agent entries
-// (hooks/opencode-plugin/index.mjs, hooks/mimocode-plugin/index.mjs) and is
+// (hooks/opencode-plugin/index.mjs) and is
 // never registered as a plugin directory itself, so — unlike the entries — it
 // may freely use named exports (#413 only constrains the entry module, whose
 // namespace the host's legacy loader iterates with Object.values()).
@@ -64,7 +64,7 @@ const CLAWD_SERVER_ID = "clawd-on-desk";
 const CLAWD_METADATA_ACCEPTED_HEADER = "x-clawd-metadata-accepted";
 // Provider limit lookups are in-process HTTP roundtrips to the host's own
 // server; cache positive model limits so the per-message.updated resolution
-// never spams the host router (60s TTL matches antigravity-context-usage.js).
+// never spams the host router (60s TTL).
 const CONTEXT_LIMIT_CACHE_MS = 60 * 1000;
 // Purge context-usage dedup entries for dead sessions once this many are
 // tracked, so long-lived hosts (days of sessions) stay bounded even though
@@ -107,8 +107,8 @@ export function orcaPaneKeyFromEnv(env = process.env) {
 // Claude-specific detection. See docs/plans/plan-opencode-integration.md Phase 4.
 // Spike confirmed (2026-04-05): plugin runs in-process with the host, so walk
 // starts at process.pid. Observed chains on Windows:
-//   WT:         <host>.exe → node.exe → powershell.exe → windowsterminal.exe
-//   Antigravity: <host>.exe → node.exe → pwsh.exe → antigravity.exe(×2) → explorer.exe
+//   WT:        <host>.exe → node.exe → powershell.exe → windowsterminal.exe
+//   Electron:  <host>.exe → node.exe → pwsh.exe → <editor>.exe(×2) → explorer.exe
 const TERMINAL_NAMES_WIN = new Set([
   "windowsterminal.exe", "cmd.exe", "powershell.exe", "pwsh.exe",
   "code.exe", "alacritty.exe", "wezterm-gui.exe", "mintty.exe",
@@ -133,7 +133,7 @@ const SYSTEM_BOUNDARY_WIN = new Set(["explorer.exe", "services.exe", "winlogon.e
 const SYSTEM_BOUNDARY_MAC = new Set(["launchd", "init", "systemd"]);
 const SYSTEM_BOUNDARY_LINUX = new Set(["systemd", "init"]);
 // Editor detection drives URI-scheme tab focus (code://, cursor://) in Clawd.
-// Antigravity is NOT listed here — it's treated as a plain terminal window.
+// Anything absent here is treated as a plain terminal window.
 const EDITOR_MAP_WIN = { "code.exe": "code", "cursor.exe": "cursor" };
 const EDITOR_MAP_MAC = { "code": "code", "cursor": "cursor" };
 const EDITOR_MAP_LINUX = { "code": "code", "cursor": "cursor", "code-insiders": "code" };
@@ -220,9 +220,8 @@ function normalizeServerUrl(raw) {
 // reasoning, cache: { read, write } }. The host's own "Context view" shows
 // the component sum INCLUDING reasoning (cache read + write, no `total` —
 // `total` is an internal SessionV1 aggregate, never a message-token field),
-// and Clawd mirrors that exact figure. Values are coerced like
-// hooks/antigravity-context-usage.js (hosts may deliver JSON numbers as
-// strings). Returns null when the payload has no usable numbers.
+// and Clawd mirrors that exact figure. Values are coerced (hosts may deliver
+// JSON numbers as strings). Returns null when the payload has no usable numbers.
 export function extractContextUsageUsed(tokens) {
   if (!tokens || typeof tokens !== "object") return null;
   const parts = [tokens.input, tokens.output, tokens.reasoning]
@@ -475,7 +474,7 @@ export function createOpencodeFamilyPlugin(config) {
   }
 
   // Walks past the first terminal match to pick the OUTERMOST terminal —
-  // matters for Electron terminals like Antigravity where the chain shows
+  // matters for Electron terminals where the chain shows
   // renderer→main and we want the main process so Clawd activates the right
   // window. Cached after first call.
   function getStablePid() {
@@ -521,7 +520,7 @@ export function createOpencodeFamilyPlugin(config) {
         // Hit system process — stop before escaping the user's session boundary.
         if (systemBoundary.has(name)) break;
         // Record but don't break: outermost terminal wins (handles Electron
-        // terminals like Antigravity where renderer→main share the same name).
+        // terminals where renderer→main share the same name).
         if (terminalNames.has(name)) terminalPid = pid;
         lastGoodPid = pid;
         if (!parentPid || parentPid === pid || parentPid <= 1) break;
@@ -1237,7 +1236,7 @@ export function createOpencodeFamilyPlugin(config) {
       body.headless = true;
     }
     // Session title from OpenCode's own session-info title field. Mirrors the
-    // pattern used by other agents (clawd-hook, workbuddy-hook) that
+    // pattern used by other agents (clawd-hook) that
     // include session_title in their state POST body. The server reads
     // this and stores it as sessionTitle, which sessionDisplayTitle()
     // then uses before falling back to path.basename(cwd).
@@ -1407,7 +1406,7 @@ export function createOpencodeFamilyPlugin(config) {
   // session generation/event sequence so stale SDK lookups cannot publish.
 
   // Fire-and-forget metadata POST of { used, limit } — mirrors
-  // antigravity-context-usage.js / claude-statusline.js quota reporting
+  // claude-statusline.js quota reporting
   // (source stamped here so the route can attribute the telemetry stream).
   function buildContextUsageBody(sessionId, used, limit) {
     return {
@@ -2089,7 +2088,7 @@ export function createOpencodeFamilyPlugin(config) {
           // session message on event.properties.info, whose assistant tokens
           // hold the session-level totals. Forward as a metadata-only
           // contextUsage POST (same dedup/no-decision semantics as the
-          // agents/antigravity plugin path). The event itself never maps to a
+          // other metadata-only paths). The event itself never maps to a
           // Clawd state transition.
           if (event.type === "message.updated") {
             handleContextUsageEvent(event, { client: instanceClient, instanceToken });

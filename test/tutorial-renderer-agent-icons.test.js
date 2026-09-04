@@ -228,14 +228,14 @@ describe("tutorial agent icon renderer", () => {
     const harness = await loadAgentsState({
       active: [{ agentId: "claude-code", label: "Claude Code", iconUrl: "file:///claude.png" }],
       install: [{ agentId: "codex", label: "Codex", iconUrl: "file:///codex.png" }],
-      cleanup: [{ agentId: "gemini-cli", label: "Gemini CLI", iconUrl: "file:///gemini.png" }],
+      cleanup: [{ agentId: "opencode", label: "opencode", iconUrl: "file:///opencode.png" }],
     });
     const avatars = findAll(harness.body, (node) =>
       node.classList && node.classList.contains("ag-avatar"));
     assert.strictEqual(avatars.length, 3);
     assert.deepStrictEqual(
       avatars.map((avatar) => findAll(avatar, (node) => node.tagName === "IMG")[0].src),
-      ["file:///codex.png", "file:///gemini.png", "file:///claude.png"],
+      ["file:///codex.png", "file:///opencode.png", "file:///claude.png"],
     );
     assert.deepStrictEqual(avatars.map((avatar) => avatar.textContent), ["", "", ""]);
   });

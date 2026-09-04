@@ -526,9 +526,9 @@ describe("prefs.validate", () => {
     // Blank/duplicate/non-string entries are dropped; order is preserved.
     assert.deepStrictEqual(
       prefs.validate({
-        quotaRingHiddenProviders: ["kimiQuota", "", "  ", null, 3, "kimiQuota", "codexQuota"],
+        quotaRingHiddenProviders: ["claudeQuota", "", "  ", null, 3, "claudeQuota", "codexQuota"],
       }).quotaRingHiddenProviders,
-      ["kimiQuota", "codexQuota"]
+      ["claudeQuota", "codexQuota"]
     );
     // Bounded, so a corrupt file cannot grow the preference without limit.
     const flood = Array.from({ length: 200 }, (_v, i) => `p${i}`);
@@ -1383,27 +1383,27 @@ describe("prefs.migrate v13 → v14 (Dashboard window bounds)", () => {
   });
 });
 
-describe("prefs.migrate v14 → v15 (ZCode permission bubbles default on)", () => {
-  it("keeps other agents' explicit permissionsEnabled:false (real user choices)", () => {
+describe("prefs.migrate v14 → v15 (retired agent-specific bubble migration)", () => {
+  it("keeps an agent's explicit permissionsEnabled:false (a real user choice)", () => {
     const upgraded = prefs.validate(prefs.migrate({
       version: 14,
       agents: {
-        qoder: { integrationInstalled: true, enabled: true, permissionsEnabled: false, notificationHookEnabled: true },
+        opencode: { integrationInstalled: true, enabled: true, permissionsEnabled: false, notificationHookEnabled: true },
       },
     }));
     assert.strictEqual(upgraded.version, prefs.CURRENT_VERSION);
-    assert.strictEqual(upgraded.agents.qoder.permissionsEnabled, false);
+    assert.strictEqual(upgraded.agents.opencode.permissionsEnabled, false);
   });
 
-  it("never touches a v15 file where the user disabled zcode bubbles after upgrade", () => {
+  it("never touches a v15 file where the user disabled bubbles after upgrade", () => {
     const upgraded = prefs.validate(prefs.migrate({
       version: 15,
       agents: {
-        zcode: { integrationInstalled: true, enabled: true, permissionsEnabled: false, notificationHookEnabled: true },
+        codex: { integrationInstalled: true, enabled: true, permissionsEnabled: false, notificationHookEnabled: true },
       },
     }));
     assert.strictEqual(upgraded.version, prefs.CURRENT_VERSION);
-    assert.strictEqual(upgraded.agents.zcode.permissionsEnabled, false);
+    assert.strictEqual(upgraded.agents.codex.permissionsEnabled, false);
   });
 
 });
@@ -1651,7 +1651,6 @@ describe("prefs.load", () => {
   // reads, so the EACCES branch is unreachable there and these assertions would fail
   // for a reason that has nothing to do with prefs. `npm test` does run on
   // windows-latest (.github/workflows/build.yml), so the skip is load-bearing.
-  // Same shape as `posixOnly` in test/antigravity-install.test.js.
   const unreadableOnly = {
     skip: process.platform === "win32" ? "chmod cannot deny reads on Windows" : false,
   };

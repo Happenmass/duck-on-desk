@@ -194,7 +194,7 @@ const {
 const { focusCodexThreadTarget } = require("./session-focus-handoff");
 const { isSessionInProgress } = require("./state-session-snapshot");
 const { restoreSessionsFromRecoveryLeases } = require("./session-recovery-loader");
-const { getAllAgents, getAgent } = require("../agents/registry");
+const { getAllAgents } = require("../agents/registry");
 const { getAgentIconUrl } = require("./state-agent-icons");
 // ── Autoplay policy: allow sound playback without user gesture ──
 // MUST be set before any BrowserWindow is created (before app.whenReady)
@@ -399,20 +399,11 @@ function _readSystemOpenAtLogin() {
   ).openAtLogin;
 }
 
-function _getAgentIntegrationOptions(agentId) {
-  const agents = _settingsController && _settingsController.get("agents");
-  const entry = agents && agents[agentId];
-  if (!entry || typeof entry !== "object") return {};
-  const options = {};
-  const agent = getAgent(agentId);
-  const capabilities = (agent && agent.capabilities) || {};
-  if (capabilities.httpHook && capabilities.customPermissionUrl) {
-    const customPermissionUrl = prefsModule.normalizeOptionalHttpUrl(entry.customPermissionUrl);
-    options.permissionTarget = customPermissionUrl
-      ? { mode: "custom", url: customPermissionUrl }
-      : { mode: "local" };
-  }
-  return options;
+// Per-agent install-time options. No surviving agent contributes any today, so
+// this reports none; the read stays wired through server.js into
+// integration-sync so an agent that needs options has somewhere to put them.
+function _getAgentIntegrationOptions() {
+  return {};
 }
 
 function _resolveAgentDisplayName(agentId) {

@@ -301,7 +301,7 @@ describe("permission telegram remote approval", () => {
     };
     const perm = initPermission(makeCtx({ getTelegramApprovalClient: () => client }));
     const entry = makePermEntry({
-      agentId: "codebuddy",
+      agentId: "claude-code",
       suggestions: [{ type: "setMode", mode: "acceptEdits", destination: "localSettings" }],
     });
     perm.pendingPermissions.push(entry);
@@ -352,9 +352,7 @@ describe("permission telegram remote approval", () => {
     const entries = [
       makePermEntry({ isElicitation: true, toolName: "AskUserQuestion" }),
       makePermEntry({ isCodexNotify: true }),
-      makePermEntry({ isKimiNotify: true }),
       makePermEntry({ agentId: "opencode" }),
-      makePermEntry({ isAntigravity: true, agentId: "antigravity-cli" }),
       makePermEntry({ toolName: "ExitPlanMode" }),
       makePermEntry({ toolName: "AskUserQuestion" }),
       makePermEntry({ toolName: "TaskList" }),

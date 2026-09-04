@@ -211,62 +211,62 @@ describe("updateSession: Notification hook gate", () => {
     assert.deepStrictEqual(ctx._soundsPlayed, ["confirm"], "notification must play confirm sound");
   });
 
-  it("mutes Qoder state-only permission notifications when the per-agent flag is off", () => {
-    // Qoder is state-only: hooks/qoder-hook.js maps its PermissionRequest /
-    // PermissionDenied events to a Clawd Notification event, so they ride this
-    // per-agent mute gate like any passive notification. This is the opposite
-    // of a real permission agent (next test), whose PermissionRequest keeps its
-    // bell because Clawd actually answers that decision.
+  it("mutes state-only permission notifications when the per-agent flag is off", () => {
+    // A state-only agent maps its PermissionRequest / PermissionDenied events
+    // to a Clawd Notification event, so they ride this per-agent mute gate like
+    // any passive notification. This is the opposite of a real permission agent
+    // (next test), whose PermissionRequest keeps its bell because Clawd actually
+    // answers that decision.
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
     api = require("../src/state")(ctx);
 
-    api.updateSession("qoder-1", "notification", "Notification", { agentId: "qoder" });
+    api.updateSession("pi-1", "notification", "Notification", { agentId: "pi" });
 
-    assert.strictEqual(api.sessions.has("qoder-1"), true, "Qoder session must still be registered (bookkeeping runs)");
-    assert.strictEqual(api.sessions.get("qoder-1").state, "idle", "Qoder Notification resolves bookkeeping to idle");
+    assert.strictEqual(api.sessions.has("pi-1"), true, "session must still be registered (bookkeeping runs)");
+    assert.strictEqual(api.sessions.get("pi-1").state, "idle", "Notification resolves bookkeeping to idle");
     const stateChanges = ctx._rendererEvents.filter(([ch]) => ch === "state-change");
     assert.ok(stateChanges.length >= 1, "pet must still get a state-change broadcast");
     assert.notStrictEqual(stateChanges[0][1], "notification", "muted: must not enter notification state");
     assert.deepStrictEqual(ctx._soundsPlayed, [], "muted: confirm sound must not play");
   });
 
-  it("lets Qoder state-only notifications through when the per-agent flag is on", () => {
+  it("lets state-only notifications through when the per-agent flag is on", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
     api = require("../src/state")(ctx);
 
-    api.updateSession("qoder-1", "notification", "Notification", { agentId: "qoder" });
+    api.updateSession("pi-1", "notification", "Notification", { agentId: "pi" });
 
     const stateChanges = ctx._rendererEvents.filter(([ch]) => ch === "state-change");
-    assert.ok(stateChanges.length >= 1, "Qoder notification must broadcast");
+    assert.ok(stateChanges.length >= 1, "notification must broadcast");
     assert.strictEqual(stateChanges[0][1], "notification");
-    assert.deepStrictEqual(ctx._soundsPlayed, ["confirm"], "Qoder notification must play confirm");
+    assert.deepStrictEqual(ctx._soundsPlayed, ["confirm"], "notification must play confirm");
   });
 
-  it("mutes CodeWhale passive attention notifications when the per-agent flag is off", () => {
+  it("mutes passive attention notifications when the per-agent flag is off", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
     api = require("../src/state")(ctx);
 
-    api.updateSession("codewhale-1", "attention", "Notification", { agentId: "codewhale" });
+    api.updateSession("opencode-1", "attention", "Notification", { agentId: "opencode" });
 
-    assert.strictEqual(api.sessions.has("codewhale-1"), true, "CodeWhale session must still be registered");
-    assert.strictEqual(api.sessions.get("codewhale-1").state, "idle", "CodeWhale attention resolves bookkeeping to idle");
+    assert.strictEqual(api.sessions.has("opencode-1"), true, "session must still be registered");
+    assert.strictEqual(api.sessions.get("opencode-1").state, "idle", "attention resolves bookkeeping to idle");
     const stateChanges = ctx._rendererEvents.filter(([ch]) => ch === "state-change");
     assert.ok(stateChanges.length >= 1, "pet must still get a state-change broadcast");
     assert.notStrictEqual(stateChanges[0][1], "attention", "muted: must not enter attention state");
   });
 
-  it("lets CodeWhale passive attention notifications through when the per-agent flag is on", () => {
+  it("lets passive attention notifications through when the per-agent flag is on", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
     api = require("../src/state")(ctx);
 
-    api.updateSession("codewhale-1", "attention", "Notification", { agentId: "codewhale" });
+    api.updateSession("opencode-1", "attention", "Notification", { agentId: "opencode" });
 
     const stateChanges = ctx._rendererEvents.filter(([ch]) => ch === "state-change");
-    assert.ok(stateChanges.length >= 1, "CodeWhale attention notification must broadcast");
+    assert.ok(stateChanges.length >= 1, "attention notification must broadcast");
     assert.strictEqual(stateChanges[0][1], "attention");
   });
 

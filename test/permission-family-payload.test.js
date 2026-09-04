@@ -7,8 +7,8 @@
 //     legacy per-agent names
 //   - the renderer consumes exactly that vocabulary, emits the single
 //     "family-always" decide behavior, and its blanket-always tooltip is
-//     templated with {agent} in every language (a MiMo user must never read
-//     "opencode" in the warning)
+//     templated with {agent} in every language (a user of some other
+//     opencode-derived host must never read "opencode" in the warning)
 
 const { describe, it } = require("node:test");
 const assert = require("node:assert");

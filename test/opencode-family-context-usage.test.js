@@ -67,11 +67,11 @@ const OPENCODE_PARAMS = Object.freeze({
   sessionIdPrefix: "opencode:",
 });
 
-const MIMOCODE_PARAMS = Object.freeze({
-  agentId: "mimocode",
-  hookSource: "mimocode-plugin",
-  logFileName: "mimocode-plugin.log",
-  sessionIdPrefix: "mimocode:",
+const OTHERHOST_PARAMS = Object.freeze({
+  agentId: "otherhost",
+  hookSource: "otherhost-plugin",
+  logFileName: "otherhost-plugin.log",
+  sessionIdPrefix: "otherhost:",
 });
 
 // Fake in-process SDK client. The normal SDK client returns the fields-style
@@ -188,7 +188,7 @@ function messageUpdatedEvent({
   sessionID = "ses_abc",
   infoSessionID,
   providerID = "openai",
-  modelID = "deepseek-v4",
+  modelID = "some-model-v4",
   role = "assistant",
   tokens,
 } = {}) {
@@ -255,13 +255,13 @@ describe("opencode-family contextUsage limit resolution (resolveContextLimit)", 
       {
         id: "openai",
         models: {
-          "deepseek-v4": { limit: { context: 128000 } },
+          "some-model-v4": { limit: { context: 128000 } },
           "gpt-5": { limit: { context: 1000 } },
         },
       },
       { id: "anthropic", models: { "claude-x": { limit: { context: 200000 } } } },
     ]);
-    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "deepseek-v4", client), 128000);
+    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "some-model-v4", client), 128000);
     assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "gpt-5", client), 1000);
     assert.strictEqual(await plugin.__test.resolveContextLimit("anthropic", "claude-x", client), 200000);
   });
@@ -269,11 +269,11 @@ describe("opencode-family contextUsage limit resolution (resolveContextLimit)", 
   it("matches the provider by providerID, the model by modelID — never by modelID alone", async () => {
     const plugin = createTrackedPlugin(core, OPENCODE_PARAMS);
     const { client } = makeFakeClient([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 128000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 128000 } } } },
     ]);
-    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "deepseek-v4", client), 128000);
+    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "some-model-v4", client), 128000);
     assert.strictEqual(
-      await plugin.__test.resolveContextLimit("deepseek-v4", "deepseek-v4", client),
+      await plugin.__test.resolveContextLimit("some-model-v4", "some-model-v4", client),
       null,
       "passing the model id as provider id must not match"
     );
@@ -282,9 +282,9 @@ describe("opencode-family contextUsage limit resolution (resolveContextLimit)", 
   it("accepts a Map instance for provider.models", async () => {
     const plugin = createTrackedPlugin(core, OPENCODE_PARAMS);
     const { client } = makeFakeClient([
-      { id: "openai", models: new Map([["deepseek-v4", { limit: { context: 128000 } }]]) },
+      { id: "openai", models: new Map([["some-model-v4", { limit: { context: 128000 } }]]) },
     ]);
-    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "deepseek-v4", client), 128000);
+    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "some-model-v4", client), 128000);
   });
 
   it("fails closed when only provider.options.limit is present", async () => {
@@ -303,31 +303,31 @@ describe("opencode-family contextUsage limit resolution (resolveContextLimit)", 
           id: "opencode-go",
           name: "opencode-go",
           env: [],
-          models: { "deepseek-v4-flash": { id: "deepseek-v4-flash", limit: { context: 1000000, output: 64000 } } },
+          models: { "some-model-v4-flash": { id: "some-model-v4-flash", limit: { context: 1000000, output: 64000 } } },
         },
         { id: "anthropic", models: { "claude-x": { limit: { context: 200000 } } } },
       ],
       { envelope: "all" }
     );
-    assert.strictEqual(await plugin.__test.resolveContextLimit("opencode-go", "deepseek-v4-flash", client), 1000000);
+    assert.strictEqual(await plugin.__test.resolveContextLimit("opencode-go", "some-model-v4-flash", client), 1000000);
     assert.strictEqual(await plugin.__test.resolveContextLimit("anthropic", "claude-x", client), 200000);
   });
 
   it("unwraps the /config/providers envelope { providers: [...] }", async () => {
     const plugin = createTrackedPlugin(core, OPENCODE_PARAMS);
     const { client } = makeFakeClient(
-      [{ id: "openai", models: { "deepseek-v4": { limit: { context: 128000 } } } }],
+      [{ id: "openai", models: { "some-model-v4": { limit: { context: 128000 } } } }],
       { envelope: "providers" }
     );
-    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "deepseek-v4", client), 128000);
+    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "some-model-v4", client), 128000);
   });
 
   it("accepts an array-shaped models collection inside a supported provider payload", async () => {
     const plugin = createTrackedPlugin(core, OPENCODE_PARAMS);
     const { client } = makeFakeClient([
-      { id: "openai", models: [{ id: "deepseek-v4", limit: { context: 64000 } }] },
+      { id: "openai", models: [{ id: "some-model-v4", limit: { context: 64000 } }] },
     ]);
-    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "deepseek-v4", client), 64000);
+    assert.strictEqual(await plugin.__test.resolveContextLimit("openai", "some-model-v4", client), 64000);
   });
 
   it("returns null for unknown providers/models and never throws on provider failure", async () => {
@@ -524,7 +524,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
 
   async function drive(plugin, event) {
     const pending = plugin.__test.handleContextUsageEvent(event, { client: makeFakeClient([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 128000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 128000 } } } },
     ]).client });
     await pending;
   }
@@ -601,7 +601,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
   it("fails closed on a token-bearing event without an explicit session id", async () => {
     const plugin = makePlugin();
     const client = makeFakeClient([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 128000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 128000 } } } },
     ]);
     await plugin.__test.handleContextUsageEvent(
       messageUpdatedEvent({ sessionID: null, tokens: { input: 100 } }),
@@ -619,7 +619,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
     const plugin = makePlugin();
     plugin.__test._rootSessionId = "ses_previous";
     const client = makeFakeClient([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 128000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 128000 } } } },
     ]);
     await plugin.__test.handleContextUsageEvent(
       messageUpdatedEvent({ sessionID: null, tokens: { input: 100 } }),
@@ -634,7 +634,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
   it("fails closed when assistant role is missing even with valid tokens and session id", async () => {
     const plugin = makePlugin();
     const client = makeFakeClient([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 128000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 128000 } } } },
     ]);
     const event = messageUpdatedEvent({ tokens: { input: 100 } });
     delete event.properties.info.role;
@@ -653,7 +653,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
     const event = messageUpdatedEvent({ sessionID: null, tokens: { input: 100 } });
     event.properties.info.id = "msg_not_a_session";
     const client = makeFakeClient([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 128000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 128000 } } } },
     ]);
     await plugin.__test.handleContextUsageEvent(event, { client: client.client, instanceToken: 1 });
 
@@ -665,7 +665,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
   it("fails closed on blank or non-string explicit session ids", async () => {
     const plugin = makePlugin();
     const client = makeFakeClient([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 128000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 128000 } } } },
     ]);
     await plugin.__test.handleContextUsageEvent(
       messageUpdatedEvent({ sessionID: "   ", tokens: { input: 100 } }),
@@ -685,11 +685,11 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
     const info = Object.assign([], {
       role: "assistant",
       providerID: "openai",
-      modelID: "deepseek-v4",
+      modelID: "some-model-v4",
       tokens: { input: 100 },
     });
     const client = makeFakeClient([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 128000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 128000 } } } },
     ]);
     await plugin.__test.handleContextUsageEvent({
       type: "message.updated",
@@ -902,11 +902,11 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
     assert.strictEqual(lookup.pending.length, 2);
 
     lookup.pending[1].resolve(sdkProviderResult([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 1000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 1000 } } } },
     ]));
     await reopenedLookup;
     lookup.pending[0].resolve(sdkProviderResult([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 1000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 1000 } } } },
     ]));
     await oldLookup;
 
@@ -931,7 +931,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
     });
     const plugin = makePlugin();
     const client = makeFakeClient([
-      { id: "openai", models: { "deepseek-v4": { limit: { context: 1000 } } } },
+      { id: "openai", models: { "some-model-v4": { limit: { context: 1000 } } } },
     ]);
     const oldPost = plugin.__test.handleContextUsageEvent(
       messageUpdatedEvent({ tokens: { input: 100 } }),
@@ -969,7 +969,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
       clearInstance: true,
     });
 
-    const provider = [{ id: "openai", models: { "deepseek-v4": { limit: { context: 1000 } } } }];
+    const provider = [{ id: "openai", models: { "some-model-v4": { limit: { context: 1000 } } } }];
     b.pending[0].resolve(sdkProviderResult(provider));
     await liveB;
     a.pending[0].resolve(sdkProviderResult(provider));
@@ -983,8 +983,8 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
     assert.strictEqual(plugin.__test._contextStateByInstance.has(2), true);
   });
 
-  it("keeps context reporting explicitly OpenCode-only until MiMo has a proven contract", async () => {
-    const plugin = createTrackedPlugin(core, MIMOCODE_PARAMS);
+  it("keeps context reporting explicitly OpenCode-only until OtherHost has a proven contract", async () => {
+    const plugin = createTrackedPlugin(core, OTHERHOST_PARAMS);
     plugin.__test._cachedPort = 23333;
     const client = makeFakeClient([
       { id: "mimo", models: { model: { limit: { context: 1000 } } } },

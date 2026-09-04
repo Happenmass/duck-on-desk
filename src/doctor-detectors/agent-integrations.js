@@ -525,35 +525,6 @@ function applyCodexSupplementary(detail, descriptor, options, settings) {
   return next;
 }
 
-function applyDisabledHookGroup(detail, descriptor, settings) {
-  if (!descriptor.hookGroupId) return detail;
-  const hooksConfig = settings && typeof settings === "object" ? settings.hooksConfig : null;
-  if (!hooksConfig || typeof hooksConfig !== "object") return detail;
-
-  let supplementary = null;
-  if (hooksConfig.enabled === false) {
-    supplementary = {
-      key: "hook_group",
-      value: "disabled-global",
-      detail: "hooksConfig.enabled is false",
-    };
-  } else if (Array.isArray(hooksConfig.disabled) && hooksConfig.disabled.includes(descriptor.hookGroupId)) {
-    supplementary = {
-      key: "hook_group",
-      value: `disabled-${descriptor.hookGroupId}`,
-      detail: `hooksConfig.disabled includes "${descriptor.hookGroupId}"`,
-    };
-  }
-  if (!supplementary) return detail;
-  return {
-    ...detail,
-    status: "not-connected",
-    level: "warning",
-    detail: `${descriptor.agentName} hooks are disabled in settings.json; Clawd preserves this user setting and will not receive hook events`,
-    supplementary,
-  };
-}
-
 // MiMo-style merged config (descriptor.configCandidates, highest-priority
 // first): EVERY existing candidate loads, each parsed as JSONC exactly like
 // the host's own loader, and the "plugin" array is REPLACED by the
@@ -654,8 +625,7 @@ function checkFileMode(descriptor, options) {
     configFileExists: true,
     configPath: descriptor.configPath,
   };
-  detail = applyCodexSupplementary(detail, descriptor, options, settings);
-  return applyDisabledHookGroup(detail, descriptor, settings);
+  return applyCodexSupplementary(detail, descriptor, options, settings);
 }
 
 function findOpencodePluginEntry(pluginEntries, marker) {

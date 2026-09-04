@@ -94,39 +94,6 @@ describe("bubble-format formatDetail builtin tools", () => {
   });
 });
 
-describe("bubble-format formatDetail antigravity gating", () => {
-  it("does NOT call Antigravity formatter for snake_case tools when isAntigravity is false", () => {
-    // Regression: previously the heuristic "toolName includes _ or input has CommandLine"
-    // would route a Codex / opencode / Kimi snake_case tool name through the Antigravity
-    // formatter and produce a composite like "/repo/src: TODO". With the explicit gate it
-    // must fall back to the generic "first string value" path instead.
-    const detail = formatDetail("grep_search", { Query: "TODO", SearchPath: "/repo/src" });
-    // Generic path picks the first string value (Object.values insertion order).
-    assert.strictEqual(detail, "TODO");
-  });
-
-  it("does NOT produce Antigravity composite for write_to_file when isAntigravity is false", () => {
-    // The Antigravity formatter would return "/repo/a.txt: create". The generic fallback
-    // returns the first string value, which is /repo/a.txt.
-    const detail = formatDetail("write_to_file", { TargetFile: "/repo/a.txt", Description: "create" });
-    assert.strictEqual(detail, "/repo/a.txt");
-  });
-
-  it("calls Antigravity formatter when isAntigravity is true", () => {
-    const detail = formatDetail(
-      "run_command",
-      { CommandLine: "npm test", Cwd: "/repo" },
-      { isAntigravity: true }
-    );
-    assert.strictEqual(detail, "npm test");
-  });
-
-  it("falls back to generic path when isAntigravity is true but tool is unknown", () => {
-    const detail = formatDetail("totally_unknown_tool", { whatever: "x" }, { isAntigravity: true });
-    assert.strictEqual(detail, "x");
-  });
-});
-
 describe("bubble-format parseMcpToolName (issue #445)", () => {
   it("parses the reported Codex Vercel MCP names to server · tool", () => {
     assert.deepStrictEqual(

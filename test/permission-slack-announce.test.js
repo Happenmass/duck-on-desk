@@ -703,7 +703,7 @@ describe("slack announce: interaction kind and action target", () => {
 
   it("does not announce from the remote path for an entry that has a bubble", () => {
     // maybeStartRemoteApproval runs for ordinary bubbled entries too (codex,
-    // qwen, CC elicitation all call it). Only remote-only entries should be
+    // opencode, CC elicitation all call it). Only remote-only entries should be
     // labelled "decide remotely" from there.
     let onDelivered;
     const client = {

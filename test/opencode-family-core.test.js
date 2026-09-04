@@ -35,13 +35,13 @@ const OPENCODE_PARAMS = Object.freeze({
   logFileName: "opencode-plugin.log",
   sessionIdPrefix: "opencode:",
 });
-// mimocode lands with the #607 rebase; the factory must already support any
-// second member — use its future params to prove instance isolation today.
-const MIMOCODE_PARAMS = Object.freeze({
-  agentId: "mimocode",
-  hookSource: "mimocode-plugin",
-  logFileName: "mimocode-plugin.log",
-  sessionIdPrefix: "mimocode:",
+// A second family member: the factory must support any of them — use a
+// synthetic host's params to prove instance isolation.
+const OTHERHOST_PARAMS = Object.freeze({
+  agentId: "otherhost",
+  hookSource: "otherhost-plugin",
+  logFileName: "otherhost-plugin.log",
+  sessionIdPrefix: "otherhost:",
 });
 
 describe("opencode-family plugin factory", () => {
@@ -62,7 +62,7 @@ describe("opencode-family plugin factory", () => {
   it("keeps two instances fully isolated (state maps + prefixes)", async () => {
     const { createOpencodeFamilyPlugin } = await loadCore();
     const oc = createOpencodeFamilyPlugin(OPENCODE_PARAMS);
-    const mc = createOpencodeFamilyPlugin(MIMOCODE_PARAMS);
+    const mc = createOpencodeFamilyPlugin(OTHERHOST_PARAMS);
 
     // Separate mutable state: the parent maps are distinct objects.
     assert.notStrictEqual(oc.__test._sessionParentById, mc.__test._sessionParentById);
@@ -72,11 +72,11 @@ describe("opencode-family plugin factory", () => {
     const ocBody = oc.__test.buildStateBody("idle", "SessionStart", "ses_123");
     const mcBody = mc.__test.buildStateBody("idle", "SessionStart", "ses_123");
     assert.strictEqual(ocBody.session_id, "opencode:ses_123");
-    assert.strictEqual(mcBody.session_id, "mimocode:ses_123");
+    assert.strictEqual(mcBody.session_id, "otherhost:ses_123");
     assert.strictEqual(ocBody.agent_id, "opencode");
-    assert.strictEqual(mcBody.agent_id, "mimocode");
+    assert.strictEqual(mcBody.agent_id, "otherhost");
     assert.strictEqual(ocBody.hook_source, "opencode-plugin");
-    assert.strictEqual(mcBody.hook_source, "mimocode-plugin");
+    assert.strictEqual(mcBody.hook_source, "otherhost-plugin");
 
     // Child bookkeeping in one instance never leaks into the other.
     oc.__test._sessionParentById.set("opencode:ses_child", "opencode:ses_root");
@@ -116,12 +116,12 @@ describe("opencode-family plugin factory", () => {
   it("isolates the FULL per-instance state bag (log path, dedup, port cache, bridge)", async () => {
     const { createOpencodeFamilyPlugin } = await loadCore();
     const oc = createOpencodeFamilyPlugin(OPENCODE_PARAMS);
-    const mc = createOpencodeFamilyPlugin(MIMOCODE_PARAMS);
+    const mc = createOpencodeFamilyPlugin(OTHERHOST_PARAMS);
 
     // logFileName actually binds per instance — a hardcoded DEBUG_LOG_PATH
     // (the reviewer's surviving mutation) must fail here.
     assert.ok(oc.__test._debugLogPath.endsWith("opencode-plugin.log"), oc.__test._debugLogPath);
-    assert.ok(mc.__test._debugLogPath.endsWith("mimocode-plugin.log"), mc.__test._debugLogPath);
+    assert.ok(mc.__test._debugLogPath.endsWith("otherhost-plugin.log"), mc.__test._debugLogPath);
     assert.notStrictEqual(oc.__test._debugLogPath, mc.__test._debugLogPath);
 
     // Per-session dedup map: distinct objects, no cross-instance visibility.
@@ -155,7 +155,7 @@ describe("opencode-family plugin factory", () => {
   it("isolates authoritative session directories and the info latch per factory", async () => {
     const { createOpencodeFamilyPlugin } = await loadCore();
     const oc = createOpencodeFamilyPlugin(OPENCODE_PARAMS);
-    const mc = createOpencodeFamilyPlugin(MIMOCODE_PARAMS);
+    const mc = createOpencodeFamilyPlugin(OTHERHOST_PARAMS);
 
     assert.notStrictEqual(oc.__test._sessionDirectoryById, mc.__test._sessionDirectoryById);
     assert.strictEqual(oc.__test._hostEmitsSessionInfo, false);
@@ -298,7 +298,7 @@ describe("opencode-family Windows GUI host focus identity", () => {
 });
 
 describe("opencode-family session-id helpers (prefix matrix)", () => {
-  for (const prefix of ["opencode:", "mimocode:"]) {
+  for (const prefix of ["opencode:", "otherhost:"]) {
     it(`${prefix} raw + prefixed child lookup`, async () => {
       const { createSessionIdHelpers } = await loadSessionIds();
       const ids = createSessionIdHelpers(prefix);
@@ -316,20 +316,20 @@ describe("opencode-family session-id helpers (prefix matrix)", () => {
   it("helpers from one prefix never match another prefix's map keys", async () => {
     const { createSessionIdHelpers } = await loadSessionIds();
     const oc = createSessionIdHelpers("opencode:");
-    const mimoMap = new Map([["mimocode:ses_child", "mimocode:ses_root"]]);
+    const otherHostMap = new Map([["otherhost:ses_child", "otherhost:ses_root"]]);
 
     // The v3-review blocker scenario: an opencode-prefixed lookup against a
-    // mimocode-keyed map must MISS — proving these helpers are prefix-bound
+    // otherhost-keyed map must MISS — proving these helpers are prefix-bound
     // and must come from the factory, never shared verbatim.
-    assert.strictEqual(oc.isChildSessionId("ses_child", mimoMap), false);
+    assert.strictEqual(oc.isChildSessionId("ses_child", otherHostMap), false);
   });
 
   it("DEFAULT_SESSION_ID and resolve fallback follow the prefix", async () => {
     const { createSessionIdHelpers } = await loadSessionIds();
-    const mc = createSessionIdHelpers("mimocode:");
-    assert.strictEqual(mc.DEFAULT_SESSION_ID, "mimocode:default");
-    assert.strictEqual(mc.resolveSessionId(null, null), "mimocode:default");
-    assert.strictEqual(mc.resolveSessionId("ses_a", null), "mimocode:ses_a");
+    const mc = createSessionIdHelpers("otherhost:");
+    assert.strictEqual(mc.DEFAULT_SESSION_ID, "otherhost:default");
+    assert.strictEqual(mc.resolveSessionId(null, null), "otherhost:default");
+    assert.strictEqual(mc.resolveSessionId("ses_a", null), "otherhost:ses_a");
   });
 });
 
@@ -337,8 +337,8 @@ describe("opencode-family registry", () => {
   it("membership is the explicit allowlist, never eventSource inference", () => {
     assert.strictEqual(isOpencodeFamily("opencode"), true);
     // plugin-event agents that are NOT family members (plan §7):
-    assert.strictEqual(isOpencodeFamily("openclaw"), false);
-    assert.strictEqual(isOpencodeFamily("hermes"), false);
+    assert.strictEqual(isOpencodeFamily("pi"), false);
+    assert.strictEqual(isOpencodeFamily("codex"), false);
     assert.strictEqual(isOpencodeFamily("claude-code"), false);
     assert.strictEqual(isOpencodeFamily(null), false);
   });

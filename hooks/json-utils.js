@@ -314,7 +314,7 @@ function writeTextAtomicWithBackup(filePath, text, options = {}) {
 /**
  * Rewrite a path so it points at the asar.unpacked mirror instead of asar.
  * In packaged builds, __dirname resolves to the virtual app.asar/ tree, but
- * external processes (Claude/Cursor/Gemini/opencode) cannot read inside asar
+ * external processes (Claude/Codex/opencode/Pi) cannot read inside asar
  * and must use the physical copy under app.asar.unpacked/ (see package.json
  * "asarUnpack"). No-op for dev/source installs.
  */
@@ -352,9 +352,11 @@ function windowsPowerShellBin(options = {}) {
  * Build a PowerShell -EncodedCommand hook command. The node bin and every
  * argv are single-quoted at the PS level then base64 utf-16le encoded, so
  * the resulting flat command line survives both cmd.exe quote stripping
- * (qwen uses `cmd /d /s /c <command>`, which strips outer quotes under /s
- * and breaks any path with a space) and any agent that wraps the command
- * once more in its own shell. Used by Antigravity and Qwen Code installers.
+ * (a `cmd /d /s /c <command>` hook runner strips outer quotes under /s and
+ * breaks any path with a space) and any agent that wraps the command once
+ * more in its own shell. No surviving installer emits this form, but the
+ * Claude hook-health inspector must still recognize commands a user or a
+ * third-party tool wrote this way, and it builds one to test that.
  */
 function buildWindowsEncodedNodeHookCommand(nodeBin, scriptPath, args, options = {}) {
   const argv = Array.isArray(args) ? args : [];
@@ -410,12 +412,11 @@ function portableWindowsNodeToken(nodeBin) {
  *
  * POSIX hook launchers can execute a plain quoted command. On Windows, some
  * launchers run through PowerShell, where a bare quoted executable is treated
- * as a string literal and must be prefixed with `&`; others (Qwen Code,
- * Antigravity) shell out through `cmd.exe /d /s /c <command>`, which mangles
- * any quoted path with a space — those use windowsWrapper:"encoded" to wrap
- * everything in PowerShell -EncodedCommand and bypass cmd's parser entirely.
- * Launchers that execute hooks through a POSIX shell on Windows (Qoder CLI
- * runs command hooks via Git Bash — see issue #597) need
+ * as a string literal and must be prefixed with `&`; others shell out through
+ * `cmd.exe /d /s /c <command>`, which mangles any quoted path with a space —
+ * those use windowsWrapper:"encoded" to wrap everything in PowerShell
+ * -EncodedCommand and bypass cmd's parser entirely. Launchers that execute
+ * hooks through a POSIX shell on Windows (Git Bash — see issue #597) need
  * windowsWrapper:"portable": an unquoted forward-slash interpreter token plus
  * double-quoted arguments, which parses under bash, cmd, and PowerShell-free
  * spawn paths alike. Same known limit as buildPortableStatuslineCommand:
@@ -462,8 +463,8 @@ const NON_PORTABLE_COMMAND_TOKEN_RE = /[\s"'`&|<>^%!();,$*?#~={}[\]]/;
  * Build a statusline command that parses in every shell the host agent might
  * run it under. Unlike hooks, statusLine settings have no `shell` field:
  * Claude Code runs the command through Git Bash when Git is installed
- * (nearly always - it's an install prerequisite) and PowerShell otherwise;
- * Antigravity is expected to use cmd like its hook runner. No QUOTED command
+ * (nearly always - it's an install prerequisite) and PowerShell otherwise,
+ * and a cmd-based hook runner is a third possibility. No QUOTED command
  * token parses in all of those: `& "..."` is PowerShell-only (bash: syntax
  * error), a bare `"..."` is a string literal in PowerShell (never executed),
  * and an unquoted backslash path is eaten by bash. So the interpreter token

@@ -102,8 +102,8 @@ describe("shouldBypassFamilyBubble", () => {
       },
     };
     shouldBypassFamilyBubble(ctx, "opencode");
-    shouldBypassFamilyBubble(ctx, "mimocode");
-    assert.deepStrictEqual(calls, ["opencode", "mimocode"]);
+    shouldBypassFamilyBubble(ctx, "codex");
+    assert.deepStrictEqual(calls, ["opencode", "codex"]);
   });
 
   it("missing isAgentPermissionsEnabled → fail-open", () => {
@@ -111,6 +111,5 @@ describe("shouldBypassFamilyBubble", () => {
   });
 });
 
-// D2/D3: shouldBypassAntigravityBubble and shouldBypassPiBubble are absent
-// because both integrations are state-only; no bubble path exists for a
-// subgate to gate.
+// D2/D3: shouldBypassPiBubble is absent because the Pi integration is
+// state-only; no bubble path exists for a subgate to gate.

@@ -942,18 +942,6 @@ function normalizePathList(value, options = {}) {
   return out;
 }
 
-function normalizeOptionalHttpUrl(value) {
-  if (typeof value !== "string") return "";
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  try {
-    const parsed = new URL(trimmed);
-    return parsed.protocol === "http:" || parsed.protocol === "https:" ? trimmed : "";
-  } catch {
-    return "";
-  }
-}
-
 function normalizeDismissedUpdateVersions(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const out = {};
@@ -1059,13 +1047,6 @@ function normalizeAgents(value, defaultsValue) {
     if (id === "codex" && CODEX_PERMISSION_MODES.includes(entry.permissionMode)) {
       merged.permissionMode = entry.permissionMode;
       touched = true;
-    }
-    if (Object.prototype.hasOwnProperty.call(base, "customPermissionUrl")) {
-      const customPermissionUrl = normalizeOptionalHttpUrl(entry.customPermissionUrl);
-      if (customPermissionUrl || typeof entry.customPermissionUrl === "string") {
-        merged.customPermissionUrl = customPermissionUrl;
-        touched = true;
-      }
     }
     if (
       Object.prototype.hasOwnProperty.call(base, "customDiscoveryPaths")
@@ -1547,7 +1528,6 @@ module.exports = {
   normalizePetTint,
   normalizePetMouthAccessory,
   normalizeShortcuts,
-  normalizeOptionalHttpUrl,
   normalizePathList,
   isValidSettingsWindowBounds,
   MAX_CUSTOM_DISCOVERY_PATHS,

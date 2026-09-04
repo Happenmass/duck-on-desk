@@ -267,6 +267,29 @@ describe("integration sync runtime", () => {
     ]);
   });
 
+  // No surviving agent contributes install-time options today, so the syncers
+  // themselves take none. What must not rot is the read: startup sync still
+  // consults getAgentIntegrationOptions once per agent it syncs
+  // (main.js -> server.js -> integration-sync), which is what an agent that
+  // needs options would hang off.
+  it("reads saved custom integration options during startup sync", () => {
+    const optionReads = [];
+    const { runtime, calls } = makeRuntime({
+      shouldSyncAgentIntegration: (agentId) => agentId === "codex",
+      getAgentIntegrationOptions: (agentId) => {
+        optionReads.push(agentId);
+        return agentId === "codex"
+          ? { permissionTarget: { mode: "custom", url: "https://approval.example.test/permission" } }
+          : {};
+      },
+    });
+
+    runtime.syncEnabledStartupIntegrations();
+
+    assert.deepStrictEqual(calls, [{ name: "codex" }]);
+    assert.deepStrictEqual(optionReads, ["codex"]);
+  });
+
   it("syncIntegrationForAgent respects Claude management gate", () => {
     const { runtime, calls } = makeRuntime({
       shouldManageClaudeHooks: () => false,

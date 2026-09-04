@@ -217,9 +217,9 @@ test("completion respects an explicitly hidden snapshot displayFolder", async ()
   const { comp, sent } = makeCompanion({ getNotifyOnComplete: () => true });
   comp.onSnapshot({ sessions: [] });
   comp.onSnapshot({ sessions: [doneEntry({
-    id: "qwenwork:hidden",
-    agentId: "qwenwork",
-    cwd: `/Users/me/.QwenWorkCN/workspace/${opaque}`,
+    id: "opencode:hidden",
+    agentId: "opencode",
+    cwd: `/Users/me/.somehost/workspace/${opaque}`,
     displayFolder: "",
   })] });
   await tick();

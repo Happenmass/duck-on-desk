@@ -90,7 +90,6 @@ function update(api, o = {}) {
       sessionTitle: o.sessionTitle ?? null,
       contextUsage: o.contextUsage ?? null,
       contextUsageOrigin: o.contextUsageOrigin ?? null,
-      antigravityQuota: o.antigravityQuota ?? null,
       claudeQuota: o.claudeQuota ?? null,
       platform: o.platform ?? null,
       model: o.model ?? null,
@@ -1576,7 +1575,7 @@ describe("cleanStaleSessions()", () => {
       sessionHudCleanupDetached: true,
     }));
     api.sessions.set("s1", rawSession("idle", {
-      agentId: "gemini-cli",
+      agentId: "codex",
       sourcePid: 9999,
       pidReachable: true,
       updatedAt: Date.now() - 31000,
@@ -2183,11 +2182,11 @@ describe("updateSession()", () => {
   });
 
   it("drops a stale Orca pane key on every spelling of a session start", () => {
-    // Producers do not agree on the name: copilot-hook.js posts its raw argv name
-    // "sessionStart" and kiro-hook.js posts "agentSpawn". Matching only
-    // "SessionStart" left both able to keep a stale key indefinitely, and Kiro is
-    // the worst case — its stdin carries no session id, so every session merges
-    // into "default" and the key would never be cleared at all.
+    // Producers do not agree on the name: some hooks post their raw argv name
+    // "sessionStart", others "agentSpawn". Matching only "SessionStart" left
+    // both able to keep a stale key indefinitely, worst of all for a producer
+    // whose stdin carries no session id — every session merges into "default"
+    // and the key would never be cleared at all.
     for (const event of ["SessionStart", "sessionStart", "agentSpawn"]) {
       update(api, {
         id: "s1",
@@ -2204,9 +2203,9 @@ describe("updateSession()", () => {
   });
 
   it("drops a stale Orca pane key when a producer with no session-start event moves terminal", () => {
-    // antigravity-hook.js posts none of the three session-start spellings, so the
-    // event-name rule never fires for it and a pane key outlived its pane forever.
-    // Its id normalizes payload.conversationId, so resuming the same conversation
+    // A producer that posts none of the three session-start spellings never
+    // fires the event-name rule, so its pane key outlived its pane forever.
+    // Its id normalizes a conversation id, so resuming the same conversation
     // from another terminal lands back on this same entry.
     update(api, {
       id: "s1",
@@ -2916,7 +2915,7 @@ describe("updateSession()", () => {
     assert.strictEqual(api.sessions.get("s1").sessionTitle, "My Task");
   });
 
-  it("lets the latest title win for non-traecode agents (unchanged behaviour)", () => {
+  it("lets the latest title win", () => {
     update(api, { id: "s2", state: "thinking", event: "UserPromptSubmit", agentId: "claude-code", sessionTitle: "旧标题" });
     update(api, { id: "s2", state: "thinking", event: "UserPromptSubmit", agentId: "claude-code", sessionTitle: "新标题" });
     assert.strictEqual(api.sessions.get("s2").sessionTitle, "新标题");
@@ -3150,31 +3149,6 @@ describe("updateSession()", () => {
     assert.strictEqual(reloaded.find((entry) => entry.host === null).claudeQuota, undefined,
       "startup cleanup must be persisted synchronously");
     assert.strictEqual(reloaded.find((entry) => entry.host === "workbox").claudeQuota.group.claudeWeekly.usedPercent, 90);
-  });
-
-  it("cleans a persisted local Kimi cache on startup when collection is disabled", () => {
-    const persistPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "clawd-kimi-optout-")), "account-quota.json");
-    const { createAccountQuotaStore } = require("../src/state-account-quota");
-    const seed = createAccountQuotaStore({ persistPath });
-    const resetAt = Date.now() + 3600000;
-    seed.update(null, {
-      kimiQuota: { kimiFiveHour: { usedPercent: 18, resetAt } },
-      codexQuota: { codexWeekly: { usedPercent: 7, resetAt } },
-    });
-    seed.flush();
-
-    const localApi = require("../src/state")(makeCtx({
-      accountQuotaPersistPath: persistPath,
-      kimiQuotaCollectionEnabled: false,
-    }));
-    const local = localApi.buildSessionSnapshot().accountQuota.find((entry) => entry.host === null);
-    assert.strictEqual(local.kimiQuota, undefined);
-    assert.strictEqual(local.codexQuota.group.codexWeekly.usedPercent, 7);
-    localApi.cleanup();
-
-    const reloaded = createAccountQuotaStore({ persistPath }).snapshot()[0];
-    assert.strictEqual(reloaded.kimiQuota, undefined);
-    assert.strictEqual(reloaded.codexQuota.group.codexWeekly.usedPercent, 7);
   });
 
   it("updateAccountQuota change-detects identical refreshes (no re-broadcast, no re-stamp)", () => {
@@ -3775,11 +3749,11 @@ describe("recentEvents tracking", () => {
     assert.strictEqual(events[0].event, null);
   });
 
-  it("records Gemini PreCompress without changing the active session state", () => {
-    update(api, { id: "g1", state: "thinking", event: "UserPromptSubmit", agentId: "gemini-cli" });
+  it("records PreCompress without changing the active session state", () => {
+    update(api, { id: "g1", state: "thinking", event: "UserPromptSubmit", agentId: "codex" });
     api.updateSession("g1", "idle", "PreCompress", {
       cwd: "/tmp",
-      agentId: "gemini-cli",
+      agentId: "codex",
       preserveState: true,
     });
 
@@ -3791,7 +3765,7 @@ describe("recentEvents tracking", () => {
     );
   });
 
-  it("keeps the pet display state on Gemini PreCompress while exposing the event in session snapshots", () => {
+  it("keeps the pet display state on PreCompress while exposing the event in session snapshots", () => {
     const stateChanges = [];
     api.cleanup();
     api = require("../src/state")(makeCtx({
@@ -3800,11 +3774,11 @@ describe("recentEvents tracking", () => {
       sendToHitWin: () => {},
     }));
 
-    update(api, { id: "g1", state: "thinking", event: "UserPromptSubmit", agentId: "gemini-cli" });
+    update(api, { id: "g1", state: "thinking", event: "UserPromptSubmit", agentId: "codex" });
     const beforeCount = stateChanges.length;
     api.updateSession("g1", "idle", "PreCompress", {
       cwd: "/tmp",
-      agentId: "gemini-cli",
+      agentId: "codex",
       preserveState: true,
     });
 
@@ -3816,11 +3790,11 @@ describe("recentEvents tracking", () => {
     assert.ok(stateChanges.every((entry) => entry[1] !== "sweeping"));
   });
 
-  it("returns Gemini sessions to idle on AfterAgent without marking them done", () => {
-    update(api, { id: "g1", state: "working", event: "PreToolUse", agentId: "gemini-cli" });
+  it("returns sessions to idle on AfterAgent without marking them done", () => {
+    update(api, { id: "g1", state: "working", event: "PreToolUse", agentId: "codex" });
     api.updateSession("g1", "idle", "AfterAgent", {
       cwd: "/tmp",
-      agentId: "gemini-cli",
+      agentId: "codex",
     });
 
     const session = api.sessions.get("g1");
@@ -4061,7 +4035,7 @@ describe("buildSessionSnapshot", () => {
       sourcePid: 9999,
       pidReachable: true,
       cwd: "/tmp/idle-project",
-      agentId: "gemini-cli",
+      agentId: "codex",
       recentEvents: [{ event: "AfterAgent", state: "idle", at: 2900 }],
     }));
 
@@ -4194,40 +4168,6 @@ describe("buildSessionSnapshot", () => {
       snapshot.sessions.find((s) => s.id === "remote-other-agent").displayTitle,
       "project"
     );
-  });
-
-  it("scopes Kiro default-session aliases by cwd", () => {
-    api.cleanup();
-    api = require("../src/state")(makeCtx({
-      getSessionAliases: () => ({
-        "local|kiro-cli|default|cwd:%2Frepo%2Fa": { title: "Kiro repo A", updatedAt: 100 },
-      }),
-    }));
-    api.sessions.set("default", rawSession("working", {
-      updatedAt: 1000,
-      cwd: "/repo/b",
-      agentId: "kiro-cli",
-    }));
-
-    const snapshot = api.buildSessionSnapshot();
-    assert.strictEqual(snapshot.sessions[0].displayTitle, "b");
-  });
-
-  it("falls back to legacy Kiro default-session aliases when no cwd-scoped alias exists", () => {
-    api.cleanup();
-    api = require("../src/state")(makeCtx({
-      getSessionAliases: () => ({
-        "local|kiro-cli|default": { title: "Legacy Kiro", updatedAt: 100 },
-      }),
-    }));
-    api.sessions.set("default", rawSession("working", {
-      updatedAt: 1000,
-      cwd: "/repo/a",
-      agentId: "kiro-cli",
-    }));
-
-    const snapshot = api.buildSessionSnapshot();
-    assert.strictEqual(snapshot.sessions[0].displayTitle, "Legacy Kiro");
   });
 
   it("returns active session alias keys for all sessions including idle and headless", () => {
@@ -5578,7 +5518,7 @@ describe("deriveSessionBadge", () => {
     assert.strictEqual(api.deriveSessionBadge(s), "idle");
   });
 
-  it("returns 'idle' when idle with Gemini AfterAgent in recentEvents", () => {
+  it("returns 'idle' when idle with AfterAgent in recentEvents", () => {
     const s = { state: "idle", recentEvents: [{ event: "AfterAgent" }] };
     assert.strictEqual(api.deriveSessionBadge(s), "idle");
   });

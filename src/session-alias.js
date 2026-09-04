@@ -30,12 +30,6 @@ function normalizeSessionId(sessionId) {
   return normalized;
 }
 
-function normalizeSessionScope(agentId, sessionId, options = {}) {
-  const normalizedAgent = normalizeSessionAgent(agentId);
-  const normalizedSessionId = normalizeSessionId(sessionId);
-  return "";
-}
-
 function sessionAliasKey(host, agentId, sessionId, options = {}) {
   const normalizedSessionId = normalizeSessionId(sessionId);
   if (!normalizedSessionId) return null;
@@ -50,8 +44,6 @@ function sessionAliasKey(host, agentId, sessionId, options = {}) {
   if (profileId && profileId !== "local") {
     parts.unshift(`profile:${encodeURIComponent(profileId)}`);
   }
-  const scope = normalizeSessionScope(agentId, normalizedSessionId, options);
-  if (scope) parts.push(scope);
   return parts.join("|");
 }
 
@@ -120,7 +112,6 @@ module.exports = {
   SESSION_ALIAS_TTL_MS,
   normalizeSessionHost,
   normalizeSessionAgent,
-  normalizeSessionScope,
   sessionAliasKey,
   sanitizeSessionAlias,
   normalizeSessionAliases,

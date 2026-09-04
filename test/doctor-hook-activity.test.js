@@ -129,11 +129,11 @@ describe("doctor hook activity connection test", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-doctor-activity-"));
     const since = Date.now() - 1000;
     const codexDir = path.join(tmp, ".codex", "sessions", "2026", "04", "28");
-    const geminiDir = path.join(tmp, ".gemini", "tmp", "project", "chats");
+    const otherDir = path.join(tmp, ".other-agent", "tmp", "project", "chats");
     fs.mkdirSync(codexDir, { recursive: true });
-    fs.mkdirSync(geminiDir, { recursive: true });
+    fs.mkdirSync(otherDir, { recursive: true });
     fs.writeFileSync(path.join(codexDir, "rollout-2026-04-28T00-00-00-11111111-2222-3333-4444-555555555555.jsonl"), "{}\n");
-    fs.writeFileSync(path.join(geminiDir, "session-abc.json"), "{}");
+    fs.writeFileSync(path.join(otherDir, "session-abc.json"), "{}");
 
     const activity = scanFileMtimeActivity({ homeDir: tmp, since });
 

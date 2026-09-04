@@ -236,7 +236,6 @@ function createHarness(overrides = {}) {
     getHookServerPort: overrides.getHookServerPort,
     getRecentHookEvents: overrides.getRecentHookEvents,
     getQuotaSourceCount: overrides.getQuotaSourceCount,
-    kimiQuotaRuntime: overrides.kimiQuotaRuntime,
     detectAgentInstallations: overrides.detectAgentInstallations,
     checkForUpdates: overrides.checkForUpdates || ((manual) => {
       calls.push(["checkForUpdates", manual]);
@@ -1134,7 +1133,7 @@ test("settings IPC serves agent/about/update/external and remove-theme dialog he
       getAllAgents: () => [
         { id: "codex", name: "Codex", eventSource: "hook", capabilities: { permission: true } },
         { id: "claude-code", name: "Claude Code", eventSource: "hook", capabilities: {} },
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {} },
+        { id: "opencode", name: "opencode", eventSource: "hook", capabilities: {} },
       ],
       getHookServerPort: () => 23335,
       getRecentHookEvents: ({ agentId }) => [{
@@ -1183,8 +1182,8 @@ test("settings IPC serves agent/about/update/external and remove-theme dialog he
         cleanupSuggestionExempt: true,
       },
       {
-        id: "qwen-code",
-        name: "Qwen Code",
+        id: "opencode",
+        name: "opencode",
         eventSource: "hook",
         capabilities: {},
         cleanupSuggestionExempt: false,
@@ -1289,7 +1288,7 @@ test("settings IPC exposes read-only agent installation detection", async () => 
       sawPath = !!options.path;
       return {
         checkedAt: options.now(),
-        agents: [{ agentId: "qwen-code", detectedInstalled: true }],
+        agents: [{ agentId: "opencode", detectedInstalled: true }],
         skippedAgentIds: ["claude-code"],
       };
     },
@@ -1297,7 +1296,7 @@ test("settings IPC exposes read-only agent installation detection", async () => 
 
   assert.deepStrictEqual(await ipcMain.invoke("settings:detect-agent-installations"), {
     checkedAt: 777,
-    agents: [{ agentId: "qwen-code", detectedInstalled: true }],
+    agents: [{ agentId: "opencode", detectedInstalled: true }],
     skippedAgentIds: ["claude-code"],
   });
   assert.strictEqual(sawFs, true);

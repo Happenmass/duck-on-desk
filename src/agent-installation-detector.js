@@ -65,14 +65,6 @@ function readText(fsImpl, filePath) {
   }
 }
 
-function listDir(fsImpl, dirPath) {
-  try {
-    return fsImpl.readdirSync(dirPath, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-}
-
 function checkedAtValue(now) {
   if (typeof now === "function") {
     const value = now();
@@ -92,10 +84,6 @@ function rebaseHomePath(value, homeDir) {
     return path.join(homeDir, path.relative(currentHome, resolved));
   }
   return value;
-}
-
-function pathForHome(homeDir, ...parts) {
-  return path.join(homeDir || os.homedir(), ...parts);
 }
 
 function uniqueStrings(values) {
@@ -120,13 +108,6 @@ function resolveAgentPaths(descriptor, options) {
   const paths = { parentDir, configPath };
   if (descriptor.settingsPath) paths.settingsPath = rebaseHomePath(descriptor.settingsPath, homeDir);
   if (descriptor.configFilePath) paths.configFilePath = rebaseHomePath(descriptor.configFilePath, homeDir);
-  if (Array.isArray(descriptor.configTargets)) {
-    paths.configTargets = descriptor.configTargets.map((target) => ({
-      ...target,
-      parentDir: rebaseHomePath(target.parentDir, homeDir),
-      configPath: rebaseHomePath(target.configPath, homeDir),
-    }));
-  }
   return finalizeAgentPaths(descriptor, paths, options);
 }
 
@@ -248,20 +229,6 @@ function detectCustomAgents(options = {}) {
   }).filter((entry) => entry.agentId && entry.executablePath);
 }
 
-function markerInDirectoryFiles(fsImpl, dirPath, marker, options = {}) {
-  if (!dirExists(fsImpl, dirPath)) return false;
-  const maxFiles = Number.isFinite(options.maxFiles) ? options.maxFiles : 100;
-  let checked = 0;
-  for (const entry of listDir(fsImpl, dirPath)) {
-    if (!entry || !entry.isFile || !entry.isFile()) continue;
-    if (checked >= maxFiles) break;
-    checked++;
-    const text = readText(fsImpl, path.join(dirPath, entry.name));
-    if (hasClawdMarkerText(text, marker)) return true;
-  }
-  return false;
-}
-
 function detectClawdIntegration(descriptor, paths, options) {
   const fsImpl = options.fs;
   if (descriptor.agentId === "pi") {
@@ -269,26 +236,6 @@ function detectClawdIntegration(descriptor, paths, options) {
     return fileExists(fsImpl, markerPath)
       ? { detected: true, reason: "marker-file", detail: `${markerPath} exists`, paths: { markerPath } }
       : { detected: false, reason: "not-found", detail: "No Clawd-managed Pi extension marker found" };
-  }
-  if (descriptor.configMode === "dir") {
-    return markerInDirectoryFiles(fsImpl, paths.configPath, descriptor.marker)
-      ? { detected: true, reason: "marker-found", detail: `${paths.configPath} contains ${descriptor.marker}`, paths: { configPath: paths.configPath } }
-      : { detected: false, reason: "not-found", detail: `No ${descriptor.marker} marker found` };
-  }
-  // Multi-generation agents may carry the marker in any generation's config;
-  // report the first hit.
-  if (Array.isArray(paths.configTargets)) {
-    for (const target of paths.configTargets) {
-      const targetText = readText(fsImpl, target.configPath);
-      if (hasClawdMarkerText(targetText, descriptor.marker)) {
-        return {
-          detected: true,
-          reason: "marker-found",
-          detail: `${target.configPath} contains ${descriptor.marker}`,
-          paths: { configPath: target.configPath },
-        };
-      }
-    }
   }
   const text = readText(fsImpl, paths.configPath);
   if (hasClawdMarkerText(text, descriptor.marker)) {

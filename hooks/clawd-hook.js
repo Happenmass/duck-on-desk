@@ -44,10 +44,6 @@ const TOOL_MATCH_ARRAY_MAX = 16;
 const TOOL_MATCH_OBJECT_KEYS_MAX = 32;
 const TOOL_MATCH_DEPTH_MAX = 6;
 const ASSISTANT_OUTPUT_CONTROL_RE = /[\u0000-\u0008\u000b\u000c\u000e-\u001F\u007F-\u009F]+/g;
-function resolveReportingAgentId() {
-  return "claude-code";
-}
-
 function normalizeTitle(value) {
   if (typeof value !== "string") return null;
   const collapsed = value
@@ -580,7 +576,7 @@ function buildStateBody(event, payload, resolve) {
   }
   // Every payload this hook reports belongs to Claude Code, regardless of the
   // terminal or editor the CLI was launched from.
-  body.agent_id = resolveReportingAgentId(payload);
+  body.agent_id = "claude-code";
   // Claude-compatible command-hook payloads use agent_id/agent_type for
   // subagent provenance. Keep the public Clawd agent_id canonical, but preserve
   // that identity separately so a SubagentStop/PostToolUse event can settle

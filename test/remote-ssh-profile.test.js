@@ -332,7 +332,7 @@ function verifiedIsolatedProfile(over = {}) {
           version: "2.1.211",
         },
         codex: absentCapability,
-        copilot: absentCapability,
+        pi: absentCapability,
       },
     },
     ...over,
@@ -527,7 +527,7 @@ test("sanitizeProfile derives isolated activation only from matching verified ev
       artifactVerified: false,
       wrapperInvoked: false,
     },
-    copilot: {
+    pi: {
       present: false,
       versionVerified: false,
       artifactVerified: false,

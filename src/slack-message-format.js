@@ -292,7 +292,7 @@ function folderName(cwd) {
 function entryFolderName(entry) {
   if (!entry || typeof entry !== "object") return "";
   // An explicit empty displayFolder is meaningful: snapshot construction uses
-  // it to suppress opaque QwenWork/QoderWork workspace ids. Falling back with
+  // it to suppress opaque workspace ids. Falling back with
   // `entry.displayFolder || folderName(entry.cwd)` would reintroduce the leak.
   if (Object.prototype.hasOwnProperty.call(entry, "displayFolder")) {
     return folderName(entry.displayFolder);

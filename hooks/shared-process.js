@@ -814,7 +814,7 @@ function createPidResolver(options) {
 
   // Low-frequency orphan sweep, AT MOST ONCE per resolver instance = per hook
   // process (plan §5.4). Triggered by `start`, or — for adapters that have no
-  // start (Antigravity etc., later slices) — by the first successful `event`
+  // start event at all — by the first successful `event`
   // fresh→v2 population, so every adapter has a cleanup entry point. Zero spawn
   // (kill(pid,0) liveness).
   let _swept = false;

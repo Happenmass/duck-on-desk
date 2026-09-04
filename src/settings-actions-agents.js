@@ -5,7 +5,6 @@ const {
   CODEX_PERMISSION_MODES,
   MAX_CUSTOM_DISCOVERY_PATH_LENGTH,
   MAX_CUSTOM_DISCOVERY_PATHS,
-  normalizeOptionalHttpUrl,
   normalizePathList,
 } = require("./prefs");
 const {
@@ -17,7 +16,6 @@ const {
   requireBoolean,
   requireString,
 } = require("./settings-validators");
-const { getAgent } = require("../agents/registry");
 const {
   MAX_CUSTOM_APPLICATIONS,
   identifyCustomApplication: defaultIdentifyCustomApplication,
@@ -158,7 +156,7 @@ function setAgentFlag(payload, deps) {
           isAgentIntegrationInstalled(snapshot, agentId)
           && typeof deps.syncIntegrationForAgent === "function"
         ) {
-          deps.syncIntegrationForAgent(agentId, buildAgentIntegrationOptions(snapshot, agentId));
+          deps.syncIntegrationForAgent(agentId);
         }
         if (typeof deps.startMonitorForAgent === "function") deps.startMonitorForAgent(agentId);
       }
@@ -189,7 +187,6 @@ const _validateUninstallAgentId = requireString("uninstallAgentIntegration.agent
 const _validateDismissInstallHintId = requireString("dismissAgentInstallHints.agentId");
 const _validateDismissCleanupHintId = requireString("dismissAgentCleanupHints.agentId");
 const _validateClearCleanupHintId = requireString("clearAgentCleanupHints.agentId");
-const _validateCustomPermissionUrlAgentId = requireString("setAgentCustomPermissionUrl.agentId");
 const _validateCustomDiscoveryPathsAgentId = requireString("setAgentCustomDiscoveryPaths.agentId");
 
 function setAgentPermissionMode(payload, deps) {
@@ -282,91 +279,6 @@ function buildAgentCommit(snapshot, agentId, patch) {
         ...patch,
       },
     },
-  };
-}
-
-function buildAgentIntegrationOptions(snapshot, agentId) {
-  const entry = snapshot && snapshot.agents && snapshot.agents[agentId];
-  if (!entry || typeof entry !== "object") return {};
-  const options = {};
-  if (agentSupportsCustomPermissionUrl(agentId)) {
-    const customPermissionUrl = normalizeOptionalHttpUrl(entry.customPermissionUrl);
-    options.permissionTarget = customPermissionUrl
-      ? { mode: "custom", url: customPermissionUrl }
-      : { mode: "local" };
-  }
-  return options;
-}
-
-function agentSupportsCustomPermissionUrl(agentId) {
-  const agent = getAgent(agentId);
-  return !!(
-    agent
-    && agent.capabilities
-    && agent.capabilities.httpHook
-    && agent.capabilities.customPermissionUrl
-  );
-}
-
-function buildAgentIntegrationOptionsWithPatch(snapshot, agentId, patch) {
-  const currentAgents = (snapshot && snapshot.agents) || {};
-  const currentEntry = currentAgents[agentId] && typeof currentAgents[agentId] === "object"
-    ? currentAgents[agentId]
-    : {};
-  return buildAgentIntegrationOptions({
-    ...snapshot,
-    agents: {
-      ...currentAgents,
-      [agentId]: {
-        ...currentEntry,
-        ...patch,
-      },
-    },
-  }, agentId);
-}
-
-function setAgentCustomPermissionUrl(payload, deps = {}) {
-  if (!payload || typeof payload !== "object") {
-    return { status: "error", message: "setAgentCustomPermissionUrl: payload must be an object" };
-  }
-  const idCheck = _validateCustomPermissionUrlAgentId(payload.agentId);
-  if (idCheck.status !== "ok") return idCheck;
-  if (!agentSupportsCustomPermissionUrl(payload.agentId)) {
-    return {
-      status: "error",
-      message: `setAgentCustomPermissionUrl does not support ${payload.agentId}`,
-    };
-  }
-  if (typeof payload.value !== "string") {
-    return { status: "error", message: "setAgentCustomPermissionUrl.value must be a string" };
-  }
-  const value = normalizeOptionalHttpUrl(payload.value);
-  if (payload.value.trim() && !value) {
-    return { status: "error", message: "setAgentCustomPermissionUrl.value must be an http(s) URL" };
-  }
-  const snapshot = deps.snapshot || {};
-  const current = snapshot.agents && snapshot.agents[payload.agentId];
-  const currentValue = normalizeOptionalHttpUrl(current && current.customPermissionUrl);
-  if (currentValue === value) return { status: "ok", noop: true };
-  try {
-    if (
-      isAgentIntegrationInstalled(snapshot, payload.agentId)
-      && typeof deps.syncIntegrationForAgent === "function"
-    ) {
-      deps.syncIntegrationForAgent(
-        payload.agentId,
-        buildAgentIntegrationOptionsWithPatch(snapshot, payload.agentId, { customPermissionUrl: value })
-      );
-    }
-  } catch (err) {
-    return {
-      status: "error",
-      message: `setAgentCustomPermissionUrl side effect threw: ${err && err.message}`,
-    };
-  }
-  return {
-    status: "ok",
-    commit: buildAgentCommit(snapshot, payload.agentId, { customPermissionUrl: value }),
   };
 }
 
@@ -520,7 +432,6 @@ async function installAgentIntegration(payload, deps = {}) {
 
   try {
     const result = await deps.syncIntegrationForAgent(agentId, {
-      ...buildAgentIntegrationOptions(snapshot, agentId),
       source: "settings-agent-install",
       automatic: false,
     });
@@ -671,7 +582,6 @@ async function repairAgentIntegration(payload, deps) {
 
   try {
     const result = await repairFn(agentId, {
-      ...buildAgentIntegrationOptions(snapshot, agentId),
       forceCodexHooksFeature: agentId === "codex" && forceCodexHooksFeature,
     });
     if (result === false) {
@@ -789,7 +699,6 @@ setAgentPermissionMode.lockKey = "agentIntegration";
 installAgentIntegration.lockKey = "agentIntegration";
 uninstallAgentIntegration.lockKey = "agentIntegration";
 repairAgentIntegration.lockKey = "agentIntegration";
-setAgentCustomPermissionUrl.lockKey = "agentIntegration";
 setAgentCustomDiscoveryPaths.lockKey = "agentIntegration";
 addCustomApplication.lockKey = "agentIntegration";
 removeCustomApplication.lockKey = "agentIntegration";
@@ -870,7 +779,6 @@ module.exports = {
   removeFromWsl,
   setAgentCustomDiscoveryPaths,
   setAgentFlag,
-  setAgentCustomPermissionUrl,
   setAgentPermissionMode,
   uninstallAgentIntegration,
   repairAgentIntegration,

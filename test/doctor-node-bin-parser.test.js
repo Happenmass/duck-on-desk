@@ -47,7 +47,7 @@ describe("doctor hook command parser", () => {
 
   it("validates absolute Windows node paths", () => {
     const nodeBin = "C:\\Program Files\\nodejs\\node.exe";
-    const scriptPath = "D:/animation/hooks/kiro-hook.js";
+    const scriptPath = "D:/animation/hooks/agent-e-hook.js";
     const command = formatNodeHookCommand(nodeBin, scriptPath, {
       platform: "win32",
       windowsWrapper: "powershell",
@@ -64,7 +64,7 @@ describe("doctor hook command parser", () => {
 
   it("validates direct process executor node/script targets without shell parsing", () => {
     const nodeBin = "C:\\Program Files\\nodejs\\node.exe";
-    const scriptPath = "D:/Program Files/Clawd/hooks/zcode-hook.js";
+    const scriptPath = "D:/Program Files/Clawd/hooks/agent-f-hook.js";
 
     assert.deepStrictEqual(
       validateHookTarget({ nodeBin, scriptPath }, {
@@ -77,7 +77,7 @@ describe("doctor hook command parser", () => {
 
   it("rejects non-Node and bare executables for strict process targets", () => {
     const cmdBin = "C:\\Windows\\System32\\cmd.exe";
-    const scriptPath = "D:/Program Files/Clawd/hooks/zcode-hook.js";
+    const scriptPath = "D:/Program Files/Clawd/hooks/agent-f-hook.js";
 
     assert.deepStrictEqual(
       validateHookTarget({ nodeBin: cmdBin, scriptPath }, {
@@ -111,7 +111,7 @@ describe("doctor hook command parser", () => {
 
   it("does not mistake preload scripts for the hook script", () => {
     const nodeBin = "/usr/local/bin/node";
-    const scriptPath = "/opt/clawd/hooks/antigravity-hook.js";
+    const scriptPath = "/opt/clawd/hooks/agent-g-hook.js";
     const command = `"${nodeBin}" "--require" "./pre.js" "${scriptPath}"`;
 
     assert.deepStrictEqual(

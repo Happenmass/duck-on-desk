@@ -10791,7 +10791,7 @@ describe("settings renderer browser environment", () => {
     assert.ok(ringEnabled);
     assert.ok(mergeSources);
     // Per-provider collection is NOT here. It lives on each provider's own card
-    // under Agents (Claude alongside Kimi), so this group stays about what the
+    // under Agents (one card per provider), so this group stays about what the
     // ring looks like and "which providers am I reading" has one place to look.
     // Pin the absence: re-adding it here would silently re-split the setting
     // across two tabs, which is the state this move existed to end.
@@ -10820,7 +10820,7 @@ describe("settings renderer browser environment", () => {
         getQuotaRingProviders: async () => ([
           { key: "claudeQuota", label: "Claude", hidden: false },
           { key: "codexQuota", label: "Codex", hidden: true },
-          { key: "kimiQuota", label: "Kimi", hidden: false },
+          { key: "otherQuota", label: "Other", hidden: false },
         ]),
         update: (key, value) => {
           updateCalls.push({ key, value });
@@ -10838,13 +10838,13 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(rows.length, 3);
     assert.deepStrictEqual(
       rows.map((row) => row.dataset.providerKey),
-      ["claudeQuota", "codexQuota", "kimiQuota"]
+      ["claudeQuota", "codexQuota", "otherQuota"]
     );
     // The switch reads as "shown", the stored preference records what is hidden.
     const switches = rows.map((row) => row.querySelector(".switch"));
     assert.strictEqual(switches[0].classList.contains("on"), true, "Claude draws");
     assert.strictEqual(switches[1].classList.contains("on"), false, "Codex is hidden");
-    assert.strictEqual(switches[2].classList.contains("on"), true, "Kimi draws");
+    assert.strictEqual(switches[2].classList.contains("on"), true, "the third provider draws");
 
     // Hiding one appends to the list rather than replacing it, or turning off a
     // second provider would quietly bring the first one back.
@@ -10852,7 +10852,7 @@ describe("settings renderer browser environment", () => {
     await Promise.resolve();
     await Promise.resolve();
     assert.deepStrictEqual(updateCalls, [
-      { key: "quotaRingHiddenProviders", value: ["codexQuota", "kimiQuota"] },
+      { key: "quotaRingHiddenProviders", value: ["codexQuota", "otherQuota"] },
     ]);
 
     // Re-showing removes only that key.
@@ -10872,7 +10872,7 @@ describe("settings renderer browser environment", () => {
       snapshot: makeGeneralSnapshot({}),
       settingsAPI: {
         getQuotaSourceCount: async () => 1,
-        getQuotaRingProviders: async () => ([{ key: "kimiQuota", label: "Kimi", hidden: false }]),
+        getQuotaRingProviders: async () => ([{ key: "otherQuota", label: "Other", hidden: false }]),
       },
     });
     harness.renderContent();
@@ -11484,8 +11484,8 @@ describe("settings renderer browser environment", () => {
     const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
     const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
     // Claude's collection switch used to live in General's quota-ring group
-    // while Kimi's equivalent lived on its agent card, so turning collection
-    // off meant a different tab depending on the provider and no page could
+    // while another provider's equivalent lived on its agent card, so turning
+    // collection off meant a different tab per provider and no page could
     // answer "which providers am I reading from". Pin the single rule: the
     // ring group is about what the ring looks like, collection is per-card.
     assert.ok(!generalSource.includes('key: "claudeQuotaCollectionEnabled"'));
@@ -12651,7 +12651,7 @@ describe("settings renderer browser environment", () => {
       snapshot: {
         agents: {
           [id]: { integrationInstalled: false, enabled: true },
-          qoderwork: { integrationInstalled: true, enabled: true },
+          "agent-g": { integrationInstalled: true, enabled: true },
         },
         customApplications: [],
         customToolDiscoveryPaths: [],
@@ -12666,8 +12666,8 @@ describe("settings renderer browser environment", () => {
           capabilities: {},
         },
         {
-          id: "qoderwork",
-          name: "QoderWork",
+          id: "agent-g",
+          name: "Zeta Agent",
           category: "work",
           eventSource: "hook",
           capabilities: {},
@@ -12692,7 +12692,7 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(connected.querySelector(".agent-category-group"), null);
     assert.deepStrictEqual(
       connected.querySelectorAll(".agent-summary-row .row-label").map((node) => node.textContent),
-      ["Nova AI", "QoderWork"]
+      ["Nova AI", "Zeta Agent"]
     );
     assert.strictEqual(harness.content.querySelector(".agent-section-recommended"), null);
     // Its executable resolves, so no missing-binary badge yet.
@@ -12713,7 +12713,7 @@ describe("settings renderer browser environment", () => {
     const stillConnected = harness.content.querySelector(".agent-section-connected");
     assert.deepStrictEqual(
       stillConnected.querySelectorAll(".agent-summary-row .row-label").map((node) => node.textContent),
-      ["Nova AI", "QoderWork"],
+      ["Nova AI", "Zeta Agent"],
       "a vanished executable must not evict the agent from Connected"
     );
     const missing = stillConnected.querySelector(".custom-missing");
@@ -12764,16 +12764,16 @@ describe("settings renderer browser environment", () => {
       snapshot: {
         lang: "en",
         agents: {
-          "gemini-cli": { integrationInstalled: false, enabled: false },
-          "kimi-code": { integrationInstalled: false, enabled: false },
-          "qwen-code": { integrationInstalled: false, enabled: false },
+          "agent-b": { integrationInstalled: false, enabled: false },
+          "agent-d": { integrationInstalled: false, enabled: false },
+          "agent-a": { integrationInstalled: false, enabled: false },
         },
         customToolDiscoveryPaths: [],
       },
       agentMetadata: [
-        { id: "gemini-cli", name: "Gemini CLI", eventSource: "hook", capabilities: {} },
-        { id: "kimi-code", name: "Kimi Code", eventSource: "hook", capabilities: {} },
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {} },
+        { id: "agent-b", name: "Agent B", eventSource: "hook", capabilities: {} },
+        { id: "agent-d", name: "Agent D", eventSource: "hook", capabilities: {} },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {} },
       ],
     });
     harness.core.runtime.agentInstallationHints = {
@@ -12805,13 +12805,13 @@ describe("settings renderer browser environment", () => {
         return true;
       })
       .map((label) => label.textContent);
-    assert.deepStrictEqual(visibleNames(), ["Gemini CLI", "Kimi Code", "Qwen Code"]);
+    assert.deepStrictEqual(visibleNames(), ["Agent A", "Agent B", "Agent D"]);
 
-    search.value = "kim";
+    search.value = "nt d";
     search.dispatchEvent({ type: "input", target: search, bubbles: false });
     harness.raf.flush();
 
-    assert.deepStrictEqual(visibleNames(), ["Kimi Code"]);
+    assert.deepStrictEqual(visibleNames(), ["Agent D"]);
     assert.strictEqual(group.querySelector(".agent-section-count").textContent, "1");
     // Typing has to open the catalog, or it would filter rows nobody can see.
     assert.strictEqual(group.classList.contains("collapsed"), false);
@@ -12824,12 +12824,12 @@ describe("settings renderer browser environment", () => {
 
     // An IME composition is pinyin keystrokes, not a query: filtering on it
     // would empty the list under the candidate window mid-word.
-    search.value = "kimi";
+    search.value = "agent d";
     search.dispatchEvent({ type: "input", target: search, bubbles: false });
     search.dispatchEvent({ type: "compositionstart", target: search, bubbles: false });
-    search.value = "ki mi";
+    search.value = "age nt d";
     search.dispatchEvent({ type: "input", target: search, bubbles: false });
-    assert.deepStrictEqual(visibleNames(), ["Kimi Code"], "composition keystrokes must not filter");
+    assert.deepStrictEqual(visibleNames(), ["Agent D"], "composition keystrokes must not filter");
     assert.strictEqual(group.querySelector(".agent-section-count").textContent, "1");
     search.value = "秘密";
     search.dispatchEvent({ type: "compositionend", target: search, bubbles: false });
@@ -12837,12 +12837,12 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(group.querySelector(".agent-section-count").textContent, "0");
 
     // The query survives a re-render, and matching is case-insensitive.
-    search.value = "QWEN";
+    search.value = "AGENT A";
     search.dispatchEvent({ type: "input", target: search, bubbles: false });
     harness.core.ops.requestRender({ content: true });
     harness.raf.flush();
     const rebuilt = harness.content.querySelector(".agent-unavailable-group");
-    assert.strictEqual(rebuilt.querySelector(".agent-section-search").value, "QWEN");
+    assert.strictEqual(rebuilt.querySelector(".agent-section-search").value, "AGENT A");
     assert.strictEqual(rebuilt.querySelector(".agent-section-count").textContent, "1");
   });
 
@@ -12852,25 +12852,25 @@ describe("settings renderer browser environment", () => {
       snapshot: {
         lang: "en",
         agents: {
-          "qwen-code": { integrationInstalled: true, enabled: true },
-          "gemini-cli": { integrationInstalled: false, enabled: false },
+          "agent-a": { integrationInstalled: true, enabled: true },
+          "agent-b": { integrationInstalled: false, enabled: false },
         },
         customToolDiscoveryPaths: [customPath],
         dismissedAgentCleanupHints: {},
         dismissedAgentInstallHints: {},
       },
       agentMetadata: [
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
-        { id: "gemini-cli", name: "Gemini CLI", eventSource: "hook", capabilities: {} },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
+        { id: "agent-b", name: "Agent B", eventSource: "hook", capabilities: {} },
       ],
     });
     harness.core.runtime.agentInstallationHints = {
       checkedAt: 1700000000000,
       agents: [
         // Connected but gone from disk -> cleanup hint on the connected subtab.
-        { agentId: "qwen-code", detectedInstalled: false, confidence: "high" },
+        { agentId: "agent-a", detectedInstalled: false, confidence: "high" },
         // On disk but not connected -> install hint + badge on the discover pill.
-        { agentId: "gemini-cli", detectedInstalled: true, confidence: "high" },
+        { agentId: "agent-b", detectedInstalled: true, confidence: "high" },
       ],
       customTools: [{
         path: customPath,
@@ -12907,7 +12907,7 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(connectedSection.querySelector(".agent-category-group"), null);
     assert.deepStrictEqual(
       connectedSection.querySelectorAll(".agent-summary-row .row-label").map((node) => node.textContent),
-      ["Qwen Code"]
+      ["Agent A"]
     );
     assert.ok(subtabs.querySelector(".custom-tool-wsl-scan"));
     assert.strictEqual(harness.content.querySelector(".custom-tool-path-picker"), null);
@@ -13151,13 +13151,13 @@ describe("settings renderer browser environment", () => {
     let calls = 0;
     const detectionResult = {
       checkedAt: 123,
-      agents: [{ agentId: "qwen-code", detectedInstalled: true }],
+      agents: [{ agentId: "agent-a", detectedInstalled: true }],
       skippedAgentIds: ["claude-code"],
     };
     const harness = loadAgentsTabForTest({
       agentMetadata: [{
-        id: "qwen-code",
-        name: "Qwen Code",
+        id: "agent-a",
+        name: "Agent A",
         eventSource: "hook",
         capabilities: {},
       }],
@@ -13181,7 +13181,7 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(harness.core.runtime.agentInstallationHints.checkedAt, detectionResult.checkedAt);
     assert.deepStrictEqual(
       harness.core.runtime.agentInstallationHints.agents.map((agent) => agent.agentId),
-      ["qwen-code"]
+      ["agent-a"]
     );
     assert.deepStrictEqual(
       harness.core.runtime.agentInstallationHints.skippedAgentIds,
@@ -13201,23 +13201,23 @@ describe("settings renderer browser environment", () => {
     const detectionResult = {
       checkedAt: 895,
       agents: [
-        { agentId: "qoder", detectedInstalled: null, confidence: "low", reason: "insufficient-evidence" },
-        { agentId: "zcode", detectedInstalled: null, confidence: "low", reason: "insufficient-evidence" },
+        { agentId: "agent-f", detectedInstalled: null, confidence: "low", reason: "insufficient-evidence" },
+        { agentId: "agent-e", detectedInstalled: null, confidence: "low", reason: "insufficient-evidence" },
       ],
       skippedAgentIds: [],
     };
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          qoder: { integrationInstalled: false, enabled: false },
-          zcode: { integrationInstalled: true, enabled: true },
+          "agent-f": { integrationInstalled: false, enabled: false },
+          "agent-e": { integrationInstalled: true, enabled: true },
         },
-        dismissedAgentInstallHints: { qoder: true },
-        dismissedAgentCleanupHints: { zcode: true },
+        dismissedAgentInstallHints: { "agent-f": true },
+        dismissedAgentCleanupHints: { "agent-e": true },
       },
       agentMetadata: [
-        { id: "qoder", name: "Qoder", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
-        { id: "zcode", name: "ZCode", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
+        { id: "agent-f", name: "Agent F", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
+        { id: "agent-e", name: "Agent E", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
       ],
       settingsAPI: {
         detectAgentInstallations: () => Promise.resolve(detectionResult),
@@ -13254,23 +13254,23 @@ describe("settings renderer browser environment", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          hermes: { integrationInstalled: true, enabled: true },
-          "qwen-code": { integrationInstalled: false, enabled: false },
+          "agent-c": { integrationInstalled: true, enabled: true },
+          "agent-a": { integrationInstalled: false, enabled: false },
           pi: { integrationInstalled: false, enabled: false },
         },
-        dismissedAgentInstallHints: { "qwen-code": true },
+        dismissedAgentInstallHints: { "agent-a": true },
       },
       agentMetadata: [
         { id: "pi", name: "Pi", eventSource: "extension", capabilities: {} },
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {} },
-        { id: "hermes", name: "Hermes Agent", eventSource: "plugin-event", capabilities: {} },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {} },
+        { id: "agent-c", name: "Agent C", eventSource: "plugin-event", capabilities: {} },
       ],
     });
     harness.core.runtime.agentInstallationHints = {
       checkedAt: 1,
       agents: [
-        { agentId: "qwen-code", detectedInstalled: true, confidence: "high" },
-        { agentId: "hermes", detectedInstalled: false, confidence: "low" },
+        { agentId: "agent-a", detectedInstalled: true, confidence: "high" },
+        { agentId: "agent-c", detectedInstalled: false, confidence: "low" },
         { agentId: "pi", detectedInstalled: false, confidence: "low" },
       ],
       skippedAgentIds: [],
@@ -13286,7 +13286,7 @@ describe("settings renderer browser environment", () => {
     const connected = harness.content.querySelector(".agent-section-connected");
     assert.ok(connected);
     assert.strictEqual(connected.querySelector(".section-title"), null);
-    assert.deepStrictEqual(labelsFor(connected), ["Hermes Agent"]);
+    assert.deepStrictEqual(labelsFor(connected), ["Agent C"]);
     assert.strictEqual(harness.content.querySelector(".agent-section-recommended"), null);
     assert.strictEqual(harness.content.querySelector(".agent-section-unavailable"), null);
 
@@ -13298,7 +13298,7 @@ describe("settings renderer browser environment", () => {
     assert.ok(recommended);
     assert.ok(unavailable);
     assert.strictEqual(recommended.querySelector(".section-title").textContent, "Detected locally");
-    assert.deepStrictEqual(labelsFor(recommended), ["Qwen Code"]);
+    assert.deepStrictEqual(labelsFor(recommended), ["Agent A"]);
     assert.strictEqual(harness.content.querySelector(".agent-section-connected"), null);
 
     // The undetected catalog is a collapsed group with a neutral count, and
@@ -13318,22 +13318,22 @@ describe("settings renderer browser environment", () => {
   });
 
   // #895 T10: medium is half of INSTALL_HINT_CONFIDENCES but every existing
-  // test used "high", so dropping medium from the set was invisible. Antigravity
-  // squatting in ~/.gemini produces exactly a medium parent-dir hit, so this is
-  // the confidence the Gemini half of #895 travels on.
+  // test used "high", so dropping medium from the set was invisible. One agent
+  // squatting in another's parent dir produces exactly a medium parent-dir hit,
+  // which is the confidence that half of #895 travels on.
   it("offers medium-confidence detections in the install hint banner", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
-        agents: { "gemini-cli": { integrationInstalled: false, enabled: false } },
+        agents: { "agent-b": { integrationInstalled: false, enabled: false } },
         dismissedAgentInstallHints: {},
       },
       agentMetadata: [
-        { id: "gemini-cli", name: "Gemini CLI", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
+        { id: "agent-b", name: "Agent B", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
       ],
     });
     harness.core.runtime.agentInstallationHints = {
       checkedAt: 1,
-      agents: [{ agentId: "gemini-cli", detectedInstalled: true, confidence: "medium", reason: "parent-dir" }],
+      agents: [{ agentId: "agent-b", detectedInstalled: true, confidence: "medium", reason: "parent-dir" }],
       skippedAgentIds: [],
     };
     harness.core.runtime.agentInstallationHintsFetched = true;
@@ -13342,12 +13342,12 @@ describe("settings renderer browser environment", () => {
     harness.core.ops.requestRender({ content: true });
 
     assert.ok(harness.content.querySelector(".agent-install-hint-banner"));
-    assert.match(harness.content.querySelector(".agent-install-hint-desc").textContent, /Gemini CLI/);
+    assert.match(harness.content.querySelector(".agent-install-hint-desc").textContent, /Agent B/);
     const recommended = harness.content.querySelector(".agent-section-recommended");
     assert.ok(recommended);
     assert.deepStrictEqual(
       recommended.querySelectorAll(".agent-summary-row .row-label").map((el) => el.textContent),
-      ["Gemini CLI"]
+      ["Agent B"]
     );
   });
 
@@ -13382,8 +13382,8 @@ describe("settings renderer browser environment", () => {
     const cases = [
       { label: "default agent is exempt", id: "codex", name: "Codex", exempt: true, expectBanner: false },
       { label: "Claude shares the exemption", id: "claude-code", name: "Claude Code", exempt: true, expectBanner: false },
-      { label: "non-default agent is eligible", id: "qwen-code", name: "Qwen Code", exempt: false, expectBanner: true },
-      { label: "missing field fails closed", id: "qwen-code", name: "Qwen Code", exempt: undefined, expectBanner: false },
+      { label: "non-default agent is eligible", id: "agent-a", name: "Agent A", exempt: false, expectBanner: true },
+      { label: "missing field fails closed", id: "agent-a", name: "Agent A", exempt: undefined, expectBanner: false },
     ];
     for (const { label, id, name, exempt, expectBanner } of cases) {
       const metadata = { id, name, eventSource: "hook", capabilities: {} };
@@ -13417,16 +13417,16 @@ describe("settings renderer browser environment", () => {
     for (const detectedInstalled of [undefined, null]) {
       const harness = loadAgentsTabForTest({
         snapshot: {
-          agents: { "qwen-code": { integrationInstalled: true, enabled: true } },
+          agents: { "agent-a": { integrationInstalled: true, enabled: true } },
           dismissedAgentCleanupHints: {},
         },
         agentMetadata: [
-          { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
+          { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
         ],
       });
       harness.core.runtime.agentInstallationHints = {
         checkedAt: 1,
-        agents: [{ agentId: "qwen-code", detectedInstalled, confidence: "low" }],
+        agents: [{ agentId: "agent-a", detectedInstalled, confidence: "low" }],
         skippedAgentIds: [],
       };
       harness.core.runtime.agentInstallationHintsFetched = true;
@@ -13445,21 +13445,21 @@ describe("settings renderer browser environment", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          "qwen-code": { integrationInstalled: false, enabled: false },
-          hermes: { integrationInstalled: true, enabled: true },
+          "agent-a": { integrationInstalled: false, enabled: false },
+          "agent-c": { integrationInstalled: true, enabled: true },
         },
         dismissedAgentInstallHints: {},
       },
       agentMetadata: [
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {} },
-        { id: "hermes", name: "Hermes Agent", eventSource: "plugin-event", capabilities: {} },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {} },
+        { id: "agent-c", name: "Agent C", eventSource: "plugin-event", capabilities: {} },
       ],
     });
     harness.core.runtime.agentInstallationHints = {
       checkedAt: 1,
       agents: [
-        { agentId: "qwen-code", detectedInstalled: true, confidence: "high" },
-        { agentId: "hermes", detectedInstalled: true, confidence: "high" },
+        { agentId: "agent-a", detectedInstalled: true, confidence: "high" },
+        { agentId: "agent-c", detectedInstalled: true, confidence: "high" },
         { agentId: "pi", detectedInstalled: true, confidence: "low" },
       ],
       skippedAgentIds: ["claude-code"],
@@ -13474,25 +13474,25 @@ describe("settings renderer browser environment", () => {
     assert.ok(harness.content.querySelector(".agent-install-hint-install"));
     assert.ok(harness.content.querySelector(".agent-install-hint-dismiss"));
     const desc = harness.content.querySelector(".agent-install-hint-desc").textContent;
-    assert.match(desc, /Qwen Code/);
-    assert.doesNotMatch(desc, /Hermes/);
+    assert.match(desc, /Agent A/);
+    assert.doesNotMatch(desc, /Agent C/);
   });
 
   it("hides install hint banners after the agent is dismissed", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          "qwen-code": { integrationInstalled: false, enabled: false },
+          "agent-a": { integrationInstalled: false, enabled: false },
         },
-        dismissedAgentInstallHints: { "qwen-code": true },
+        dismissedAgentInstallHints: { "agent-a": true },
       },
       agentMetadata: [
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {} },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {} },
       ],
     });
     harness.core.runtime.agentInstallationHints = {
       checkedAt: 1,
-      agents: [{ agentId: "qwen-code", detectedInstalled: true, confidence: "high" }],
+      agents: [{ agentId: "agent-a", detectedInstalled: true, confidence: "high" }],
       skippedAgentIds: [],
     };
     harness.core.runtime.agentInstallationHintsFetched = true;
@@ -13508,16 +13508,16 @@ describe("settings renderer browser environment", () => {
       snapshot: {
         agents: {
           "claude-code": { integrationInstalled: false, enabled: false },
-          "qwen-code": { integrationInstalled: false, enabled: false },
+          "agent-a": { integrationInstalled: false, enabled: false },
         },
         dismissedAgentInstallHints: {
           "claude-code": true,
-          "qwen-code": true,
+          "agent-a": true,
         },
       },
       agentMetadata: [
         { id: "claude-code", name: "Claude Code", eventSource: "hook", capabilities: {} },
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {} },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {} },
       ],
       settingsAPI: {
         command: (action, payload) => {
@@ -13528,7 +13528,7 @@ describe("settings renderer browser environment", () => {
     });
     harness.core.runtime.agentInstallationHints = {
       checkedAt: 1,
-      agents: [{ agentId: "qwen-code", detectedInstalled: false, confidence: "low" }],
+      agents: [{ agentId: "agent-a", detectedInstalled: false, confidence: "low" }],
       skippedAgentIds: ["claude-code"],
     };
     harness.core.runtime.agentInstallationHintsFetched = true;
@@ -13539,25 +13539,25 @@ describe("settings renderer browser environment", () => {
 
     assert.strictEqual(harness.content.querySelector(".agent-install-hint-banner"), null);
     assert.strictEqual(calls[0][0], "clearAgentInstallHints");
-    assert.deepStrictEqual([...calls[0][1].agentIds], ["qwen-code"]);
+    assert.deepStrictEqual([...calls[0][1].agentIds], ["agent-a"]);
   });
 
   it("wires install hint banner buttons to bulk install and dismiss commands", async () => {
     const calls = [];
     const detectionResult = {
       checkedAt: 2,
-      agents: [{ agentId: "qwen-code", detectedInstalled: true, confidence: "high" }],
+      agents: [{ agentId: "agent-a", detectedInstalled: true, confidence: "high" }],
       skippedAgentIds: [],
     };
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          "qwen-code": { integrationInstalled: false, enabled: false },
+          "agent-a": { integrationInstalled: false, enabled: false },
         },
         dismissedAgentInstallHints: {},
       },
       agentMetadata: [
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {} },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {} },
       ],
       settingsAPI: {
         command: (action, payload) => {
@@ -13577,7 +13577,7 @@ describe("settings renderer browser environment", () => {
     await Promise.resolve();
 
     assert.strictEqual(calls[0][0], "installAgentIntegration");
-    assert.strictEqual(calls[0][1].agentId, "qwen-code");
+    assert.strictEqual(calls[0][1].agentId, "agent-a");
 
     calls.length = 0;
     harness.core.runtime.agentInstallationHintsFetched = true;
@@ -13587,28 +13587,28 @@ describe("settings renderer browser environment", () => {
     await Promise.resolve();
 
     assert.strictEqual(calls[0][0], "dismissAgentInstallHints");
-    assert.deepStrictEqual([...calls[0][1].agentIds], ["qwen-code"]);
+    assert.deepStrictEqual([...calls[0][1].agentIds], ["agent-a"]);
   });
 
   it("shows a non-error toast when a recommended install is skipped", async () => {
     const toasts = [];
     const detectionResult = {
       checkedAt: 2,
-      agents: [{ agentId: "qwen-code", detectedInstalled: true, confidence: "high" }],
+      agents: [{ agentId: "agent-a", detectedInstalled: true, confidence: "high" }],
       skippedAgentIds: [],
     };
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          "qwen-code": { integrationInstalled: false, enabled: false },
+          "agent-a": { integrationInstalled: false, enabled: false },
         },
         dismissedAgentInstallHints: {},
       },
       agentMetadata: [
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {} },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {} },
       ],
       settingsAPI: {
-        command: () => Promise.resolve({ status: "skipped", message: "Qwen missing" }),
+        command: () => Promise.resolve({ status: "skipped", message: "agent missing" }),
         detectAgentInstallations: () => Promise.resolve(detectionResult),
       },
     });
@@ -13625,7 +13625,7 @@ describe("settings renderer browser environment", () => {
     await Promise.resolve();
 
     assert.strictEqual(toasts.length, 1);
-    assert.match(toasts[0].message, /Qwen Code/);
+    assert.match(toasts[0].message, /Agent A/);
     assert.notStrictEqual(toasts[0].options.error, true);
   });
 
@@ -13664,19 +13664,19 @@ describe("settings renderer browser environment", () => {
         agents: {
           "claude-code": { integrationInstalled: true, enabled: true },
           codex: { integrationInstalled: true, enabled: true },
-          "qwen-code": { integrationInstalled: true, enabled: true },
+          "agent-a": { integrationInstalled: true, enabled: true },
         },
         dismissedAgentCleanupHints: {},
       },
       agentMetadata: [
         { id: "claude-code", name: "Claude Code", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: true },
         { id: "codex", name: "Codex", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: true },
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
       ],
     });
     harness.core.runtime.agentInstallationHints = {
       checkedAt: 1,
-      agents: [{ agentId: "qwen-code", detectedInstalled: false, confidence: "low" }],
+      agents: [{ agentId: "agent-a", detectedInstalled: false, confidence: "low" }],
       skippedAgentIds: ["claude-code"],
     };
     harness.core.runtime.agentInstallationHintsFetched = true;
@@ -13688,7 +13688,7 @@ describe("settings renderer browser environment", () => {
     assert.ok(harness.content.querySelector(".agent-cleanup-hint-remove"));
     assert.ok(harness.content.querySelector(".agent-cleanup-hint-dismiss"));
     const desc = harness.content.querySelector(".agent-cleanup-hint-desc").textContent;
-    assert.match(desc, /Qwen Code/);
+    assert.match(desc, /Agent A/);
     assert.doesNotMatch(desc, /Claude Code/);
     assert.doesNotMatch(desc, /Codex/);
   });
@@ -13697,17 +13697,17 @@ describe("settings renderer browser environment", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          "qwen-code": { integrationInstalled: true, enabled: true },
+          "agent-a": { integrationInstalled: true, enabled: true },
         },
-        dismissedAgentCleanupHints: { "qwen-code": true },
+        dismissedAgentCleanupHints: { "agent-a": true },
       },
       agentMetadata: [
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
       ],
     });
     harness.core.runtime.agentInstallationHints = {
       checkedAt: 1,
-      agents: [{ agentId: "qwen-code", detectedInstalled: false, confidence: "low" }],
+      agents: [{ agentId: "agent-a", detectedInstalled: false, confidence: "low" }],
       skippedAgentIds: [],
     };
     harness.core.runtime.agentInstallationHintsFetched = true;
@@ -13722,12 +13722,12 @@ describe("settings renderer browser environment", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          "qwen-code": { integrationInstalled: true, enabled: true },
+          "agent-a": { integrationInstalled: true, enabled: true },
         },
-        dismissedAgentCleanupHints: { "qwen-code": true },
+        dismissedAgentCleanupHints: { "agent-a": true },
       },
       agentMetadata: [
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
       ],
       settingsAPI: {
         command: (action, payload) => {
@@ -13738,7 +13738,7 @@ describe("settings renderer browser environment", () => {
     });
     harness.core.runtime.agentInstallationHints = {
       checkedAt: 1,
-      agents: [{ agentId: "qwen-code", detectedInstalled: true, confidence: "high" }],
+      agents: [{ agentId: "agent-a", detectedInstalled: true, confidence: "high" }],
       skippedAgentIds: [],
     };
     harness.core.runtime.agentInstallationHintsFetched = true;
@@ -13749,25 +13749,25 @@ describe("settings renderer browser environment", () => {
 
     assert.strictEqual(harness.content.querySelector(".agent-cleanup-hint-banner"), null);
     assert.strictEqual(calls[0][0], "clearAgentCleanupHints");
-    assert.deepStrictEqual([...calls[0][1].agentIds], ["qwen-code"]);
+    assert.deepStrictEqual([...calls[0][1].agentIds], ["agent-a"]);
   });
 
   it("wires cleanup hint banner buttons to bulk uninstall and dismiss commands", async () => {
     const calls = [];
     const detectionResult = {
       checkedAt: 2,
-      agents: [{ agentId: "qwen-code", detectedInstalled: false, confidence: "low" }],
+      agents: [{ agentId: "agent-a", detectedInstalled: false, confidence: "low" }],
       skippedAgentIds: [],
     };
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          "qwen-code": { integrationInstalled: true, enabled: true },
+          "agent-a": { integrationInstalled: true, enabled: true },
         },
         dismissedAgentCleanupHints: {},
       },
       agentMetadata: [
-        { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
+        { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {}, cleanupSuggestionExempt: false },
       ],
       settingsAPI: {
         command: (action, payload) => {
@@ -13787,7 +13787,7 @@ describe("settings renderer browser environment", () => {
     await Promise.resolve();
 
     assert.strictEqual(calls[0][0], "uninstallAgentIntegration");
-    assert.strictEqual(calls[0][1].agentId, "qwen-code");
+    assert.strictEqual(calls[0][1].agentId, "agent-a");
     assert.strictEqual(calls[0][1].dismissInstallHint, false);
 
     calls.length = 0;
@@ -13798,7 +13798,7 @@ describe("settings renderer browser environment", () => {
     await Promise.resolve();
 
     assert.strictEqual(calls[0][0], "dismissAgentCleanupHints");
-    assert.deepStrictEqual([...calls[0][1].agentIds], ["qwen-code"]);
+    assert.deepStrictEqual([...calls[0][1].agentIds], ["agent-a"]);
   });
 
   it("keeps Agent management switch broadcasts in place even when Codex permission rows are mounted", () => {
@@ -14038,22 +14038,22 @@ describe("settings renderer browser environment", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          codebuddy: {
+          "agent-h": {
             enabled: true,
             permissionsEnabled: true,
           },
         },
       },
       agentMetadata: [{
-        id: "codebuddy",
-        name: "CodeBuddy",
+        id: "agent-h",
+        name: "Agent H",
         eventSource: "hook",
         capabilities: {
           permissionApproval: true,
         },
       }],
       collapsedGroups: {
-        "agents:codebuddy": false,
+        "agents:agent-h": false,
       },
     });
 
@@ -14064,8 +14064,8 @@ describe("settings renderer browser environment", () => {
       .find((meta) => meta.flag === "subagentPermissionsEnabled");
     assert.strictEqual(subagentSwitch, undefined);
     const permissionsSwitch = [...harness.core.state.mountedControls.agentSwitches.values()]
-      .find((meta) => meta.agentId === "codebuddy" && meta.flag === "permissionsEnabled");
-    assert.ok(permissionsSwitch, "CodeBuddy permission switch should still be mounted");
+      .find((meta) => meta.agentId === "agent-h" && meta.flag === "permissionsEnabled");
+    assert.ok(permissionsSwitch, "Agent H permission switch should still be mounted");
   });
 
   it("does not render a permission toggle on a state-only agent row", () => {
@@ -14169,22 +14169,22 @@ describe("settings renderer browser environment", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          "gemini-cli": {
+          "agent-b": {
             enabled: true,
             notificationHookEnabled: true,
           },
         },
       },
       agentMetadata: [{
-        id: "gemini-cli",
-        name: "Gemini CLI",
+        id: "agent-b",
+        name: "Agent B",
         eventSource: "hook",
         capabilities: {
           notificationHook: true,
         },
       }],
       collapsedGroups: {
-        "agents:gemini-cli": false,
+        "agents:agent-b": false,
       },
     });
 
@@ -14195,7 +14195,7 @@ describe("settings renderer browser environment", () => {
     harness.core.ops.applyChanges({
       changes: {
         agents: {
-          "gemini-cli": {
+          "agent-b": {
             enabled: true,
             notificationHookEnabled: false,
           },
@@ -14203,7 +14203,7 @@ describe("settings renderer browser environment", () => {
       },
       snapshot: {
         agents: {
-          "gemini-cli": {
+          "agent-b": {
             enabled: true,
             notificationHookEnabled: false,
           },
@@ -14272,7 +14272,7 @@ describe("settings renderer browser environment", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          "gemini-cli": {
+          "agent-b": {
             integrationInstalled: true,
             enabled: true,
             notificationHookEnabled: true,
@@ -14280,15 +14280,15 @@ describe("settings renderer browser environment", () => {
         },
       },
       agentMetadata: [{
-        id: "gemini-cli",
-        name: "Gemini CLI",
+        id: "agent-b",
+        name: "Agent B",
         eventSource: "hook",
         capabilities: {
           notificationHook: true,
         },
       }],
       collapsedGroups: {
-        "agents:gemini-cli": false,
+        "agents:agent-b": false,
       },
     });
 
@@ -16813,18 +16813,18 @@ describe("settings renderer browser environment", () => {
     function buildHarness(wslEntryOverrides) {
       const detectionResult = {
         checkedAt: 2,
-        agents: [{ agentId: "qwen-code", detectedInstalled: true, confidence: "high" }],
+        agents: [{ agentId: "agent-a", detectedInstalled: true, confidence: "high" }],
         skippedAgentIds: [],
         wslAgents: [{
-          agentId: "qwen-code",
-          agentName: "Qwen Code",
+          agentId: "agent-a",
+          agentName: "Agent A",
           distro: "Ubuntu",
           detectedInstalled: true,
           confidence: "high",
           reason: "parent-dir",
           detail: "",
           wslHome: "/home/u",
-          wslParentDir: "/home/u/.qwen",
+          wslParentDir: "/home/u/.agent-a",
           hooksDeployed: false,
           hooksFilesPresent: false,
           ...wslEntryOverrides,
@@ -16835,11 +16835,11 @@ describe("settings renderer browser environment", () => {
       };
       const harness = loadAgentsTabForTest({
         snapshot: {
-          agents: { "qwen-code": { integrationInstalled: false, enabled: false } },
+          agents: { "agent-a": { integrationInstalled: false, enabled: false } },
           dismissedAgentInstallHints: {},
         },
         agentMetadata: [
-          { id: "qwen-code", name: "Qwen Code", eventSource: "hook", capabilities: {} },
+          { id: "agent-a", name: "Agent A", eventSource: "hook", capabilities: {} },
         ],
         settingsAPI: {
           detectAgentInstallations: () => Promise.resolve(detectionResult),

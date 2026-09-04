@@ -32,7 +32,7 @@ function parseJsonc(text) {
 // unconditionally, so any opencode.jsonc declaring "plugin" silently killed
 // the registration while Settings and Doctor both reported success.
 //
-// Structural difference from mimocode worth locking: opencode's create-default
+// Structural difference from other family hosts worth locking: opencode's create-default
 // (opencode.json) is NOT its highest-priority candidate (opencode.jsonc is).
 // ---------------------------------------------------------------------------
 describe("opencode JSONC installer — merged config semantics (#825)", () => {

@@ -148,8 +148,8 @@ const OC = Object.freeze({
   logFileName: "opencode-plugin.log", sessionIdPrefix: "opencode:",
 });
 const MC = Object.freeze({
-  agentId: "mimocode", hookSource: "mimocode-plugin",
-  logFileName: "mimocode-plugin.log", sessionIdPrefix: "mimocode:",
+  agentId: "otherhost", hookSource: "otherhost-plugin",
+  logFileName: "otherhost-plugin.log", sessionIdPrefix: "otherhost:",
 });
 
 function bridgeRequest(plugin, { token, method = "POST", pathName = "/reply", body } = {}) {
@@ -216,7 +216,7 @@ describe("opencode-family reverse bridge (plugin side, real handler)", () => {
     }
   });
 
-  it("proves lastSeen can mis-associate an interleaved permission for opencode and MiMo", async () => {
+  it("proves lastSeen can mis-associate an interleaved permission for opencode and OtherHost", async () => {
     for (const params of [OC, MC]) {
       const instance = await initInstance(params);
       await instance.hooks.event({

@@ -110,12 +110,6 @@ function translations() {
     sessionAutomationOrphansTitle: "Ended or hidden sessions",
     sessionAutomationOrphansHint: "These overrides remain active until revoked.",
     sessionAutomationRevoke: "Revoke",
-    dashboardKimiQuotaRefresh: "Refresh Kimi quota",
-    dashboardKimiQuotaRefreshing: "Refreshing Kimi…",
-    dashboardKimiQuotaUpdated: "Kimi quota updated.",
-    dashboardKimiQuotaRefreshFailed: "Refresh failed: {reason}",
-    dashboardKimiQuotaEmpty: "No quota data yet. Click refresh to fetch it.",
-    dashboardKimiQuotaRefreshShort: "Refresh",
   };
 }
 
@@ -139,8 +133,7 @@ async function loadDashboard(
   sessions,
   openResult = { status: "ok" },
   snapshotOverrides = {},
-  automationResult = { status: "applied" },
-  kimiOptions = {}
+  automationResult = { status: "applied" }
 ) {
   const document = createDocument([
     "title",
@@ -150,7 +143,6 @@ async function loadDashboard(
   ]);
   const openCalls = [];
   const automationCalls = [];
-  const kimiRefreshCalls = [];
   let renderInterval = null;
   const api = {
     onLangChange: () => {},
@@ -180,17 +172,6 @@ async function loadDashboard(
         ? automationResult("clear", payload)
         : automationResult;
     },
-    getKimiQuotaStatus: async () => kimiOptions.status || {
-      status: "ok",
-      configured: false,
-      decryptable: false,
-      collectionEnabled: false,
-      agentEnabled: true,
-    },
-    refreshKimiQuota: async () => {
-      kimiRefreshCalls.push(true);
-      return kimiOptions.refreshResult || { status: "ok" };
-    },
   };
   const context = vm.createContext({
     window: { dashboardAPI: api }, document, console, Intl, Date,
@@ -205,7 +186,6 @@ async function loadDashboard(
     quotaSummary: document.elements.get("quotaSummary"),
     openCalls,
     automationCalls,
-    kimiRefreshCalls,
     tickRender: () => { if (renderInterval) renderInterval(); },
   };
 }
@@ -269,7 +249,7 @@ test("Dashboard renders local/remote/webui reasons and only local folder action"
   assert.strictEqual(byClass(root, "open-folder-button").length, 1);
 });
 
-test("Dashboard renders no Kimi quota section or refresh for a disconnected key", async () => {
+test("Dashboard renders no quota section when there is no quota data", async () => {
   const dashboard = await loadDashboard([]);
 
   assert.strictEqual(byClass(dashboard.quotaSummary, "quota-refresh-button").length, 0);

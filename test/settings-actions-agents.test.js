@@ -22,7 +22,6 @@ test("settings agent actions expose the command surface", () => {
     "removeFromWsl",
     "repairAgentIntegration",
     "setAgentCustomDiscoveryPaths",
-    "setAgentCustomPermissionUrl",
     "setAgentFlag",
     "setAgentPermissionMode",
     "uninstallAgentIntegration",
@@ -35,7 +34,6 @@ test("settings agent integration commands share a serialization lock", () => {
   assert.strictEqual(agentCommands.installAgentIntegration.lockKey, "agentIntegration");
   assert.strictEqual(agentCommands.uninstallAgentIntegration.lockKey, "agentIntegration");
   assert.strictEqual(agentCommands.repairAgentIntegration.lockKey, "agentIntegration");
-  assert.strictEqual(agentCommands.setAgentCustomPermissionUrl.lockKey, "agentIntegration");
   assert.strictEqual(agentCommands.setAgentCustomDiscoveryPaths.lockKey, "agentIntegration");
   assert.strictEqual(agentCommands.addCustomApplication.lockKey, "agentIntegration");
   assert.strictEqual(agentCommands.removeCustomApplication.lockKey, "agentIntegration");
@@ -49,7 +47,6 @@ test("settings command registry exposes custom AI add, remove, and discovery com
   assert.strictEqual(commandRegistry.addCustomApplication, agentCommands.addCustomApplication);
   assert.strictEqual(commandRegistry.removeCustomApplication, agentCommands.removeCustomApplication);
   assert.strictEqual(commandRegistry.setAgentCustomDiscoveryPaths, agentCommands.setAgentCustomDiscoveryPaths);
-  assert.strictEqual(commandRegistry.setAgentCustomPermissionUrl, agentCommands.setAgentCustomPermissionUrl);
 });
 
 test("settings agent actions add and deduplicate a recognized custom AI", () => {
@@ -279,7 +276,7 @@ test("settings agent actions persist the disabled Codex gate before runtime clea
 
 test("disabling an agent clears session automation before sessions and permissions", () => {
   const snapshot = prefs.getDefaults();
-  snapshot.agents["qwen-code"] = {
+  snapshot.agents["opencode"] = {
     integrationInstalled: true,
     enabled: true,
     permissionsEnabled: true,
@@ -287,7 +284,7 @@ test("disabling an agent clears session automation before sessions and permissio
   };
   const calls = [];
   const result = agentCommands.setAgentFlag(
-    { agentId: "qwen-code", flag: "enabled", value: false },
+    { agentId: "opencode", flag: "enabled", value: false },
     {
       snapshot,
       stopMonitorForAgent: (id) => calls.push(`stop:${id}`),
@@ -298,16 +295,16 @@ test("disabling an agent clears session automation before sessions and permissio
   );
   assert.strictEqual(result.status, "ok");
   assert.deepStrictEqual(calls, [
-    "stop:qwen-code",
-    "automation:qwen-code",
-    "sessions:qwen-code",
-    "permissions:qwen-code",
+    "stop:opencode",
+    "automation:opencode",
+    "sessions:opencode",
+    "permissions:opencode",
   ]);
 });
 
 test("settings agent actions do not install files when enabling an uninstalled agent", () => {
   const snapshot = prefs.getDefaults();
-  snapshot.agents["gemini-cli"] = {
+  snapshot.agents["pi"] = {
     integrationInstalled: false,
     enabled: false,
     permissionsEnabled: true,
@@ -324,15 +321,15 @@ test("settings agent actions do not install files when enabling an uninstalled a
   };
 
   const result = agentCommands.setAgentFlag(
-    { agentId: "gemini-cli", flag: "enabled", value: true },
+    { agentId: "pi", flag: "enabled", value: true },
     deps
   );
 
   assert.strictEqual(result.status, "ok");
   assert.deepStrictEqual(calls.syncIntegrationForAgent, []);
-  assert.deepStrictEqual(calls.startMonitorForAgent, ["gemini-cli"]);
-  assert.strictEqual(result.commit.agents["gemini-cli"].enabled, true);
-  assert.strictEqual(result.commit.agents["gemini-cli"].integrationInstalled, false);
+  assert.deepStrictEqual(calls.startMonitorForAgent, ["pi"]);
+  assert.strictEqual(result.commit.agents["pi"].enabled, true);
+  assert.strictEqual(result.commit.agents["pi"].integrationInstalled, false);
 });
 
 test("settings agent actions await the Claude enable queue before starting the monitor or committing", async () => {

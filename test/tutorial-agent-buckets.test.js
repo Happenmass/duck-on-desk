@@ -20,7 +20,7 @@ function makeHome() {
   return dir;
 }
 
-const INSTALLABLE = ["claude-code", "codex", "gemini-cli", "kimi-cli", "qwen-code"];
+const INSTALLABLE = ["claude-code", "codex", "agent-a", "agent-c", "agent-b"];
 
 function detect(agentId, agentName, detectedInstalled, confidence) {
   return { agentId, agentName, detectedInstalled, confidence };
@@ -36,23 +36,23 @@ describe("bucketAgentsForTutorial", () => {
         // integration installed + explicitly NOT detected → cleanup (stale hook).
         // #895: this has to be a non-default agent. Default integrations are
         // exempt, because a missing ~/.codex is not evidence of a stale hook.
-        detect("qwen-code", "Qwen Code", false, "low"),
+        detect("agent-b", "Agent B", false, "low"),
         // not installed + detected high → install
-        detect("gemini-cli", "Gemini CLI", true, "high"),
+        detect("agent-a", "Agent A", true, "high"),
         // not installed + detected low → neither (too weak to offer)
-        detect("kimi-cli", "Kimi CLI", true, "low"),
+        detect("agent-c", "Agent C", true, "low"),
       ],
       agentsPref: {
         "claude-code": { integrationInstalled: true },
-        "qwen-code": { integrationInstalled: true },
-        "gemini-cli": { integrationInstalled: false },
-        "kimi-cli": { integrationInstalled: false },
+        "agent-b": { integrationInstalled: true },
+        "agent-a": { integrationInstalled: false },
+        "agent-c": { integrationInstalled: false },
       },
     });
 
     assert.deepStrictEqual(result.active, [{ agentId: "claude-code", label: "Claude Code", iconUrl: null }]);
-    assert.deepStrictEqual(result.cleanup, [{ agentId: "qwen-code", label: "Qwen Code", iconUrl: null }]);
-    assert.deepStrictEqual(result.install, [{ agentId: "gemini-cli", label: "Gemini CLI", iconUrl: null }]);
+    assert.deepStrictEqual(result.cleanup, [{ agentId: "agent-b", label: "Agent B", iconUrl: null }]);
+    assert.deepStrictEqual(result.install, [{ agentId: "agent-a", label: "Agent A", iconUrl: null }]);
   });
 
   // #895 T5 / T5b: the tutorial told users with a genuinely installed Codex to
@@ -86,14 +86,14 @@ describe("bucketAgentsForTutorial", () => {
 
   it("offers medium-confidence detections for install but never low", () => {
     const result = bucketAgentsForTutorial({
-      installableIds: ["gemini-cli", "kimi-cli"],
+      installableIds: ["agent-a", "agent-c"],
       detectionAgents: [
-        detect("gemini-cli", "Gemini CLI", true, "medium"),
-        detect("kimi-cli", "Kimi CLI", true, "low"),
+        detect("agent-a", "Agent A", true, "medium"),
+        detect("agent-c", "Agent C", true, "low"),
       ],
       agentsPref: {},
     });
-    assert.deepStrictEqual(result.install.map((a) => a.agentId), ["gemini-cli"]);
+    assert.deepStrictEqual(result.install.map((a) => a.agentId), ["agent-a"]);
     assert.strictEqual(result.cleanup.length, 0);
     assert.strictEqual(result.active.length, 0);
   });
@@ -111,9 +111,9 @@ describe("bucketAgentsForTutorial", () => {
   // must not be read as detected either — the agent simply gets no bucket.
   it("treats an installable agent with no detector entry as unknown, not as cleanup", () => {
     const result = bucketAgentsForTutorial({
-      installableIds: ["qwen-code"],
+      installableIds: ["agent-b"],
       detectionAgents: [],
-      agentsPref: { "qwen-code": { integrationInstalled: true } },
+      agentsPref: { "agent-b": { integrationInstalled: true } },
     });
     assert.deepStrictEqual(result.cleanup, []);
     assert.strictEqual(result.install.length, 0);
@@ -124,11 +124,11 @@ describe("bucketAgentsForTutorial", () => {
   // unknown. Only a strict `false` may propose a deletion.
   it("requires a strict false verdict before proposing cleanup", () => {
     for (const value of [undefined, null]) {
-      const entry = detect("qwen-code", "Qwen Code", value, "low");
+      const entry = detect("agent-b", "Agent B", value, "low");
       const result = bucketAgentsForTutorial({
-        installableIds: ["qwen-code"],
+        installableIds: ["agent-b"],
         detectionAgents: [entry],
-        agentsPref: { "qwen-code": { integrationInstalled: true } },
+        agentsPref: { "agent-b": { integrationInstalled: true } },
       });
       assert.deepStrictEqual(result.cleanup, [], `detectedInstalled=${value} must not propose cleanup`);
     }
@@ -137,9 +137,9 @@ describe("bucketAgentsForTutorial", () => {
   it("keeps an explicit null verdict out of active, install, and cleanup", () => {
     for (const integrationInstalled of [false, true]) {
       const result = bucketAgentsForTutorial({
-        installableIds: ["qoder"],
-        detectionAgents: [detect("qoder", "Qoder", null, "low")],
-        agentsPref: { qoder: { integrationInstalled } },
+        installableIds: ["agent-d"],
+        detectionAgents: [detect("agent-d", "Agent D", null, "low")],
+        agentsPref: { "agent-d": { integrationInstalled } },
       });
       assert.deepStrictEqual(result, { install: [], cleanup: [], active: [] });
     }
@@ -184,7 +184,7 @@ describe("bucketAgentsForTutorial", () => {
         agentsPref: {
           "claude-code": { integrationInstalled: true },
           codex: { integrationInstalled: true },
-          "qwen-code": { integrationInstalled: true },
+          "agent-b": { integrationInstalled: true },
         },
       });
       assert.deepStrictEqual(result.cleanup, [], `detectionAgents=${detectionAgents} must propose no cleanup`);
@@ -224,8 +224,8 @@ describe("bucketAgentsForTutorial", () => {
       getAgentIconUrl: () => { throw new Error("icon lookup failed"); },
     });
     const invalid = bucketAgentsForTutorial({
-      installableIds: ["gemini-cli"],
-      detectionAgents: [detect("gemini-cli", "Gemini CLI", true, "high")],
+      installableIds: ["agent-a"],
+      detectionAgents: [detect("agent-a", "Agent A", true, "high")],
       getAgentIconUrl: () => 42,
     });
 

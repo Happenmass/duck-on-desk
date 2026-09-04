@@ -59,6 +59,24 @@ describe("agent installation detector", () => {
   // Clawd, so it stays real evidence and Codex must be reported like any other
   // agent. This is one code-level route consistent with #895; the reporter's
   // exact on-disk layout remains unconfirmed.
+  it("skips only the agent whose parent dir Clawd creates itself", () => {
+    const homeDir = makeHome();
+
+    const report = detectAgentInstallations({ homeDir, now: 12345 });
+
+    assert.strictEqual(report.checkedAt, 12345);
+    assert.deepStrictEqual(report.skippedAgentIds, ["claude-code"]);
+    assert.ok(!byId(report, "claude-code"));
+    assert.ok(byId(report, "opencode"));
+
+    // Present in the report, and honestly negative on an empty home.
+    const codex = byId(report, "codex");
+    assert.ok(codex, "codex must be examined, not skipped");
+    assert.strictEqual(codex.detectedInstalled, false);
+    assert.strictEqual(codex.confidence, "low");
+    assert.strictEqual(codex.reason, "not-found");
+  });
+
   it("reports Codex from its own directory once it exists", () => {
     const homeDir = makeHome();
     mkdirp(path.join(homeDir, ".codex"));

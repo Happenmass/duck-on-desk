@@ -145,7 +145,7 @@ test("buildPresencePayload publishes ONLY the folder name, never a full path, on
 test("buildPresencePayload respects an explicitly hidden snapshot displayFolder", () => {
   const opaque = "mqgw60jiigjsjcid";
   const session = {
-    agentId: "qwenwork",
+    agentId: "opencode",
     state: "working",
     cwd: `/Users/me/.QwenWorkCN/workspace/${opaque}`,
     displayFolder: "",
@@ -302,7 +302,9 @@ test("before-quit stops the Discord presence bridge before tearing down session 
 test("main caches only ACK-committed visuals, filters reactions, and keeps the GIF override dev-only", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
   const projectionStart = source.indexOf("displayedVisualProjection = createDisplayedVisualProjection({");
-  const projectionEnd = source.indexOf("const _kimiQuotaCredentialStore", projectionStart);
+  const projectionEnd = source.indexOf("const { setState, applyState, updateSession", projectionStart);
+  assert.ok(projectionStart !== -1 && projectionEnd > projectionStart,
+    "both projection block anchors must still exist in main.js");
   const commitBlock = source.slice(projectionStart, projectionEnd);
   const cacheWrite = commitBlock.indexOf("lastDiscordPresenceVisual = {");
   const bridgeFeed = commitBlock.indexOf("discordPresenceBridge.onVisual(");

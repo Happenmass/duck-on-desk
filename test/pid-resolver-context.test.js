@@ -171,7 +171,7 @@ describe("resolver no-arg compatibility (§5.1 red line)", () => {
     let spawns = 0;
     const { mod, cleanup } = loadSharedProcessWithMock({
       execFileSyncMock: () => { spawns++; return snapshotJson([
-        { pid: process.pid, name: "node.exe", ppid: 700, cmd: "node C:/x/gemini/cli.js" },
+        { pid: process.pid, name: "node.exe", ppid: 700, cmd: "node C:/x/someagent/cli.js" },
         { pid: 700, name: "windowsterminal.exe", ppid: 0 },
       ]); },
       platform: "win32",
@@ -182,7 +182,7 @@ describe("resolver no-arg compatibility (§5.1 red line)", () => {
       const resolve = mod.createPidResolver({
         platformConfig: cfg, startPid: process.pid,
         agentNames: { win: new Set(["node.exe"]), mac: new Set(["node"]) },
-        agentCmdlineCheck: (c) => c.includes("gemini"),
+        agentCmdlineCheck: (c) => c.includes("someagent"),
         readRuntimeIdentity: () => ({ ok: true, reason: null, port: 23333, ownerPid: process.pid }),
         env: {},
       });
@@ -584,7 +584,7 @@ describe("resolver v1→v2 promotion (Claude only)", () => {
     const sid = freshSid();
     pc.writePidCache(sid, CWD, liveSubset());
     try {
-      const meta = resolve({ namespace: "gemini", sessionId: sid, cacheCwd: CWD, lifecycle: "prompt", cacheable: true });
+      const meta = resolve({ namespace: "someagent", sessionId: sid, cacheCwd: CWD, lifecycle: "prompt", cacheable: true });
       assert.strictEqual(meta.cacheSource, "none", "non-Claude prompt miss stays empty (no v1 read)");
       assert.ok(pc.readPidCache(sid, CWD), "the v1 is untouched by a non-Claude namespace");
     } finally { cleanup(); }

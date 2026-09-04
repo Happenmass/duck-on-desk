@@ -198,11 +198,6 @@
     return "native";
   }
 
-  function readAgentCustomPermissionUrl(agentId) {
-    const entry = state.snapshot && state.snapshot.agents && state.snapshot.agents[agentId];
-    return entry && typeof entry.customPermissionUrl === "string" ? entry.customPermissionUrl : "";
-  }
-
   function readAgentCustomDiscoveryPaths(agentId) {
     if (agentId === "custom") {
       const value = state.snapshot && state.snapshot.customToolDiscoveryPaths;
@@ -1962,7 +1957,6 @@
     readAgentFlagValue,
     readAgentIntegrationInstalled,
     readAgentPermissionMode,
-    readAgentCustomPermissionUrl,
     readAgentCustomDiscoveryPaths,
     readCustomToolDetectionResults,
     readCustomAgentDetectionResults,

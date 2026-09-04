@@ -168,10 +168,7 @@ function getSessionAliasEntry(id, sessionLike, sessionAliases = {}) {
     sessionLike && sessionLike.host,
     sessionLike && sessionLike.agentId,
     rawSessionId,
-    {
-      cwd: sessionLike && sessionLike.cwd,
-      profileId: sessionLike && sessionLike.profileId,
-    }
+    { profileId: sessionLike && sessionLike.profileId }
   );
   if (scopedAliasKey && sessionAliases[scopedAliasKey]) return sessionAliases[scopedAliasKey];
 
@@ -490,10 +487,7 @@ function getActiveSessionAliasKeys(sessions) {
       session && session.host,
       session && session.agentId,
       (session && session.rawSessionId) || id,
-      {
-        cwd: session && session.cwd,
-        profileId: session && session.profileId,
-      }
+      { profileId: session && session.profileId }
     );
     if (key) keys.add(key);
   }

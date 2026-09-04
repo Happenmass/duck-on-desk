@@ -24,12 +24,12 @@ const {
 //     Codex retention), so dedupe by `id:rawEvent:at` is mandatory.
 //   - First snapshot only primes the dedupe map (no backlog re-ping on start).
 
-// Scope limitation (R1a): only the "Stop" naming family is covered. Copilot
-// CLI signals completion with `agentStop`, which deriveSessionBadge does NOT
-// map to a done badge, so the desktop HUD badge never lights for it either —
-// adding it here alone would do nothing (the badge gate below filters first).
-// Covering Copilot needs a deriveSessionBadge change (affects desktop), tracked
-// as a follow-up. See docs limitations note.
+// Scope limitation (R1a): only the "Stop" naming family is covered. An agent
+// that signals completion with some other event name (e.g. `agentStop`) is not
+// mapped to a done badge by deriveSessionBadge, so the desktop HUD badge never
+// lights for it either — adding the name here alone would do nothing (the badge
+// gate below filters first). Covering one needs a deriveSessionBadge change
+// (affects desktop). See docs limitations note.
 const COMPLETION_EVENTS = new Set([
   "Stop",
   "StopFailure",

@@ -184,7 +184,7 @@ function normalizeElicitationToolInput(toolInput) {
 // Keep the renderer's bounded display text separate from the protocol payload
 // used to build updatedInput. The wire answer key is the exact upstream
 // question string; putting that string through preview clamping before reply
-// silently changes the key and makes Claude/Hermes discard the answer.
+// silently changes the key and makes the asking agent discard the answer.
 //
 // Unsupported/ambiguous shapes are not partially rendered. The route hands
 // those requests back to the agent's native UI, because truncating questions

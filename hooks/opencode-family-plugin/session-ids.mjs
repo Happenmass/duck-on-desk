@@ -12,8 +12,8 @@
 //     isChildSessionId
 //
 // The last two LOOK neutral but must normalize through the SAME prefix that
-// wrote the parent-map keys: a mimocode child key "mimocode:ses_child" looked
-// up via an opencode normalizer would miss forever — child never marked
+// wrote the parent-map keys: a child key written under one host's prefix looked
+// up via another host's normalizer would miss forever — child never marked
 // headless, child session.idle misroutes to Stop, and session.deleted deletes
 // under the wrong prefix so the map leaks for the life of the process.
 

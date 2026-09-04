@@ -25,32 +25,32 @@ describe("findHookCommands", () => {
         Stop: [{
           matcher: "",
           hooks: [
-            { type: "command", command: '"/opt/node" "/app/hooks/codebuddy-hook.js"' },
+            { type: "command", command: '"/opt/node" "/app/hooks/agent-a-hook.js"' },
           ],
         }],
       },
     };
 
-    assert.deepStrictEqual(findHookCommands(settings, "codebuddy-hook.js"), []);
+    assert.deepStrictEqual(findHookCommands(settings, "agent-a-hook.js"), []);
     assert.deepStrictEqual(
-      findHookCommands(settings, "codebuddy-hook.js", { nested: true }),
-      ['"/opt/node" "/app/hooks/codebuddy-hook.js"']
+      findHookCommands(settings, "agent-a-hook.js", { nested: true }),
+      ['"/opt/node" "/app/hooks/agent-a-hook.js"']
     );
   });
 
   it("returns all matching commands across events", () => {
     const settings = {
       hooks: {
-        SessionStart: [{ command: '"node" "/app/hooks/gemini-hook.js"' }],
-        Stop: [{ command: '"/usr/bin/node" "/app/hooks/gemini-hook.js"' }],
+        SessionStart: [{ command: '"node" "/app/hooks/agent-d-hook.js"' }],
+        Stop: [{ command: '"/usr/bin/node" "/app/hooks/agent-d-hook.js"' }],
       },
     };
 
     assert.deepStrictEqual(
-      findHookCommands(settings, "gemini-hook.js"),
+      findHookCommands(settings, "agent-d-hook.js"),
       [
-        '"node" "/app/hooks/gemini-hook.js"',
-        '"/usr/bin/node" "/app/hooks/gemini-hook.js"',
+        '"node" "/app/hooks/agent-d-hook.js"',
+        '"/usr/bin/node" "/app/hooks/agent-d-hook.js"',
       ]
     );
   });
@@ -63,11 +63,11 @@ describe("findHookCommands", () => {
           "bad",
           { type: "command" },
           { command: 123 },
-          { hooks: [{ command: '"/node" "/app/hooks/kiro-hook.js"' }] },
+          { hooks: [{ command: '"/node" "/app/hooks/agent-e-hook.js"' }] },
         ],
       },
     };
 
-    assert.deepStrictEqual(findHookCommands(settings, "kiro-hook.js"), []);
+    assert.deepStrictEqual(findHookCommands(settings, "agent-e-hook.js"), []);
   });
 });

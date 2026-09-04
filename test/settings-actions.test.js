@@ -218,7 +218,7 @@ describe("updateRegistry pure-data validators", () => {
     const entry = updateRegistry.quotaRingHiddenProviders;
     const check = (value) => (typeof entry === "function" ? entry(value) : entry.validate(value));
     assert.strictEqual(check([]).status, "ok");
-    assert.strictEqual(check(["codexQuota", "kimiQuota"]).status, "ok");
+    assert.strictEqual(check(["codexQuota", "claudeQuota"]).status, "ok");
     // Shape only — an unrecognized key is accepted on purpose, because
     // rejecting it would un-hide the provider behind the user's back.
     assert.strictEqual(check(["notAProviderYet"]).status, "ok");

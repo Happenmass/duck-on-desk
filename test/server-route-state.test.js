@@ -847,11 +847,11 @@ describe("server-route-state POST", () => {
   // Account quota is session-independent: any POST carrying it feeds the
   // per-source store (keyed by the reporting host, null = local), and it
   // never rides updateSession opts.
-  it("does not call updateAccountQuota for invalid antigravity_quota", async () => {
+  it("does not call updateAccountQuota for an unrecognized quota key", async () => {
     const res = await callStatePost(JSON.stringify({
       state: "idle",
       session_id: "sid",
-      antigravity_quota: { geminiFiveHour: { usedPercent: "not-a-number" } },
+      unknown_quota: { unknownFiveHour: { usedPercent: 42 } },
     }));
 
     assert.strictEqual(res.statusCode, 200);

@@ -113,7 +113,7 @@ function createHarness(ctxOverrides = {}) {
     getDoneHeroSvg: () => "<svg id=\"done-hero\"></svg>",
     setLang: (lang) => { calls.setLang.push(lang); },
     getShortcutsSummary: () => [{ id: "permissionAllow", label: "Allow", accelerator: "CommandOrControl+Shift+Y" }],
-    getAgentOnboardingState: () => ({ install: [{ agentId: "gemini-cli", label: "Gemini CLI", iconUrl: "file:///icons/gemini-cli.png" }], cleanup: [], active: [] }),
+    getAgentOnboardingState: () => ({ install: [{ agentId: "agent-a", label: "Agent A", iconUrl: "file:///icons/agent-a.png" }], cleanup: [], active: [] }),
     installAgent: (agentId) => { calls.installAgent.push(agentId); return Promise.resolve({ status: "ok" }); },
     uninstallAgent: (agentId) => { calls.uninstallAgent.push(agentId); return Promise.resolve({ status: "ok" }); },
     registerShortcut: (payload) => { calls.registerShortcut.push(payload); return Promise.resolve({ status: "ok" }); },
@@ -207,9 +207,9 @@ describe("tutorial window shell", () => {
     assert.strictEqual(stateSend.payload.heroSrc, "data:image/png;base64,hero");
     assert.strictEqual(stateSend.payload.doneHeroSvg, "<svg id=\"done-hero\"></svg>");
     assert.deepStrictEqual(stateSend.payload.agents.install, [{
-      agentId: "gemini-cli",
-      label: "Gemini CLI",
-      iconUrl: "file:///icons/gemini-cli.png",
+      agentId: "agent-a",
+      label: "Agent A",
+      iconUrl: "file:///icons/agent-a.png",
     }]);
     assert.strictEqual(stateSend.payload.shortcuts[0].accelerator, "CommandOrControl+Shift+Y");
   });
@@ -251,8 +251,8 @@ describe("tutorial window shell", () => {
     h.tutorial.open();
     h.getCreatedWindow().emitWebContents("did-finish-load");
     const before = h.sends.filter((s) => s.channel === "tutorial:state").length;
-    const result = await h.handlers.get("tutorial:install-agent")({}, "gemini-cli");
-    assert.deepStrictEqual(h.calls.installAgent, ["gemini-cli"]);
+    const result = await h.handlers.get("tutorial:install-agent")({}, "agent-a");
+    assert.deepStrictEqual(h.calls.installAgent, ["agent-a"]);
     assert.strictEqual(result.status, "ok");
     const after = h.sends.filter((s) => s.channel === "tutorial:state").length;
     assert.strictEqual(after, before + 1, "state re-pushed after install");

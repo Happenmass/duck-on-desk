@@ -1689,7 +1689,7 @@ function mergeSessionProcessMetadata(existing, incoming = {}, options = {}) {
   };
 }
 
-function resolveIncomingSessionTitle(existing, agentId, incomingTitle) {
+function resolveIncomingSessionTitle(existing, incomingTitle) {
   const normalized = normalizeTitle(incomingTitle);
   return normalized || (existing && existing.sessionTitle) || null;
 }
@@ -1862,7 +1862,7 @@ function updateSession(sessionId, state, event, opts = {}) {
       const srcCodexOriginator = codexOriginator || (existing && existing.codexOriginator) || null;
       const srcCodexSource = codexSource || (existing && existing.codexSource) || null;
       const srcGhosttyTerminalId = normalizeGhosttyTerminalId(ghosttyTerminalId) || (existing && existing.ghosttyTerminalId) || null;
-      const srcSessionTitle = resolveIncomingSessionTitle(existing, srcAgentId, sessionTitle);
+      const srcSessionTitle = resolveIncomingSessionTitle(existing, sessionTitle);
       const permissionContext = resolveContextUsageUpdate(existing, contextUsage, contextUsageOrigin);
       const srcContextUsage = permissionContext.contextUsage;
       const srcContextUsageOrigin = permissionContext.contextUsageOrigin;
@@ -1973,7 +1973,7 @@ function updateSession(sessionId, state, event, opts = {}) {
   const srcGhosttyTerminalId = normalizeGhosttyTerminalId(ghosttyTerminalId) || (existing && existing.ghosttyTerminalId) || null;
   // Sticky: empty input does not clear an existing title. A session that has
   // ever been named keeps that name until the user explicitly renames it.
-  const srcSessionTitle = resolveIncomingSessionTitle(existing, srcAgentId, sessionTitle);
+  const srcSessionTitle = resolveIncomingSessionTitle(existing, sessionTitle);
   const normalizedIncomingContextUsage = normalizeContextUsage(contextUsage);
   const effectiveContextUsageOrigin = normalizeContextUsageOrigin(contextUsageOrigin)
     || (srcAgentId === "claude-code" && normalizedIncomingContextUsage && normalizedIncomingContextUsage.source === "claude"

@@ -53,12 +53,12 @@ describe("extractExistingNodeBin", () => {
       hooks: {
         Stop: [{
           matcher: "",
-          hooks: [{ type: "command", command: '"/opt/homebrew/bin/node" "/path/to/codebuddy-hook.js"' }],
+          hooks: [{ type: "command", command: '"/opt/homebrew/bin/node" "/path/to/agent-a-hook.js"' }],
         }],
       },
     };
     assert.strictEqual(
-      extractExistingNodeBin(settings, "codebuddy-hook.js", { nested: true }),
+      extractExistingNodeBin(settings, "agent-a-hook.js", { nested: true }),
       "/opt/homebrew/bin/node"
     );
   });
@@ -68,12 +68,12 @@ describe("extractExistingNodeBin", () => {
       hooks: {
         Stop: [{
           matcher: "",
-          hooks: [{ type: "command", command: '"/opt/homebrew/bin/node" "/path/to/codebuddy-hook.js"' }],
+          hooks: [{ type: "command", command: '"/opt/homebrew/bin/node" "/path/to/agent-a-hook.js"' }],
         }],
       },
     };
     assert.strictEqual(
-      extractExistingNodeBin(settings, "codebuddy-hook.js"),
+      extractExistingNodeBin(settings, "agent-a-hook.js"),
       null
     );
   });
@@ -143,61 +143,61 @@ describe("extractExistingNodeBin", () => {
 
 describe("extractExistingNodeBinFromCommands", () => {
   it("extracts the first absolute path that is not the hook script", () => {
-    const commands = ['"/usr/local/bin/node" "/path/to/kimi-hook.js"'];
-    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "kimi-hook.js"), "/usr/local/bin/node");
+    const commands = ['"/usr/local/bin/node" "/path/to/agent-b-hook.js"'];
+    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "agent-b-hook.js"), "/usr/local/bin/node");
   });
 
   it("returns Windows drive paths verbatim", () => {
-    const commands = ['"C:\\Program Files\\nodejs\\node.exe" "C:\\Users\\u\\.kimi\\hooks\\kimi-hook.js"'];
+    const commands = ['"C:\\Program Files\\nodejs\\node.exe" "C:\\Users\\u\\.agent-b\\hooks\\agent-b-hook.js"'];
     assert.strictEqual(
-      extractExistingNodeBinFromCommands(commands, "kimi-hook.js"),
+      extractExistingNodeBinFromCommands(commands, "agent-b-hook.js"),
       "C:\\Program Files\\nodejs\\node.exe"
     );
   });
 
   it("returns UNC paths", () => {
-    const commands = ['"\\\\fileserver\\tools\\node.exe" "C:\\hooks\\kimi-hook.js"'];
+    const commands = ['"\\\\fileserver\\tools\\node.exe" "C:\\hooks\\agent-b-hook.js"'];
     assert.strictEqual(
-      extractExistingNodeBinFromCommands(commands, "kimi-hook.js"),
+      extractExistingNodeBinFromCommands(commands, "agent-b-hook.js"),
       "\\\\fileserver\\tools\\node.exe"
     );
   });
 
   it("skips bare 'node' and returns null when nothing absolute is found", () => {
-    const commands = ['"node" "/path/to/kimi-hook.js"'];
-    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "kimi-hook.js"), null);
+    const commands = ['"node" "/path/to/agent-b-hook.js"'];
+    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "agent-b-hook.js"), null);
   });
 
   it("extracts an unquoted absolute first token (portable Windows hook form)", () => {
-    const commands = ['C:/nvm/v20.11.0/node.exe "D:/app/hooks/qoder-hook.js" "Stop"'];
+    const commands = ['C:/nvm/v20.11.0/node.exe "D:/app/hooks/agent-c-hook.js" "Stop"'];
     assert.strictEqual(
-      extractExistingNodeBinFromCommands(commands, "qoder-hook.js"),
+      extractExistingNodeBinFromCommands(commands, "agent-c-hook.js"),
       "C:/nvm/v20.11.0/node.exe"
     );
   });
 
   it("does not treat a bare-node portable command as an absolute path", () => {
-    const commands = ['node "D:/app/hooks/qoder-hook.js" "Stop"'];
-    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "qoder-hook.js"), null);
+    const commands = ['node "D:/app/hooks/agent-c-hook.js" "Stop"'];
+    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "agent-c-hook.js"), null);
   });
 
   it("walks past commands that begin with the marker itself", () => {
     const commands = [
-      '"/path/to/kimi-hook.js"',
-      '"/usr/bin/node" "/path/to/kimi-hook.js"',
+      '"/path/to/agent-b-hook.js"',
+      '"/usr/bin/node" "/path/to/agent-b-hook.js"',
     ];
-    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "kimi-hook.js"), "/usr/bin/node");
+    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "agent-b-hook.js"), "/usr/bin/node");
   });
 
   it("returns null for non-array or missing inputs", () => {
-    assert.strictEqual(extractExistingNodeBinFromCommands([], "kimi-hook.js"), null);
-    assert.strictEqual(extractExistingNodeBinFromCommands(null, "kimi-hook.js"), null);
+    assert.strictEqual(extractExistingNodeBinFromCommands([], "agent-b-hook.js"), null);
+    assert.strictEqual(extractExistingNodeBinFromCommands(null, "agent-b-hook.js"), null);
     assert.strictEqual(extractExistingNodeBinFromCommands(["something"], ""), null);
   });
 
   it("ignores non-string entries in the commands array", () => {
-    const commands = [null, 42, '"/usr/bin/node" "/hooks/kimi-hook.js"'];
-    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "kimi-hook.js"), "/usr/bin/node");
+    const commands = [null, 42, '"/usr/bin/node" "/hooks/agent-b-hook.js"'];
+    assert.strictEqual(extractExistingNodeBinFromCommands(commands, "agent-b-hook.js"), "/usr/bin/node");
   });
 });
 
@@ -216,33 +216,33 @@ describe("formatNodeHookCommand", () => {
     // Quoted-without-shell breaks naive-split hook runners on WSL — the
     // quotes become part of the executable name (silent hook failure).
     assert.strictEqual(
-      formatNodeHookCommand("/usr/bin/node", "/home/u/.claude/hooks/gemini-hook.js", {
+      formatNodeHookCommand("/usr/bin/node", "/home/u/.claude/hooks/agent-d-hook.js", {
         platform: "linux",
         wslDistro: "Ubuntu",
         args: ["Stop"],
       }),
-      "/usr/bin/node /home/u/.claude/hooks/gemini-hook.js Stop"
+      "/usr/bin/node /home/u/.claude/hooks/agent-d-hook.js Stop"
     );
   });
 
   it("ignores wslDistro on win32 — Windows wrappers keep their quoting", () => {
     assert.strictEqual(
-      formatNodeHookCommand("C:\\nodejs\\node.exe", "D:/app/hooks/kiro-hook.js", {
+      formatNodeHookCommand("C:\\nodejs\\node.exe", "D:/app/hooks/agent-e-hook.js", {
         platform: "win32",
         windowsWrapper: "powershell",
         wslDistro: "Ubuntu",
       }),
-      '& "C:\\nodejs\\node.exe" "D:/app/hooks/kiro-hook.js"'
+      '& "C:\\nodejs\\node.exe" "D:/app/hooks/agent-e-hook.js"'
     );
   });
 
   it("formats Windows PowerShell commands with call operator", () => {
     assert.strictEqual(
-      formatNodeHookCommand("C:\\Program Files\\nodejs\\node.exe", "D:/app/hooks/kiro-hook.js", {
+      formatNodeHookCommand("C:\\Program Files\\nodejs\\node.exe", "D:/app/hooks/agent-e-hook.js", {
         platform: "win32",
         windowsWrapper: "powershell",
       }),
-      '& "C:\\Program Files\\nodejs\\node.exe" "D:/app/hooks/kiro-hook.js"'
+      '& "C:\\Program Files\\nodejs\\node.exe" "D:/app/hooks/agent-e-hook.js"'
     );
   });
 
@@ -261,34 +261,34 @@ describe("formatNodeHookCommand", () => {
   // forward-slash interpreter token, double-quoted args, zero backslashes.
   it("formats the portable Windows form with bare node when the path has spaces", () => {
     assert.strictEqual(
-      formatNodeHookCommand("C:\\Program Files\\nodejs\\node.exe", "D:\\app\\hooks\\qoder-hook.js", {
+      formatNodeHookCommand("C:\\Program Files\\nodejs\\node.exe", "D:\\app\\hooks\\agent-c-hook.js", {
         platform: "win32",
         windowsWrapper: "portable",
         args: ["PermissionRequest"],
       }),
-      'node "D:/app/hooks/qoder-hook.js" "PermissionRequest"'
+      'node "D:/app/hooks/agent-c-hook.js" "PermissionRequest"'
     );
   });
 
   it("formats the portable Windows form with an unquoted forward-slash node path", () => {
     assert.strictEqual(
-      formatNodeHookCommand("C:\\nvm\\v20.11.0\\node.exe", "D:/app/hooks/qoder-hook.js", {
+      formatNodeHookCommand("C:\\nvm\\v20.11.0\\node.exe", "D:/app/hooks/agent-c-hook.js", {
         platform: "win32",
         windowsWrapper: "portable",
         args: ["Stop"],
       }),
-      'C:/nvm/v20.11.0/node.exe "D:/app/hooks/qoder-hook.js" "Stop"'
+      'C:/nvm/v20.11.0/node.exe "D:/app/hooks/agent-c-hook.js" "Stop"'
     );
   });
 
   it("ignores the portable wrapper on POSIX", () => {
     assert.strictEqual(
-      formatNodeHookCommand("/usr/local/bin/node", "/app/hooks/qoder-hook.js", {
+      formatNodeHookCommand("/usr/local/bin/node", "/app/hooks/agent-c-hook.js", {
         platform: "linux",
         windowsWrapper: "portable",
         args: ["Stop"],
       }),
-      '"/usr/local/bin/node" "/app/hooks/qoder-hook.js" "Stop"'
+      '"/usr/local/bin/node" "/app/hooks/agent-c-hook.js" "Stop"'
     );
   });
 });

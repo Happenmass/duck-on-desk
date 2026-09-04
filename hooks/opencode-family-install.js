@@ -11,8 +11,8 @@
 // Why the global config and not plugins/ directory scanning:
 //   - Phase 0 spike verified that 1.3.13 does NOT auto-scan ~/.config/opencode/plugins/
 //     for bare .mjs files. It only loads plugins listed in "plugin" arrays.
-//   - Global scope applies to every project the user opens, matching
-//     Gemini/Cursor install behavior.
+//   - Global scope applies to every project the user opens, matching how the
+//     other agent integrations install.
 //   - opencode.ai/docs/plugins confirms Load Order starts with "global config".
 
 const fs = require("fs");

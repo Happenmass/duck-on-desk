@@ -435,7 +435,7 @@ describe("pid-cache v2 — path + key (§5.2)", () => {
 
   it("the key varies with version+namespace+sessionId+cacheCwd (NUL-separated, no cross-field collision)", () => {
     // namespace is in the key: two agents that share a sid+cwd never collide.
-    assert.notStrictEqual(pc.cacheFilePathV2("gemini", "sid", CWD), pc.cacheFilePathV2("qoder", "sid", CWD));
+    assert.notStrictEqual(pc.cacheFilePathV2("ns-a", "sid", CWD), pc.cacheFilePathV2("ns-b", "sid", CWD));
     // sessionId and cacheCwd both participate.
     assert.notStrictEqual(pc.cacheFilePathV2(NS, "sid-A", CWD), pc.cacheFilePathV2(NS, "sid-B", CWD));
     assert.notStrictEqual(pc.cacheFilePathV2(NS, "sid", "/a"), pc.cacheFilePathV2(NS, "sid", "/b"));
@@ -471,8 +471,8 @@ describe("pid-cache v2 — read/write/shape", () => {
     const sid = freshSidV2();
     pc.writePidCacheV2(NS, sid, CWD, SUBSET_V2);
     assert.ok(pc.readPidCacheV2(NS, sid, CWD), "own namespace hits");
-    assert.strictEqual(pc.readPidCacheV2("gemini", sid, CWD), null, "another namespace must miss");
-    pc.dropPidCacheV2("gemini", sid, CWD); // no-op cleanup
+    assert.strictEqual(pc.readPidCacheV2("other-ns", sid, CWD), null, "another namespace must miss");
+    pc.dropPidCacheV2("other-ns", sid, CWD); // no-op cleanup
   });
 
   it("readPidCacheV2 rejects version / namespace / cwd mismatch and non-positive pids", () => {
@@ -481,7 +481,7 @@ describe("pid-cache v2 — read/write/shape", () => {
     const base = { namespace: NS, cwd: CWD, stablePid: 1, agentPid: 2, ts: Date.now() };
     fs.writeFileSync(file, JSON.stringify({ ...base, version: 1 }));
     assert.strictEqual(pc.readPidCacheV2(NS, sid, CWD), null, "wrong version → null");
-    fs.writeFileSync(file, JSON.stringify({ ...base, version: 2, namespace: "gemini" }));
+    fs.writeFileSync(file, JSON.stringify({ ...base, version: 2, namespace: "other-ns" }));
     assert.strictEqual(pc.readPidCacheV2(NS, sid, CWD), null, "stored namespace mismatch → null");
     fs.writeFileSync(file, JSON.stringify({ ...base, version: 2, cwd: "/other" }));
     assert.strictEqual(pc.readPidCacheV2(NS, sid, CWD), null, "cwd mismatch → null");

@@ -16,7 +16,7 @@ describe("account quota store", () => {
   it("reports durable flush success and failure", () => {
     const okPath = tempPersistPath();
     const okStore = createAccountQuotaStore({ persistPath: okPath, now: () => 1000 });
-    okStore.update(null, { kimiQuota: { kimiWeekly: { usedPercent: 0, resetAt: 999999 } } });
+    okStore.update(null, { claudeQuota: { claudeWeekly: { usedPercent: 0, resetAt: 999999 } } });
     assert.strictEqual(okStore.flush(), true);
 
     const directoryPath = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-account-quota-dir-"));
@@ -26,7 +26,7 @@ describe("account quota store", () => {
       now: () => 1000,
       logWarn: (...args) => warnings.push(args),
     });
-    badStore.update(null, { kimiQuota: { kimiWeekly: { usedPercent: 0, resetAt: 999999 } } });
+    badStore.update(null, { claudeQuota: { claudeWeekly: { usedPercent: 0, resetAt: 999999 } } });
     assert.strictEqual(badStore.flush(), false);
     assert.strictEqual(warnings.length, 1);
   });

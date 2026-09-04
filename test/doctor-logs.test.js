@@ -27,7 +27,7 @@ describe("doctor log opener", () => {
     const clawdDir = path.join(homeDir, ".clawd");
     fs.mkdirSync(clawdDir, { recursive: true });
     fs.mkdirSync(userDataDir, { recursive: true });
-    const oldLog = path.join(clawdDir, "gemini-debug.log");
+    const oldLog = path.join(clawdDir, "agent-debug.log");
     const newLog = path.join(userDataDir, "permission-debug.log");
     fs.writeFileSync(oldLog, "old");
     fs.writeFileSync(newLog, "new");

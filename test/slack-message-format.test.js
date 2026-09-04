@@ -160,8 +160,8 @@ test("completion uses the snapshot display tag instead of raw or canonical id pr
   }
 });
 
-test("completion does not expose qoder or qwenwork raw prefixes as Slack tags", () => {
-  for (const rawId of ["qoder:abc123456", "qwenwork:xyz987654"]) {
+test("completion does not expose prefixed raw session ids as Slack tags", () => {
+  for (const rawId of ["opencode:abc123456", "pi:xyz987654"]) {
     const msg = fmt.buildCompletionMessage(
       { id: rawId, displaySessionTag: "1122334455", badge: "done" },
       { lang: "en" },
