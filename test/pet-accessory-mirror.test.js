@@ -8,7 +8,7 @@ const {
   isAccessoryMirrored,
 } = require("../src/pet-accessory-mirror");
 
-const CLAWD = Object.freeze({
+const DUCK = Object.freeze({
   hasRoamVisual: true,   // states.roam is a dedicated visual, not idle[0]
   roamFlipAssets: false, // roam art is drawn facing right
   miniFlipAssets: false,
@@ -18,8 +18,8 @@ test("free roam mirrors on walk heading alone, with mini mode off", () => {
   // Regression: geometry used to gate mirroring on miniMode, and roam is
   // mutually exclusive with mini mode (src/roam.js), so a left-heading walk
   // drew a mirrored pet against an unmirrored hit box for the whole trip.
-  const walkingLeft = { ...CLAWD, roamHeadingLeft: true, inMiniMode: false, miniPreEntryMode: false };
-  const walkingRight = { ...CLAWD, roamHeadingLeft: false, inMiniMode: false, miniPreEntryMode: false };
+  const walkingLeft = { ...DUCK, roamHeadingLeft: true, inMiniMode: false, miniPreEntryMode: false };
+  const walkingRight = { ...DUCK, roamHeadingLeft: false, inMiniMode: false, miniPreEntryMode: false };
 
   assert.equal(shouldFlipAssetDirection("roam", walkingLeft), true);
   assert.equal(shouldFlipAssetDirection("roam", walkingRight), false);

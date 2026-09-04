@@ -83,7 +83,7 @@ function makeCtx(overrides = {}) {
   return {
     createHttpServer: null,
     setImmediate: () => {},
-    getPortCandidates: () => [23333],
+    getPortCandidates: () => [24333],
     writeRuntimeConfig: () => true,
     clearRuntimeConfig: () => true,
     readRuntimePort: () => null,
@@ -107,7 +107,7 @@ function makeCtx(overrides = {}) {
     updateSession: (...args) => updateSessionCalls.push(args),
     resolvePermissionEntry: () => {},
     sendPermissionResponse: (res, behavior, message) => {
-      res.writeHead(200, { "x-clawd-server": "clawd-on-desk" });
+      res.writeHead(200, { "x-duck-server": "duck-on-desk" });
       res.end(JSON.stringify({ behavior, message }));
     },
     showPermissionBubble: (entry) => shown.push(entry),
@@ -137,11 +137,11 @@ describe("server hook event ringbuffer", () => {
       state: "working",
       session_id: "sid",
     }, {
-      "x-clawd-routing-nonce": "a".repeat(32),
+      "x-duck-routing-nonce": "a".repeat(32),
     });
 
     assert.strictEqual(res.statusCode, 404);
-    assert.strictEqual(res.headers["x-clawd-server"], undefined);
+    assert.strictEqual(res.headers["x-duck-server"], undefined);
     assert.strictEqual(ctx._test.updateSessionCalls.length, 0);
     assert.deepStrictEqual(api.getRecentHookEvents(), []);
   });

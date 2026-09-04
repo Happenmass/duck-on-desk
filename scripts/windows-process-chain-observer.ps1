@@ -11,7 +11,7 @@ if (-not $isAdmin) {
   throw "This evidence observer requires an elevated PowerShell session. No observer was registered."
 }
 
-$sourceId = "ClawdIssue694ProcessStart-$PID-$([Guid]::NewGuid().ToString('N'))"
+$sourceId = "DuckIssue694ProcessStart-$PID-$([Guid]::NewGuid().ToString('N'))"
 $records = New-Object System.Collections.Generic.List[object]
 
 function Write-EvidenceRecord {

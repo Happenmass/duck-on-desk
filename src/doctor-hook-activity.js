@@ -164,7 +164,7 @@ function evaluateConnectionTest(input = {}) {
     return {
       status: "hooks-need-review",
       level: "warning",
-      detail: "Codex activity was detected, but Clawd cannot evaluate the HTTP path because its Codex hooks still need review. Run /hooks in Codex CLI, review the Clawd hooks, then run this test again. This result does not rule out a separate firewall or proxy issue.",
+      detail: "Codex activity was detected, but Duck cannot evaluate the HTTP path because its Codex hooks still need review. Run /hooks in Codex CLI, review the Duck hooks, then run this test again. This result does not rule out a separate firewall or proxy issue.",
     };
   }
 
@@ -173,7 +173,7 @@ function evaluateConnectionTest(input = {}) {
     return {
       status: "http-blocked",
       level: "warning",
-      detail: `File activity changed for ${agents.join(", ")}, but no HTTP hook event reached Clawd. Firewall, EDR, or proxy interception is likely.`,
+      detail: `File activity changed for ${agents.join(", ")}, but no HTTP hook event reached Duck. Firewall, EDR, or proxy interception is likely.`,
     };
   }
 

@@ -2,15 +2,15 @@
 
 ### New Features
 
-- **Clawd Doctor** - adds a diagnostics modal in Settings for local server health, agent integrations, permission bubble policy, theme health, and live hook connectivity checks. Doctor can copy a redacted diagnostic report, open the debug log, re-run checks, restart Clawd when the local server is unhealthy, and repair supported integration issues such as missing hooks or disabled Codex hook features.
+- **Duck Doctor** - adds a diagnostics modal in Settings for local server health, agent integrations, permission bubble policy, theme health, and live hook connectivity checks. Doctor can copy a redacted diagnostic report, open the debug log, re-run checks, restart Duck when the local server is unhealthy, and repair supported integration issues such as missing hooks or disabled Codex hook features.
 - **Cloudling built-in theme** - ships a third built-in theme with full state coverage, mini-mode assets, direct sleep/DND transitions, pointer-aware idle and mini-eye tracking, theme-specific hitboxes, reaction assets, preview GIFs, state-mapping docs, and bundled source/spec notes for future polish.
 - **Japanese localization** (#197) - adds Japanese UI strings across menus, Settings, Dashboard, permission bubbles, Doctor, and a new Japanese README.
 - **Session HUD completion bell** (#217) - completed sessions now show an unread bell in the HUD until the row is opened/focused, then the bell reappears on the next completed run.
 - **iTerm2 tab-level focus** (#216) - clicking a session can now switch to the matching iTerm2 tab on macOS instead of only raising the iTerm2 window.
-- **Codex permission mode control** (#200) - Codex can stay in native mode so AutoReview/native terminal approval remains in charge, or switch to intercept mode for Clawd Allow/Deny bubbles. DND, disabled agents, and disabled bubbles now return no-decision so Codex falls back to its native prompt.
+- **Codex permission mode control** (#200) - Codex can stay in native mode so AutoReview/native terminal approval remains in charge, or switch to intercept mode for Duck Allow/Deny bubbles. DND, disabled agents, and disabled bubbles now return no-decision so Codex falls back to its native prompt.
 - **Settings-native Claude hook confirmations** (#180) - Claude hook disconnect/disable decisions now happen inside the Settings modal, keeping the hook management flow in one place.
 - **Animation override preview improvements** - Settings preview posters now render through an isolated async preview surface, and animation override data merging is split out for safer future changes.
-- **Theme authoring upgrades** (#207) - themes can define file-specific hitboxes, users can override wide-hitbox behavior per asset, a Clawd working-typing boss variant asset was added for future theme work, and the theme guide now documents Cloudling's built-in-only scripted SVG runtime boundary.
+- **Theme authoring upgrades** (#207) - themes can define file-specific hitboxes, users can override wide-hitbox behavior per asset, a Duck working-typing boss variant asset was added for future theme work, and the theme guide now documents Cloudling's built-in-only scripted SVG runtime boundary.
 
 ### Bug Fixes
 
@@ -36,7 +36,7 @@
 
 - **Cloudling docs and previews** - README variants now describe three built-in themes, include Cloudling GIF previews, update the state mapping tables, and bundle the multi-monitor demo video locally.
 - **Theme guide refresh** - documents built-in theme ids, file-specific hitboxes, updater anchors, mini-working fallback behavior, scripted SVG restrictions, and validation expectations.
-- **Codex/WSL and architecture docs** - clarify that Clawd uses Codex official hooks as the primary path with JSONL polling as fallback, explain native/intercept permission behavior, and preserve WSL/remote deployment caveats.
+- **Codex/WSL and architecture docs** - clarify that Duck uses Codex official hooks as the primary path with JSONL polling as fallback, explain native/intercept permission behavior, and preserve WSL/remote deployment caveats.
 - **Contributor and README maintenance** - contributor tables are collapsed behind localized `<details>` sections, new contributors are added across README variants and Settings About, and the Japanese README joins the English/Chinese/Korean set.
 - **Artwork notice update** - license text now explicitly covers bundled theme assets, including Cloudling.
 
@@ -44,7 +44,7 @@
 
 Huge thanks to everyone who shipped code, design, docs, testing, or review for v0.6.3:
 
-- **@rullerzhou-afk** - Clawd Doctor, Cloudling theme/art/runtime integration, Codex subagent handling, animation preview infrastructure, docs, tests, and release polish
+- **@rullerzhou-afk** - Duck Doctor, Cloudling theme/art/runtime integration, Codex subagent handling, animation preview infrastructure, docs, tests, and release polish
 - **@YOIMIYA66** - Settings-native Claude hook confirmations and async Claude hook management (#180, #219)
 - **@Rladmsrl** - Codex desktop stale-session cleanup (#192)
 - **@tongguang2** - disabled-agent gating for startup hook sync and Claude watcher recovery (#194)

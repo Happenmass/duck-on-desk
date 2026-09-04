@@ -84,15 +84,15 @@ describe("wsl-deploy", () => {
   describe("parseConnectivityProbe", () => {
     it("parses REACHABLE with port", () => {
       assert.deepStrictEqual(
-        parseConnectivityProbe("REACHABLE 23333\n"),
-        { reachable: true, port: 23333 }
+        parseConnectivityProbe("REACHABLE 24333\n"),
+        { reachable: true, port: 24333 }
       );
     });
 
     it("ignores login-shell noise around the marker", () => {
       assert.deepStrictEqual(
-        parseConnectivityProbe("bash: warning\nREACHABLE 23334\n"),
-        { reachable: true, port: 23334 }
+        parseConnectivityProbe("bash: warning\nREACHABLE 24334\n"),
+        { reachable: true, port: 24334 }
       );
     });
 
@@ -123,8 +123,8 @@ describe("wsl-deploy", () => {
 
     it("accepts an injected packaged resources path", () => {
       assert.strictEqual(
-        resolveHooksDir({ isPackaged: true, resourcesPath: "C:\\Clawd\\resources" }),
-        path.join("C:\\Clawd\\resources", "app.asar.unpacked", "hooks")
+        resolveHooksDir({ isPackaged: true, resourcesPath: "C:\\Duck\\resources" }),
+        path.join("C:\\Duck\\resources", "app.asar.unpacked", "hooks")
       );
     });
   });

@@ -7,7 +7,7 @@
 // same file while the app runs.
 // User-facing contract: docs/guides/roam-fence.md (keep both in sync).
 //
-// File: ~/.clawd/roam-area.json
+// File: ~/.duck-on-desk/roam-area.json
 // Format:
 //   {
 //     "enabled": true,     // boolean, required — anything else is invalid
@@ -152,7 +152,7 @@ module.exports = function createRoamFenceLoader(deps = {}) {
   const warn = deps.warn || ((message) => console.warn(message));
   const filePath =
     deps.filePath ||
-    require("path").join(require("os").homedir(), ".clawd", "roam-area.json");
+    require("path").join(require("os").homedir(), ".duck-on-desk", "roam-area.json");
 
   // null = UNKNOWN: nothing confirmed yet. Roam treats it as "hold this
   // round" — see pickRandomTarget() in src/roam.js.

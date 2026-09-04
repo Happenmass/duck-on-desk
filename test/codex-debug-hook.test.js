@@ -13,7 +13,7 @@ const {
 const tempDirs = [];
 
 function makeTempDir() {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-debug-hook-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-debug-hook-"));
   tempDirs.push(tmpDir);
   return tmpDir;
 }
@@ -87,7 +87,7 @@ describe("Codex debug hook", () => {
       script: scriptPath,
       payload: { hook_event_name: "Stop", session_id: "session-1" },
       httpContract: "expect-none",
-      env: { CLAWD_CODEX_DEBUG_LOG: logPath },
+      env: { DUCK_CODEX_DEBUG_LOG: logPath },
     });
 
     assert.strictEqual(result.status, 0);

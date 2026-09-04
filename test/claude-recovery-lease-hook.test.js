@@ -12,7 +12,7 @@ const {
   updateRecoveryLeaseFromStateBody,
 } = require("../hooks/session-recovery-lease");
 
-const HOOK = path.join(__dirname, "..", "hooks", "clawd-hook.js");
+const HOOK = path.join(__dirname, "..", "hooks", "duck-hook.js");
 
 describe("Claude hook recovery lease ordering", () => {
   let home;
@@ -20,9 +20,9 @@ describe("Claude hook recovery lease ordering", () => {
   let hookHarness;
 
   beforeEach(() => {
-    home = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-hook-recovery-"));
+    home = fs.mkdtempSync(path.join(os.tmpdir(), "duck-hook-recovery-"));
     hookHarness = createSpawnedHookHarness({ home });
-    recoveryDir = path.join(home, ".clawd", "session-recovery-v1");
+    recoveryDir = path.join(home, ".duck-on-desk", "session-recovery-v1");
     updateRecoveryLeaseFromStateBody({
       agent_id: "claude-code",
       session_id: "offline-session",
@@ -52,7 +52,7 @@ describe("Claude hook recovery lease ordering", () => {
     });
   }
 
-  it("updates the lease even when the Clawd HTTP receiver is offline", () => {
+  it("updates the lease even when the Duck HTTP receiver is offline", () => {
     const result = run("PreToolUse", { tool_name: "Bash" });
     assert.strictEqual(result.status, 0, result.stderr);
     assert.strictEqual(result.stdout, "");

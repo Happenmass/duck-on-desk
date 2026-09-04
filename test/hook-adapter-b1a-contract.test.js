@@ -6,19 +6,19 @@ const path = require("node:path");
 
 const { createSpawnedHookHarness } = require("./helpers/spawned-hook");
 const {
-  CLAWD_HOOK_PID_HEADER,
-  CLAWD_PROCESS_INSTANCE_HEADER,
+  DUCK_HOOK_PID_HEADER,
+  DUCK_PROCESS_INSTANCE_HEADER,
 } = require("../hooks/server-config");
 
 const HOOKS_DIR = path.resolve(__dirname, "..", "hooks");
-const harness = createSpawnedHookHarness({ prefix: "clawd-b1a-hook-" });
+const harness = createSpawnedHookHarness({ prefix: "duck-b1a-hook-" });
 
 after(() => harness.cleanup());
 
 const GENERATION = "b1a-spawn-recorder-generation";
 const RUNTIME = () => ({
-  app: "clawd-on-desk",
-  port: 23335,
+  app: "duck-on-desk",
+  port: 24335,
   ownerPid: process.pid,
   windowsProcessChain: {
     version: 1,
@@ -60,7 +60,7 @@ const CASES = [
 
 describe("#694 B1a authoritative hook transport", { skip: process.platform !== "win32" }, () => {
   for (const entry of CASES) {
-    it(`${entry.name}: reaches fake Clawd with headers and zero child processes`, () => {
+    it(`${entry.name}: reaches fake Duck with headers and zero child processes`, () => {
       const result = harness.run({
         script: path.join(HOOKS_DIR, entry.script),
         payload: entry.payload,
@@ -68,8 +68,8 @@ describe("#694 B1a authoritative hook transport", { skip: process.platform !== "
         httpContract: "expect-attempt",
         probeProcessSpawns: true,
         env: {
-          CLAWD_POST_RECORDER_SUCCEED: "1",
-          CLAWD_RECORD_RUNTIME_READS: "1",
+          DUCK_POST_RECORDER_SUCCEED: "1",
+          DUCK_RECORD_RUNTIME_READS: "1",
         },
         timeout: 10000,
       });
@@ -79,9 +79,9 @@ describe("#694 B1a authoritative hook transport", { skip: process.platform !== "
       assert.deepStrictEqual(result.spawns, []);
       const post = result.attempts.find((attempt) => attempt.kind === "request" && attempt.path === entry.path);
       assert.ok(post, `missing ${entry.path} attempt: ${JSON.stringify(result.attempts)}`);
-      assert.strictEqual(post.port, 23335);
-      assert.match(post.headers[CLAWD_HOOK_PID_HEADER], /^[1-9]\d*$/);
-      assert.strictEqual(post.headers[CLAWD_PROCESS_INSTANCE_HEADER], GENERATION);
+      assert.strictEqual(post.port, 24335);
+      assert.match(post.headers[DUCK_HOOK_PID_HEADER], /^[1-9]\d*$/);
+      assert.strictEqual(post.headers[DUCK_PROCESS_INSTANCE_HEADER], GENERATION);
       assert.strictEqual(
         result.attempts.filter((attempt) => attempt.kind === "runtime-read").length,
         1,

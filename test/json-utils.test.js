@@ -7,30 +7,30 @@ const { asarUnpackedPath, buildPortableStatuslineCommand, extractExistingNodeBin
 
 // Hook command format depends on real-environment WSL signals; clear them so
 // assertions stay deterministic when the suite itself runs inside WSL.
-delete process.env.CLAWD_WSL_DISTRO;
+delete process.env.DUCK_WSL_DISTRO;
 delete process.env.WSL_DISTRO_NAME;
 
 describe("asarUnpackedPath", () => {
   it("rewrites an app.asar path segment to app.asar.unpacked", () => {
     assert.strictEqual(
-      asarUnpackedPath("/Applications/Clawd.app/Contents/Resources/app.asar/hooks/clawd-hook.js"),
-      "/Applications/Clawd.app/Contents/Resources/app.asar.unpacked/hooks/clawd-hook.js"
+      asarUnpackedPath("/Applications/Duck.app/Contents/Resources/app.asar/hooks/duck-hook.js"),
+      "/Applications/Duck.app/Contents/Resources/app.asar.unpacked/hooks/duck-hook.js"
     );
     assert.strictEqual(
-      asarUnpackedPath("C:/Program Files/Clawd on Desk/resources/app.asar/hooks/clawd-hook.js"),
-      "C:/Program Files/Clawd on Desk/resources/app.asar.unpacked/hooks/clawd-hook.js"
+      asarUnpackedPath("C:/Program Files/Duck on Desk/resources/app.asar/hooks/duck-hook.js"),
+      "C:/Program Files/Duck on Desk/resources/app.asar.unpacked/hooks/duck-hook.js"
     );
   });
 
   it("is a no-op for source-tree paths with no app.asar segment", () => {
-    const sourcePath = "/home/dev/clawd-on-desk/hooks/clawd-hook.js";
+    const sourcePath = "/home/dev/duck-on-desk/hooks/duck-hook.js";
     assert.strictEqual(asarUnpackedPath(sourcePath), sourcePath);
   });
 
   it("only rewrites the first app.asar/ occurrence", () => {
     assert.strictEqual(
-      asarUnpackedPath("/a/app.asar/nested/app.asar/hooks/clawd-hook.js"),
-      "/a/app.asar.unpacked/nested/app.asar/hooks/clawd-hook.js"
+      asarUnpackedPath("/a/app.asar/nested/app.asar/hooks/duck-hook.js"),
+      "/a/app.asar.unpacked/nested/app.asar/hooks/duck-hook.js"
     );
   });
 });
@@ -131,7 +131,7 @@ describe("extractExistingNodeBin", () => {
   it("extracts node path from a UNC share", () => {
     const settings = {
       hooks: {
-        stop: [{ command: '"\\\\fileserver\\tools\\nodejs\\node.exe" "C:\\Clawd\\cursor-hook.js"' }],
+        stop: [{ command: '"\\\\fileserver\\tools\\nodejs\\node.exe" "C:\\Duck\\cursor-hook.js"' }],
       },
     };
     assert.strictEqual(
@@ -352,7 +352,7 @@ describe("buildPortableStatuslineCommand", () => {
 
 describe("writeJsonAtomicAsync", () => {
   it("writes pretty JSON atomically and cleans up tmp files", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-json-utils-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-json-utils-"));
     const filePath = path.join(tmpDir, "settings.json");
     try {
       await writeJsonAtomicAsync(filePath, { hooks: { Stop: [] } });
@@ -367,7 +367,7 @@ describe("writeJsonAtomicAsync", () => {
 });
 
 describe("backup pruning", () => {
-  const PREFIX = "settings.json.clawd-cleanup-";
+  const PREFIX = "settings.json.duck-on-desk-cleanup-";
   // 17-digit, lexically-increasing creation stamp (matches YYYYMMDDHHMMSSmmm width).
   const stampAt = (i) => `20260630000000${String(i).padStart(3, "0")}`;
   const bakOf = (stamp, suffix) => `${PREFIX}${stamp}${suffix != null ? "." + suffix : ""}.bak`;
@@ -385,11 +385,11 @@ describe("backup pruning", () => {
     return fs.readdirSync(dir).filter((n) => n.startsWith(PREFIX) && n.endsWith(".bak")).sort();
   }
   function withTmp(fn) {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-prune-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-prune-"));
     try { return fn(dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   }
   async function withTmpAsync(fn) {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-prune-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-prune-"));
     try { return await fn(dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   }
 
@@ -425,7 +425,7 @@ describe("backup pruning", () => {
       fs.utimesSync(settingsPath, weekAgo, weekAgo); // source looks old
       // 5 pre-existing backups that look "newer" by mtime
       for (let i = 1; i <= 5; i++) seedBak(dir, stampAt(i), { mtimeSec: 1_800_000_000 + i });
-      const created = writeJsonAtomicWithBackup(settingsPath, { user: "config", clawd: true }, { backup: true, backupKeep: 5 });
+      const created = writeJsonAtomicWithBackup(settingsPath, { user: "config", duck: true }, { backup: true, backupKeep: 5 });
       assert.ok(created, "should return a backup path");
       assert.ok(fs.existsSync(created), "the just-written backup must NOT be pruned away");
       assert.ok(bakNames(dir).includes(path.basename(created)), "new backup is among survivors");
@@ -480,7 +480,7 @@ describe("backup pruning", () => {
     withTmp((dir) => {
       const settingsPath = path.join(dir, "settings.json");
       for (let i = 1; i <= 6; i++) seedBak(dir, stampAt(i));
-      const otherBak = path.join(dir, `other.json.clawd-cleanup-${stampAt(1)}.bak`);
+      const otherBak = path.join(dir, `other.json.duck-on-desk-cleanup-${stampAt(1)}.bak`);
       fs.writeFileSync(otherBak, "{}", "utf8");
       fs.writeFileSync(settingsPath, "{}", "utf8");
       pruneOldBackups(settingsPath, { backupKeep: 2 });

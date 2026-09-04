@@ -99,7 +99,7 @@ describe("cmux panel focus (macOS)", () => {
       assert.ok(panelArgIdx >= 0, "Should have --panel flag");
       assert.strictEqual(panelCall.args[panelArgIdx + 1], panelId, "Should focus exact panel UUID");
       const workspaceArgIdx = panelCall.args.indexOf("--workspace");
-      assert.ok(workspaceArgIdx >= 0, "Should pass --workspace so cmux does not rely on Clawd's environment");
+      assert.ok(workspaceArgIdx >= 0, "Should pass --workspace so cmux does not rely on Duck's environment");
       assert.strictEqual(panelCall.args[workspaceArgIdx + 1], "ws-uuid-1", "Should focus inside the matched workspace");
 
       done();

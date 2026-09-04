@@ -76,7 +76,7 @@ describe("macOS Dock visibility coordinator", () => {
       ["reapply"],
     ]);
     assert.deepStrictEqual(warnings, [[
-      "Clawd: failed to resolve macOS Dock icon policy:",
+      "Duck: failed to resolve macOS Dock icon policy:",
       "version failure",
     ]]);
   });
@@ -208,7 +208,7 @@ describe("macOS Dock visibility coordinator", () => {
 
     assert.strictEqual(warnings.length, 1);
     assert.deepStrictEqual(warnings[0], [
-      "Clawd: macOS Dock transition failed:",
+      "Duck: macOS Dock transition failed:",
       "native failure",
     ]);
   });

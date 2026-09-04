@@ -25,14 +25,14 @@ function loadSettingsStrings() {
   const context = {};
   context.globalThis = context;
   vm.runInNewContext(fs.readFileSync(SETTINGS_I18N, "utf8"), context);
-  return context.ClawdSettingsI18n.STRINGS;
+  return context.DuckSettingsI18n.STRINGS;
 }
 
 function loadModalTestHooks() {
   let source = fs.readFileSync(SETTINGS_DOCTOR_MODAL, "utf8");
   // Inject the seam right after the public API assignment, still inside the IIFE
   // scope so the closure-private helpers are in scope.
-  const anchor = "  root.ClawdSettingsDoctorModal = {";
+  const anchor = "  root.DuckSettingsDoctorModal = {";
   assert.ok(source.includes(anchor), "modal public API anchor not found");
   source = source.replace(
     anchor,

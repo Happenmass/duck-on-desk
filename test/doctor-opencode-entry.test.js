@@ -41,13 +41,13 @@ describe("validateOpencodeEntry", () => {
 
   it("reports missing plugin directories", () => {
     assert.deepStrictEqual(
-      validateOpencodeEntry("/opt/clawd/hooks/opencode-plugin", { fs: fakeFs() }),
+      validateOpencodeEntry("/opt/duck/hooks/opencode-plugin", { fs: fakeFs() }),
       { ok: false, reason: "directory-missing" }
     );
   });
 
   it("reports entries that are not directories", () => {
-    const entry = "/opt/clawd/hooks/opencode-plugin";
+    const entry = "/opt/duck/hooks/opencode-plugin";
     assert.deepStrictEqual(
       validateOpencodeEntry(entry, { fs: fakeFs({ files: [entry] }) }),
       { ok: false, reason: "not-a-directory" }
@@ -55,7 +55,7 @@ describe("validateOpencodeEntry", () => {
   });
 
   it("reports missing index.mjs", () => {
-    const entry = "/opt/clawd/hooks/opencode-plugin";
+    const entry = "/opt/duck/hooks/opencode-plugin";
     assert.deepStrictEqual(
       validateOpencodeEntry(entry, { fs: fakeFs({ dirs: [entry] }) }),
       { ok: false, reason: "index-mjs-missing" }
@@ -72,7 +72,7 @@ describe("validateOpencodeEntry", () => {
   }
 
   it("accepts absolute plugin directories with index.mjs", () => {
-    const entry = "/opt/clawd/hooks/opencode-plugin";
+    const entry = "/opt/duck/hooks/opencode-plugin";
     assert.deepStrictEqual(
       validateOpencodeEntry(entry, {
         fs: fakeFs({
@@ -85,7 +85,7 @@ describe("validateOpencodeEntry", () => {
   });
 
   it("accepts Windows absolute paths", () => {
-    const entry = "C:\\clawd\\hooks\\opencode-plugin";
+    const entry = "C:\\duck\\hooks\\opencode-plugin";
     assert.deepStrictEqual(
       validateOpencodeEntry(entry, {
         fs: fakeFs({
@@ -98,7 +98,7 @@ describe("validateOpencodeEntry", () => {
   });
 
   it("reports a missing shared core (packaging false-green guard)", () => {
-    const entry = "/opt/clawd/hooks/opencode-plugin";
+    const entry = "/opt/duck/hooks/opencode-plugin";
     const [corePath, sessionIdsPath] = familySharedFiles(entry);
     assert.deepStrictEqual(
       validateOpencodeEntry(entry, {
@@ -112,7 +112,7 @@ describe("validateOpencodeEntry", () => {
   });
 
   it("reports core present but session helpers missing (two-level closure)", () => {
-    const entry = "/opt/clawd/hooks/opencode-plugin";
+    const entry = "/opt/duck/hooks/opencode-plugin";
     const [corePath, sessionIdsPath] = familySharedFiles(entry);
     assert.deepStrictEqual(
       validateOpencodeEntry(entry, {
@@ -126,7 +126,7 @@ describe("validateOpencodeEntry", () => {
   });
 
   it("rejects a module with an extra named export (#413 false-green guard)", () => {
-    const entry = "/opt/clawd/hooks/opencode-plugin";
+    const entry = "/opt/duck/hooks/opencode-plugin";
     const indexPath = path.join(entry, "index.mjs");
     assert.deepStrictEqual(
       validateOpencodeEntry(entry, {
@@ -144,7 +144,7 @@ describe("validateOpencodeEntry", () => {
   });
 
   it("accepts a module that only default-exports a function", () => {
-    const entry = "/opt/clawd/hooks/opencode-plugin";
+    const entry = "/opt/duck/hooks/opencode-plugin";
     const indexPath = path.join(entry, "index.mjs");
     assert.deepStrictEqual(
       validateOpencodeEntry(entry, {

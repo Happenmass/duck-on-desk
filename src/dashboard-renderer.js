@@ -1,6 +1,6 @@
 "use strict";
 
-const { canOfferLocalFolder, focusUnavailableReasonKey } = globalThis.ClawdSessionFocusUnavailable;
+const { canOfferLocalFolder, focusUnavailableReasonKey } = globalThis.DuckSessionFocusUnavailable;
 
 const AGENT_LABELS = {
   "claude-code": "Claude Code",

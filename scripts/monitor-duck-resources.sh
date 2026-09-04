@@ -2,7 +2,7 @@
 set -euo pipefail
 
 INTERVAL="2"
-PATTERN="Clawd on Desk|clawd-on-desk|src/main.js"
+PATTERN="Duck on Desk|duck-on-desk|src/main.js"
 TARGET_PID=""
 OUTFILE=""
 ONCE=0
@@ -10,24 +10,24 @@ QUIET=0
 
 usage() {
   cat <<'EOF'
-Monitor Clawd on Desk CPU and memory usage and write CSV samples.
+Monitor Duck on Desk CPU and memory usage and write CSV samples.
 
 Usage:
-  bash scripts/monitor-clawd-resources.sh [options]
+  bash scripts/monitor-duck-resources.sh [options]
 
 Options:
   --interval <seconds>  Sampling interval (default: 2)
   --pattern <regex>     pgrep -f regex for process discovery
   --pid <pid>           Monitor this PID and all descendants
-  --output <path>       Output CSV path (default: logs/clawd-resource-<timestamp>.csv)
+  --output <path>       Output CSV path (default: logs/duck-resource-<timestamp>.csv)
   --once                Sample once then exit
   --quiet               Do not print per-sample logs to stdout
   -h, --help            Show this help
 
 Examples:
-  bash scripts/monitor-clawd-resources.sh
-  bash scripts/monitor-clawd-resources.sh --interval 1 --output ./logs/run.csv
-  bash scripts/monitor-clawd-resources.sh --pid 12345
+  bash scripts/monitor-duck-resources.sh
+  bash scripts/monitor-duck-resources.sh --interval 1 --output ./logs/run.csv
+  bash scripts/monitor-duck-resources.sh --pid 12345
 EOF
 }
 
@@ -81,7 +81,7 @@ fi
 
 if [ -z "$OUTFILE" ]; then
   ts="$(date '+%Y%m%d-%H%M%S')"
-  OUTFILE="logs/clawd-resource-${ts}.csv"
+  OUTFILE="logs/duck-resource-${ts}.csv"
 fi
 
 mkdir -p "$(dirname "$OUTFILE")"

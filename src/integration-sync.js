@@ -86,17 +86,17 @@ function createIntegrationSyncRuntime(options = {}) {
       const result = getAgentIntegrationOptions(agentId);
       return result && typeof result === "object" ? result : {};
     } catch (err) {
-      console.warn(`Clawd: failed to read ${agentId} integration options:`, err && err.message);
+      console.warn(`Duck: failed to read ${agentId} integration options:`, err && err.message);
       return {};
     }
   }
 
-  function syncClawdHooks(options = {}) {
+  function syncDuckHooks(options = {}) {
     const source = typeof options.source === "string" ? options.source : null;
     const automatic = options.automatic !== false;
     try {
-      if (typeof ctx.syncClawdHooksImpl === "function") {
-        return ctx.syncClawdHooksImpl({
+      if (typeof ctx.syncDuckHooksImpl === "function") {
+        return ctx.syncDuckHooksImpl({
           autoStart: ctx.autoStartWithClaude,
           port: getHookServerPort(),
           source,
@@ -114,7 +114,7 @@ function createIntegrationSyncRuntime(options = {}) {
         port: getHookServerPort(),
       });
       if (added > 0 || updated > 0 || removed > 0) {
-        console.log(`Clawd: synced hooks (added ${added}, updated ${updated}, removed ${removed})`);
+        console.log(`Duck: synced hooks (added ${added}, updated ${updated}, removed ${removed})`);
       }
       // Statusline registration is best-effort and reported separately: it only
       // takes the slot when empty/already ours (never overwrites a user's own
@@ -124,17 +124,17 @@ function createIntegrationSyncRuntime(options = {}) {
         if (ctx.claudeQuotaCollectionEnabled === true) {
           const statuslineResult = registerClaudeStatusline({ silent: true });
           if (statuslineResult.changed) {
-            console.log("Clawd: registered Claude Code statusline (rate limit quota)");
+            console.log("Duck: registered Claude Code statusline (rate limit quota)");
           }
         } else {
           unregisterClaudeStatusline({ backup: true, silent: true });
         }
       } catch (statuslineErr) {
-        console.warn("Clawd: failed to sync Claude Code statusline:", statuslineErr.message);
+        console.warn("Duck: failed to sync Claude Code statusline:", statuslineErr.message);
       }
       return { status: "ok", added, updated, removed };
     } catch (err) {
-      console.warn("Clawd: failed to sync hooks:", err.message);
+      console.warn("Duck: failed to sync hooks:", err.message);
       return { status: "error", message: err && err.message ? err.message : "Failed to sync Claude hooks" };
     }
   }
@@ -145,14 +145,14 @@ function createIntegrationSyncRuntime(options = {}) {
       const { registerCodexHooks } = require("../hooks/codex-install.js");
       const result = registerCodexHooks({ silent: true });
       if (hasPositiveCount(result.added) || hasPositiveCount(result.updated)) {
-        console.log(`Clawd: synced Codex hooks (added ${result.added}, updated ${result.updated})`);
+        console.log(`Duck: synced Codex hooks (added ${result.added}, updated ${result.updated})`);
       }
       if (Array.isArray(result.warnings)) {
-        for (const warning of result.warnings) console.warn(`Clawd: Codex hook sync warning: ${warning}`);
+        for (const warning of result.warnings) console.warn(`Duck: Codex hook sync warning: ${warning}`);
       }
       return normalizeCountSyncResult(result, "Codex CLI", "codex-not-installed");
     } catch (err) {
-      console.warn("Clawd: failed to sync Codex hooks:", err.message);
+      console.warn("Duck: failed to sync Codex hooks:", err.message);
       return { status: "error", message: err && err.message ? err.message : "Failed to sync Codex hooks" };
     }
   }
@@ -166,10 +166,10 @@ function createIntegrationSyncRuntime(options = {}) {
         forceCodexHooksFeature: options && options.forceCodexHooksFeature === true,
       });
       if (added > 0 || updated > 0 || configChanged) {
-        console.log(`Clawd: repaired Codex hooks (added ${added}, updated ${updated}, configChanged=${!!configChanged})`);
+        console.log(`Duck: repaired Codex hooks (added ${added}, updated ${updated}, configChanged=${!!configChanged})`);
       }
       if (Array.isArray(warnings)) {
-        for (const warning of warnings) console.warn(`Clawd: Codex hook repair warning: ${warning}`);
+        for (const warning of warnings) console.warn(`Duck: Codex hook repair warning: ${warning}`);
         if (warnings.length > 0) {
           return {
             status: "error",
@@ -187,7 +187,7 @@ function createIntegrationSyncRuntime(options = {}) {
           : "Codex hooks repaired",
       };
     } catch (err) {
-      console.warn("Clawd: failed to repair Codex hooks:", err.message);
+      console.warn("Duck: failed to repair Codex hooks:", err.message);
       return { status: "error", message: err && err.message };
     }
   }
@@ -198,14 +198,14 @@ function createIntegrationSyncRuntime(options = {}) {
       const { registerOpencodePlugin } = require("../hooks/opencode-install.js");
       const result = registerOpencodePlugin({ silent: true });
       if (result.added || result.created) {
-        console.log(`Clawd: synced opencode plugin (added=${result.added}, created=${result.created})`);
+        console.log(`Duck: synced opencode plugin (added=${result.added}, created=${result.created})`);
       }
       if (result && result.reason === "opencode-not-found") {
         return asSkipped(result, "opencode-not-found", "opencode is not installed; skipped plugin sync");
       }
       return asOk(result);
     } catch (err) {
-      console.warn("Clawd: failed to sync opencode plugin:", err.message);
+      console.warn("Duck: failed to sync opencode plugin:", err.message);
       return { status: "error", message: err && err.message ? err.message : "Failed to sync opencode plugin" };
     }
   }
@@ -216,11 +216,11 @@ function createIntegrationSyncRuntime(options = {}) {
       const { registerPiExtension } = require("../hooks/pi-install.js");
       const result = registerPiExtension({ silent: true });
       if (result.installed && result.updated) {
-        console.log("Clawd: synced Pi extension");
+        console.log("Duck: synced Pi extension");
       }
       return normalizeInstalledFlagResult(result, "Pi", "pi-not-found");
     } catch (err) {
-      console.warn("Clawd: failed to sync Pi extension:", err.message);
+      console.warn("Duck: failed to sync Pi extension:", err.message);
       return { status: "error", message: err && err.message ? err.message : "Failed to sync Pi extension" };
     }
   }
@@ -243,7 +243,7 @@ function createIntegrationSyncRuntime(options = {}) {
   function syncIntegrationForAgent(agentId, options = {}) {
     if (agentId === "claude-code") {
       if (!shouldManageClaudeHooks()) return false;
-      const result = syncClawdHooks(options);
+      const result = syncDuckHooks(options);
       // Claude watcher baseline seeding reads settings.json, so it must not run
       // until this sync has actually settled — an in-flight (queued) async sync
       // must not be mistaken for a completed one. Synchronous/test-injected
@@ -329,7 +329,7 @@ function createIntegrationSyncRuntime(options = {}) {
       const result = uninstall({ ...agentOptions, silent: true });
       return result && typeof result === "object" ? result : true;
     } catch (err) {
-      console.warn(`Clawd: failed to uninstall ${agentId} integration:`, err.message);
+      console.warn(`Duck: failed to uninstall ${agentId} integration:`, err.message);
       return {
         status: "error",
         message: err && err.message ? err.message : `Failed to uninstall ${agentId} integration`,
@@ -339,7 +339,7 @@ function createIntegrationSyncRuntime(options = {}) {
 
   function syncEnabledStartupIntegrations() {
     if (shouldManageClaudeHooks() && shouldSyncAgentIntegration("claude-code")) {
-      const result = syncClawdHooks({ source: "startup", automatic: true });
+      const result = syncDuckHooks({ source: "startup", automatic: true });
       if (result && typeof result === "object" && typeof result.then === "function") {
         result.then(() => startClaudeSettingsWatcher());
       } else {
@@ -354,7 +354,7 @@ function createIntegrationSyncRuntime(options = {}) {
   }
 
   return {
-    syncClawdHooks,
+    syncDuckHooks,
     syncCodexHooks,
     syncOpencodePlugin,
     syncPiExtension,

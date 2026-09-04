@@ -8,7 +8,7 @@ const path = require("node:path");
 // Load default theme for test ctx
 const themeLoader = require("../src/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
-const _defaultTheme = themeLoader.loadTheme("clawd");
+const _defaultTheme = themeLoader.loadTheme("duck");
 const _calicoTheme = themeLoader.loadTheme("calico");
 const { createTranslator } = require("../src/i18n");
 const { makeSessionKey, resolveSessionIdentity } = require("../src/session-key");
@@ -323,7 +323,7 @@ describe("restoreSessionFromLease()", () => {
     assert.strictEqual(api.restoreSessionFromLease(lease({ state: "juggling" })), true);
     const sessionId = makeSessionKey({ profileId: "local", rawSessionId: "claude-real-session" });
     assert.strictEqual(api.sessions.get(sessionId).subagentTracker.recoveredFloor, true);
-    assert.strictEqual(api.getSvgOverride("juggling"), "clawd-headphones-groove.svg");
+    assert.strictEqual(api.getSvgOverride("juggling"), "duck-headphones-groove.svg");
 
     update(api, {
       id: sessionId,
@@ -339,7 +339,7 @@ describe("restoreSessionFromLease()", () => {
     const tracker = api.sessions.get(sessionId).subagentTracker;
     assert.strictEqual(tracker.recoveredFloor, false);
     assert.deepStrictEqual([...tracker.confirmedIds], ["child-a"]);
-    assert.strictEqual(api.getSvgOverride("juggling"), "clawd-headphones-groove.svg");
+    assert.strictEqual(api.getSvgOverride("juggling"), "duck-headphones-groove.svg");
   });
 
   it("never overwrites a session that arrived from a real hook first", () => {
@@ -411,7 +411,7 @@ describe("resolveDisplayState()", () => {
 
     api.setUpdateVisualState("checking");
     assert.strictEqual(api.resolveDisplayState(), "thinking");
-    assert.strictEqual(api.getSvgOverride("thinking"), "clawd-working-debugger.svg");
+    assert.strictEqual(api.getSvgOverride("thinking"), "duck-working-debugger.svg");
 
     api.setUpdateVisualState("available");
     assert.strictEqual(api.resolveDisplayState(), "notification");
@@ -443,7 +443,7 @@ describe("resolveDisplayState()", () => {
     api = require("../src/state")(ctx);
 
     api.setUpdateVisualState("checking");
-    assert.strictEqual(api.getSvgOverride("thinking"), "clawd-working-debugger.svg");
+    assert.strictEqual(api.getSvgOverride("thinking"), "duck-working-debugger.svg");
 
     ctx.theme = _calicoTheme;
     api.refreshTheme();
@@ -451,7 +451,7 @@ describe("resolveDisplayState()", () => {
 
     ctx.theme = _defaultTheme;
     api.refreshTheme();
-    assert.strictEqual(api.getSvgOverride("thinking"), "clawd-working-debugger.svg");
+    assert.strictEqual(api.getSvgOverride("thinking"), "duck-working-debugger.svg");
   });
 
   it("update overlay does not override higher-priority agent states", () => {
@@ -479,7 +479,7 @@ describe("resolveDisplayState()", () => {
   it("update overlay wins when no sessions exist", () => {
     api.setUpdateVisualState("checking");
     assert.strictEqual(api.resolveDisplayState(), "thinking");
-    assert.strictEqual(api.getSvgOverride("thinking"), "clawd-working-debugger.svg");
+    assert.strictEqual(api.getSvgOverride("thinking"), "duck-working-debugger.svg");
     api.setUpdateVisualState("available");
     assert.strictEqual(api.resolveDisplayState(), "notification");
     api.setUpdateVisualState(null);
@@ -604,35 +604,35 @@ describe("working sub-animations", () => {
 
   it("1 working session → typing SVG", () => {
     api.sessions.set("s1", rawSession("working"));
-    assert.strictEqual(api.getSvgOverride("working"), "clawd-working-typing.svg");
+    assert.strictEqual(api.getSvgOverride("working"), "duck-working-typing.svg");
   });
 
   it("2 working sessions → headphones groove SVG", () => {
     api.sessions.set("s1", rawSession("working"));
     api.sessions.set("s2", rawSession("working"));
-    assert.strictEqual(api.getSvgOverride("working"), "clawd-headphones-groove.svg");
+    assert.strictEqual(api.getSvgOverride("working"), "duck-headphones-groove.svg");
   });
 
   it("3+ working sessions → building SVG", () => {
     api.sessions.set("s1", rawSession("working"));
     api.sessions.set("s2", rawSession("thinking"));
     api.sessions.set("s3", rawSession("working"));
-    assert.strictEqual(api.getSvgOverride("working"), "clawd-working-building.svg");
+    assert.strictEqual(api.getSvgOverride("working"), "duck-working-building.svg");
   });
 
   it("1 juggling session → headphones groove SVG", () => {
     api.sessions.set("s1", rawSession("juggling"));
-    assert.strictEqual(api.getSvgOverride("juggling"), "clawd-headphones-groove.svg");
+    assert.strictEqual(api.getSvgOverride("juggling"), "duck-headphones-groove.svg");
   });
 
   it("2+ juggling sessions → three-ball juggling SVG", () => {
     api.sessions.set("s1", rawSession("juggling"));
     api.sessions.set("s2", rawSession("juggling"));
-    assert.strictEqual(api.getSvgOverride("juggling"), "clawd-working-juggling.svg");
+    assert.strictEqual(api.getSvgOverride("juggling"), "duck-working-juggling.svg");
   });
 
   it("idle → follow SVG", () => {
-    assert.strictEqual(api.getSvgOverride("idle"), "clawd-idle-follow.svg");
+    assert.strictEqual(api.getSvgOverride("idle"), "duck-idle-follow.svg");
   });
 });
 
@@ -645,9 +645,9 @@ describe("#862 juggling tier counts subagents, not sessions", () => {
   beforeEach(() => { api = require("../src/state")(makeCtx()); });
   afterEach(() => { api.cleanup(); });
 
-  const GROOVE = "clawd-headphones-groove.svg";
-  const JUGGLE = "clawd-working-juggling.svg";
-  const TYPING = "clawd-working-typing.svg";
+  const GROOVE = "duck-headphones-groove.svg";
+  const JUGGLE = "duck-working-juggling.svg";
+  const TYPING = "duck-working-typing.svg";
 
   function start(id = "s1", child = "child-1") {
     update(api, {
@@ -1011,7 +1011,7 @@ describe("#862 renderer tier timing", () => {
         if (channel === "state-change") changes.push([state, svg]);
       },
     }));
-    api.applyState("working", "clawd-working-typing.svg");
+    api.applyState("working", "duck-working-typing.svg");
     changes.length = 0;
     update(api, { id: "s1", state: "working", event: "PreToolUse" });
   });
@@ -1038,7 +1038,7 @@ describe("#862 renderer tier timing", () => {
     assert.deepStrictEqual(changes, [], "working should remain visible for its minimum duration");
 
     mock.timers.tick(1000);
-    assert.deepStrictEqual(changes, [["juggling", "clawd-headphones-groove.svg"]],
+    assert.deepStrictEqual(changes, [["juggling", "duck-headphones-groove.svg"]],
       "the delayed paint must use the live 1-child tier, not a stale queued 2+ asset");
   });
 
@@ -1046,13 +1046,13 @@ describe("#862 renderer tier timing", () => {
     native("SubagentStart", "child-a", "juggling");
     native("SubagentStart", "child-b", "juggling");
     mock.timers.tick(1000);
-    assert.deepStrictEqual(changes.at(-1), ["juggling", "clawd-working-juggling.svg"]);
+    assert.deepStrictEqual(changes.at(-1), ["juggling", "duck-working-juggling.svg"]);
 
     native("SubagentStop", "child-a", "working");
-    assert.deepStrictEqual(changes.at(-1), ["juggling", "clawd-headphones-groove.svg"]);
+    assert.deepStrictEqual(changes.at(-1), ["juggling", "duck-headphones-groove.svg"]);
 
     native("SubagentStop", "child-b", "working");
-    assert.deepStrictEqual(changes.at(-1), ["working", "clawd-working-typing.svg"]);
+    assert.deepStrictEqual(changes.at(-1), ["working", "duck-working-typing.svg"]);
   });
 
   it("returns from a one-shot error to the live juggling tier", () => {
@@ -1061,11 +1061,11 @@ describe("#862 renderer tier timing", () => {
     changes.length = 0;
 
     update(api, { id: "s1", state: "error", event: "PostToolUseFailure" });
-    assert.deepStrictEqual(changes.at(-1), ["error", "clawd-error.svg"]);
+    assert.deepStrictEqual(changes.at(-1), ["error", "duck-error.svg"]);
     assert.strictEqual(api.sessions.get("s1").state, "juggling");
 
     mock.timers.tick(5000);
-    assert.deepStrictEqual(changes.at(-1), ["juggling", "clawd-headphones-groove.svg"]);
+    assert.deepStrictEqual(changes.at(-1), ["juggling", "duck-headphones-groove.svg"]);
   });
 });
 
@@ -1077,10 +1077,10 @@ describe("hitbox selection", () => {
   it("uses a file-specific hitbox for the displayed SVG", () => {
     const theme = cloneTheme(_defaultTheme);
     const fileBox = { x: 10, y: 11, w: 12, h: 13 };
-    theme.fileHitBoxes = { "clawd-working-typing.svg": fileBox };
+    theme.fileHitBoxes = { "duck-working-typing.svg": fileBox };
     api = require("../src/state")(makeCtx({ theme }));
 
-    api.applyState("working", "clawd-working-typing.svg");
+    api.applyState("working", "duck-working-typing.svg");
 
     assert.deepStrictEqual(api.getCurrentHitBox(), fileBox);
   });
@@ -1090,10 +1090,10 @@ describe("hitbox selection", () => {
     theme.fileHitBoxes = {};
     api = require("../src/state")(makeCtx({ theme }));
 
-    api.applyState("error", "clawd-error.svg");
+    api.applyState("error", "duck-error.svg");
     assert.deepStrictEqual(api.getCurrentHitBox(), theme.hitBoxes.wide);
 
-    api.applyState("working", "clawd-working-typing.svg");
+    api.applyState("working", "duck-working-typing.svg");
     assert.deepStrictEqual(api.getCurrentHitBox(), theme.hitBoxes.default);
   });
 });
@@ -1117,7 +1117,7 @@ describe("visual fallback resolution", () => {
   it("keeps the logical state while resolving visuals through fallbackTo", () => {
     api.applyState("error");
     assert.strictEqual(api.getCurrentState(), "error");
-    assert.strictEqual(api.getCurrentSvg(), "clawd-happy.svg");
+    assert.strictEqual(api.getCurrentSvg(), "duck-happy.svg");
 
     mock.timers.tick(5000);
     assert.strictEqual(api.getCurrentState(), "idle");
@@ -1242,7 +1242,7 @@ describe("wake poll behavior", () => {
     api.cleanup();
     ctx = makeCtx({
       getCursorScreenPoint: () => ({ ...fakeCursor }),
-      getIdleVisualChoice: () => "clawd-idle-reading.svg",
+      getIdleVisualChoice: () => "duck-idle-reading.svg",
     });
     const changes = [];
     ctx.sendToRenderer = (ev, ...args) => { if (ev === "state-change") changes.push(args); };
@@ -1254,7 +1254,7 @@ describe("wake poll behavior", () => {
     mock.timers.tick(200);
     mock.timers.tick(350);
     assert.strictEqual(api.getCurrentState(), "idle");
-    assert.deepStrictEqual(changes[changes.length - 1], ["idle", "clawd-idle-reading.svg"]);
+    assert.deepStrictEqual(changes[changes.length - 1], ["idle", "duck-idle-reading.svg"]);
   });
 
   it("collapsing + mouse move → waking", () => {
@@ -1288,7 +1288,7 @@ describe("wake poll behavior", () => {
     fakeCursor.x = 200;
     mock.timers.tick(200);
     assert.strictEqual(api.getCurrentState(), "idle");
-    assert.strictEqual(api.getCurrentSvg(), "clawd-idle-follow.svg");
+    assert.strictEqual(api.getCurrentSvg(), "duck-idle-follow.svg");
   });
 
   it("dozing + still > DEEP_SLEEP_TIMEOUT → collapsing", () => {
@@ -1383,13 +1383,13 @@ describe("cleanStaleSessions()", () => {
     const changes = [];
     api = require("../src/state")(makeCtx({
       processKill: makePidKill(new Set()),
-      getIdleVisualChoice: () => "clawd-idle-reading.svg",
+      getIdleVisualChoice: () => "duck-idle-reading.svg",
       sendToRenderer: (ev, ...args) => { if (ev === "state-change") changes.push(args); },
     }));
     api.sessions.set("s1", rawSession("working", { agentPid: 9999, pidReachable: true }));
     api.cleanStaleSessions();
     assert.strictEqual(api.sessions.size, 0);
-    assert.deepStrictEqual(changes[changes.length - 1], ["idle", "clawd-idle-reading.svg"]);
+    assert.deepStrictEqual(changes[changes.length - 1], ["idle", "duck-idle-reading.svg"]);
   });
 
   it("agentPid alive + sourcePid dead + stale → delete", () => {
@@ -1925,7 +1925,7 @@ describe("updateSession()", () => {
     }]);
   });
 
-  it("dismissSession removes only Clawd bookkeeping for that session", () => {
+  it("dismissSession removes only Duck bookkeeping for that session", () => {
     update(api, { id: "s1", state: "working" });
     update(api, { id: "s2", state: "thinking" });
 
@@ -4063,8 +4063,8 @@ describe("Stop completion gate (#406)", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     // The product default is now 0 (opt-in); this describe exercises the
     // debounce, so turn it on explicitly.
-    savedDebounceEnv = process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-    process.env.CLAWD_COMPLETION_DEBOUNCE_MS = "1000";
+    savedDebounceEnv = process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+    process.env.DUCK_COMPLETION_DEBOUNCE_MS = "1000";
     soundsPlayed = [];
     stateChanges = [];
     ctx = makeCtx({
@@ -4079,8 +4079,8 @@ describe("Stop completion gate (#406)", () => {
   afterEach(() => {
     api.cleanup();
     mock.timers.reset();
-    if (savedDebounceEnv === undefined) delete process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-    else process.env.CLAWD_COMPLETION_DEBOUNCE_MS = savedDebounceEnv;
+    if (savedDebounceEnv === undefined) delete process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+    else process.env.DUCK_COMPLETION_DEBOUNCE_MS = savedDebounceEnv;
   });
 
   it("background_tasks without final assistant text hold the Claude Stop as working — no celebrate, badge stays running", () => {
@@ -4180,7 +4180,7 @@ describe("Stop completion gate (#406)", () => {
   });
 
   it("disabling completion debounce cannot release a typed background subagent (#952)", () => {
-    process.env.CLAWD_COMPLETION_DEBOUNCE_MS = "0";
+    process.env.DUCK_COMPLETION_DEBOUNCE_MS = "0";
     update(api, {
       id: "s1",
       state: "attention",
@@ -4192,7 +4192,7 @@ describe("Stop completion gate (#406)", () => {
     assert.strictEqual(api.sessions.get("s1").state, "working");
     assert.strictEqual(api.deriveSessionBadge(api.sessions.get("s1")), "running");
     assert.ok(!soundsPlayed.includes("complete"));
-    process.env.CLAWD_COMPLETION_DEBOUNCE_MS = "1000";
+    process.env.DUCK_COMPLETION_DEBOUNCE_MS = "1000";
   });
 
   it("an absent typed snapshot inherits the private hold instead of completing (#952)", () => {
@@ -4856,22 +4856,22 @@ describe("Stop completion gate (#406)", () => {
     assert.ok(soundsPlayed.includes("complete"));
   });
 
-  it("CLAWD_COMPLETION_DEBOUNCE_MS=0 disables the debounce (immediate celebration)", () => {
-    const saved = process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-    process.env.CLAWD_COMPLETION_DEBOUNCE_MS = "0";
+  it("DUCK_COMPLETION_DEBOUNCE_MS=0 disables the debounce (immediate celebration)", () => {
+    const saved = process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+    process.env.DUCK_COMPLETION_DEBOUNCE_MS = "0";
     try {
       update(api, { id: "s1", state: "attention", event: "Stop" });
       assert.strictEqual(api.getCurrentState(), "attention");
       assert.ok(soundsPlayed.includes("complete"));
     } finally {
-      if (saved === undefined) delete process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-      else process.env.CLAWD_COMPLETION_DEBOUNCE_MS = saved;
+      if (saved === undefined) delete process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+      else process.env.DUCK_COMPLETION_DEBOUNCE_MS = saved;
     }
   });
 
-  it("CLAWD_COMPLETION_DEBOUNCE_MS=0 also disables the bg-only assistant-text quiet window", () => {
-    const saved = process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-    process.env.CLAWD_COMPLETION_DEBOUNCE_MS = "0";
+  it("DUCK_COMPLETION_DEBOUNCE_MS=0 also disables the bg-only assistant-text quiet window", () => {
+    const saved = process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+    process.env.DUCK_COMPLETION_DEBOUNCE_MS = "0";
     try {
       update(api, {
         id: "s1",
@@ -4885,8 +4885,8 @@ describe("Stop completion gate (#406)", () => {
       assert.ok(soundsPlayed.includes("complete"));
       assert.strictEqual(api.deriveSessionBadge(api.sessions.get("s1")), "done");
     } finally {
-      if (saved === undefined) delete process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-      else process.env.CLAWD_COMPLETION_DEBOUNCE_MS = saved;
+      if (saved === undefined) delete process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+      else process.env.DUCK_COMPLETION_DEBOUNCE_MS = saved;
     }
   });
 
@@ -4964,9 +4964,9 @@ describe("Stop completion gate (#406)", () => {
 
   it("promoteCompletion does not swallow another session's queued high-priority visual (#406 regression)", () => {
     // Short debounce so A promotes WHILE B's queued error is still pending behind
-    // the held "working" min-display (1000ms in the clawd theme).
-    const saved = process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-    process.env.CLAWD_COMPLETION_DEBOUNCE_MS = "100";
+    // the held "working" min-display (1000ms in the duck theme).
+    const saved = process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+    process.env.DUCK_COMPLETION_DEBOUNCE_MS = "100";
     try {
       update(api, { id: "A", state: "attention", event: "Stop" }); // held working at t0 (min-display 1000)
       update(api, { id: "B", state: "error", event: "StopFailure" }); // error(8) queues behind working's min-display
@@ -4978,13 +4978,13 @@ describe("Stop completion gate (#406)", () => {
       );
       assert.strictEqual(api.deriveSessionBadge(api.sessions.get("A")), "done", "A still completes");
     } finally {
-      if (saved === undefined) delete process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-      else process.env.CLAWD_COMPLETION_DEBOUNCE_MS = saved;
+      if (saved === undefined) delete process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+      else process.env.DUCK_COMPLETION_DEBOUNCE_MS = saved;
     }
   });
 
   it("Claude AskUserQuestion PostToolUse falls back to transcript completion when Stop is missed", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-claude-stop-fallback-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-claude-stop-fallback-"));
     const transcript = path.join(dir, "transcript.jsonl");
     const rawSessionId = "claude-probe-hit";
     const sessionId = resolveSessionIdentity(rawSessionId, "local").sessionId;
@@ -5021,7 +5021,7 @@ describe("Stop completion gate (#406)", () => {
   });
 
   it("Claude transcript completion cannot promote through a typed background-subagent hold (#952)", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-claude-stop-fallback-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-claude-stop-fallback-"));
     const transcript = path.join(dir, "transcript.jsonl");
     const rawSessionId = "claude-probe-background-subagent";
     const sessionId = resolveSessionIdentity(rawSessionId, "local").sessionId;
@@ -5057,7 +5057,7 @@ describe("Stop completion gate (#406)", () => {
   });
 
   it("Claude transcript fallback documents raw transcript sessionId mismatch", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-claude-stop-fallback-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-claude-stop-fallback-"));
     const transcript = path.join(dir, "transcript.jsonl");
     const rawSessionId = "claude-probe-raw-mismatch";
     const sessionId = resolveSessionIdentity(rawSessionId, "local").sessionId;
@@ -5085,7 +5085,7 @@ describe("Stop completion gate (#406)", () => {
   });
 
   it("Claude transcript completion fallback is cancelled before restoring the same raw session id", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-claude-stop-fallback-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-claude-stop-fallback-"));
     const transcript = path.join(dir, "transcript.jsonl");
     const rawSessionId = "claude-probe-restore-race";
     const sessionId = resolveSessionIdentity(rawSessionId, "local").sessionId;
@@ -5125,7 +5125,7 @@ describe("Stop completion gate (#406)", () => {
   });
 
   it("Claude transcript completion fallback is limited to AskUserQuestion tool results", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-claude-stop-fallback-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-claude-stop-fallback-"));
     const transcript = path.join(dir, "transcript.jsonl");
     fs.writeFileSync(transcript, [
       JSON.stringify({ type: "user", sessionId: "s1", message: { content: [{ type: "tool_result", content: "ok" }] } }),
@@ -5147,7 +5147,7 @@ describe("Stop completion gate (#406)", () => {
   });
 
   it("Claude transcript completion fallback cancels when work resumes", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-claude-stop-fallback-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-claude-stop-fallback-"));
     const transcript = path.join(dir, "transcript.jsonl");
     fs.writeFileSync(transcript, [
       JSON.stringify({ type: "assistant", sessionId: "s1", message: { content: [{ type: "tool_use", name: "AskUserQuestion" }] } }),
@@ -5179,8 +5179,8 @@ describe("Headless Stop debounce default (#449)", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     // This group exercises the built-in defaults — make sure no env override
     // from the host shell leaks in.
-    savedDebounceEnv = process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-    delete process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
+    savedDebounceEnv = process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+    delete process.env.DUCK_COMPLETION_DEBOUNCE_MS;
     soundsPlayed = [];
     ctx = makeCtx({
       processKill: () => true,
@@ -5191,8 +5191,8 @@ describe("Headless Stop debounce default (#449)", () => {
   afterEach(() => {
     api.cleanup();
     mock.timers.reset();
-    if (savedDebounceEnv === undefined) delete process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-    else process.env.CLAWD_COMPLETION_DEBOUNCE_MS = savedDebounceEnv;
+    if (savedDebounceEnv === undefined) delete process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+    else process.env.DUCK_COMPLETION_DEBOUNCE_MS = savedDebounceEnv;
   });
 
   it("headless Stop is held; the orchestrator's next prompt suppresses the celebration", () => {
@@ -5248,15 +5248,15 @@ describe("Headless Stop debounce default (#449)", () => {
     assert.ok(soundsPlayed.includes("complete"), "quiet window still promotes");
   });
 
-  it("CLAWD_COMPLETION_DEBOUNCE_MS=0 disables the headless default too", () => {
-    process.env.CLAWD_COMPLETION_DEBOUNCE_MS = "0";
+  it("DUCK_COMPLETION_DEBOUNCE_MS=0 disables the headless default too", () => {
+    process.env.DUCK_COMPLETION_DEBOUNCE_MS = "0";
     update(api, { id: "h1", state: "attention", event: "Stop", headless: true });
     assert.strictEqual(api.getCurrentState(), "attention");
     assert.ok(soundsPlayed.includes("complete"), "explicit 0 keeps the old immediate behavior");
   });
 
-  it("an explicit CLAWD_COMPLETION_DEBOUNCE_MS overrides the headless default window", () => {
-    process.env.CLAWD_COMPLETION_DEBOUNCE_MS = "100";
+  it("an explicit DUCK_COMPLETION_DEBOUNCE_MS overrides the headless default window", () => {
+    process.env.DUCK_COMPLETION_DEBOUNCE_MS = "100";
     update(api, { id: "h1", state: "attention", event: "Stop", headless: true });
     mock.timers.tick(99);
     assert.deepStrictEqual(soundsPlayed, [], "inside the overridden window");
@@ -5474,7 +5474,7 @@ describe("DND mode", () => {
 
   it("DND preserves the Claude transcript completion fallback without sound", () => {
     const sounds = [];
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-claude-dnd-fallback-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-claude-dnd-fallback-"));
     const transcript = path.join(dir, "transcript.jsonl");
     const rawSessionId = "claude-dnd-probe-hit";
     const sessionId = resolveSessionIdentity(rawSessionId, "local").sessionId;
@@ -5560,7 +5560,7 @@ describe("refreshTheme()", () => {
   });
 
   it("updates idle svg and DND sleep path after hot theme switch", () => {
-    assert.strictEqual(api.getSvgOverride("idle"), "clawd-idle-follow.svg");
+    assert.strictEqual(api.getSvgOverride("idle"), "duck-idle-follow.svg");
 
     ctx.theme = _calicoTheme;
     api.refreshTheme();

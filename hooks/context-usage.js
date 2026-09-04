@@ -126,7 +126,7 @@ function computeClaudeUsageFromEntry(entry) {
 }
 
 // Mirror the transcript-pollution guards used by the assistant-output
-// extractor in clawd-hook.js. Without these, the most recent usage-bearing
+// extractor in duck-hook.js. Without these, the most recent usage-bearing
 // entry can belong to a Task sub-agent (sidechain), a different session
 // (resumed/forked transcript), or a synthetic API-error message — none of
 // which reflect the main session's context window.

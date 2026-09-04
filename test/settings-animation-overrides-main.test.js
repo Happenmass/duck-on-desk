@@ -74,7 +74,7 @@ function makeTheme(root, overrides = {}) {
 }
 
 function createRuntimeHarness(overrides = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-anim-main-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-anim-main-"));
   const assetsDir = path.join(root, "assets");
   fs.mkdirSync(assetsDir, { recursive: true });
   fs.writeFileSync(path.join(assetsDir, "idle.svg"), "<svg viewBox=\"0 0 100 100\"></svg>", "utf8");
@@ -285,7 +285,7 @@ test("external object-channel SVG previews require posters without getting trust
 });
 
 test("poster descriptors snapshot theme id, basename, file URL, size, and mtime into the cache key", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-anim-descriptor-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-anim-descriptor-"));
   try {
     const absPath = path.join(root, "scripted.svg");
     fs.writeFileSync(absPath, "<svg viewBox=\"0 0 10 10\"></svg>", "utf8");

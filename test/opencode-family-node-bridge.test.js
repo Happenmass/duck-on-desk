@@ -12,22 +12,22 @@ const path = require("node:path");
 const { after, before, describe, it } = require("node:test");
 const { pathToFileURL } = require("node:url");
 
-const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-family-node-bridge-"));
+const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "duck-family-node-bridge-"));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
-const runtimeDir = path.join(TMP_HOME, ".clawd");
+const runtimeDir = path.join(TMP_HOME, ".duck-on-desk");
 fs.mkdirSync(runtimeDir, { recursive: true, mode: 0o700 });
 const runtimePath = path.join(runtimeDir, "runtime.json");
 fs.writeFileSync(runtimePath, JSON.stringify({
-  app: "clawd-on-desk",
-  port: 23333,
+  app: "duck-on-desk",
+  port: 24333,
   ownerPid: process.pid,
 }), { mode: 0o600 });
 if (process.platform !== "win32") fs.chmodSync(runtimePath, 0o600);
 
 let createOpencodeFamilyPlugin;
 const fetchCalls = [];
-let clawdResponseRecognized = false;
+let duckResponseRecognized = false;
 
 before(async () => {
   delete globalThis.Bun;
@@ -39,8 +39,8 @@ before(async () => {
     return {
       status: 200,
       headers: {
-        get: (name) => clawdResponseRecognized && String(name).toLowerCase() === "x-clawd-server"
-          ? "clawd-on-desk"
+        get: (name) => duckResponseRecognized && String(name).toLowerCase() === "x-duck-server"
+          ? "duck-on-desk"
           : null,
       },
       text: async () => "",
@@ -156,7 +156,7 @@ describe("opencode-family Node reverse bridge", () => {
     await emitPermission(instance, "per_node_once");
     await new Promise((resolve) => setTimeout(resolve, 30));
     const forwarded = fetchCalls.find((call) => call.url.endsWith("/permission"));
-    assert.ok(forwarded, "permission was not forwarded to Clawd");
+    assert.ok(forwarded, "permission was not forwarded to Duck");
     assert.strictEqual(forwarded.body.bridge_url, instance.plugin.__test._bridgeUrl);
     assert.strictEqual(forwarded.body.bridge_token, instance.plugin.__test._bridgeTokenHex);
 
@@ -239,7 +239,7 @@ describe("opencode-family Node reverse bridge", () => {
   });
 
   it("forwards the same strict completion lifecycle from the Node Desktop host path", async (t) => {
-    clawdResponseRecognized = true;
+    duckResponseRecognized = true;
     const instance = await initNodeInstance();
     t.after(() => instance.plugin.__test.closeBridgeForTest());
     try {
@@ -260,7 +260,7 @@ describe("opencode-family Node reverse bridge", () => {
       assert.strictEqual(Object.hasOwn(body, "bridge_url"), false);
       assert.strictEqual(Object.hasOwn(body, "bridge_token"), false);
     } finally {
-      clawdResponseRecognized = false;
+      duckResponseRecognized = false;
     }
   });
 });

@@ -3,21 +3,21 @@ const http = require("http");
 const os = require("os");
 const path = require("path");
 
-const CLAWD_SERVER_ID = "clawd-on-desk";
-const CLAWD_SERVER_HEADER = "x-clawd-server";
-const DEFAULT_SERVER_PORT = 23333;
+const DUCK_SERVER_ID = "duck-on-desk";
+const DUCK_SERVER_HEADER = "x-duck-server";
+const DEFAULT_SERVER_PORT = 24333;
 const SERVER_PORT_COUNT = 5;
 const SERVER_PORTS = Array.from({ length: SERVER_PORT_COUNT }, (_, i) => DEFAULT_SERVER_PORT + i);
 const STATE_PATH = "/state";
 const PERMISSION_PATH = "/permission";
 const DEFAULT_HOOK_HTTP_TIMEOUT_MS = 100;
 const REMOTE_HOOK_HTTP_TIMEOUT_MS = 5000;
-const HOST_PREFIX_FILENAME = "clawd-host-prefix";
+const HOST_PREFIX_FILENAME = "duck-host-prefix";
 const CODEX_AUTO_START_GATE_FILENAME = "codex-auto-start.json";
 const CODEX_AUTO_START_GATE_VERSION = 1;
-const CODEX_WSL_INTEROP_ARG = "--clawd-wsl-interop";
-const CODEX_WINDOWS_STABLE_ARG = "--clawd-windows-stable";
-const ROUTING_NONCE_HEADER = "x-clawd-routing-nonce";
+const CODEX_WSL_INTEROP_ARG = "--duck-wsl-interop";
+const CODEX_WINDOWS_STABLE_ARG = "--duck-windows-stable";
+const ROUTING_NONCE_HEADER = "x-duck-routing-nonce";
 const ROUTING_NONCE_RE = /^[a-f0-9]{32}$/;
 
 function normalizePort(value) {
@@ -27,12 +27,12 @@ function normalizePort(value) {
 
 function defaultRuntimeConfigPath(options = {}) {
   const homeDir = typeof options.homeDir === "string" ? options.homeDir : os.homedir();
-  return path.join(homeDir, ".clawd", "runtime.json");
+  return path.join(homeDir, ".duck-on-desk", "runtime.json");
 }
 
 function defaultCodexAutoStartGatePath(options = {}) {
   const homeDir = typeof options.homeDir === "string" ? options.homeDir : os.homedir();
-  return path.join(homeDir, ".clawd", CODEX_AUTO_START_GATE_FILENAME);
+  return path.join(homeDir, ".duck-on-desk", CODEX_AUTO_START_GATE_FILENAME);
 }
 
 function readCodexAutoStartGate(options = {}) {
@@ -42,7 +42,7 @@ function readCodexAutoStartGate(options = {}) {
     const parsed = JSON.parse(fsApi.readFileSync(filePath, "utf8"));
     return !!(
       parsed
-      && parsed.app === CLAWD_SERVER_ID
+      && parsed.app === DUCK_SERVER_ID
       && parsed.version === CODEX_AUTO_START_GATE_VERSION
       && parsed.enabled === true
     );
@@ -58,7 +58,7 @@ function writeCodexAutoStartGate(enabled, options = {}) {
   const dir = path.dirname(filePath);
   const tmpPath = path.join(dir, `.codex-auto-start.${process.pid}.${Date.now()}.tmp`);
   const body = JSON.stringify({
-    app: CLAWD_SERVER_ID,
+    app: DUCK_SERVER_ID,
     version: CODEX_AUTO_START_GATE_VERSION,
     enabled,
   }, null, 2);
@@ -85,7 +85,7 @@ function readHostPrefix(options = {}) {
     HOST_PREFIX_FILENAME,
     options,
     "hostPrefixPath",
-    "CLAWD_HOST_PREFIX_PATH",
+    "DUCK_HOST_PREFIX_PATH",
   );
   let prefix = null;
   try { prefix = (options.readFileSync || fs.readFileSync)(hostPrefixPath, "utf8").trim(); } catch {}
@@ -138,13 +138,13 @@ function applyWslSourceFields(body, options = {}) {
 // ── runtime.json identity (#681) ─────────────────────────────────────────────
 // The file carries app + port + ownerPid. `app` has always been written but was
 // never validated on read; `ownerPid` is new in #681 and is the liveness anchor
-// that lets a hook decide "Clawd is gone" WITHOUT spawning anything.
+// that lets a hook decide "Duck is gone" WITHOUT spawning anything.
 //
 // Two readers with deliberately different strictness:
 //   - readRuntimePort()     — the PORT reader every POST path already uses.
 //     Stays permissive about ownerPid so a runtime.json written by an older
-//     Clawd (no ownerPid) keeps routing state/permission POSTs. It DOES now
-//     require a matching `app`, which every Clawd that ever wrote this file
+//     Duck (no ownerPid) keeps routing state/permission POSTs. It DOES now
+//     require a matching `app`, which every Duck that ever wrote this file
 //     stamped, so no released shape regresses.
 //   - readRuntimeIdentity() — the strict gate for hooks/shared-process.js.
 //     Requires app + port + ownerPid. Missing ownerPid is fail-closed: the hook
@@ -166,9 +166,9 @@ const WINDOWS_PROCESS_CHAIN_AGENT_IDS = new Set([
 ]);
 const WINDOWS_PROCESS_CHAIN_MODES = new Set(["legacy", "shadow", "b1a-authoritative"]);
 const PROCESS_INSTANCE_RE = /^[A-Za-z0-9_-]{1,128}$/;
-const CLAWD_HOOK_PID_HEADER = "X-Clawd-Hook-Pid";
-const CLAWD_PROCESS_INSTANCE_HEADER = "X-Clawd-Process-Instance";
-const CLAWD_LEGACY_PROCESS_CACHE_HEADER = "X-Clawd-Legacy-Process-Cache";
+const DUCK_HOOK_PID_HEADER = "X-Duck-Hook-Pid";
+const DUCK_PROCESS_INSTANCE_HEADER = "X-Duck-Process-Instance";
+const DUCK_LEGACY_PROCESS_CACHE_HEADER = "X-Duck-Legacy-Process-Cache";
 
 function normalizeOwnerPid(value) {
   return Number.isInteger(value) && value > 0 ? value : null;
@@ -207,7 +207,7 @@ function parseRuntimeConfig(options = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { ok: false, reason: RUNTIME_REASON_MISSING, port: null, ownerPid: null };
   }
-  if (raw.app !== CLAWD_SERVER_ID) {
+  if (raw.app !== DUCK_SERVER_ID) {
     return { ok: false, reason: RUNTIME_REASON_APP_MISMATCH, port: null, ownerPid: null };
   }
   const port = normalizePort(raw.port);
@@ -234,7 +234,7 @@ function readRuntimePort(options = {}) {
 }
 
 // Strict identity for the zero-spawn resolver gate. ok=true means the file is a
-// well-formed Clawd runtime with a usable ownerPid — it does NOT mean Clawd is
+// well-formed Duck runtime with a usable ownerPid — it does NOT mean Duck is
 // alive (the caller checks that) and it is NOT an authentication or ownership
 // proof: any process running as this user can write this file, and a PID can be
 // reused. It is a liveness hint inside an existing trust boundary, nothing more.
@@ -278,7 +278,7 @@ function readWindowsProcessChainObservation(agentId, options = {}) {
 
 // Boolean contract: returns true on success, false on ANY failure, and never
 // throws. mkdirSync is INSIDE the try (#681) — it used to sit outside, so an
-// EACCES on ~/.clawd escaped as an exception into src/server.js's 'listening'
+// EACCES on ~/.duck escaped as an exception into src/server.js's 'listening'
 // handler and stranded startHttpServer's promise before it could settle.
 function writeRuntimeConfig(port, options = {}) {
   const safePort = normalizePort(port);
@@ -289,7 +289,7 @@ function writeRuntimeConfig(port, options = {}) {
   const ownerPid = normalizeOwnerPid(options.ownerPid) || process.pid;
   const dir = path.dirname(filePath);
   const tmpPath = path.join(dir, `.runtime.${process.pid}.${Date.now()}.tmp`);
-  const runtimeBody = { app: CLAWD_SERVER_ID, port: safePort, ownerPid };
+  const runtimeBody = { app: DUCK_SERVER_ID, port: safePort, ownerPid };
   const windowsProcessChain = normalizeWindowsProcessChainConfig(options.windowsProcessChain);
   if (windowsProcessChain) runtimeBody.windowsProcessChain = windowsProcessChain;
   const body = JSON.stringify(runtimeBody, null, 2);
@@ -431,12 +431,12 @@ function readHeader(res, headerName) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function isClawdResponse(res, body) {
-  if (readHeader(res, CLAWD_SERVER_HEADER) === CLAWD_SERVER_ID) return true;
+function isDuckResponse(res, body) {
+  if (readHeader(res, DUCK_SERVER_HEADER) === DUCK_SERVER_ID) return true;
   if (!body) return false;
   try {
     const data = JSON.parse(body);
-    return data && data.app === CLAWD_SERVER_ID;
+    return data && data.app === DUCK_SERVER_ID;
   } catch {
     return false;
   }
@@ -446,7 +446,7 @@ function isRemoteHookMode(options = {}) {
   if (options.remote === true) return true;
   if (options.remote === false) return false;
   const env = options.env || process.env;
-  return envFlagEnabled(env && env.CLAWD_REMOTE);
+  return envFlagEnabled(env && env.DUCK_REMOTE);
 }
 
 function buildWindowsProcessChainHeaders(port, options = {}) {
@@ -470,12 +470,12 @@ function buildWindowsProcessChainHeaders(port, options = {}) {
   const hookPid = Number(request.hookPid);
   if (!Number.isInteger(hookPid) || hookPid <= 0 || hookPid > 0xffffffff) return {};
   const headers = {
-    [CLAWD_HOOK_PID_HEADER]: String(hookPid),
-    [CLAWD_PROCESS_INSTANCE_HEADER]: observation.instanceGeneration,
+    [DUCK_HOOK_PID_HEADER]: String(hookPid),
+    [DUCK_PROCESS_INSTANCE_HEADER]: observation.instanceGeneration,
   };
   const cacheSource = request.legacyCacheSource;
   if (cacheSource === "fresh" || cacheSource === "v2" || cacheSource === "v1" || cacheSource === "none") {
-    headers[CLAWD_LEGACY_PROCESS_CACHE_HEADER] = cacheSource;
+    headers[DUCK_LEGACY_PROCESS_CACHE_HEADER] = cacheSource;
   }
   return headers;
 }
@@ -499,7 +499,7 @@ function getStatePostTimeoutMs(options = {}) {
 function getPermissionProbeTimeoutMs(options = {}) {
   // Permission discovery also crosses the reverse tunnel in remote mode.
   // This can make the all-ports-dead path slower, but avoids missing a
-  // healthy local Clawd behind a high-latency tunnel.
+  // healthy local Duck behind a high-latency tunnel.
   return normalizeHookHttpTimeout(
     options.probeTimeoutMs,
     DEFAULT_HOOK_HTTP_TIMEOUT_MS,
@@ -522,7 +522,7 @@ function probePort(port, timeoutMs, callback, options = {}) {
       res.on("data", (chunk) => {
         if (body.length < 256) body += chunk;
       });
-      res.on("end", () => callback(isClawdResponse(res, body)));
+      res.on("end", () => callback(isDuckResponse(res, body)));
     }
   );
 
@@ -549,7 +549,7 @@ function postStateToPort(port, payload, timeoutMs, callback, options = {}) {
       timeout: timeoutMs,
     },
     (res) => {
-      if (readHeader(res, CLAWD_SERVER_HEADER) === CLAWD_SERVER_ID) {
+      if (readHeader(res, DUCK_SERVER_HEADER) === DUCK_SERVER_ID) {
         res.resume();
         callback(true, port);
         return;
@@ -560,7 +560,7 @@ function postStateToPort(port, payload, timeoutMs, callback, options = {}) {
       res.on("data", (chunk) => {
         if (responseBody.length < 256) responseBody += chunk;
       });
-      res.on("end", () => callback(isClawdResponse(res, responseBody), port));
+      res.on("end", () => callback(isDuckResponse(res, responseBody), port));
     }
   );
 
@@ -572,7 +572,7 @@ function postStateToPort(port, payload, timeoutMs, callback, options = {}) {
   req.end(payload);
 }
 
-function discoverClawdPort(options, callback) {
+function discoverDuckPort(options, callback) {
   const timeoutMs = options && options.timeoutMs ? options.timeoutMs : DEFAULT_HOOK_HTTP_TIMEOUT_MS;
   const ports = getPortCandidates(options && options.preferredPort, options);
   const probe = options && options.probePort ? options.probePort : probePort;
@@ -676,7 +676,7 @@ function postPermissionToPort(port, payload, timeoutMs, callback, options = {}) 
         if (responseBody.length < 262144) responseBody += chunk;
       });
       res.on("end", () => {
-        finish(readHeader(res, CLAWD_SERVER_HEADER) === CLAWD_SERVER_ID, responseBody, res.statusCode || 0);
+        finish(readHeader(res, DUCK_SERVER_HEADER) === DUCK_SERVER_ID, responseBody, res.statusCode || 0);
       });
     }
   );
@@ -693,7 +693,7 @@ function postPermissionToRunningServer(body, options, callback) {
   const timeoutMs = options && options.timeoutMs ? options.timeoutMs : 590000;
   const probeTimeoutMs = getPermissionProbeTimeoutMs(options || {});
   const payload = typeof body === "string" ? body : JSON.stringify(body);
-  const discover = options && options.discoverClawdPort ? options.discoverClawdPort : discoverClawdPort;
+  const discover = options && options.discoverDuckPort ? options.discoverDuckPort : discoverDuckPort;
   const post = options && options.postPermissionToPort ? options.postPermissionToPort : postPermissionToPort;
 
   discover({ ...options, timeoutMs: probeTimeoutMs }, (port) => {
@@ -896,14 +896,14 @@ function isScoopShimPath(value) {
   return normalizeWindowsPathForMatch(value).includes("\\scoop\\shims\\");
 }
 
-function isClawdOrElectronPath(value) {
+function isDuckOrElectronPath(value) {
   const norm = normalizeWindowsPathForMatch(value);
   if (!norm) return false;
   // Reject the packaged Electron host. Match by basename so we don't false-flag
   // a legitimate Node living under a parent folder whose name happens to
-  // contain "Clawd" or "Electron".
+  // contain "Duck" or "Electron".
   const base = path.win32.basename(norm);
-  return base.includes("clawd on desk") || base === "electron.exe";
+  return base.includes("duck on desk") || base === "electron.exe";
 }
 
 function validateWindowsNodeCandidate(value) {
@@ -918,7 +918,7 @@ function validateWindowsNodeCandidate(value) {
   }
   if (!isWindowsNodeBasename(trimmed)) return null;
   if (isScoopShimPath(trimmed)) return null;
-  if (isClawdOrElectronPath(trimmed)) return null;
+  if (isDuckOrElectronPath(trimmed)) return null;
   return trimmed;
 }
 
@@ -961,7 +961,7 @@ function resolveWindowsNodeBinSync(options = {}) {
   };
 
   // 1. process.execPath / options.execPath when it's actually node[.exe].
-  //    In packaged Clawd builds this is `Clawd on Desk.exe`, so it falls
+  //    In packaged Duck builds this is `Duck on Desk.exe`, so it falls
   //    through; mostly useful for unit tests and non-Electron Node runs.
   const execHit = checkAccess(validateWindowsNodeCandidate(options.execPath || process.execPath));
   if (execHit) return execHit;
@@ -1164,8 +1164,8 @@ async function resolveNodeBinAsync(options = {}) {
 }
 
 module.exports = {
-  CLAWD_SERVER_HEADER,
-  CLAWD_SERVER_ID,
+  DUCK_SERVER_HEADER,
+  DUCK_SERVER_ID,
   CODEX_AUTO_START_GATE_FILENAME,
   CODEX_AUTO_START_GATE_VERSION,
   CODEX_WSL_INTEROP_ARG,
@@ -1179,9 +1179,9 @@ module.exports = {
   ROUTING_NONCE_RE,
   SERVER_PORTS,
   STATE_PATH,
-  CLAWD_HOOK_PID_HEADER,
-  CLAWD_PROCESS_INSTANCE_HEADER,
-  CLAWD_LEGACY_PROCESS_CACHE_HEADER,
+  DUCK_HOOK_PID_HEADER,
+  DUCK_PROCESS_INSTANCE_HEADER,
+  DUCK_LEGACY_PROCESS_CACHE_HEADER,
   WINDOWS_PROCESS_CHAIN_VERSION,
   buildPermissionUrl,
   buildWindowsProcessChainHeaders,
@@ -1190,7 +1190,7 @@ module.exports = {
   defaultRuntimeConfigPath,
   isManagedPermissionUrl,
   isRemoteHookMode,
-  discoverClawdPort,
+  discoverDuckPort,
   getPortCandidates,
   getPermissionProbeTimeoutMs,
   getStatePostTimeoutMs,

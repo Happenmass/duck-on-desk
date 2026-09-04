@@ -292,12 +292,12 @@
     }
   ],
   "displayHintMap": {
-    "clawd-working-building.svg": "cloudling-building.svg",
-    "clawd-working-typing.svg": "cloudling-typing.svg",
-    "clawd-headphones-groove.svg": "cloudling-juggling.svg",
-    "clawd-working-juggling.svg": "cloudling-juggling.svg",
-    "clawd-working-conducting.svg": "cloudling-conducting.svg",
-    "clawd-working-thinking.svg": "cloudling-thinking.svg"
+    "duck-working-building.svg": "cloudling-building.svg",
+    "duck-working-typing.svg": "cloudling-typing.svg",
+    "duck-headphones-groove.svg": "cloudling-juggling.svg",
+    "duck-working-juggling.svg": "cloudling-juggling.svg",
+    "duck-working-conducting.svg": "cloudling-conducting.svg",
+    "duck-working-thinking.svg": "cloudling-thinking.svg"
   },
   "updateVisuals": {
     "checking": "cloudling-thinking.svg"

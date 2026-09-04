@@ -21,12 +21,12 @@ preference recovery, Windows fullscreen detection, and Developer ID packaging.
 - **OpenCode JSONC and Desktop bridge support** (#899, #900) — writes the plugin
   into the effective JSON/JSONC configuration and supports OpenCode Desktop's
   Node utility-process bridge. Permission forwarding now requires the live,
-  owner-only Clawd runtime identity instead of sending reverse-bridge credentials
+  owner-only Duck runtime identity instead of sending reverse-bridge credentials
   to scanned ports, while preserving no-decision fallback to the native
-  permission flow when Clawd is unavailable or intentionally silent.
+  permission flow when Duck is unavailable or intentionally silent.
 - **Codex and Gemini detection fixes** (#897) — installation discovery now
   distinguishes real CLI evidence from directories created by other products or
-  by Clawd itself.
+  by Duck itself.
 - **Codex hook review stability and Claude hook repair** (#870, #873) — keeps
   official-hook trust stable across builds and safely handles environment-based
   worktree hook paths.
@@ -63,8 +63,8 @@ preference recovery, Windows fullscreen detection, and Developer ID packaging.
   from fullscreen applications so ordinary maximization no longer triggers the
   fullscreen overlay policy. Thanks to @KaiC5504.
 - **Unreadable or damaged preferences are visible and still safe** (#888, #891)
-  — Clawd no longer overwrites a prefs file it could not read. If readable
-  contents are malformed, it preserves the original as `clawd-prefs.json.bak`
+  — Duck no longer overwrites a prefs file it could not read. If readable
+  contents are malformed, it preserves the original as `duck-prefs.json.bak`
   and repairs the primary file, but agent gates remain closed for that launch.
   If the backup cannot be created, the primary file and Settings writes remain
   locked instead of risking the only copy. Startup and Doctor explain the exact
@@ -110,7 +110,7 @@ Returning contributors include @chrono-meta (#888, #892), @KaiC5504 (#889),
 
 ### Upgrade Notes
 
-- Launch Clawd once after upgrading so installed and enabled integrations can
+- Launch Duck once after upgrading so installed and enabled integrations can
   reconcile their packaged hooks, plugins, and extensions.
 - Existing Feishu/Lark users must open **Settings → Remote Approval**, select the
   correct platform, save **App ID / App Secret** again, and then save the
@@ -119,7 +119,7 @@ Returning contributors include @chrono-meta (#888, #892), @KaiC5504 (#889),
 - DeepSeek Harness is experimental, disabled by default, and limited to the
   supported `@deepseek-ai/dsh@0.1.0-rc.6` web profile. API-backed session and
   approval smoke is not yet claimed as Windows-verified.
-- Slack is notification-only. Answer permission requests in Clawd, Telegram, or
+- Slack is notification-only. Answer permission requests in Duck, Telegram, or
   Feishu/Lark; Slack cannot Allow or Deny.
 - Packaged macOS and Linux builds still do not perform in-app updates. Download
   future versions manually from GitHub Releases.
@@ -134,7 +134,7 @@ above its 50 MiB warning budget.
 
 The final code-bearing candidate at
 `119257ebad54dbcd8b24df178397e83341cbcc9e` passed the manual
-[Build & Release workflow](https://github.com/rullerzhou-afk/clawd-on-desk/actions/runs/32621621221)
+[Build & Release workflow](https://github.com/rullerzhou-afk/duck-on-desk/actions/runs/32621621221)
 on August 23, 2026. The run completed the release validator, Developer ID
 signing and notarization, Windows/macOS/Linux full test and packaging jobs, and
 target-native package audits for Windows x64/ARM64, macOS Intel/Apple Silicon,

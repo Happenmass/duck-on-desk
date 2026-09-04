@@ -3,7 +3,7 @@
 ### New Features
 
 - **Gemini CLI hook-only integration** (#224, #225, #226) - Gemini now uses the current hook path instead of the legacy session-file polling path, with agent Settings controls, installer updates, event mapping, PID detection, diagnostics, and targeted tests.
-- **Codex Pet compatibility MVP** (#235) - Clawd can import Codex Pet packages, adapt their sprite atlas/state metadata into Clawd themes, sync imported pets into the theme list, refresh/remove imported pets, and switch to a newly imported pet from Settings.
+- **Codex Pet compatibility MVP** (#235) - Duck can import Codex Pet packages, adapt their sprite atlas/state metadata into Duck themes, sync imported pets into the theme list, refresh/remove imported pets, and switch to a newly imported pet from Settings.
 - **Fade theme switching** (#237) - theme changes now fade the pet window between themes instead of snapping directly to the new asset set.
 - **Theme and animation Settings polish** (#234, #236) - Settings tab switches are smoother, animation override timing sliders are easier to use, loading states are clearer, and imported Codex Pets are grouped separately from built-in and user themes.
 - **Session controls** (#227, #229) - Session HUD and Dashboard now show renamed Codex session titles, expose stronger HUD display toggles, support hiding sessions, and avoid letting session cleanup push the pet into sleep.
@@ -12,7 +12,7 @@
 ### Bug Fixes
 
 - **General Settings switch stability** (#238) - General tab switches now stay mounted during settings updates, preventing transient unmount/remount behavior while Settings patches are applied.
-- **Gemini diagnostics and event behavior** - Gemini hook events now map consistently into Clawd states, installer tests isolate their home directories, and hook diagnostics are easier to interpret when setup fails.
+- **Gemini diagnostics and event behavior** - Gemini hook events now map consistently into Duck states, installer tests isolate their home directories, and hook diagnostics are easier to interpret when setup fails.
 - **Codex runtime stability** - Codex PID reachability checks are more reliable, renamed session titles are reflected in the UI, exit probe logging improves debugging, and same-named Codex Pet assets reload correctly after import or refresh.
 - **Renderer crash logging** (#220) - renderer-side crash logging now guards against `EIO` write failures instead of letting logging errors cascade.
 - **Agent submenu toggle flash** (#233) - toggling an agent from Settings no longer briefly flashes the submenu into an inconsistent state.
@@ -31,7 +31,7 @@
 ### Docs & Contributors
 
 - **Release positioning** - v0.7.0 is a feature release because it adds Gemini hook-only support, Codex Pet compatibility, theme transition behavior, and deeper Windows Terminal focus behavior on top of normal fixes.
-- **Windows Terminal limitations** (#242) - docs now explain why Clawd only switches tabs when the target terminal title is uniquely identifiable.
+- **Windows Terminal limitations** (#242) - docs now explain why Duck only switches tabs when the target terminal title is uniquely identifiable.
 - **Contributor tables** - README variants and Settings About now show all 43 listed GitHub contributors, including the new v0.7.0 contributors **@YuChenYunn** and **@jhseo-b**.
 - **Setup, state mapping, and architecture docs** - docs were refreshed for Gemini hook behavior, Codex Pet/theme capabilities, imported theme handling, and current runtime boundaries.
 
@@ -50,5 +50,5 @@ Huge thanks to everyone who shipped code, tests, docs, diagnostics, or release p
 
 - **Codex hook coverage is still not complete** - official hooks remain the primary path, but JSONL polling is still kept as fallback for hook-disabled sessions and events that official hooks do not fully cover yet.
 - **Gemini is hook-only in the current runtime path** - the legacy Gemini session JSON monitor is retained for compatibility tests/history, but normal Gemini integration expects the hook installer path.
-- **Windows Terminal tab focus is intentionally conservative** - Clawd will not switch tabs when the title match is ambiguous, so users may need to rename terminals or use direct focus paths for repeated/similar session titles.
+- **Windows Terminal tab focus is intentionally conservative** - Duck will not switch tabs when the title match is ambiguous, so users may need to rename terminals or use direct focus paths for repeated/similar session titles.
 - **Codex Pet compatibility is an MVP** - atlas import and theme adaptation are supported, but unusual pet package layouts may still fail validation or need manual theme authoring.

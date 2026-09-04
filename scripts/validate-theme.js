@@ -2,12 +2,12 @@
 "use strict";
 
 /**
- * validate-theme.js — CLI tool to validate a Clawd theme before distribution.
+ * validate-theme.js — CLI tool to validate a Duck theme before distribution.
  *
  * Usage:
  *   node scripts/validate-theme.js <theme-dir>
  *   node scripts/validate-theme.js themes/template
- *   node scripts/validate-theme.js ~/AppData/Roaming/clawd-on-desk/themes/my-theme
+ *   node scripts/validate-theme.js ~/AppData/Roaming/duck-on-desk/themes/my-theme
  *
  * Checks:
  *   1. theme.json schema (required fields, types, schemaVersion)
@@ -58,7 +58,7 @@ let assetsOverride = null;
 function printUsage() {
   console.error(`Usage: node ${path.basename(process.argv[1])} <theme-directory> [--assets <assets-dir>]`);
   console.error(`Example: node scripts/validate-theme.js themes/template`);
-  console.error(`         node scripts/validate-theme.js themes/clawd --assets assets/svg`);
+  console.error(`         node scripts/validate-theme.js themes/duck --assets assets/svg`);
 }
 
 // Anything the parser does not understand is refused rather than ignored. The old

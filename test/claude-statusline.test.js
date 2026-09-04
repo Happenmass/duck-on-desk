@@ -114,7 +114,7 @@ describe("Claude Code statusline adapter", () => {
     const events = [];
     let finishPost;
     const run = main({
-      env: { CLAWD_REMOTE: "1" },
+      env: { DUCK_REMOTE: "1" },
       payload: {
         session_id: "remote-session",
         model: { display_name: "Remote Claude" },
@@ -215,8 +215,8 @@ describe("Claude Code statusline chain mode", () => {
   };
 
   it("reads the chained command from the sidecar (statusLine object, trimmed)", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-chain-"));
-    const sidecarPath = path.join(dir, "clawd-statusline-chain.json");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-chain-"));
+    const sidecarPath = path.join(dir, "duck-statusline-chain.json");
     fs.writeFileSync(sidecarPath, JSON.stringify({
       statusLine: { type: "command", command: "  ~/.claude/my-statusline.sh  ", padding: 0 },
     }));

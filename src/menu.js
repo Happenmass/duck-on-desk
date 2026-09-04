@@ -110,7 +110,7 @@ module.exports = function initMenu(ctx) {
     const message = reason && reason.message
       ? reason.message
       : (typeof reason === "string" ? reason : "Unknown error");
-    console.warn("Clawd: permission automation mode change failed:", message);
+    console.warn("Duck: permission automation mode change failed:", message);
     try {
       return Promise.resolve(ctx.showPermissionAutomationError({
         lang: ctx.lang,
@@ -118,10 +118,10 @@ module.exports = function initMenu(ctx) {
         detail: message,
         dismissLabel: t("dismiss"),
       })).catch((err) => {
-        console.warn("Clawd: permission automation error window failed:", err && err.message);
+        console.warn("Duck: permission automation error window failed:", err && err.message);
       });
     } catch (err) {
-      console.warn("Clawd: permission automation error window failed:", err && err.message);
+      console.warn("Duck: permission automation error window failed:", err && err.message);
       return Promise.resolve();
     }
   }
@@ -226,7 +226,7 @@ module.exports = function initMenu(ctx) {
       iconPath: path.join(__dirname, "../assets/icon.png"),
     });
     ctx.tray = new Tray(icon);
-    ctx.tray.setToolTip("Clawd Desktop Pet");
+    ctx.tray.setToolTip("Duck Desktop Pet");
     buildTrayMenu();
   }
 

@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 function makeFixture(themeId, assets = {}) {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-theme-cache-"));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "duck-theme-cache-"));
   tempDirs.push(tmp);
   const themeDir = path.join(tmp, "themes", themeId);
   const assetsDir = path.join(themeDir, "assets");

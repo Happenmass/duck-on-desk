@@ -330,7 +330,7 @@ function createAgentRuntimeMain(options = {}) {
         codexMonitor.start();
       }
     } catch (err) {
-      logWarn("Clawd: Codex log monitor not started:", err && err.message);
+      logWarn("Duck: Codex log monitor not started:", err && err.message);
     }
     return codexMonitor;
   }

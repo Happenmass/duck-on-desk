@@ -20,7 +20,7 @@ describe("spawned-hook test harness", () => {
 
     assert.strictEqual(result.status, 0, result.stderr);
     assert.ok(result.preloads.some((preload) => preload.endsWith("hook-post-recorder.js")));
-    assert.strictEqual(result.attempts[0].port, 23333);
+    assert.strictEqual(result.attempts[0].port, 24333);
     assert.strictEqual(result.attempts[0].path, "/state");
   });
 

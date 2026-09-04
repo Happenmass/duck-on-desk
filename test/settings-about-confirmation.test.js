@@ -58,12 +58,12 @@ function loadCleanupActionForTest({ showModal, command }) {
   const toastCalls = [];
   const commandCalls = [];
   const strings = {
-    aboutCleanupButton: "Remove Clawd integrations",
+    aboutCleanupButton: "Remove Duck integrations",
     aboutCleanupRunning: "Removing integrations",
     aboutCleanupFailed: "Integration cleanup failed",
     aboutCleanupSuccess: "Removed {removed} item(s) from {affected} integration(s). Failed: {failed}.",
-    aboutCleanupConfirmTitle: "Remove Clawd integrations?",
-    aboutCleanupConfirmDetail: "This removes Clawd hooks/plugins from local agents.",
+    aboutCleanupConfirmTitle: "Remove Duck integrations?",
+    aboutCleanupConfirmDetail: "This removes Duck hooks/plugins from local agents.",
     aboutCleanupConfirmAction: "Remove integrations",
     aboutCleanupConfirmCancel: "Cancel",
   };
@@ -83,8 +83,8 @@ function loadCleanupActionForTest({ showModal, command }) {
   context.globalThis = context;
   vm.createContext(context);
   const source = fs.readFileSync(ABOUT_SOURCE, "utf8").replace(
-    "root.ClawdSettingsTabAbout = { init };",
-    "root.ClawdSettingsTabAbout = { init, __test: { createCleanupFooterAction } };"
+    "root.DuckSettingsTabAbout = { init };",
+    "root.DuckSettingsTabAbout = { init, __test: { createCleanupFooterAction } };"
   );
   vm.runInContext(source, context);
 
@@ -103,8 +103,8 @@ function loadCleanupActionForTest({ showModal, command }) {
     i18n: { CONTRIBUTORS: [], MAINTAINERS: [] },
     tabs: {},
   };
-  context.ClawdSettingsTabAbout.init(core);
-  const wrap = context.ClawdSettingsTabAbout.__test.createCleanupFooterAction();
+  context.DuckSettingsTabAbout.init(core);
+  const wrap = context.DuckSettingsTabAbout.__test.createCleanupFooterAction();
 
   return {
     button: wrap.children[0],
@@ -130,8 +130,8 @@ describe("About integration cleanup confirmation", () => {
     assert.strictEqual(harness.modalCalls.length, 1);
     assert.strictEqual(harness.commandCalls.length, 0);
     assert.deepStrictEqual(JSON.parse(JSON.stringify(harness.modalCalls[0])), {
-      title: "Remove Clawd integrations?",
-      detail: "This removes Clawd hooks/plugins from local agents.",
+      title: "Remove Duck integrations?",
+      detail: "This removes Duck hooks/plugins from local agents.",
       actions: [
         { id: "cancel", label: "Cancel", tone: "neutral", defaultFocus: true },
         { id: "confirm", label: "Remove integrations", tone: "danger" },
@@ -166,7 +166,7 @@ describe("About integration cleanup confirmation", () => {
     });
     await flushPromises();
     assert.strictEqual(harness.button.disabled, false);
-    assert.strictEqual(harness.button.textContent, "Remove Clawd integrations");
+    assert.strictEqual(harness.button.textContent, "Remove Duck integrations");
     assert.strictEqual(
       harness.status.textContent,
       "Removed 3 item(s) from 2 integration(s). Failed: 0."
@@ -183,7 +183,7 @@ describe("About integration cleanup confirmation", () => {
     harness.button.dispatchEvent({ type: "click" });
     await flushPromises();
     assert.strictEqual(harness.button.disabled, false);
-    assert.strictEqual(harness.button.textContent, "Remove Clawd integrations");
+    assert.strictEqual(harness.button.textContent, "Remove Duck integrations");
     assert.strictEqual(harness.status.textContent, "Integration cleanup failed: synthetic failure");
     assert.strictEqual(harness.toastCalls.length, 1);
   });

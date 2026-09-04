@@ -7,7 +7,7 @@
 // permission-family-roundtrip.test.js covers the Electron→bridge half; this
 // file covers the Bun runtime half by initializing the REAL factory plugin with a
 // fake `globalThis.Bun.serve` that captures the fetch handler, a fake global
-// fetch (so nothing touches a live Clawd on the real ports), and a mock SDK
+// fetch (so nothing touches a live Duck on the real ports), and a mock SDK
 // client — then drives handleBridgeRequest/verifyBridgeToken/startBridge/
 // handlePermissionAsked through actual Request/Response objects.
 
@@ -18,20 +18,20 @@ const path = require("node:path");
 const { describe, it, before, after } = require("node:test");
 const { pathToFileURL } = require("node:url");
 
-// Redirect HOME before the core module is imported: its CLAWD_DIR constant
+// Redirect HOME before the core module is imported: its DUCK_DIR constant
 // resolves os.homedir() at module-evaluation time, and plugin init resets the
-// debug log under it — the suite must never touch the user's real ~/.clawd.
+// debug log under it — the suite must never touch the user's real ~/.duck.
 // (node:test runs each file in its own process, so this cannot leak.)
-const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-family-bridge-"));
+const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "duck-family-bridge-"));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
-const RUNTIME_CONFIG_PATH = path.join(TMP_HOME, ".clawd", "runtime.json");
+const RUNTIME_CONFIG_PATH = path.join(TMP_HOME, ".duck-on-desk", "runtime.json");
 
 function writeLiveRuntimeIdentity() {
   fs.mkdirSync(path.dirname(RUNTIME_CONFIG_PATH), { recursive: true, mode: 0o700 });
   fs.writeFileSync(RUNTIME_CONFIG_PATH, JSON.stringify({
-    app: "clawd-on-desk",
-    port: 23333,
+    app: "duck-on-desk",
+    port: 24333,
     ownerPid: process.pid,
   }), { mode: 0o600 });
   if (process.platform !== "win32") fs.chmodSync(RUNTIME_CONFIG_PATH, 0o600);
@@ -42,16 +42,16 @@ writeLiveRuntimeIdentity();
 let createOpencodeFamilyPlugin;
 const fetchCalls = [];
 let bridgePortCounter = 40000;
-let clawdResponseRecognized = false;
+let duckResponseRecognized = false;
 let fetchBehavior = null;
 
-function fakeClawdResponse(recognized = clawdResponseRecognized) {
+function fakeDuckResponse(recognized = duckResponseRecognized) {
   return {
     status: 200,
     headers: {
       get(name) {
-        return recognized && String(name).toLowerCase() === "x-clawd-server"
-          ? "clawd-on-desk"
+        return recognized && String(name).toLowerCase() === "x-duck-server"
+          ? "duck-on-desk"
           : null;
       },
     },
@@ -60,13 +60,13 @@ function fakeClawdResponse(recognized = clawdResponseRecognized) {
 }
 
 before(async () => {
-  // Fake fetch: record every POST the plugin fires and answer as a non-Clawd
+  // Fake fetch: record every POST the plugin fires and answer as a non-Duck
   // server (missing identity header) so the port scan exhausts harmlessly.
   globalThis.fetch = async (url, opts) => {
     const call = { url: String(url), body: opts && opts.body ? JSON.parse(opts.body) : null };
     fetchCalls.push(call);
     if (typeof fetchBehavior === "function") return fetchBehavior(call);
-    return fakeClawdResponse();
+    return fakeDuckResponse();
   };
   const modulePath = path.join(__dirname, "..", "hooks", "opencode-family-plugin", "core.mjs");
   ({ createOpencodeFamilyPlugin } = await import(pathToFileURL(modulePath).href));
@@ -169,7 +169,7 @@ describe("opencode-family reverse bridge (plugin side, real handler)", () => {
     for (const inst of [oc, mc]) {
       assert.strictEqual(typeof inst.captured.fetch, "function", "Bun.serve fetch handler not captured");
       assert.strictEqual(inst.captured.hostname, "127.0.0.1");
-      // A fixed port would EADDRINUSE against Clawd itself (23333-23337) and
+      // A fixed port would EADDRINUSE against Duck itself (24333-24337) and
       // silently degrade every bubble to the TUI fallback.
       assert.strictEqual(inst.captured.requestedPort, 0, "bridge must ask the OS for a port (port: 0)");
       assert.match(inst.plugin.__test._bridgeUrl, /^http:\/\/127\.0\.0\.1:\d+$/);
@@ -371,7 +371,7 @@ describe("opencode-family reverse bridge (plugin side, real handler)", () => {
 
 describe("opencode-family permission completion lifecycle", () => {
   it("forwards only the current requestID/reply generation and invalidates the reverse target first", async () => {
-    clawdResponseRecognized = true;
+    duckResponseRecognized = true;
     fetchBehavior = null;
     try {
       for (const params of [OC, MC]) {
@@ -427,7 +427,7 @@ describe("opencode-family permission completion lifecycle", () => {
         assert.strictEqual(instance.sdkCalls.length, 0, "external cleanup must never call the host SDK");
       }
     } finally {
-      clawdResponseRecognized = false;
+      duckResponseRecognized = false;
       fetchBehavior = null;
     }
   });
@@ -451,7 +451,7 @@ describe("opencode-family permission completion lifecycle", () => {
   });
 
   it("uses the asked target session on mismatch, but still reports an evicted target from the event session", async () => {
-    clawdResponseRecognized = true;
+    duckResponseRecognized = true;
     try {
       const instance = await initInstance(OC);
       await emitPermission(instance, "per_target_session", "ses_target");
@@ -479,12 +479,12 @@ describe("opencode-family permission completion lifecycle", () => {
       const log = fs.readFileSync(instance.plugin.__test._debugLogPath, "utf8");
       assert.match(log, /session mismatch req=per_target_session/);
     } finally {
-      clawdResponseRecognized = false;
+      duckResponseRecognized = false;
     }
   });
 
   it("does not let a standalone replied event pollute root/last-seen fallback state", async () => {
-    clawdResponseRecognized = true;
+    duckResponseRecognized = true;
     try {
       const instance = await initInstance(OC);
       await emitPermissionReplied(instance, {
@@ -501,19 +501,19 @@ describe("opencode-family permission completion lifecycle", () => {
       await settlePermissionTail(instance.plugin, "per_missing_session");
       assert.strictEqual(fetchCalls[0].body.session_id, "opencode:default");
     } finally {
-      clawdResponseRecognized = false;
+      duckResponseRecognized = false;
     }
   });
 
   it("serializes asked→replied for one request while a different request remains parallel", async () => {
-    clawdResponseRecognized = true;
+    duckResponseRecognized = true;
     let releaseAsked;
     const askedGate = new Promise((resolve) => { releaseAsked = resolve; });
     fetchBehavior = async (call) => {
       if (call.body && call.body.request_id === "per_fifo_a" && !call.body.permission_event) {
         await askedGate;
       }
-      return fakeClawdResponse(true);
+      return fakeDuckResponse(true);
     };
     try {
       const instance = await initInstance(OC);
@@ -545,14 +545,14 @@ describe("opencode-family permission completion lifecycle", () => {
     } finally {
       releaseAsked();
       fetchBehavior = null;
-      clawdResponseRecognized = false;
+      duckResponseRecognized = false;
     }
   });
 
   it("stops lifecycle delivery after one recognized response and bounds persistent failure at three attempts", async () => {
     const instance = await initInstance(OC);
     try {
-      clawdResponseRecognized = true;
+      duckResponseRecognized = true;
       fetchCalls.length = 0;
       await emitPermissionReplied(instance, {
         sessionID: "ses_retry",
@@ -562,7 +562,7 @@ describe("opencode-family permission completion lifecycle", () => {
       await settlePermissionTail(instance.plugin, "per_retry_ok");
       assert.strictEqual(fetchCalls.length, 1);
 
-      clawdResponseRecognized = false;
+      duckResponseRecognized = false;
       fetchCalls.length = 0;
       const startedAt = Date.now();
       await emitPermissionReplied(instance, {
@@ -576,13 +576,13 @@ describe("opencode-family permission completion lifecycle", () => {
       assert.ok(elapsed >= 450 && elapsed < 1800, `retry duration out of bounds: ${elapsed}ms`);
       assert.strictEqual(instance.plugin.__test._permissionPostTailByRequestId.size, 0);
     } finally {
-      clawdResponseRecognized = false;
+      duckResponseRecognized = false;
       fetchBehavior = null;
     }
   });
 
-  it("keeps Clawd-first echo and multi-request cascades idempotent without a second host decision", async () => {
-    clawdResponseRecognized = true;
+  it("keeps Duck-first echo and multi-request cascades idempotent without a second host decision", async () => {
+    duckResponseRecognized = true;
     const sdk = {};
     try {
       const instance = await initInstance(OC, { sdk });
@@ -605,7 +605,7 @@ describe("opencode-family permission completion lifecycle", () => {
       );
       assert.strictEqual(bridgeResponse.status, 200);
       await settlePermissionTail(instance.plugin, "per_echo");
-      assert.strictEqual(instance.sdkCalls.length, 1, "Clawd decision reaches the host once");
+      assert.strictEqual(instance.sdkCalls.length, 1, "Duck decision reaches the host once");
       assert.strictEqual(
         fetchCalls.filter((call) => call.body && call.body.request_id === "per_echo" && call.body.permission_event === "replied").length,
         1,
@@ -638,13 +638,13 @@ describe("opencode-family permission completion lifecycle", () => {
       assert.strictEqual(instance.plugin.__test._permissionPostTailByRequestId.size, 0);
       assert.strictEqual(instance.sdkCalls.length, 1, "completion traffic never calls the SDK");
     } finally {
-      clawdResponseRecognized = false;
+      duckResponseRecognized = false;
       fetchBehavior = null;
     }
   });
 
   it("bounds target history and releases lifecycle tails after a large permission sequence", async () => {
-    clawdResponseRecognized = true;
+    duckResponseRecognized = true;
     try {
       const instance = await initInstance(OC);
       const requestIds = Array.from({ length: 270 }, (_, index) => `per_pressure_${index}`);
@@ -665,7 +665,7 @@ describe("opencode-family permission completion lifecycle", () => {
       assert.strictEqual(instance.plugin.__test._permissionTargetByRequestId.size, 0);
       assert.strictEqual(instance.plugin.__test._permissionPostTailByRequestId.size, 0);
     } finally {
-      clawdResponseRecognized = false;
+      duckResponseRecognized = false;
     }
   });
 });

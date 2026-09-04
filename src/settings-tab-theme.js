@@ -1122,5 +1122,5 @@
     };
   }
 
-  root.ClawdSettingsTabTheme = { init };
+  root.DuckSettingsTabTheme = { init };
 })(globalThis);

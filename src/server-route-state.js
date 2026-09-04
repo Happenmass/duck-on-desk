@@ -6,11 +6,11 @@ const {
   assessSessionAutomationIdentity,
 } = require("./session-automation-identity");
 const {
-  CLAWD_SERVER_HEADER,
-  CLAWD_SERVER_ID,
-  CLAWD_HOOK_PID_HEADER,
-  CLAWD_LEGACY_PROCESS_CACHE_HEADER,
-  CLAWD_PROCESS_INSTANCE_HEADER,
+  DUCK_SERVER_HEADER,
+  DUCK_SERVER_ID,
+  DUCK_HOOK_PID_HEADER,
+  DUCK_LEGACY_PROCESS_CACHE_HEADER,
+  DUCK_PROCESS_INSTANCE_HEADER,
 } = require("../hooks/server-config");
 const { isCodexDesktopOriginator } = require("../hooks/codex-originator");
 const {
@@ -52,7 +52,7 @@ const ASSISTANT_LAST_OUTPUT_MAX = 2400;
 // A recognized 204 may still mean "unknown session" or another designed
 // metadata drop; only this header allows a metadata sender to advance its
 // application-level dedup baseline.
-const CLAWD_METADATA_ACCEPTED_HEADER = "X-Clawd-Metadata-Accepted";
+const DUCK_METADATA_ACCEPTED_HEADER = "X-Duck-Metadata-Accepted";
 
 function normalizeHwndString(value) {
   if (value === null || value === undefined) return null;
@@ -144,10 +144,10 @@ function resolveStateContextUsageOrigin(agentId, contextUsage) {
 }
 
 function sendStateHealthResponse(res, options) {
-  const body = JSON.stringify({ ok: true, app: CLAWD_SERVER_ID, port: options.getHookServerPort() });
+  const body = JSON.stringify({ ok: true, app: DUCK_SERVER_ID, port: options.getHookServerPort() });
   res.writeHead(200, {
     "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
+    [DUCK_SERVER_HEADER]: DUCK_SERVER_ID,
   });
   res.end(body);
 }
@@ -195,7 +195,7 @@ function handleStatePost(req, res, options) {
       const recordRequestHookEvent = createRequestHookRecorder(agentIdentity, data, "state");
       if (agentIdentity.rejected) {
         recordRequestHookEvent.droppedInvalidAgent();
-        res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+        res.writeHead(204, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
         res.end();
         return;
       }
@@ -356,7 +356,7 @@ function handleStatePost(req, res, options) {
       // so hook exit behavior is unchanged.
       if (typeof ctx.isAgentEnabled === "function" && !ctx.isAgentEnabled(agentId)) {
         recordRequestHookEvent.droppedByDisabled();
-        res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+        res.writeHead(204, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
         res.end();
         return;
       }
@@ -374,13 +374,13 @@ function handleStatePost(req, res, options) {
           if (typeof ctx.clearCodexUserInputBubbles === "function") {
             ctx.clearCodexUserInputBubbles(sid, codexUserInput.callId, "codex-user-input-resolved");
           }
-          res.writeHead(200, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+          res.writeHead(200, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
           res.end("ok");
           return;
         }
         if (headless || shouldDropForDnd()) {
           recordRequestHookEvent.droppedByDnd();
-          res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+          res.writeHead(204, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
           res.end();
           return;
         }
@@ -398,7 +398,7 @@ function handleStatePost(req, res, options) {
             codexSource,
           });
         if (!shown) {
-          res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+          res.writeHead(204, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
           res.end();
           return;
         }
@@ -410,7 +410,7 @@ function handleStatePost(req, res, options) {
         // statusline refreshing every few hundred ms would evict the real
         // hook events the diagnostics exist to show. 204 either way — legacy
         // statusline scripts ignore the response, while delivery-aware
-        // plugins use CLAWD_METADATA_ACCEPTED_HEADER to distinguish a live
+        // plugins use DUCK_METADATA_ACCEPTED_HEADER to distinguish a live
         // accepted session from the designed "session unknown" drop.
         let metadataAccepted = false;
         if (typeof ctx.updateSessionMetadata === "function") {
@@ -424,7 +424,7 @@ function handleStatePost(req, res, options) {
           }
           // OpenCode title changes ride the same metadata-only channel (the
           // placeholder → real title swap arrives on session.updated, which
-          // maps to no Clawd state). Not gated on the Claude telemetry flag —
+          // maps to no Duck state). Not gated on the Claude telemetry flag —
           // it's not Claude statusline data.
           if (sessionTitle) metaUpdate.sessionTitle = sessionTitle;
           if (Object.keys(metaUpdate).length > 0) {
@@ -432,8 +432,8 @@ function handleStatePost(req, res, options) {
           }
         }
         res.writeHead(204, {
-          [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
-          ...(metadataAccepted ? { [CLAWD_METADATA_ACCEPTED_HEADER]: "1" } : {}),
+          [DUCK_SERVER_HEADER]: DUCK_SERVER_ID,
+          ...(metadataAccepted ? { [DUCK_METADATA_ACCEPTED_HEADER]: "1" } : {}),
         });
         res.end();
         return;
@@ -448,7 +448,7 @@ function handleStatePost(req, res, options) {
           sid,
         );
         if (codexHookState.drop) {
-          res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+          res.writeHead(204, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
           res.end();
           return;
         }
@@ -459,7 +459,7 @@ function handleStatePost(req, res, options) {
           return;
         }
         // #627 residual: UserPromptSubmit no longer carries a fresh wt_hwnd
-        // from the hook (cache-only prompt path, hooks/clawd-hook.js) — sample
+        // from the hook (cache-only prompt path, hooks/duck-hook.js) — sample
         // the foreground Windows Terminal window synchronously here instead
         // (koffi FFI inside the already-running Electron process, never a
         // subprocess, so it cannot reproduce the console flash #627 was
@@ -504,8 +504,8 @@ function handleStatePost(req, res, options) {
               effectiveWslDistro: effWslDistro,
               effectivePlatform: effPlatform,
               effectiveHeadless: effHeadless,
-              hookPidHeader: requestHeaders[CLAWD_HOOK_PID_HEADER.toLowerCase()],
-              instanceGeneration: requestHeaders[CLAWD_PROCESS_INSTANCE_HEADER.toLowerCase()],
+              hookPidHeader: requestHeaders[DUCK_HOOK_PID_HEADER.toLowerCase()],
+              instanceGeneration: requestHeaders[DUCK_PROCESS_INSTANCE_HEADER.toLowerCase()],
             });
         let processChainResult = null;
         if (processChainAssessment.eligible && typeof resolveWindowsProcessMetadata === "function") {
@@ -551,7 +551,7 @@ function handleStatePost(req, res, options) {
             errorKind: processChainResult && processChainResult.errorKind || null,
             depth: processChainResult && processChainResult.depth || 0,
             durationMs: processChainResult && processChainResult.durationMs || 0,
-            cacheSource: requestHeaders[CLAWD_LEGACY_PROCESS_CACHE_HEADER.toLowerCase()] || null,
+            cacheSource: requestHeaders[DUCK_LEGACY_PROCESS_CACHE_HEADER.toLowerCase()] || null,
             rawEditor: processChainResult && processChainResult.rawEditor || null,
             effectiveEditor: authoritativeProcessMetadata.editor,
             legacyMetadata: legacyProcessMetadata,
@@ -801,7 +801,7 @@ function handleStatePost(req, res, options) {
             });
           } catch {}
         }
-        res.writeHead(200, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+        res.writeHead(200, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
         res.end("ok");
       } else {
         res.writeHead(400);
@@ -816,7 +816,7 @@ function handleStatePost(req, res, options) {
 
 module.exports = {
   MAX_STATE_BODY_BYTES,
-  CLAWD_METADATA_ACCEPTED_HEADER,
+  DUCK_METADATA_ACCEPTED_HEADER,
   sendStateHealthResponse,
   handleStatePost,
 };

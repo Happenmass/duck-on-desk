@@ -5,14 +5,14 @@ const fs = require("fs");
 const electron = require("electron");
 const { redactSecrets } = require("./secret-redact");
 
-const RELEASES_LATEST_URL = "https://github.com/rullerzhou-afk/clawd-on-desk/releases/latest";
+const RELEASES_LATEST_URL = "https://github.com/rullerzhou-afk/duck-on-desk/releases/latest";
 const DEPENDENCY_INSTALL_TIMEOUT_MS = 10 * 60 * 1000;
 const UPDATE_ERROR_DETAIL_MAX_LENGTH = 8 * 1024;
 
 const UPDATE_ERROR_COPY = Object.freeze({
   NETWORK_OFFLINE: {
     suffix: "NetworkOffline",
-    message: "Clawd could not reach the update service because the network appears to be offline.",
+    message: "Duck could not reach the update service because the network appears to be offline.",
     nextStep: "Reconnect to the internet, then check for updates again.",
   },
   DNS_FAILED: {
@@ -47,7 +47,7 @@ const UPDATE_ERROR_COPY = Object.freeze({
   },
   GIT_FETCH_FAILED: {
     suffix: "GitFetch",
-    message: "Clawd could not fetch the latest source revision.",
+    message: "Duck could not fetch the latest source revision.",
     nextStep: "Check the Git remote and network connection, then try again.",
   },
   GIT_REMOTE_OR_BRANCH: {
@@ -63,7 +63,7 @@ const UPDATE_ERROR_COPY = Object.freeze({
   UPDATER_UNAVAILABLE: {
     suffix: "UpdaterUnavailable",
     message: "The packaged updater is unavailable in this installation.",
-    nextStep: "Restart Clawd or reinstall it from the latest official package.",
+    nextStep: "Restart Duck or reinstall it from the latest official package.",
   },
   NO_COMPATIBLE_ASSET: {
     suffix: "NoAsset",
@@ -82,17 +82,17 @@ const UPDATE_ERROR_COPY = Object.freeze({
   },
   DISK_OR_PERMISSION: {
     suffix: "DiskPermission",
-    message: "Clawd could not write the update because of disk space or file permissions.",
+    message: "Duck could not write the update because of disk space or file permissions.",
     nextStep: "Free disk space or check install-folder permissions, then retry.",
   },
   DEPENDENCY_INSTALL_FAILED: {
     suffix: "Dependency",
     message: "Updated dependencies could not be installed.",
-    nextStep: "Run npm install in the Clawd repository, then restart Clawd.",
+    nextStep: "Run npm install in the Duck repository, then restart Duck.",
   },
   UNKNOWN: {
     suffix: "Unknown",
-    message: "Clawd encountered an unexpected error while updating.",
+    message: "Duck encountered an unexpected error while updating.",
     nextStep: "Copy the error details and try again later.",
   },
 });
@@ -358,7 +358,7 @@ function initUpdater(ctx, deps = {}) {
   // ── #329 pending-update state (Phase 2) ──────────────────────────────
   // Prefs IO is delegated to ctx.getUpdatePref / setUpdatePref. main.js
   // wires these to settingsController so reads/writes go through the
-  // single-writer architecture and persist to clawd-prefs.json.
+  // single-writer architecture and persist to duck-prefs.json.
   function readPref(key, fallback) {
     if (typeof ctx.getUpdatePref !== "function") return fallback;
     try {
@@ -594,7 +594,7 @@ function initUpdater(ctx, deps = {}) {
     return showInfoBubble(
       "up-to-date",
       t("updateNotAvailable", "You're Up to Date"),
-      t("updateNotAvailableMsg", "Clawd v{version} is the latest version.").replace("{version}", displayVersion),
+      t("updateNotAvailableMsg", "Duck v{version} is the latest version.").replace("{version}", displayVersion),
       {
         version,
         actions: [{ id: "dismiss", label: t("dismiss", "Dismiss"), variant: "secondary" }],
@@ -691,9 +691,9 @@ function initUpdater(ctx, deps = {}) {
     return new Promise((resolve, reject) => {
       const req = httpsGet({
         hostname: "github.com",
-        path: "/rullerzhou-afk/clawd-on-desk/releases/latest",
+        path: "/rullerzhou-afk/duck-on-desk/releases/latest",
         headers: {
-          "User-Agent": "Clawd-on-Desk",
+          "User-Agent": "Duck-on-Desk",
           Accept: "text/html,*/*",
         },
       }, (res) => {
@@ -724,11 +724,11 @@ function initUpdater(ctx, deps = {}) {
 
   function fetchLatestReleaseFromApi() {
     return new Promise((resolve, reject) => {
-      const headers = { "User-Agent": "Clawd-on-Desk" };
+      const headers = { "User-Agent": "Duck-on-Desk" };
       if (lastReleaseEtag) headers["If-None-Match"] = lastReleaseEtag;
       const req = httpsGet({
         hostname: "api.github.com",
-        path: "/repos/rullerzhou-afk/clawd-on-desk/releases/latest",
+        path: "/repos/rullerzhou-afk/duck-on-desk/releases/latest",
         headers,
       }, (res) => {
         // 304 Not Modified — drain and serve the cached release.
@@ -951,7 +951,7 @@ function initUpdater(ctx, deps = {}) {
       title: t("updateReady", "Update Ready"),
       message: t(
         "updateReadyMsg",
-        "v{version} has been downloaded. Restart now to finish updating, or choose Later to finish after you quit and reopen Clawd."
+        "v{version} has been downloaded. Restart now to finish updating, or choose Later to finish after you quit and reopen Duck."
       ).replace("{version}", displayVersion),
       version,
       actions: [
@@ -986,7 +986,7 @@ function initUpdater(ctx, deps = {}) {
     void showInfoBubble(
       "downloading",
       t("updateInstalling", "Installing Update..."),
-      t("updateInstallingMsg", "Preparing the update. Clawd will restart when it is ready."),
+      t("updateInstallingMsg", "Preparing the update. Duck will restart when it is ready."),
       { version }
     );
 
@@ -1025,7 +1025,7 @@ function initUpdater(ctx, deps = {}) {
       title: t("nativeArm64Available", "Native ARM64 Build Available"),
       message: t(
         "nativeArm64AvailableMsg",
-        "Clawd v{version} has a native Windows ARM64 installer. Install it for better performance and battery life?"
+        "Duck v{version} has a native Windows ARM64 installer. Install it for better performance and battery life?"
       ).replace("{version}", displayVersion),
       version,
       actions: [
@@ -1101,7 +1101,7 @@ function initUpdater(ctx, deps = {}) {
 
     await showSuccessBubble({
       title: t("updateReady", "Update Ready"),
-      message: t("gitUpdateRestarting", "Update complete. Restarting Clawd now..."),
+      message: t("gitUpdateRestarting", "Update complete. Restarting Duck now..."),
     });
     await new Promise((resolve) => setTimeout(resolve, 1200));
     hideBubble();

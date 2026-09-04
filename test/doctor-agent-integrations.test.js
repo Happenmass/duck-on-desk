@@ -24,7 +24,7 @@ const { validateHookTarget } = require("../src/doctor-detectors/agent-node-bin-p
 const tempDirs = [];
 
 function makeTempDir() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-doctor-agent-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-doctor-agent-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -224,7 +224,7 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeJson(descriptor.configPath, { hooks: {} });
@@ -257,14 +257,14 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeJson(descriptor.configPath, {
       hooks: {
         Stop: [{
           matcher: "",
-          hooks: [{ command: '"/node" "/app/hooks/clawd-hook.js" Stop' }],
+          hooks: [{ command: '"/node" "/app/hooks/duck-hook.js" Stop' }],
         }],
       },
     });
@@ -282,7 +282,7 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeJson(descriptor.configPath, { hooks: {} });
@@ -292,7 +292,7 @@ describe("checkAgentIntegrations", () => {
     });
 
     assert.strictEqual(detail.status, "not-connected");
-    assert.match(detail.detail, /has no clawd-hook\.js command/);
+    assert.match(detail.detail, /has no duck-hook\.js command/);
     assert.doesNotMatch(detail.detail, /paused automatic Claude hook repair/);
     assert.strictEqual(detail.claudeHookGuard, undefined);
   });
@@ -301,7 +301,7 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeJson(descriptor.configPath, { hooks: {} });
@@ -326,7 +326,7 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeJson(descriptor.configPath, { hooks: {} });
@@ -342,7 +342,7 @@ describe("checkAgentIntegrations", () => {
     });
 
     assert.strictEqual(detail.status, "not-connected");
-    assert.match(detail.detail, /CLAWD_NODE_BIN/);
+    assert.match(detail.detail, /DUCK_NODE_BIN/);
     assert.strictEqual(detail.claudeHookRuntimeStatus.degradedReason, "env-hook-node-unresolved");
     assert.deepStrictEqual(detail.fixAction, { type: "agent-integration", agentId: "claude-code" });
   });
@@ -351,14 +351,14 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeJson(descriptor.configPath, {
       hooks: {
         Stop: [
-          { matcher: "", hooks: [{ type: "command", command: '"node" "/app/hooks/clawd-hook.js" Stop' }] },
-          { matcher: "", hooks: [{ type: "command", command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" Stop' }] },
+          { matcher: "", hooks: [{ type: "command", command: '"node" "/app/hooks/duck-hook.js" Stop' }] },
+          { matcher: "", hooks: [{ type: "command", command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" Stop' }] },
         ],
       },
     });
@@ -375,7 +375,7 @@ describe("checkAgentIntegrations", () => {
 
     assert.strictEqual(detail.status, "needs-review", "generic marker success must not hide the degraded env diagnostic");
     assert.strictEqual(detail.level, "warning");
-    assert.match(detail.detail, /CLAWD_HOOK_PATH/);
+    assert.match(detail.detail, /DUCK_HOOK_PATH/);
     assert.strictEqual(detail.claudeHookRuntimeStatus.degradedReason, "env-indirection-unverified");
     assert.strictEqual(detail.fixAction, undefined, "unverified ownership must not offer a destructive automatic Fix");
   });
@@ -384,7 +384,7 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeText(descriptor.configPath, "{not-json");
@@ -408,7 +408,7 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeJson(descriptor.configPath, { hooks: {} });
@@ -436,7 +436,7 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeJson(descriptor.configPath, { hooks: {} });
@@ -457,12 +457,12 @@ describe("checkAgentIntegrations", () => {
     const descriptor = baseDescriptor({
       agentId: "claude-code",
       agentName: "Claude Code",
-      marker: "clawd-hook.js",
+      marker: "duck-hook.js",
       nested: true,
     });
     writeJson(descriptor.configPath, {
       hooks: {
-        Stop: [{ matcher: "", hooks: [{ command: '"/node" "/app/hooks/clawd-hook.js" Stop' }] }],
+        Stop: [{ matcher: "", hooks: [{ command: '"/node" "/app/hooks/duck-hook.js" Stop' }] }],
       },
     });
 
@@ -571,7 +571,7 @@ describe("checkAgentIntegrations", () => {
   });
 
 
-  // #544: Windows Clawd writes dual-field entries — commandWindows carries
+  // #544: Windows Duck writes dual-field entries — commandWindows carries
   // the PowerShell form codex actually runs on Windows, command carries a
   // WSL-interop form only executable inside WSL. The doctor must validate
   // the field THIS platform's codex resolves; blanket-validating `command`
@@ -689,7 +689,7 @@ describe("checkAgentIntegrations", () => {
       hooks: {
         Stop: [{ hooks: [{
           type: "command",
-          command: '"node.exe" "/mnt/c/app/hooks/codex-hook.js" --clawd-wsl-interop',
+          command: '"node.exe" "/mnt/c/app/hooks/codex-hook.js" --duck-wsl-interop',
           commandWindows,
           timeout: 30,
         }] }],
@@ -812,11 +812,11 @@ describe("checkAgentIntegrations", () => {
       agentName: "Pi",
       eventSource: "extension",
       parentDir,
-      configPath: path.join(parentDir, "extensions", "clawd-on-desk"),
+      configPath: path.join(parentDir, "extensions", "duck-on-desk"),
       configMode: "pi-extension",
       marker: "index.ts",
       coreFile: "pi-extension-core.js",
-      markerFile: ".clawd-managed.json",
+      markerFile: ".duck-on-desk-managed.json",
     });
   }
 
@@ -845,8 +845,8 @@ describe("checkAgentIntegrations", () => {
 
   it("reports managed Pi extension as ok", () => {
     const descriptor = piDescriptor();
-    writeJson(path.join(descriptor.configPath, ".clawd-managed.json"), {
-      app: "clawd-on-desk",
+    writeJson(path.join(descriptor.configPath, ".duck-on-desk-managed.json"), {
+      app: "duck-on-desk",
       integration: "pi",
       managed: true,
     });
@@ -862,8 +862,8 @@ describe("checkAgentIntegrations", () => {
 
   it("reports managed Pi extension with missing copied files as repairable broken-path", () => {
     const descriptor = piDescriptor();
-    writeJson(path.join(descriptor.configPath, ".clawd-managed.json"), {
-      app: "clawd-on-desk",
+    writeJson(path.join(descriptor.configPath, ".duck-on-desk-managed.json"), {
+      app: "duck-on-desk",
       integration: "pi",
       managed: true,
     });
@@ -961,7 +961,7 @@ describe("checkAgentIntegrations", () => {
     const descriptor = jsoncDescriptor(root);
     fs.writeFileSync(
       descriptor.configPath,
-      `{\n  // Clawd pet plugin\n  "plugin": [\n    ${JSON.stringify(pluginPath)},\n  ],\n}\n`,
+      `{\n  // Duck pet plugin\n  "plugin": [\n    ${JSON.stringify(pluginPath)},\n  ],\n}\n`,
       "utf8"
     );
 
@@ -1047,7 +1047,7 @@ describe("checkAgentIntegrations", () => {
   // opencode.jsonc (later wins, "plugin" arrays REPLACED). The doctor must
   // validate the MERGED effective view — reading opencode.json alone reported
   // "plugin entry verified" while opencode was actually running the .jsonc
-  // array with no Clawd plugin in it.
+  // array with no Duck plugin in it.
   function opencodeDescriptor(root, overrides = {}) {
     const parentDir = path.join(root, ".config", "opencode");
     fs.mkdirSync(parentDir, { recursive: true });
@@ -1231,7 +1231,7 @@ describe("checkAgentIntegrations", () => {
 
 describe("findOpencodePluginEntry", () => {
   it("matches only absolute plugin entries by basename", () => {
-    const absEntry = "C:\\clawd\\hooks\\opencode-plugin";
+    const absEntry = "C:\\duck\\hooks\\opencode-plugin";
     assert.strictEqual(
       findOpencodePluginEntry(["vendor/opencode-plugin", absEntry], "opencode-plugin"),
       absEntry

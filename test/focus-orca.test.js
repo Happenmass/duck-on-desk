@@ -8,7 +8,7 @@ const { loadFocusWithMock } = require("./helpers/load-focus-with-mock");
 const { orcaPaneKeyFromEnv, applyOrcaPaneKey, NESTED_TERMINAL_ENV } = require("../hooks/shared-process");
 
 const PANE_KEY = "8ce1fff7-tab:9813824b-leaf";
-const CWD = "D:\\Repos\\Apps\\clawd-on-desk";
+const CWD = "D:\\Repos\\Apps\\duck-on-desk";
 const LIVE_HANDLE = "term_63323b46";
 const STALE_HANDLE = "term_4602ecfa";
 // Orca packages its terminal daemon inside the app bundle, so extractMacAppBundlePath
@@ -25,7 +25,7 @@ const DEFAULT_TERMINALS = [
     handle: LIVE_HANDLE,
     tabId: "8ce1fff7-tab",
     leafId: "9813824b-leaf",
-    worktreePath: "D:/Repos/Apps/clawd-on-desk",
+    worktreePath: "D:/Repos/Apps/duck-on-desk",
   },
   {
     handle: "term_other",
@@ -157,7 +157,7 @@ describe("orcaPaneKeyFromEnv / applyOrcaPaneKey", () => {
     assert.strictEqual(orcaPaneKeyFromEnv({ TERM_PROGRAM: "Orca" }), null);
     // A remote hook is not a substitute for the TERM_PROGRAM confirmation.
     assert.strictEqual(orcaPaneKeyFromEnv({
-      CLAWD_REMOTE: "1",
+      DUCK_REMOTE: "1",
       ORCA_PANE_KEY: PANE_KEY,
     }), null);
     assert.strictEqual(orcaPaneKeyFromEnv({}), null);
@@ -245,7 +245,7 @@ describe("orcaPaneKeyFromEnv / applyOrcaPaneKey", () => {
     for (const file of files) {
       const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
       for (let i = 0; i < lines.length; i++) {
-        if (!/^\s*if \((?:process\.env\.CLAWD_REMOTE|options\.remote|remote)\) \{\s*$/.test(lines[i])) continue;
+        if (!/^\s*if \((?:process\.env\.DUCK_REMOTE|options\.remote|remote)\) \{\s*$/.test(lines[i])) continue;
         const nearby = lines.slice(i, i + 8);
         if (!nearby.some((line) => /body\.host\s*=/.test(line))) continue;
         checked += 1;
@@ -296,7 +296,7 @@ describe("Orca pane key validator copies", () => {
     }
   });
 
-  // This gate is what decides whether Clawd hijacks focus to Orca. A marker added
+  // This gate is what decides whether Duck hijacks focus to Orca. A marker added
   // to shared-process.js alone would leave the standalone copies trusting an
   // inherited key, with the wrong window reported as a successful focus.
   it("keeps the nested-terminal marker list in step across every copy", () => {
@@ -404,8 +404,8 @@ describe("Orca pane key normalization", () => {
   it("normalizes separators and trailing slash, folding case only where the filesystem does", () => {
     withFocus({ platform: "win32" }, (t) => {
       assert.strictEqual(
-        t.normalizeOrcaWorktreePath("D:\\Repos\\Apps\\clawd-on-desk\\"),
-        t.normalizeOrcaWorktreePath("d:/repos/apps/clawd-on-desk")
+        t.normalizeOrcaWorktreePath("D:\\Repos\\Apps\\duck-on-desk\\"),
+        t.normalizeOrcaWorktreePath("d:/repos/apps/duck-on-desk")
       );
     });
     withFocus({ platform: "linux" }, (t) => {
@@ -428,7 +428,7 @@ describe("Orca pane key normalization", () => {
     await withFocus({ platform: "linux" }, async (t, cli) => {
       // Routine shape: the pane is gone and the agent's cwd is a subdirectory of
       // the worktree, which an exact match would report as orca-pane-not-found.
-      t.scheduleOrcaPaneFocus("gone-tab:gone-leaf", "D:\\Repos\\Apps\\clawd-on-desk\\src\\hooks");
+      t.scheduleOrcaPaneFocus("gone-tab:gone-leaf", "D:\\Repos\\Apps\\duck-on-desk\\src\\hooks");
       await settle(t);
       const switches = cli.switchCalls();
       assert.strictEqual(switches.length, 1, "expected the worktree fallback to switch");
@@ -531,7 +531,7 @@ describe("resolveOrcaHandle", () => {
   it("prefers the longest matching worktree so a nested session keeps its own tab", async () => {
     const terminals = [
       { handle: "term_outer", tabId: "outer", leafId: "leaf", worktreePath: "D:/Repos/Apps" },
-      { handle: "term_inner", tabId: "inner", leafId: "leaf", worktreePath: "D:/Repos/Apps/clawd-on-desk" },
+      { handle: "term_inner", tabId: "inner", leafId: "leaf", worktreePath: "D:/Repos/Apps/duck-on-desk" },
     ];
     await withFocus({ terminals }, async (t) => {
       const res = await resolveHandle(t, "gone-tab:gone-leaf", `${CWD}\\src`);
@@ -547,8 +547,8 @@ describe("resolveOrcaHandle", () => {
     // listed first and logged a successful switch, so a Direct Send reply could
     // land in the other pane's composer.
     const terminals = [
-      { handle: "term_first", tabId: "a", leafId: "leaf", worktreePath: "D:/Repos/Apps/clawd-on-desk" },
-      { handle: "term_second", tabId: "b", leafId: "leaf", worktreePath: "D:\\Repos\\Apps\\clawd-on-desk" },
+      { handle: "term_first", tabId: "a", leafId: "leaf", worktreePath: "D:/Repos/Apps/duck-on-desk" },
+      { handle: "term_second", tabId: "b", leafId: "leaf", worktreePath: "D:\\Repos\\Apps\\duck-on-desk" },
     ];
     await withFocus({ terminals }, async (t) => {
       const res = await resolveHandle(t, "gone-tab:gone-leaf", `${CWD}\\src`);
@@ -561,8 +561,8 @@ describe("resolveOrcaHandle", () => {
   it("still resolves an exact pane key while other terminals tie on the worktree", async () => {
     // The tie only decides the fallback; an exact key is never ambiguous.
     const terminals = [
-      { handle: "term_first", tabId: "a", leafId: "leaf", worktreePath: "D:/Repos/Apps/clawd-on-desk" },
-      { handle: LIVE_HANDLE, tabId: "8ce1fff7-tab", leafId: "9813824b-leaf", worktreePath: "D:/Repos/Apps/clawd-on-desk" },
+      { handle: "term_first", tabId: "a", leafId: "leaf", worktreePath: "D:/Repos/Apps/duck-on-desk" },
+      { handle: LIVE_HANDLE, tabId: "8ce1fff7-tab", leafId: "9813824b-leaf", worktreePath: "D:/Repos/Apps/duck-on-desk" },
     ];
     await withFocus({ terminals }, async (t) => {
       const res = await resolveHandle(t, PANE_KEY, CWD);
@@ -741,8 +741,8 @@ describe("scheduleOrcaPaneFocus outcome", () => {
     ["a rejected switch", { switchResults: [{ ok: false, code: "terminal_not_writable" }] }, PANE_KEY, "orca-switch-failed"],
     ["an ambiguous worktree", {
       terminals: [
-        { handle: "term_first", tabId: "a", leafId: "leaf", worktreePath: "D:/Repos/Apps/clawd-on-desk" },
-        { handle: "term_second", tabId: "b", leafId: "leaf", worktreePath: "D:/Repos/Apps/clawd-on-desk" },
+        { handle: "term_first", tabId: "a", leafId: "leaf", worktreePath: "D:/Repos/Apps/duck-on-desk" },
+        { handle: "term_second", tabId: "b", leafId: "leaf", worktreePath: "D:/Repos/Apps/duck-on-desk" },
       ],
     }, "gone-tab:gone-leaf", "orca-pane-ambiguous"],
   ]) {
@@ -761,14 +761,14 @@ describe("scheduleOrcaPaneFocus outcome", () => {
 describe("Windows Orca window fallback", () => {
   it("gates the Orca branch on the orcaHosted flag", () => {
     withFocus({ platform: "win32" }, (t) => {
-      const off = t.makeFocusCmd(4242, ["clawd-on-desk"], null, null, "tok");
-      const on = t.makeFocusCmd(4242, ["clawd-on-desk"], null, null, "tok", ["clawd-on-desk"], true);
+      const off = t.makeFocusCmd(4242, ["duck-on-desk"], null, null, "tok");
+      const on = t.makeFocusCmd(4242, ["duck-on-desk"], null, null, "tok", ["duck-on-desk"], true);
       // Sixth-arg callers must keep working — the flag defaults to off.
       assert.match(off, /\$orcaHosted = \$false/);
       assert.match(on, /\$orcaHosted = \$true/);
       for (const script of [off, on]) {
         assert.match(script, /\$orcaProcessNames = @\('Orca'\)/);
-        assert.match(script, /function Get-ClawdOrcaWindows/);
+        assert.match(script, /function Get-DuckOrcaWindows/);
         assert.match(script, /if \(\$orcaHosted\) \{/);
         assert.match(script, /\$reason = 'orca-window'/);
         assert.match(script, /\$reason = 'orca-window-ambiguous'/);
@@ -779,7 +779,7 @@ describe("Windows Orca window fallback", () => {
 
   it("tries the Orca window before every other branch in the script", () => {
     withFocus({ platform: "win32" }, (t) => {
-      const script = t.makeFocusCmd(4242, ["clawd-on-desk"], "key", 4660, "tok", ["clawd-on-desk"], true);
+      const script = t.makeFocusCmd(4242, ["duck-on-desk"], "key", 4660, "tok", ["duck-on-desk"], true);
       const orcaAt = script.indexOf("if ($orcaHosted) {");
       const cacheAt = script.indexOf("$reason = 'cached-window'");
       const wtHwndAt = script.indexOf("$reason = 'wt-hwnd-from-hook'");
@@ -802,16 +802,16 @@ describe("Windows Orca window fallback", () => {
       // and src/state.js makes it sticky, so one SessionStart next to a Windows
       // Terminal window would otherwise focus that terminal for the rest of the
       // session — and report it as a success.
-      const script = t.makeFocusCmd(4242, ["clawd-on-desk"], "key", 4660, "tok", ["clawd-on-desk"], true);
+      const script = t.makeFocusCmd(4242, ["duck-on-desk"], "key", 4660, "tok", ["duck-on-desk"], true);
       assert.match(script, /\$wtHwndFromHook = \[IntPtr\]\(\[int64\]4660\)/);
       assert.match(script, /\$orcaHosted = \$true/);
       assert.ok(script.includes("if (-not $focused -and -not $orcaHosted) {"),
         "the window cache must be gated off for Orca sessions");
-      // Get-ClawdCachedWindow evicts the stored entry on a validation miss, so it
+      // Get-DuckCachedWindow evicts the stored entry on a validation miss, so it
       // has to be read inside that gate rather than before it — otherwise an Orca
       // focus drops another path's cache entry as a side effect.
       const cacheGateAt = script.indexOf("if (-not $focused -and -not $orcaHosted) {");
-      const cacheReadAt = script.indexOf("$cachedHwnd = Get-ClawdCachedWindow");
+      const cacheReadAt = script.indexOf("$cachedHwnd = Get-DuckCachedWindow");
       assert.ok(cacheGateAt > 0 && cacheReadAt > cacheGateAt,
         "the cache must not be read, and evicted, ahead of the Orca gate");
       assert.ok(script.includes("if (-not $focused -and -not $orcaHosted -and $wtHwndFromHook -ne [IntPtr]::Zero)"),
@@ -835,14 +835,14 @@ describe("Windows Orca window fallback", () => {
 
   it("never caches the Orca window, whose title cannot satisfy the cache check", () => {
     withFocus({ platform: "win32" }, (t) => {
-      const script = t.makeFocusCmd(4242, ["clawd-on-desk"], "key", null, "tok", ["clawd-on-desk"], true);
+      const script = t.makeFocusCmd(4242, ["duck-on-desk"], "key", null, "tok", ["duck-on-desk"], true);
       const block = script.slice(
         script.indexOf("if ($orcaHosted) {"),
-        script.indexOf("$cachedHwnd = Get-ClawdCachedWindow")
+        script.indexOf("$cachedHwnd = Get-DuckCachedWindow")
       );
       assert.ok(block.length > 0);
-      assert.ok(!block.includes("Save-ClawdFocusCache"),
-        "the Orca window title is just 'Orca', so a cached entry would fail Test-ClawdWindowTitleMatch");
+      assert.ok(!block.includes("Save-DuckFocusCache"),
+        "the Orca window title is just 'Orca', so a cached entry would fail Test-DuckWindowTitleMatch");
     });
   });
 

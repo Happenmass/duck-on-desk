@@ -47,7 +47,7 @@ function loadSettingsI18nStrings() {
   const context = {};
   context.globalThis = context;
   vm.runInNewContext(source, context);
-  return context.ClawdSettingsI18n.STRINGS;
+  return context.DuckSettingsI18n.STRINGS;
 }
 
 function loadBubbleStrings() {
@@ -327,7 +327,7 @@ describe("i18n locales", () => {
     const es = loadSettingsI18nStrings().es;
     const expected = {
       sidebarAnimOverrides: "Animación y sonido",
-      agentsSubtitle: "Descubre automáticamente herramientas de IA en este equipo y en WSL, o añade manualmente una IA que Clawd aún no incluya. Una vez conectada, gestiona aquí su estado, sus solicitudes de permiso y sus notificaciones.",
+      agentsSubtitle: "Descubre automáticamente herramientas de IA en este equipo y en WSL, o añade manualmente una IA que Duck aún no incluya. Una vez conectada, gestiona aquí su estado, sus solicitudes de permiso y sus notificaciones.",
       shortcutLabelPetReveal: "Clic en la mascota: Mostrar superposiciones de la mascota",
       bubbleNotificationDesc: "El interruptor controla los avisos pasivos de Codex. Los segundos fijan el límite máximo de cierre automático; estados de sesión posteriores pueden descartarlo antes. 0 los oculta.",
       langChinese: "简体中文",

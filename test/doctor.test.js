@@ -36,7 +36,7 @@ describe("doctor aggregate checks", () => {
 
   it("runs all checks through injectable dependencies", () => {
     const result = runDoctorChecks({
-      prefs: { theme: "clawd" },
+      prefs: { theme: "duck" },
       checkPrefsReadability: () => ({ id: "prefs-readability", status: "pass", level: null }),
       checkLocalServer: () => ({ id: "local-server", status: "pass", level: null }),
       checkAgentIntegrations: () => ({ id: "agent-integrations", status: "pass", level: null, details: [] }),
@@ -80,7 +80,7 @@ describe("doctor aggregate checks", () => {
     const prefs = result.checks.find((check) => check.id === "prefs-readability");
     assert.strictEqual(prefs.status, "critical");
     assert.strictEqual(prefs.reason, "prefs-recovered");
-    assert.match(prefs.detail, /clawd-prefs\.json\.bak/);
+    assert.match(prefs.detail, /duck-prefs\.json\.bak/);
     assert.match(prefs.detail, /paused for this launch/i);
   });
 

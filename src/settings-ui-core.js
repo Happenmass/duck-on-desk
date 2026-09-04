@@ -1,7 +1,7 @@
 "use strict";
 
 (function initSettingsUiCore(root) {
-  const sizeApi = root.ClawdSettingsSizeSlider || {};
+  const sizeApi = root.DuckSettingsSizeSlider || {};
   const {
     SIZE_UI_MIN,
     SIZE_UI_MAX,
@@ -17,7 +17,7 @@
     throw new Error("settings-size-slider.js failed to load before settings-ui-core.js");
   }
 
-  const i18nApi = root.ClawdSettingsI18n || {};
+  const i18nApi = root.DuckSettingsI18n || {};
   const STRINGS = i18nApi.STRINGS;
   const CONTRIBUTORS = i18nApi.CONTRIBUTORS;
   const MAINTAINERS = i18nApi.MAINTAINERS;
@@ -25,14 +25,14 @@
     throw new Error("settings-i18n.js failed to load before settings-ui-core.js");
   }
 
-  const animMergeApi = root.ClawdSettingsAnimOverridesMerge || {};
+  const animMergeApi = root.DuckSettingsAnimOverridesMerge || {};
   const mergePosterCacheIntoAnimationData = animMergeApi.mergePosterCacheIntoAnimationData
     || ((data) => data);
   const applyAnimationPosterPayloadToRuntime = animMergeApi.applyAnimationPosterPayload
     || (() => ({ valid: false, stored: false, applied: false }));
-  const selectPickerApi = root.ClawdLanguagePicker || {};
+  const selectPickerApi = root.DuckLanguagePicker || {};
 
-  const shortcutApi = root.ClawdShortcutActions || {};
+  const shortcutApi = root.DuckShortcutActions || {};
   const SHORTCUT_ACTIONS = shortcutApi.SHORTCUT_ACTIONS || {};
   const SHORTCUT_ACTION_IDS = shortcutApi.SHORTCUT_ACTION_IDS || Object.keys(SHORTCUT_ACTIONS);
   const buildAcceleratorFromEvent = shortcutApi.buildAcceleratorFromEvent
@@ -45,8 +45,8 @@
   // startsWith("Mac") not /\bMac\b/ — "MacIntel" has \w after "c", fails \b (regression #135).
   const IS_MAC = (navigator.platform || "").startsWith("Mac");
   const IS_WIN = (navigator.platform || "").startsWith("Win");
-  const COLLAPSED_GROUPS_STORAGE_KEY = "clawd.settings.collapsedGroups.v1";
-  const NAVIGATION_STORAGE_KEY = "clawd.settings.navigation.v1";
+  const COLLAPSED_GROUPS_STORAGE_KEY = "duck.settings.collapsedGroups.v1";
+  const NAVIGATION_STORAGE_KEY = "duck.settings.navigation.v1";
   const MAX_PERSISTED_SCROLL_TOP = 10_000_000;
   // Runtime-only geometry belongs in the snapshot for consistency, but has no
   // mounted Settings control. Re-rendering for it would destroy focused inputs
@@ -2177,5 +2177,5 @@
     translateShortcutError,
   };
 
-  root.ClawdSettingsCore = core;
+  root.DuckSettingsCore = core;
 })(globalThis);

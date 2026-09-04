@@ -9,7 +9,7 @@ const path = require("node:path");
 const { identifyCustomApplication, normalizeCustomApplications } = require("../src/custom-applications");
 
 function tempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "clawd-custom-ai-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "duck-custom-ai-"));
 }
 
 test("identifies a selected Windows executable with a stable custom agent id", () => {

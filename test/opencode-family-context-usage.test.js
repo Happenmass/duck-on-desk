@@ -23,8 +23,8 @@ const ORIGINAL_HOME = {
     value: process.env.USERPROFILE,
   },
 };
-const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-context-usage-"));
-fs.mkdirSync(path.join(TMP_HOME, ".clawd"), { recursive: true });
+const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "duck-context-usage-"));
+fs.mkdirSync(path.join(TMP_HOME, ".duck-on-desk"), { recursive: true });
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
 
@@ -147,7 +147,7 @@ function makeSeedThenDeferredClient(seedProviders) {
   return { client: { provider: { list } }, calls, pending };
 }
 
-// Captures every POST the plugin makes (headers carry the Clawd identity the
+// Captures every POST the plugin makes (headers carry the Duck identity the
 // port-discovery loop requires before trusting the port).
 function installFetchStub({
   recognized = () => true,
@@ -169,8 +169,8 @@ function installFetchStub({
     call.recognized = isRecognized;
     call.metadataAccepted = isMetadataAccepted;
     const responseHeaders = {
-      ...(isRecognized ? { "x-clawd-server": "clawd-on-desk" } : {}),
-      ...(isMetadataAccepted ? { "x-clawd-metadata-accepted": "1" } : {}),
+      ...(isRecognized ? { "x-duck-server": "duck-on-desk" } : {}),
+      ...(isMetadataAccepted ? { "x-duck-metadata-accepted": "1" } : {}),
     };
     return {
       status: isRecognized ? (call.body.metadata_only === true ? 204 : 200) : 503,
@@ -518,7 +518,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
 
   function makePlugin() {
     const plugin = createTrackedPlugin(core, OPENCODE_PARAMS);
-    plugin.__test._cachedPort = 23333; // skip runtime.json + port scan
+    plugin.__test._cachedPort = 24333; // skip runtime.json + port scan
     return plugin;
   }
 
@@ -538,7 +538,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
 
     assert.strictEqual(stub.posted.length, 1);
     const body = stub.posted[0].body;
-    assert.strictEqual(stub.posted[0].url, "http://127.0.0.1:23333/state");
+    assert.strictEqual(stub.posted[0].url, "http://127.0.0.1:24333/state");
     assert.strictEqual(body.metadata_only, true);
     assert.strictEqual(body.agent_id, "opencode");
     assert.strictEqual(body.hook_source, "opencode-plugin");
@@ -738,7 +738,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
     assert.deepStrictEqual(stub.posted[1].body.context_usage, { used: 43000, limit: 128000, source: "opencode" });
   });
 
-  it("retries identical metadata until Clawd explicitly accepts it", async () => {
+  it("retries identical metadata until Duck explicitly accepts it", async () => {
     stub.restore();
     let acceptMetadata = false;
     stub = installFetchStub({ metadataAccepted: () => acceptMetadata });
@@ -751,7 +751,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
     await plugin.__test.handleContextUsageEvent(event, { client: client.client, instanceToken: 1 });
     await plugin.__test.handleContextUsageEvent(event, { client: client.client, instanceToken: 1 });
     assert.strictEqual(stub.posted.length, 2, "recognized/no-ack metadata must not advance the baseline");
-    assert.strictEqual(stub.attempts, 2, "recognized/no-ack must stop scanning after the Clawd port");
+    assert.strictEqual(stub.attempts, 2, "recognized/no-ack must stop scanning after the Duck port");
     assert.strictEqual(
       plugin.__test._contextStateByInstance.get(1).get("opencode:ses_abc").delivered,
       null
@@ -985,7 +985,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
 
   it("keeps context reporting explicitly OpenCode-only until OtherHost has a proven contract", async () => {
     const plugin = createTrackedPlugin(core, OTHERHOST_PARAMS);
-    plugin.__test._cachedPort = 23333;
+    plugin.__test._cachedPort = 24333;
     const client = makeFakeClient([
       { id: "mimo", models: { model: { limit: { context: 1000 } } } },
     ]);

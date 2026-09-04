@@ -16,25 +16,25 @@ const MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const MAX_SPRITESHEET_BYTES = 16 * 1024 * 1024;
 const MAX_PET_JSON_BYTES = 64 * 1024;
 const MAX_REDIRECTS = 5;
-const IMPORT_MARKER_FILENAME = ".clawd-imported-pet.json";
-const ERR_REPLACE_DECLINED = "ERR_CLAWD_CODEX_PET_REPLACE_DECLINED";
+const IMPORT_MARKER_FILENAME = ".duck-on-desk-imported-pet.json";
+const ERR_REPLACE_DECLINED = "ERR_DUCK_CODEX_PET_REPLACE_DECLINED";
 const INTERNAL_HOST_SUFFIXES = [".localhost", ".local", ".lan", ".home", ".internal", ".intranet", ".corp"];
 
 function getDefaultCodexPetsDir(homeDir = os.homedir()) {
   return path.join(homeDir, ".codex", "pets");
 }
 
-function parseClawdImportUrl(rawUrl) {
+function parseDuckImportUrl(rawUrl) {
   let parsed;
   try {
     parsed = new URL(String(rawUrl || ""));
   } catch {
-    throw new Error("invalid clawd import URL");
+    throw new Error("invalid duck import URL");
   }
-  if (parsed.protocol !== "clawd:") throw new Error("unsupported protocol");
+  if (parsed.protocol !== "duck:") throw new Error("unsupported protocol");
 
   const action = parsed.hostname || parsed.pathname.replace(/^\/+/, "");
-  if (action !== "import-pet") throw new Error(`unsupported clawd action: ${action || "(missing)"}`);
+  if (action !== "import-pet") throw new Error(`unsupported duck action: ${action || "(missing)"}`);
 
   const remote = parsed.searchParams.get("url");
   if (!remote) throw new Error("import-pet URL requires a url parameter");
@@ -160,7 +160,7 @@ async function downloadHttpsBuffer(rawUrl, options = {}) {
       port: url.port || 443,
       method: "GET",
       path: `${url.pathname}${url.search}`,
-      headers: { "User-Agent": "Clawd-Codex-Pet-Importer" },
+      headers: { "User-Agent": "Duck-Codex-Pet-Importer" },
       lookup: (_hostname, _opts, cb) => cb(null, resolved.address, resolved.family),
       timeout: options.timeoutMs || 30000,
     }, (res) => {
@@ -314,7 +314,7 @@ async function installCodexPetPackage({ manifest, files, codexPetsDir, confirmRe
         existingManifest,
         incomingManifest: manifest,
         existingMarker,
-        wasClawdImported: !!existingMarker,
+        wasDuckImported: !!existingMarker,
       });
       if (!confirmed) {
         const err = new Error("Codex Pet package replacement was cancelled");
@@ -325,7 +325,7 @@ async function installCodexPetPackage({ manifest, files, codexPetsDir, confirmRe
     }
     fs.renameSync(stagingDir, targetDir);
     fs.writeFileSync(path.join(targetDir, IMPORT_MARKER_FILENAME), `${JSON.stringify({
-      managedBy: "clawd",
+      managedBy: "duck",
       kind: "codex-pet-import",
       schemaVersion: 1,
       importedAt: new Date().toISOString(),
@@ -347,7 +347,7 @@ function readImportMarker(packageDir) {
     const marker = JSON.parse(fs.readFileSync(path.join(packageDir, IMPORT_MARKER_FILENAME), "utf8"));
     if (
       marker
-      && marker.managedBy === "clawd"
+      && marker.managedBy === "duck"
       && marker.kind === "codex-pet-import"
       && marker.schemaVersion === 1
     ) {
@@ -499,7 +499,7 @@ function normalizePackageRelativePath(value, fieldName) {
 
 function derivePackageDirName(manifest) {
   // Import package directories may preserve Unicode names. The adapter derives
-  // separate ASCII-safe Clawd theme ids from the installed package metadata.
+  // separate ASCII-safe Duck theme ids from the installed package metadata.
   const candidate = sanitizePackageDirName(manifest.id) || sanitizePackageDirName(manifest.displayName);
   if (candidate) return candidate;
   const hash = crypto.createHash("sha1").update(JSON.stringify(manifest)).digest("hex").slice(0, 8);
@@ -531,7 +531,7 @@ module.exports = {
   IMPORT_MARKER_FILENAME,
   ERR_REPLACE_DECLINED,
   getDefaultCodexPetsDir,
-  parseClawdImportUrl,
+  parseDuckImportUrl,
   normalizeRemotePetUrl,
   isBlockedHostname,
   isBlockedIp,

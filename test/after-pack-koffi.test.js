@@ -13,7 +13,7 @@ const {
 } = require("../scripts/after-pack-koffi");
 
 function tempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "clawd-koffi-prune-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "duck-koffi-prune-"));
 }
 
 function fakePe(machine) {
@@ -54,7 +54,7 @@ async function makePackagedKoffi(root, targetId) {
   const target = require("../src/native-package-target").getReleaseTarget(targetId);
   const appOutDir = target.runtimePlatform === "darwin" ? path.join(root, "out") : path.join(root, "app");
   const appRoot = target.runtimePlatform === "darwin"
-    ? path.join(appOutDir, "Clawd on Desk.app")
+    ? path.join(appOutDir, "Duck on Desk.app")
     : appOutDir;
   const resources = target.runtimePlatform === "darwin"
     ? path.join(appRoot, "Contents", "Resources")

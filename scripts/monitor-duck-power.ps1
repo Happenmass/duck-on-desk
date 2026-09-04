@@ -1,7 +1,7 @@
 param(
   [int]$DurationSeconds = 600,
   [double]$IntervalSeconds = 2,
-  [string]$Pattern = 'Clawd on Desk|clawd-on-desk|src[\\/]+main\.js',
+  [string]$Pattern = 'Duck on Desk|duck-on-desk|src[\\/]+main\.js',
   [int[]]$RootPid,
   [string]$OutputPath,
   [switch]$Once,
@@ -21,7 +21,7 @@ if ($DurationSeconds -le 0 -and -not $Once) {
 
 if (-not $OutputPath) {
   $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-  $OutputPath = Join-Path "logs" "clawd-power-$timestamp.csv"
+  $OutputPath = Join-Path "logs" "duck-power-$timestamp.csv"
 }
 
 $outputDir = Split-Path -Parent $OutputPath
@@ -36,7 +36,7 @@ function Get-AllProcessRows {
 function Get-CandidateProcessRows {
   $rows = Get-AllProcessRows |
     Where-Object {
-      $_.Name -eq "Clawd on Desk.exe" -or
+      $_.Name -eq "Duck on Desk.exe" -or
       (
         ($_.Name -eq "electron.exe" -or $_.Name -eq "node.exe") -and
         $_.CommandLine -and
@@ -92,7 +92,7 @@ function Get-TargetPids {
   }
 
   $rows = Get-CandidateProcessRows | Where-Object {
-    $_.Name -eq "Clawd on Desk.exe" -or
+    $_.Name -eq "Duck on Desk.exe" -or
     ($_.CommandLine -and $_.CommandLine -match $Pattern)
   }
 
@@ -242,7 +242,7 @@ function New-OutputRow {
 }
 
 if (-not $Quiet) {
-  Write-Host "Monitoring Clawd power/resource proxy metrics."
+  Write-Host "Monitoring Duck power/resource proxy metrics."
   Write-Host "Output: $OutputPath"
   Write-Host "Pattern: $Pattern"
   if ($RootPid) {

@@ -56,7 +56,7 @@ function createRoamFenceSettings(options = {}) {
   }
   const filePath = options.filePath
     || loader.filePath
-    || path.join((options.os || defaultOs).homedir(), ".clawd", "roam-area.json");
+    || path.join((options.os || defaultOs).homedir(), ".duck-on-desk", "roam-area.json");
   const platform = options.platform || process.platform;
   let writeSerial = Promise.resolve();
 

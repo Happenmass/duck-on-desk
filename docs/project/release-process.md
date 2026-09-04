@@ -1,6 +1,6 @@
 # Release Process
 
-Use this flow when preparing a Clawd app release.
+Use this flow when preparing a Duck app release.
 
 ## Before Tagging
 
@@ -85,7 +85,7 @@ Before launching:
   and no unreviewed exception. Confirm each updater metadata `version` and every
   listed artifact filename identify `1.0.0`.
 - For migration smoke, install v0.16.0 first and save a copy of the old
-  `clawd-prefs.json` before upgrading.
+  `duck-prefs.json` before upgrading.
 - For Reasonix smoke, prepare a machine with Reasonix initialized so
   `<Reasonix home>/` exists (`%APPDATA%\reasonix` on Windows,
   `~/.reasonix` on macOS/Linux). A skipped install because Reasonix is missing
@@ -126,15 +126,15 @@ Required all-platform checks:
 - Settings -> About contributors include the three v1.0.0 first-time
   contributors: `eugenewang5425`, `draintovmasyan783-creator`, and `Yueh-H`,
   while preserving all previous contributors.
-- Make `clawd-prefs.json` temporarily unreadable and launch once. Confirm the
+- Make `duck-prefs.json` temporarily unreadable and launch once. Confirm the
   startup warning and Doctor critical item both explain that agent events and
   approvals are paused; restore access and restart before continuing.
-- Replace `clawd-prefs.json` with truncated JSON and launch once. Confirm the
-  original bytes are retained in `clawd-prefs.json.bak`, startup and Doctor say
+- Replace `duck-prefs.json` with truncated JSON and launch once. Confirm the
+  original bytes are retained in `duck-prefs.json.bak`, startup and Doctor say
   the recovered defaults are non-authoritative for this launch, and every agent
-  event/permission/sync gate stays closed until Settings are reviewed and Clawd
+  event/permission/sync gate stays closed until Settings are reviewed and Duck
   is restarted.
-- Repeat with a path collision that prevents `clawd-prefs.json.bak` from being
+- Repeat with a path collision that prevents `duck-prefs.json.bak` from being
   created. Confirm the primary file remains byte-for-byte unchanged, Settings
   writes stay locked, and startup/Doctor report backup failure without claiming
   that a backup exists.
@@ -147,10 +147,10 @@ Required all-platform checks:
 - Run one real OpenCode session through a title rename, tool activity, and
   SessionEnd. HUD/Dashboard must show the bounded title, retain causal ordering,
   and remove the session without replaying a stale state after a slow endpoint.
-- Stop Clawd while OpenCode is running, trigger a permission request, and confirm
+- Stop Duck while OpenCode is running, trigger a permission request, and confirm
   the plugin leaves the decision in OpenCode's native UI without POSTing its
-  reverse-bridge credentials to another listener in the Clawd port range.
-- Restart Clawd during an active Claude session, then let the real hook resume
+  reverse-bridge credentials to another listener in the Duck port range.
+- Restart Duck during an active Claude session, then let the real hook resume
   and end it. Dashboard/HUD must keep one canonical session throughout and
   remove it cleanly on SessionEnd, with no duplicate or ghost recovery row.
 - Exercise manual accessories on normal, interrupt, sleep, idle, reaction, and
@@ -166,7 +166,7 @@ Required all-platform checks:
   merge-across-machines can be turned both on and off, and an occupied third-party
   Claude statusline is preserved unless explicit chaining is enabled.
 - Trigger a long CJK Claude or Codex completion and confirm the Stop event reaches
-  Clawd without a 413 and the happy animation is not dropped.
+  Duck without a 413 and the happy animation is not dropped.
 - Codex official hook health: disable hooks / leave hooks unreviewed, confirm
   Agents badge or startup nudge reports attention, then repair/review and
   confirm it returns healthy.
@@ -177,7 +177,7 @@ Required all-platform checks:
   confirm Dashboard keeps separate sessions, then disable/delete one and confirm
   the other remains intact. Forged/stale `custom-` ids must be rejected.
 - Install WorkBuddy against the current `~/.workbuddy-ai/settings.json` path and
-  confirm state + Notification events arrive without Clawd taking over approval.
+  confirm state + Notification events arrive without Duck taking over approval.
 - Install MiMo Code into a commented/trailing-comma JSONC config, exercise
   Allow/Always/Deny and DND fallback, then uninstall and confirm user config is preserved.
 - Settings -> Agents -> Install Reasonix succeeds on Windows when paths contain
@@ -188,15 +188,15 @@ Required all-platform checks:
 - Set `REASONIX_HOME` to an unresolved variable and confirm install/sync fails
   closed without writing `settings.json` into the launch directory.
 - Install ZCode and confirm lifecycle events plus a real `PermissionRequest`
-  reach Clawd. Exercise manual Allow and Deny, then confirm no-decision falls
+  reach Duck. Exercise manual Allow and Deny, then confirm no-decision falls
   back to ZCode's native permission flow and permission automation stays
   unavailable. From an Orca pane, jump back to the session and confirm the
   validated pane key focuses the correct pane locally and over managed Remote SSH.
-- Install QwenWork on Windows or macOS and confirm lifecycle state reaches Clawd,
+- Install QwenWork on Windows or macOS and confirm lifecycle state reaches Duck,
   `PermissionRequest` / `PermissionDenied` remain observation-only, and uninstall
-  removes only Clawd-managed hook entries.
+  removes only Duck-managed hook entries.
 - Remote SSH profile with connect-on-launch connects after startup; repeat with
-  local port 23333 occupied so the server binds a later port and the tunnel still
+  local port 24333 occupied so the server binds a later port and the tunnel still
   targets the real bound port.
 - Upgrade a Remote SSH target that still has the legacy Codex monitor PID file;
   deploy/cleanup must complete without shell `bad substitution`. Confirm
@@ -214,7 +214,7 @@ Recommended all-platform checks:
   without a valid fence, then use a small fence and invalid/missing fence input.
   Targets must remain reachable and on-screen, with invalid input falling back
   safely.
-- Dizzy spin: on the Clawd theme, circle the cursor rapidly and confirm dizzy
+- Dizzy spin: on the Duck theme, circle the cursor rapidly and confirm dizzy
   triggers; repeat on Calico/Cloudling and confirm no unsupported-state glitch.
 - Low-power idle mode: verify sleeping/Cloudling static sleep behavior and that
   the HUD can be reclaimed/reopened without a blank surface.
@@ -310,7 +310,7 @@ The catalog gap is closed, but the published v0.15.0 locale still points both
 `LicenseUrl` and `ReleaseNotesUrl` at v0.14.0. Its files were generated with
 winmatsch, so their publication does not validate this repository's komac output.
 The first v0.15.0 prepare run
-[`31654717731`](https://github.com/rullerzhou-afk/clawd-on-desk/actions/runs/31654717731)
+[`31654717731`](https://github.com/rullerzhou-afk/duck-on-desk/actions/runs/31654717731)
 also predates the upstream repair and reproduced the old two-x64 shape. The
 workflow therefore stays prepare-only until its **generated output** is validated
 automatically; a correct upstream installer matrix alone is not sufficient reason
@@ -362,7 +362,7 @@ installer supports (`build.nsis` sets `oneClick: false` and no `perMachine`).
 
 1. **Prepare-only plumbing — complete; still the current execution mode.** Hosted
    run
-   [`31549249655`](https://github.com/rullerzhou-afk/clawd-on-desk/actions/runs/31549249655)
+   [`31549249655`](https://github.com/rullerzhou-afk/duck-on-desk/actions/runs/31549249655)
    successfully exercised the workflow, token, installer downloads and artifact
    paths. Against the then-broken upstream manifest it reproduced komac's bad
    two-x64 output, confirming why automatic submission had to remain disabled.

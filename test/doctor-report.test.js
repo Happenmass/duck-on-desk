@@ -44,7 +44,7 @@ describe("doctor report redaction", () => {
     assert.ok(out.includes("[REDACTED]"));
   });
 
-  it("redacts configured Clawd app roots without consuming the rest of the path", () => {
+  it("redacts configured Duck app roots without consuming the rest of the path", () => {
     const out = redact([
       "D:/animation/hooks/opencode-plugin",
       "D:\\animation\\hooks\\codex-hook.js",
@@ -75,7 +75,7 @@ describe("doctor report redaction", () => {
     const result = redactDoctorResult({
       checks: [{
         id: "agent-integrations",
-        detail: "C:\\Users\\Alice\\.clawd\\runtime.json",
+        detail: "C:\\Users\\Alice\\.duck-on-desk\\runtime.json",
         details: [{
           agentName: "Cursor Agent",
           detail: "C:\\Users\\Alice\\.cursor\\hooks.json missing",
@@ -109,7 +109,7 @@ describe("formatDiagnosticReport", () => {
       codexHookTrust: {
         key: "codex_hook_trust",
         value: "needs-review",
-        detail: "2/2 Clawd Codex hook(s) need Codex /hooks review: PermissionRequest, Stop",
+        detail: "2/2 Duck Codex hook(s) need Codex /hooks review: PermissionRequest, Stop",
       },
       opencodeEntryIssue: "directory-missing",
       opencodeEntry: "C:\\Users\\Alice\\opencode-plugin",
@@ -125,7 +125,7 @@ describe("formatDiagnosticReport", () => {
 
   it("formats a supplementary diagnostic into visible detail text", () => {
     const detail = formatAgentDetail({
-      detail: "Codex hooks are disabled in config.toml; Clawd preserves this user setting and will not receive hook events",
+      detail: "Codex hooks are disabled in config.toml; Duck preserves this user setting and will not receive hook events",
       supplementary: {
         key: "hooks",
         value: "disabled",
@@ -142,7 +142,7 @@ describe("formatDiagnosticReport", () => {
       generatedAt: "2026-04-28T14:32:00.000Z",
       overall: { status: "warning", issueCount: 1 },
       checks: [
-        { id: "local-server", status: "pass", level: null, detail: "Listening on 127.0.0.1:23333" },
+        { id: "local-server", status: "pass", level: null, detail: "Listening on 127.0.0.1:24333" },
         {
           id: "agent-integrations",
           status: "warning",
@@ -192,7 +192,7 @@ describe("formatDiagnosticReport", () => {
       appRoot: "D:\\animation",
     });
 
-    assert.match(report, /# Clawd Diagnostic Report/);
+    assert.match(report, /# Duck Diagnostic Report/);
     assert.match(report, /Overall: WARNING/);
     assert.match(report, /Cursor Agent/);
     assert.match(report, /permission bubbles disabled/);
@@ -210,7 +210,7 @@ describe("formatDiagnosticReport", () => {
     assert.ok(!report.includes("~/.cursor\\hooks.json"));
   });
 
-  it("keeps the fallback file table when no HTTP event reached Clawd", () => {
+  it("keeps the fallback file table when no HTTP event reached Duck", () => {
     const report = formatDiagnosticReport({
       generatedAt: "2026-04-28T14:32:00.000Z",
       overall: { status: "warning", issueCount: 1 },
@@ -218,7 +218,7 @@ describe("formatDiagnosticReport", () => {
       connectionTest: {
         status: "http-blocked",
         level: "warning",
-        detail: "File activity changed, but no HTTP hook event reached Clawd.",
+        detail: "File activity changed, but no HTTP hook event reached Duck.",
         events: [],
         fileActivity: [{
           agentId: "codex",

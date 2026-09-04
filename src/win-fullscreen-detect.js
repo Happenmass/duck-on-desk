@@ -110,18 +110,18 @@ function createForegroundFullscreenProbe(options = {}) {
     if (typeof koffi.address === "function") addressOf = koffi.address;
     user32 = koffi.load("user32.dll");
     // LONG is 32-bit even on Win64 (LLP64); use int32 to be unambiguous.
-    koffi.struct("ClawdRECT", { left: "int32", top: "int32", right: "int32", bottom: "int32" });
-    koffi.struct("ClawdMONITORINFO", {
+    koffi.struct("DuckRECT", { left: "int32", top: "int32", right: "int32", bottom: "int32" });
+    koffi.struct("DuckMONITORINFO", {
       cbSize: "uint32",
-      rcMonitor: "ClawdRECT",
-      rcWork: "ClawdRECT",
+      rcMonitor: "DuckRECT",
+      rcWork: "DuckRECT",
       dwFlags: "uint32",
     });
-    monitorInfoSize = koffi.sizeof("ClawdMONITORINFO");
+    monitorInfoSize = koffi.sizeof("DuckMONITORINFO");
     GetForegroundWindow = user32.func("void* __stdcall GetForegroundWindow()");
-    GetWindowRect = user32.func("bool __stdcall GetWindowRect(void* hWnd, _Out_ ClawdRECT* lpRect)");
+    GetWindowRect = user32.func("bool __stdcall GetWindowRect(void* hWnd, _Out_ DuckRECT* lpRect)");
     MonitorFromWindow = user32.func("void* __stdcall MonitorFromWindow(void* hWnd, uint32 dwFlags)");
-    GetMonitorInfoW = user32.func("bool __stdcall GetMonitorInfoW(void* hMonitor, _Inout_ ClawdMONITORINFO* lpmi)");
+    GetMonitorInfoW = user32.func("bool __stdcall GetMonitorInfoW(void* hMonitor, _Inout_ DuckMONITORINFO* lpmi)");
     GetClassNameW = user32.func("int __stdcall GetClassNameW(void* hWnd, _Out_ uint16_t* lpClassName, int nMaxCount)");
   } catch (err) {
     if (typeof options.onError === "function") options.onError(err);

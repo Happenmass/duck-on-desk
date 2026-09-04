@@ -46,7 +46,7 @@ function makeFakeMonitorClass(instances) {
 
 function makeRealStateHarness() {
   themeLoader.init(SRC_DIR);
-  const theme = JSON.parse(JSON.stringify(themeLoader.loadTheme("clawd")));
+  const theme = JSON.parse(JSON.stringify(themeLoader.loadTheme("duck")));
   // Composition tests assert lifecycle effects synchronously; animation hold
   // timers are state presentation policy and are covered in state.test.js.
   theme.timings.minDisplay = {};

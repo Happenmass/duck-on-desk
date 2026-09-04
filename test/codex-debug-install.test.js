@@ -17,7 +17,7 @@ const MARKER = "codex-debug-hook.js";
 const tempDirs = [];
 
 function makeTempCodexDir(initialHooks = null, configText = null) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-debug-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-debug-"));
   const codexDir = path.join(tmpDir, ".codex");
   fs.mkdirSync(codexDir, { recursive: true });
   if (initialHooks !== null) {
@@ -157,7 +157,7 @@ describe("Codex debug hook installer", () => {
   });
 
   it("inserts hooks=true into an existing features section", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-config-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-config-"));
     tempDirs.push(tmpDir);
     const configPath = path.join(tmpDir, "config.toml");
     fs.writeFileSync(configPath, "[features]\nfoo = true\n[model]\nname = \"x\"\n", "utf8");
@@ -172,7 +172,7 @@ describe("Codex debug hook installer", () => {
   });
 
   it("handles TOML table headers with trailing comments", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-config-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-config-"));
     tempDirs.push(tmpDir);
     const configPath = path.join(tmpDir, "config.toml");
     fs.writeFileSync(
@@ -191,7 +191,7 @@ describe("Codex debug hook installer", () => {
   });
 
   it("migrates legacy codex_hooks=false under a commented header without enabling it", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-config-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-config-"));
     tempDirs.push(tmpDir);
     const configPath = path.join(tmpDir, "config.toml");
     const original = "[features] # user feature flags\ncodex_hooks = false\n";

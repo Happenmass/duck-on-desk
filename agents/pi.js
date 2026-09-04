@@ -1,6 +1,6 @@
 // Pi agent configuration
-// Perception via Pi extension: lifecycle event hook -> HTTP POST to Clawd.
-// Pi remains state-only here; Clawd must not add a permission layer on top of
+// Perception via Pi extension: lifecycle event hook -> HTTP POST to Duck.
+// Pi remains state-only here; Duck must not add a permission layer on top of
 // Pi's default YOLO execution model.
 
 module.exports = {
@@ -11,7 +11,7 @@ module.exports = {
   // state.js covers the known CLI distribution there.
   startupRecoveryProcessNames: { win: ["pi.exe"], mac: [], linux: [] },
   eventSource: "extension",
-  // Clawd-internal event names. hooks/pi-extension-core.js translates Pi's
+  // Duck-internal event names. hooks/pi-extension-core.js translates Pi's
   // native snake_case events to this shared PascalCase event vocabulary.
   eventMap: {
     SessionStart: "idle",

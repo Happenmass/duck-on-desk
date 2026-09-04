@@ -23,7 +23,7 @@ const themeLoader = require(path.join(ROOT, "src", "theme-loader"));
 themeLoader.init(path.join(ROOT, "src"));
 
 const BUILTINS = [
-  { id: "clawd", theme: path.join(ROOT, "themes", "clawd", "theme.json"), assets: path.join(ROOT, "assets", "svg") },
+  { id: "duck", theme: path.join(ROOT, "themes", "duck", "theme.json"), assets: path.join(ROOT, "assets", "svg") },
   { id: "cloudling", theme: path.join(ROOT, "themes", "cloudling", "theme.json"), assets: path.join(ROOT, "themes", "cloudling", "assets") },
 ];
 const SLOT_AUDITS = Object.freeze([
@@ -181,13 +181,13 @@ async function sampleMatrices(win, targetId, options = {}) {
       if (typeof window.__cloudlingSetPointer !== "function") {
         throw new Error("cloudling scripted pointer hook is unavailable");
       }
-      if (typeof window.__clawdSetLowPowerPaused !== "function") {
+      if (typeof window.__duckSetLowPowerPaused !== "function") {
         throw new Error("cloudling animation pause hook is unavailable");
       }
       // Drive the SVG's own frame callbacks at a fixed cadence. Wall-clock
       // sleeps under-sample hidden windows on busy CI hosts, particularly the
       // mini visual whose rotation lag advances once per rendered frame.
-      window.__clawdSetLowPowerPaused(true);
+      window.__duckSetLowPowerPaused(true);
       const nativeRequest = window.requestAnimationFrame;
       const nativeCancel = window.cancelAnimationFrame;
       const pendingFrames = new Map();
@@ -220,7 +220,7 @@ async function sampleMatrices(win, targetId, options = {}) {
         { x: 1000, y: 1000, inside: true },
       ];
       try {
-        window.__clawdSetLowPowerPaused(false);
+        window.__duckSetLowPowerPaused(false);
         frameTime = performance.now();
         for (const probe of probes) {
           window.__cloudlingSetPointer(probe);
@@ -232,7 +232,7 @@ async function sampleMatrices(win, targetId, options = {}) {
           }
         }
       } finally {
-        window.__clawdSetLowPowerPaused(true);
+        window.__duckSetLowPowerPaused(true);
         window.requestAnimationFrame = nativeRequest;
         window.cancelAnimationFrame = nativeCancel;
       }
@@ -277,7 +277,7 @@ async function sampleMatrices(win, targetId, options = {}) {
       // Preferred: the visual exposes a pure seek, so sweep its whole cycle
       // deterministically. Sampling a script-driven SVG against the wall clock
       // measures the machine, not the animation.
-      if (typeof window.__clawdSeekTo === "function") {
+      if (typeof window.__duckSeekTo === "function") {
         const seekSeconds = ${JSON.stringify(seekSeconds)};
         // 19 ms because it is coprime with both periods (1160 ms walk cycle,
         // 4400 ms breath). A 20 ms step divides the walk cycle exactly 58
@@ -285,7 +285,7 @@ async function sampleMatrices(win, targetId, options = {}) {
         // the contact pulse's peak at q=0.72 however long it runs; a coprime
         // step walks every 1 ms phase of both cycles for the same sample count.
         for (let ms = 0; ms <= seekSeconds * 1000; ms += 19) {
-          window.__clawdSeekTo(ms / 1000);
+          window.__duckSeekTo(ms / 1000);
           out.push(snapshot());
         }
         if (new Set(out.map((m) => JSON.stringify(m))).size < 2) {

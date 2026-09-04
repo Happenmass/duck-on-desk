@@ -37,7 +37,7 @@ function entriesContainHttpHookUrl(entries, expectedUrl) {
   return false;
 }
 
-const HOOK_MARKER = "clawd-hook.js";
+const HOOK_MARKER = "duck-hook.js";
 const AUTO_START_MARKER = "auto-start.js";
 
 // Bounds the issues array so a pathological settings.json (thousands of
@@ -104,7 +104,7 @@ function findManagedStateCommandRecords(settings, eventName) {
 
   const collect = (hook, entryIndex, hookIndex) => {
     if (!hook || typeof hook.command !== "string") return;
-    // Health historically recognizes Clawd commands inside PowerShell
+    // Health historically recognizes Duck commands inside PowerShell
     // EncodedCommand wrappers. Keep that read-only visibility without
     // broadening the installer's raw-marker mutation ownership boundary.
     const mutationKind = classifyManagedClaudeStateHookCommand(hook.command, settings, eventName);
@@ -170,7 +170,7 @@ const AUTO_START_COMMAND_ISSUE_CODES = Object.freeze({
   missing: "auto-start-path-missing",
 });
 
-// Validates every Clawd-owned command found for one event. Every command is
+// Validates every Duck-owned command found for one event. Every command is
 // checked independently — a stale/broken duplicate sitting alongside an
 // already-healthy command for the same event must still surface as an issue.
 // Stopping at the first healthy match would silently hide exactly the kind
@@ -214,7 +214,7 @@ function inspectEventCommands(commands, event, marker, expectedScriptPath, valid
     } else {
       // parse-failed or an unrecognized wrapper — do not guess. Misclassifying
       // a third-party/unusual command as repairable risks rewriting something
-      // Clawd does not own; surface it for Doctor instead.
+      // Duck does not own; surface it for Doctor instead.
       pushIssue(issues, {
         code: "command-unparseable",
         event,
@@ -449,7 +449,7 @@ function buildClaudeRepairSignature(issues) {
  *
  * This is deliberately lenient about `command-unparseable`: that issue is
  * `automaticRepairable: false` (misclassifying a third-party/unusual command
- * as Clawd's to rewrite is worse than leaving it alone), so there is no
+ * as Duck's to rewrite is worse than leaving it alone), so there is no
  * automatic repair action it should ever trigger or block. Used by the
  * periodic supervisor to decide "is there work for auto-repair to attempt."
  * Callers that need to know whether the config is *actually, fully* healthy
@@ -463,7 +463,7 @@ function hasNoAutomaticRepairWork(report) {
 }
 
 /**
- * Whether a report contains a Clawd-owned command this module could not
+ * Whether a report contains a Duck-owned command this module could not
  * parse (and therefore never attempted to classify as stale/missing/valid).
  * Exposed so callers can distinguish "nothing left to repair" from "nothing
  * left to repair, but something is still visibly wrong" without duplicating
@@ -476,15 +476,15 @@ function reportHasUnparseableCommand(report) {
 const DEGRADED_DIAGNOSTICS = Object.freeze({
   "command-unparseable": Object.freeze({
     reason: "command-unparseable",
-    message: "a Clawd-owned hook command could not be parsed; see Doctor for details",
+    message: "a Duck-owned hook command could not be parsed; see Doctor for details",
   }),
   "env-hook-node-unresolved": Object.freeze({
     reason: "env-hook-node-unresolved",
-    message: "an env-indirected Clawd hook was preserved because its absolute Node path could not be verified",
+    message: "an env-indirected Duck hook was preserved because its absolute Node path could not be verified",
   }),
   "env-indirection-unverified": Object.freeze({
     reason: "env-indirection-unverified",
-    message: "an env-indirected hook command could not be proven Clawd-owned from settings.env",
+    message: "an env-indirected hook command could not be proven Duck-owned from settings.env",
   }),
 });
 
@@ -502,7 +502,7 @@ function getClaudeHookDegradedDiagnostic(report) {
  * healthy, suitable for reporting a user-facing "ok" instead of blindly
  * trusting the installer's return value. Any unhealthy report fails this
  * stricter gate, including non-automatic issues such as a missing core event
- * or an unparseable Clawd-owned command.
+ * or an unparseable Duck-owned command.
  */
 function isExplicitRepairVerified(report) {
   return !!report && report.status === "healthy";

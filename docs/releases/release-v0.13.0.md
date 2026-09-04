@@ -13,7 +13,7 @@ This release welcomes **seven first-time contributors**.
 - **WorkBuddy support** (#618) — optional Claude Code-compatible command hooks
   support the current `~/.workbuddy-ai/settings.json` location and the legacy
   `~/.workbuddy/settings.json` location. WorkBuddy is state + Notification only:
-  approval remains in WorkBuddy's native sandbox and GUI, and Clawd never
+  approval remains in WorkBuddy's native sandbox and GUI, and Duck never
   registers a `/permission` hook. Thanks to first-time contributor @kkirito16.
 - **MiMo Code support** (#607) — MiMo joins the opencode family through
   `@mimo-ai/plugin`, with comment-preserving JSONC install/repair/uninstall,
@@ -54,7 +54,7 @@ This release welcomes **seven first-time contributors**.
   hook set verifies healthy.
 - **CodeBuddy permission ownership** — local and explicitly configured custom
   permission URLs remain supported, while unrelated HTTP hooks are preserved;
-  a bare hook named only `clawd` is never treated as owned.
+  a bare hook named only `duck` is never treated as owned.
 - **Kimi passive approval cues** (#675, #680, #702, #703) — permission cards are
   tool-aware, batched approval state is tracked without taking over Kimi's
   native decision, dismissing a cue can focus the terminal, and the legacy
@@ -62,7 +62,7 @@ This release welcomes **seven first-time contributors**.
   default to persisted `--permission-mode=suspect` because current kimi-cli
   versions do not emit explicit permission fields; an existing explicit choice
   is preserved. Pre-approved gated commands lasting longer than about 0.8s may
-  briefly show a false-alarm cue. Set `CLAWD_KIMI_PERMISSION_MODE=explicit`
+  briefly show a false-alarm cue. Set `DUCK_KIMI_PERMISSION_MODE=explicit`
   before reinstalling/syncing to opt out persistently, or use the same runtime
   environment variable for a temporary override.
 - **Permission fallback clarity** (#704) — opencode-family bubbles can return
@@ -75,13 +75,13 @@ This release welcomes **seven first-time contributors**.
 - **No residual Windows Terminal prompt flash** (#672) — foreground Windows
   Terminal sampling moves into the already-running Electron process, removing
   the remaining per-prompt PowerShell spawn. Hook process-tree inspection is
-  also skipped when Clawd is offline and temporary caches no longer retain agent
+  also skipped when Duck is offline and temporary caches no longer retain agent
   command lines (#681). Thanks to @Dxy2326.
 - **Windows DWM cloak recovery** (#525, #701) — the pet can detect and recover
   from an unexpectedly cloaked window across watchdog and power/display-wake
   paths.
 - **Windows first-frame visibility recovery** — after the first pet visual is
-  actually rendered, Clawd replays the existing window bounds and native
+  actually rendered, Duck replays the existing window bounds and native
   visibility/topmost recovery sequence without relocating the saved pet
   position. This prevents an upgrade launch from requiring the tray recovery
   action before the pet appears.
@@ -126,9 +126,9 @@ Thanks also to returning contributors **@KaiC5504**, **@Yike-Ye**, and
 - WorkBuddy users should prefer `~/.workbuddy-ai/settings.json`; the legacy
   `~/.workbuddy/settings.json` path remains supported.
 - Custom HTTP senders must continue discovering the active port from
-  `~/.clawd/runtime.json`; port 23333 must not be hardcoded.
-- After upgrading from v0.12.0 or earlier, fully quit and start Clawd once so
-  `~/.clawd/runtime.json` gains its `ownerPid`. Until that first restart, hooks
+  `~/.duck-on-desk/runtime.json`; port 24333 must not be hardcoded.
+- After upgrading from v0.12.0 or earlier, fully quit and start Duck once so
+  `~/.duck-on-desk/runtime.json` gains its `ownerPid`. Until that first restart, hooks
   fail closed for process-tree metadata: state/approval routing still works,
   but terminal PID and click-to-focus metadata may be temporarily absent.
 - WorkBuddy has no verified standalone Linux/WSL CLI. MiMo/opencode `task`
@@ -138,7 +138,7 @@ Thanks also to returning contributors **@KaiC5504**, **@Yike-Ye**, and
 
 - Windows x64: packaged real-machine smoke passed on July 22, 2026. The final
   `win-unpacked` app opened a live window, owned its runtime identity, fell back
-  from occupied port 23333 to 23334, and returned a valid `GET /state` health
+  from occupied port 24333 to 24334, and returned a valid `GET /state` health
   response. The NSIS cleanup entry point also removed a managed MiMo plugin
   from JSONC while preserving its comment, trailing comma, third-party plugin,
   and unrelated settings. After the first draft installer exposed a blank pet

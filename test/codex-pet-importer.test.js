@@ -12,7 +12,7 @@ const adapter = require("../src/codex-pet-adapter");
 const FIXTURE_DIR = path.join(__dirname, "fixtures", "codex-pets", "tiny-atlas-png");
 
 function makeTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-pet-importer-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-pet-importer-"));
 }
 
 function fixtureManifest(overrides = {}) {
@@ -151,23 +151,23 @@ function makeHttpsRequestMock(routes) {
   return { request, calls };
 }
 
-test("parses clawd import URLs and rejects unsafe remote hosts", () => {
-  const parsed = importer.parseClawdImportUrl(
-    "clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fpets%2Ftiny%2Fpet.json"
+test("parses duck import URLs and rejects unsafe remote hosts", () => {
+  const parsed = importer.parseDuckImportUrl(
+    "duck://import-pet?url=https%3A%2F%2Fexample.test%2Fpets%2Ftiny%2Fpet.json"
   );
   assert.strictEqual(parsed.action, "import-pet");
   assert.strictEqual(parsed.url, "https://example.test/pets/tiny/pet.json");
-  const idn = importer.parseClawdImportUrl(
-    `clawd://import-pet?url=${encodeURIComponent("https://例え.テスト/pets/tiny/pet.json")}`
+  const idn = importer.parseDuckImportUrl(
+    `duck://import-pet?url=${encodeURIComponent("https://例え.テスト/pets/tiny/pet.json")}`
   );
   assert.match(idn.asciiHostname, /^xn--/);
 
   assert.throws(
-    () => importer.parseClawdImportUrl("clawd://import-pet?url=http%3A%2F%2Fexample.test%2Fpet.json"),
+    () => importer.parseDuckImportUrl("duck://import-pet?url=http%3A%2F%2Fexample.test%2Fpet.json"),
     /https/
   );
   assert.throws(
-    () => importer.parseClawdImportUrl("clawd://import-pet?url=https%3A%2F%2Flocalhost%2Fpet.json"),
+    () => importer.parseDuckImportUrl("duck://import-pet?url=https%3A%2F%2Flocalhost%2Fpet.json"),
     /blocked/
   );
 });
@@ -414,7 +414,7 @@ test("does not overwrite non-pet directories in the Codex pets root", async () =
   assert.strictEqual(fs.readFileSync(path.join(petsDir, "tiny-atlas-png", "notes.txt"), "utf8"), "keep");
 });
 
-test("requires confirmation before replacing an existing non-Clawd-imported pet package", async () => {
+test("requires confirmation before replacing an existing non-Duck-imported pet package", async () => {
   const root = makeTempDir();
   const petsDir = path.join(root, "pets");
   const targetDir = path.join(petsDir, "tiny-atlas-png");
@@ -457,7 +457,7 @@ test("requires confirmation before replacing an existing non-Clawd-imported pet 
   assert.ok(importer.readImportMarker(replaced.packageDir));
 });
 
-test("requires confirmation before replacing Clawd-imported pet packages", async () => {
+test("requires confirmation before replacing Duck-imported pet packages", async () => {
   const root = makeTempDir();
   const petsDir = path.join(root, "pets");
   const first = await importer.installCodexPetPackage({
@@ -489,7 +489,7 @@ test("requires confirmation before replacing Clawd-imported pet packages", async
     }),
     { code: importer.ERR_REPLACE_DECLINED }
   );
-  assert.strictEqual(seenPayload.wasClawdImported, true);
+  assert.strictEqual(seenPayload.wasDuckImported, true);
   assert.ok(seenPayload.existingMarker);
 
   const second = await importer.installCodexPetPackage({

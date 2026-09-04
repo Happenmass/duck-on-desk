@@ -7,20 +7,20 @@ const { EventEmitter } = require("node:events");
 const {
   INITIAL_DISCOVER_TIMEOUT_MS,
   STARTUP_DISCOVER_TIMEOUT_MS,
-  waitForClawdPort,
+  waitForDuckPort,
   resolveMacBundleExecutable,
   launchApp,
   main,
 } = require("../hooks/auto-start");
 
-test("auto-start exits without launching when Clawd is already listening", async () => {
+test("auto-start exits without launching when Duck is already listening", async () => {
   const calls = [];
 
   await new Promise((resolve) => {
     main({
-      discoverClawdPort(options, callback) {
+      discoverDuckPort(options, callback) {
         calls.push(["discover", options.timeoutMs]);
-        callback(23333);
+        callback(24333);
       },
       launchApp() {
         calls.push(["launch"]);
@@ -40,11 +40,11 @@ test("auto-start exits without launching when Clawd is already listening", async
 
 test("auto-start waits for the cold-launched app before exiting", async () => {
   const calls = [];
-  const ports = [null, null, 23333];
+  const ports = [null, null, 24333];
 
   await new Promise((resolve) => {
     main({
-      discoverClawdPort(options, callback) {
+      discoverDuckPort(options, callback) {
         calls.push(["discover", options.timeoutMs]);
         callback(ports.shift() || null);
       },
@@ -73,17 +73,17 @@ test("auto-start waits for the cold-launched app before exiting", async () => {
   ]);
 });
 
-test("waitForClawdPort gives up after the startup deadline", async () => {
+test("waitForDuckPort gives up after the startup deadline", async () => {
   const calls = [];
   let now = 0;
 
   await new Promise((resolve) => {
-    waitForClawdPort({
+    waitForDuckPort({
       timeoutMs: 250,
       intervalMs: 100,
       discoverTimeoutMs: 10,
       now: () => now,
-      discoverClawdPort(options, callback) {
+      discoverDuckPort(options, callback) {
         calls.push(["discover", options.timeoutMs, now]);
         callback(null);
       },
@@ -113,7 +113,7 @@ test("waitForClawdPort gives up after the startup deadline", async () => {
 
 test("packaged macOS auto-start launches the exact bundle executable", () => {
   const calls = [];
-  const hooksDir = "/tmp/Clawd on Desk.app/Contents/Resources/app.asar.unpacked/hooks";
+  const hooksDir = "/tmp/Duck on Desk.app/Contents/Resources/app.asar.unpacked/hooks";
   launchApp({
     platform: "darwin",
     hooksDir,
@@ -129,7 +129,7 @@ test("packaged macOS auto-start launches the exact bundle executable", () => {
 
   assert.deepStrictEqual(calls, [
     {
-      command: "/tmp/Clawd on Desk.app/Contents/MacOS/Clawd on Desk",
+      command: "/tmp/Duck on Desk.app/Contents/MacOS/Duck on Desk",
       args: [],
       options: { detached: true, stdio: "ignore" },
     },
@@ -139,7 +139,7 @@ test("packaged macOS auto-start launches the exact bundle executable", () => {
 
 test("packaged macOS auto-start survives a renamed outer app bundle", () => {
   const calls = [];
-  const appBundle = "/Applications/Clawd on Desk 2.app";
+  const appBundle = "/Applications/Duck on Desk 2.app";
   const hooksDir = `${appBundle}/Contents/Resources/app.asar.unpacked/hooks`;
   launchApp({
     platform: "darwin",
@@ -152,7 +152,7 @@ test("packaged macOS auto-start survives a renamed outer app bundle", () => {
           "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
           "<plist><dict>",
           "<key>CFBundleExecutable</key>",
-          "<string>Clawd on Desk</string>",
+          "<string>Duck on Desk</string>",
           "</dict></plist>",
         ].join("");
       },
@@ -164,7 +164,7 @@ test("packaged macOS auto-start survives a renamed outer app bundle", () => {
   });
 
   assert.deepStrictEqual(calls, [{
-    command: `${appBundle}/Contents/MacOS/Clawd on Desk`,
+    command: `${appBundle}/Contents/MacOS/Duck on Desk`,
     args: [],
     options: { detached: true, stdio: "ignore" },
   }]);
@@ -177,7 +177,7 @@ test("macOS executable resolution fails closed to the stable product executable"
         throw new Error("unreadable plist");
       },
     },
-}), "/tmp/Renamed.app/Contents/MacOS/Clawd on Desk");
+}), "/tmp/Renamed.app/Contents/MacOS/Duck on Desk");
 });
 
 test("detached app launch handles asynchronous spawn errors", () => {
@@ -190,7 +190,7 @@ test("detached app launch handles asynchronous spawn errors", () => {
 
   launchApp({
     platform: "darwin",
-    hooksDir: "/tmp/Clawd on Desk.app/Contents/Resources/app.asar.unpacked/hooks",
+    hooksDir: "/tmp/Duck on Desk.app/Contents/Resources/app.asar.unpacked/hooks",
     spawn() {
       return child;
     },

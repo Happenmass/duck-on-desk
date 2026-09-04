@@ -48,7 +48,7 @@ test("ordinary tray and README callers use the canonical application icon", () =
 
   for (const relativePath of LOCALIZED_READMES) {
     const source = fs.readFileSync(path.join(ROOT, relativePath), "utf8");
-    assert.match(source, /<img src="assets\/icon\.png" width="128" alt="Clawd">/);
+    assert.match(source, /<img src="assets\/icon\.png" width="128" alt="Duck">/);
     assert.doesNotMatch(source, /assets\/tray-icon\.png/);
   }
 });

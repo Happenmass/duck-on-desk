@@ -1,6 +1,6 @@
 // test/state-source-pid-merge.test.js — #681 Slice A1, server-side contract.
 //
-// #681 lets the shared resolver report "nothing" when Clawd is offline or the
+// #681 lets the shared resolver report "nothing" when Duck is offline or the
 // snapshot failed. Six adapters assign `body.source_pid = stablePid`
 // unconditionally, so they now put a literal `null` on the wire rather than
 // omitting the field. Deliberately NOT fixed in those adapters — reordering all
@@ -112,7 +112,7 @@ describe("#681 — /state normalizes an explicit source_pid:null exactly like an
 const path = require("node:path");
 const themeLoader = require("../src/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
-const _defaultTheme = themeLoader.loadTheme("clawd");
+const _defaultTheme = themeLoader.loadTheme("duck");
 
 function makeCtx() {
   return {
@@ -156,8 +156,8 @@ describe("#681 — an already-known sourcePid survives a later source_pid:null",
   const sessionFor = (sid) => api.sessions.get(sid);
 
   it("SessionStart establishes 1234; an offline PreToolUse must NOT erase it", () => {
-    // The exact #681 sequence: Clawd is up when the session starts, the user
-    // quits Clawd (or a snapshot fails), and the next hook event ships nothing.
+    // The exact #681 sequence: Duck is up when the session starts, the user
+    // quits Duck (or a snapshot fails), and the next hook event ships nothing.
     api.updateSession("s-681", "idle", "SessionStart", { sourcePid: 1234, agentId: "claude-code", cwd: "D:/repo" });
     assert.strictEqual(sessionFor("s-681").sourcePid, 1234, "precondition");
 

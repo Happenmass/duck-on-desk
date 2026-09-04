@@ -31,14 +31,14 @@ function writeUtf16LeBom(filePath, text) {
 }
 
 function makeFixture(settingsText, options = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-uninstall-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-uninstall-"));
   const home = path.join(root, "User With Space 中文");
   const claudeDir = path.join(home, ".claude");
-  const installDir = path.join(root, "Clawd Install Dir");
+  const installDir = path.join(root, "Duck Install Dir");
   fs.mkdirSync(claudeDir, { recursive: true });
   fs.mkdirSync(installDir, { recursive: true });
 
-  const markerPath = path.join(installDir, ".clawd-install-user-home");
+  const markerPath = path.join(installDir, ".duck-on-desk-install-user-home");
   if (options.markerEncoding === "utf16le-bom") {
     writeUtf16LeBom(markerPath, home);
   } else {
@@ -118,7 +118,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
 
   it("keeps the PowerShell permission port list in sync with SERVER_PORTS", () => {
     const script = readText(CLEANUP_SCRIPT);
-    const match = script.match(/\$ClawdPermissionPorts\s*=\s*@\(([^)]*)\)/);
+    const match = script.match(/\$DuckPermissionPorts\s*=\s*@\(([^)]*)\)/);
     assert.ok(match, "PowerShell script should use an explicit @(...) permission port literal");
 
     const ports = match[1]
@@ -142,7 +142,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
     assert.match(script, /\[object\[\]\]\$nextEntries\.ToArray\(\)/);
   });
 
-  it("removes only Clawd hooks while preserving third-party hooks and array shape", {
+  it("removes only Duck hooks while preserving third-party hooks and array shape", {
     skip: process.platform !== "win32" ? "requires Windows PowerShell" : false,
   }, () => {
     const fixture = makeFixture(JSON.stringify({
@@ -151,7 +151,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
         SessionStart: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: '& "node" "C:\\Clawd\\hooks\\auto-start.js"' }],
+            hooks: [{ type: "command", command: '& "node" "C:\\Duck\\hooks\\auto-start.js"' }],
           },
           {
             matcher: "",
@@ -161,7 +161,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: '& "node" "C:\\Clawd\\hooks\\clawd-hook.js" Stop' }],
+            hooks: [{ type: "command", command: '& "node" "C:\\Duck\\hooks\\duck-hook.js" Stop' }],
           },
         ],
         PreToolUse: [
@@ -169,7 +169,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
             matcher: "",
             hooks: [
               { type: "command", command: 'node "C:\\third-party.js" PreToolUse' },
-              { type: "command", command: '& "node" "C:\\Clawd\\hooks\\clawd-hook.js" PreToolUse' },
+              { type: "command", command: '& "node" "C:\\Duck\\hooks\\duck-hook.js" PreToolUse' },
             ],
           },
         ],
@@ -177,7 +177,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
           {
             matcher: "",
             hooks: [
-              { type: "http", url: "http://127.0.0.1:23337/permission", timeout: 600 },
+              { type: "http", url: "http://127.0.0.1:24337/permission", timeout: 600 },
               { type: "http", url: "http://127.0.0.1:8080/permission", timeout: 100 },
             ],
           },
@@ -216,7 +216,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
       );
       assert.strictEqual(settings.hooks.PermissionRequest[1].url, "http://localhost:8080/permission");
 
-      const backups = fs.readdirSync(fixture.claudeDir).filter((name) => /^settings\.json\.clawd-uninstall-.*\.bak$/.test(name));
+      const backups = fs.readdirSync(fixture.claudeDir).filter((name) => /^settings\.json\.duck-on-desk-uninstall-.*\.bak$/.test(name));
       assert.strictEqual(backups.length, 1);
       assertNoUtf8Bom(fixture.settingsPath);
     } finally {
@@ -232,7 +232,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: '& "node" "C:\\Clawd\\hooks\\clawd-hook.js" Stop' }],
+            hooks: [{ type: "command", command: '& "node" "C:\\Duck\\hooks\\duck-hook.js" Stop' }],
           },
         ],
       },
@@ -256,7 +256,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
           {
             matcher: "",
             hooks: [
-              { type: "http", url: "http://127.0.0.1:23333/permission", timeout: 600 },
+              { type: "http", url: "http://127.0.0.1:24333/permission", timeout: 600 },
               { type: "http", url: "http://127.0.0.1:8080/permission", timeout: 100 },
             ],
           },
@@ -285,7 +285,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: '& "node" "C:\\User\\Clawd-Hook.js" Stop' }],
+            hooks: [{ type: "command", command: '& "node" "C:\\User\\Duck-Hook.js" Stop' }],
           },
         ],
       },
@@ -294,7 +294,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
     try {
       runCleanup(fixture);
       const settings = readJson(fixture.settingsPath);
-      assert.strictEqual(settings.hooks.Stop[0].hooks[0].command, '& "node" "C:\\User\\Clawd-Hook.js" Stop');
+      assert.strictEqual(settings.hooks.Stop[0].hooks[0].command, '& "node" "C:\\User\\Duck-Hook.js" Stop');
     } finally {
       fixture.cleanup();
     }
@@ -309,7 +309,7 @@ describe("Windows NSIS Claude hook uninstall cleanup", () => {
     try {
       runCleanup(fixture);
       assert.strictEqual(fs.readFileSync(fixture.settingsPath, "utf8"), malformed);
-      const backups = fs.readdirSync(fixture.claudeDir).filter((name) => name.includes("clawd-uninstall"));
+      const backups = fs.readdirSync(fixture.claudeDir).filter((name) => name.includes("duck-uninstall"));
       assert.deepStrictEqual(backups, []);
     } finally {
       fixture.cleanup();

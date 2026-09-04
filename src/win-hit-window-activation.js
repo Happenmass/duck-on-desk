@@ -2,7 +2,7 @@
 
 // Electron's BrowserWindow.setFocusable(false) calls Focus(false) on Windows.
 // That deactivates whichever application currently owns the foreground, so
-// using it when a fullscreen game/video is detected makes Clawd itself take
+// using it when a fullscreen game/video is detected makes Duck itself take
 // foreground. When available, this controller lets the hit BrowserWindow stay
 // Electron-non-focusable for its lifetime and toggles only WS_EX_NOACTIVATE.
 // Desktop pointer delivery is validated independently; clearing the native

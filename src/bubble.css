@@ -93,7 +93,7 @@ body { padding: 6px; }
 .card.expanded {
   /* Root CSS zoom leaves vh tied to the unzoomed BrowserWindow. Divide by the
      injected text scale so the painted card still fits the actual window. */
-  height: calc(100vh / var(--clawd-text-zoom, 1) - 12px);
+  height: calc(100vh / var(--duck-text-zoom, 1) - 12px);
   min-height: 0;
 }
 .card.measuring {

@@ -16,7 +16,7 @@ const {
 const CURRENT_VERSION = require("../package.json").version;
 
 function tempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "clawd-updater-metadata-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "duck-updater-metadata-"));
 }
 
 function writeArtifact(root, name, content) {
@@ -36,10 +36,10 @@ function writeBlockmap(root, zipName, value = { version: "2", files: [{ name: "f
 }
 
 function writeMacFixture(root) {
-  const x64Zip = writeArtifact(root, `Clawd-on-Desk-${CURRENT_VERSION}-x64.zip`, "x64-zip");
-  const arm64Zip = writeArtifact(root, `Clawd-on-Desk-${CURRENT_VERSION}-arm64.zip`, "arm64-zip");
-  const x64Dmg = writeArtifact(root, `Clawd-on-Desk-${CURRENT_VERSION}-x64.dmg`, "x64-dmg");
-  const arm64Dmg = writeArtifact(root, `Clawd-on-Desk-${CURRENT_VERSION}-arm64.dmg`, "arm64-dmg");
+  const x64Zip = writeArtifact(root, `Duck-on-Desk-${CURRENT_VERSION}-x64.zip`, "x64-zip");
+  const arm64Zip = writeArtifact(root, `Duck-on-Desk-${CURRENT_VERSION}-arm64.zip`, "arm64-zip");
+  const x64Dmg = writeArtifact(root, `Duck-on-Desk-${CURRENT_VERSION}-x64.dmg`, "x64-dmg");
+  const arm64Dmg = writeArtifact(root, `Duck-on-Desk-${CURRENT_VERSION}-arm64.dmg`, "arm64-dmg");
   writeBlockmap(root, x64Zip.name);
   writeBlockmap(root, arm64Zip.name);
   return {
@@ -85,8 +85,8 @@ test("minimal updater YAML parser keeps files and top-level path separate", () =
 test("Windows dual-architecture updater metadata verifies bytes and hashes", (t) => {
   const root = tempDir();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const x64 = writeArtifact(root, `Clawd-on-Desk-Setup-${CURRENT_VERSION}-x64.exe`, "x64");
-  const arm64 = writeArtifact(root, `Clawd-on-Desk-Setup-${CURRENT_VERSION}-arm64.exe`, "arm64");
+  const x64 = writeArtifact(root, `Duck-on-Desk-Setup-${CURRENT_VERSION}-x64.exe`, "x64");
+  const arm64 = writeArtifact(root, `Duck-on-Desk-Setup-${CURRENT_VERSION}-arm64.exe`, "arm64");
   const metadata = path.join(root, "latest.yml");
   fs.writeFileSync(metadata, yamlFor([x64, arm64], x64.name));
   const report = verifyUpdaterMetadata({
@@ -234,8 +234,8 @@ test("macOS contract rejects missing, empty, non-gzip, and malformed blockmaps",
 test("Linux contract requires AppImage, deb, path, and blockMapSize", (t) => {
   const root = tempDir();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const appImage = writeArtifact(root, `Clawd-on-Desk-${CURRENT_VERSION}-x86_64.AppImage`, "appimage");
-  const deb = writeArtifact(root, `Clawd-on-Desk-${CURRENT_VERSION}-amd64.deb`, "deb");
+  const appImage = writeArtifact(root, `Duck-on-Desk-${CURRENT_VERSION}-x86_64.AppImage`, "appimage");
+  const deb = writeArtifact(root, `Duck-on-Desk-${CURRENT_VERSION}-amd64.deb`, "deb");
   const metadata = path.join(root, "latest-linux.yml");
   fs.writeFileSync(metadata, yamlFor([appImage, deb], appImage.name, { appImageBlockMap: true }));
   assert.deepEqual(
@@ -252,8 +252,8 @@ test("Linux contract requires AppImage, deb, path, and blockMapSize", (t) => {
 test("metadata verification reports missing artifacts and tampered hashes", (t) => {
   const root = tempDir();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const x64 = writeArtifact(root, `Clawd-on-Desk-Setup-${CURRENT_VERSION}-x64.exe`, "x64");
-  const arm64 = { name: `Clawd-on-Desk-Setup-${CURRENT_VERSION}-arm64.exe`, size: 10, sha512: "wrong" };
+  const x64 = writeArtifact(root, `Duck-on-Desk-Setup-${CURRENT_VERSION}-x64.exe`, "x64");
+  const arm64 = { name: `Duck-on-Desk-Setup-${CURRENT_VERSION}-arm64.exe`, size: 10, sha512: "wrong" };
   const metadata = path.join(root, "latest.yml");
   fs.writeFileSync(metadata, yamlFor([x64, arm64], x64.name));
   const report = verifyUpdaterMetadata({
@@ -268,8 +268,8 @@ test("metadata verification reports missing artifacts and tampered hashes", (t) 
 test("metadata and every artifact URL must match the expected release version", (t) => {
   const root = tempDir();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const x64 = writeArtifact(root, `Clawd-on-Desk-Setup-${CURRENT_VERSION}-x64.exe`, "x64");
-  const arm64 = writeArtifact(root, `Clawd-on-Desk-Setup-${CURRENT_VERSION}-arm64.exe`, "arm64");
+  const x64 = writeArtifact(root, `Duck-on-Desk-Setup-${CURRENT_VERSION}-x64.exe`, "x64");
+  const arm64 = writeArtifact(root, `Duck-on-Desk-Setup-${CURRENT_VERSION}-arm64.exe`, "arm64");
   const metadata = path.join(root, "latest.yml");
   fs.writeFileSync(metadata, yamlFor([x64, arm64], x64.name, { version: "0.14.0" }));
   const staleMetadata = verifyUpdaterMetadata({
@@ -280,7 +280,7 @@ test("metadata and every artifact URL must match the expected release version", 
   });
   assert.equal(staleMetadata.errors.some((error) => /metadata version/.test(error)), true);
 
-  const staleX64 = writeArtifact(root, "Clawd-on-Desk-Setup-0.14.0-x64.exe", "old-x64");
+  const staleX64 = writeArtifact(root, "Duck-on-Desk-Setup-0.14.0-x64.exe", "old-x64");
   const mixedMetadata = path.join(root, "latest-mixed.yml");
   fs.writeFileSync(mixedMetadata, yamlFor([staleX64, arm64], staleX64.name));
   const mixedAssets = verifyUpdaterMetadata({
@@ -297,28 +297,28 @@ test("stable updater contracts reject prerelease or extra version segments exact
     {
       contract: "windows",
       files: [
-        { url: `Clawd-on-Desk-Setup-${CURRENT_VERSION}-rc.1-x64.exe` },
-        { url: `Clawd-on-Desk-Setup-${CURRENT_VERSION}-arm64.exe` },
+        { url: `Duck-on-Desk-Setup-${CURRENT_VERSION}-rc.1-x64.exe` },
+        { url: `Duck-on-Desk-Setup-${CURRENT_VERSION}-arm64.exe` },
       ],
-      path: `Clawd-on-Desk-Setup-${CURRENT_VERSION}-rc.1-x64.exe`,
+      path: `Duck-on-Desk-Setup-${CURRENT_VERSION}-rc.1-x64.exe`,
     },
     {
       contract: "mac",
       files: [
-        { url: `Clawd-on-Desk-${CURRENT_VERSION}-rc.1-x64.zip` },
-        { url: `Clawd-on-Desk-${CURRENT_VERSION}-arm64.zip` },
-        { url: `Clawd-on-Desk-${CURRENT_VERSION}-x64.dmg` },
-        { url: `Clawd-on-Desk-${CURRENT_VERSION}-arm64.dmg` },
+        { url: `Duck-on-Desk-${CURRENT_VERSION}-rc.1-x64.zip` },
+        { url: `Duck-on-Desk-${CURRENT_VERSION}-arm64.zip` },
+        { url: `Duck-on-Desk-${CURRENT_VERSION}-x64.dmg` },
+        { url: `Duck-on-Desk-${CURRENT_VERSION}-arm64.dmg` },
       ],
-      path: `Clawd-on-Desk-${CURRENT_VERSION}-rc.1-x64.zip`,
+      path: `Duck-on-Desk-${CURRENT_VERSION}-rc.1-x64.zip`,
     },
     {
       contract: "linux",
       files: [
-        { url: `Clawd-on-Desk-${CURRENT_VERSION}-rc.1-x86_64.AppImage`, blockMapSize: 1 },
-        { url: `Clawd-on-Desk-${CURRENT_VERSION}-amd64.deb` },
+        { url: `Duck-on-Desk-${CURRENT_VERSION}-rc.1-x86_64.AppImage`, blockMapSize: 1 },
+        { url: `Duck-on-Desk-${CURRENT_VERSION}-amd64.deb` },
       ],
-      path: `Clawd-on-Desk-${CURRENT_VERSION}-rc.1-x86_64.AppImage`,
+      path: `Duck-on-Desk-${CURRENT_VERSION}-rc.1-x86_64.AppImage`,
     },
   ];
 

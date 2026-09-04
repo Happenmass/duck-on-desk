@@ -2,7 +2,7 @@
 
 ### New Features
 
-- **Hermes Agent plugin integration** - Clawd now supports Hermes Agent via a Python plugin with session boundary hooks, terminal focus metadata, WebUI session metadata, a dedicated agent icon, and default enablement for new installs.
+- **Hermes Agent plugin integration** - Duck now supports Hermes Agent via a Python plugin with session boundary hooks, terminal focus metadata, WebUI session metadata, a dedicated agent icon, and default enablement for new installs.
 - **Pi Agent extension integration** - Pi is supported through a global extension under `~/.pi/agent/extensions`, with permission bubbles for `bash`/`write`/`edit` operations and a dedicated agent icon.
 - **OpenClaw state-only integration** - OpenClaw is supported through `~/.openclaw/openclaw.json` plugin path for state reporting, with a session icon and icon attribution. Phase 1 covers local `openclaw tui --local`.
 - **Settings Doctor panel** - New diagnostics modal in Settings that checks agent integration health, hook/plugin installation status, and feature coverage, with collapsible detail sections and attention indicators.
@@ -11,7 +11,7 @@
 - **One-click remote SSH tunnel (Phase 2)** (#252) - Enhanced remote SSH deployment with improved profile management and IPC.
 - **Copilot CLI remote SSH deployment** (#284) - Remote deploy now copies and registers Copilot CLI hooks when `~/.copilot/` exists on the remote host, marks those hooks as remote, and carries host prefix metadata while skipping local-only PID collection.
 - **User theme zip package import** - Settings can now import user theme zip packages directly, with import queue semantics and validation.
-- **Copilot CLI session name forwarding** (#267) - Copilot CLI hook now forwards the session name to Clawd for better session display.
+- **Copilot CLI session name forwarding** (#267) - Copilot CLI hook now forwards the session name to Duck for better session display.
 - **Permission auto-close fallback** (#273) - Stuck hook sockets now auto-close after a configurable timeout instead of blocking indefinitely.
 - **Custom scrollbar styles** (#243) - Settings window now uses custom scrollbar styles for a more polished look.
 - **Go to Terminal workspace focus** - "Go to Terminal" now focuses the originating workspace when using Superset deep-link.
@@ -33,7 +33,7 @@
 - **Low power idle CPU** - Fixed excessive CPU usage during low-power idle mouse-follow.
 - **Mini mode crabwalk** - Fixed reverse mini crabwalk during pre-entry animation.
 - **Doctor panel polish** - Multiple rounds of review feedback, collapsed detail sections, timestamp display, and attention check clarifications.
-- **Claude auto-start session handoff** - Fixed session not being handed off correctly when Claude auto-starts Clawd.
+- **Claude auto-start session handoff** - Fixed session not being handed off correctly when Claude auto-starts Duck.
 - **Codex Desktop session focus** (#281) - Fixed Codex Desktop sessions not opening from dashboard, preserved permission focus metadata through stale logs and review rounds, and carried metadata correctly across session transitions.
 - **cmux panel focus hardening** - Fixed cmux panel focus matching when multiple cmux windows are present.
 - **Windows CIM timeout hardening** - Bounded Windows CIM parent-process lookups in terminal focus and Hermes fallback metadata resolution to avoid slow system queries stalling focus/session metadata paths.

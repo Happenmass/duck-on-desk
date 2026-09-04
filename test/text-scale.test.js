@@ -177,7 +177,7 @@ describe("applyZoomToWindow", () => {
     assert.strictEqual(applyZoomToWindow(win, 1.25), true);
     await settle();
     assert.deepStrictEqual(win.factorCalls, [1]);
-    assert.deepStrictEqual(win.cssCalls, [":root { zoom: 1.25 !important; --clawd-text-zoom: 1.25; }"]);
+    assert.deepStrictEqual(win.cssCalls, [":root { zoom: 1.25 !important; --duck-text-zoom: 1.25; }"]);
   });
 
   it("memoizes per webContents and swaps the stylesheet on a changed value", async () => {
@@ -189,7 +189,7 @@ describe("applyZoomToWindow", () => {
     applyZoomToWindow(win, 1.4);
     await settle();
     assert.strictEqual(win.cssCalls.length, 2);
-    assert.strictEqual(win.cssCalls[1], ":root { zoom: 1.4 !important; --clawd-text-zoom: 1.4; }");
+    assert.strictEqual(win.cssCalls[1], ":root { zoom: 1.4 !important; --duck-text-zoom: 1.4; }");
     assert.deepStrictEqual(win.removedKeys, ["key-1"], "previous sheet must be removed");
   });
 
@@ -197,7 +197,7 @@ describe("applyZoomToWindow", () => {
     const win = makeWindow();
     assert.strictEqual(applyZoomToWindow(win, 1), true);
     await settle();
-    assert.deepStrictEqual(win.cssCalls, [":root { zoom: 1 !important; --clawd-text-zoom: 1; }"]);
+    assert.deepStrictEqual(win.cssCalls, [":root { zoom: 1 !important; --duck-text-zoom: 1; }"]);
   });
 
   it("is safe on destroyed/missing windows and swallows setter errors", () => {
@@ -247,9 +247,9 @@ describe("applyZoomToWindow", () => {
     await settle();
     await settle();
     assert.deepStrictEqual(win.cssCalls, [
-      ":root { zoom: 1.2 !important; --clawd-text-zoom: 1.2; }",
-      ":root { zoom: 1.3 !important; --clawd-text-zoom: 1.3; }",
-      ":root { zoom: 1.4 !important; --clawd-text-zoom: 1.4; }",
+      ":root { zoom: 1.2 !important; --duck-text-zoom: 1.2; }",
+      ":root { zoom: 1.3 !important; --duck-text-zoom: 1.3; }",
+      ":root { zoom: 1.4 !important; --duck-text-zoom: 1.4; }",
     ]);
     assert.deepStrictEqual(win.removedKeys, ["key-1", "key-2"], "only the newest sheet survives");
   });

@@ -30,7 +30,7 @@ const DEBUG_MARKER = "codex-debug-hook.js";
 const tempDirs = [];
 
 function makeTempCodexDir(initialHooks = null, configText = null) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-install-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-install-"));
   const codexDir = path.join(tmpDir, ".codex");
   fs.mkdirSync(codexDir, { recursive: true });
   if (initialHooks !== null) {
@@ -117,7 +117,7 @@ describe("Codex official hook installer", () => {
     fs.mkdirSync(stable.stableDir, { recursive: true });
     fs.writeFileSync(
       stable.legacyWindowsLauncherPath,
-      "\uFEFF# clawd-codex-stable-launcher-v2\n# clawd-generation:legacy\n",
+      "\uFEFF# duck-codex-stable-launcher-v2\n# duck-generation:legacy\n",
       "utf8"
     );
 
@@ -203,7 +203,7 @@ describe("Codex official hook installer", () => {
     const command = process.platform === "win32" ? installedHook.commandWindows : installedHook.command;
     if (process.platform === "win32") {
       // The Windows stable entry is now a direct call-operator command
-      // (Defender ML false positive fix, clawd-on-desk#986); its data sidecar
+      // (Defender ML false positive fix, duck-on-desk#986); its data sidecar
       // is validated through the managed artifacts, not by parsing the
       // command string, so a damaged sidecar no longer surfaces through
       // inspectStableCodexHookCommand.
@@ -228,7 +228,7 @@ describe("Codex official hook installer", () => {
       // Re-registration repairs the managed sidecar without touching the
       // trusted command strings in hooks.json.
       const repairedSource = fs.readFileSync(stable.launcherPath, "utf8");
-      assert.strictEqual(repairedSource.split("\n")[0], "clawd-codex-stable-windows-run-v1");
+      assert.strictEqual(repairedSource.split("\n")[0], "duck-codex-stable-windows-run-v1");
       assert.strictEqual(readStableCodexHookManifest(stable.windowsManifestPath).ok, true);
     } else {
       assert.strictEqual(
@@ -243,7 +243,7 @@ describe("Codex official hook installer", () => {
     registerCodexHooks({
       silent: true,
       codexDir,
-      nodeBin: "/opt/clawd-node/bin/node",
+      nodeBin: "/opt/duck-node/bin/node",
       platform: "linux",
     });
     const hooksPath = path.join(codexDir, "hooks.json");
@@ -263,7 +263,7 @@ describe("Codex official hook installer", () => {
     assert.strictEqual(fs.readFileSync(stable.launcherPath, "utf8"), wrapperBefore);
     assert.strictEqual(
       readStableCodexHookManifest(stable.manifestPath).record.nodeBin,
-      "/opt/clawd-node/bin/node"
+      "/opt/duck-node/bin/node"
     );
   });
 
@@ -446,7 +446,7 @@ describe("Codex official hook installer", () => {
     assert.strictEqual(command, '& "C:\\Program Files\\nodejs\\node.exe" "D:/animation/hooks/codex-hook.js"');
   });
 
-  it("registers remote hooks with CLAWD_REMOTE in the command environment", () => {
+  it("registers remote hooks with DUCK_REMOTE in the command environment", () => {
     const codexDir = makeTempCodexDir({});
     const result = registerCodexHooks({
       silent: true,
@@ -461,11 +461,11 @@ describe("Codex official hook installer", () => {
     const command = settings.hooks.SessionStart[0].hooks[0].command;
     assert.strictEqual(
       command,
-      "CLAWD_REMOTE='1' \"/usr/local/bin/node\" \"" + path.resolve(__dirname, "..", "hooks", "codex-hook.js").replace(/\\/g, "/") + "\""
+      "DUCK_REMOTE='1' \"/usr/local/bin/node\" \"" + path.resolve(__dirname, "..", "hooks", "codex-hook.js").replace(/\\/g, "/") + "\""
     );
   });
 
-  it("keeps legacy WSL --remote on CLAWD_REMOTE only", () => {
+  it("keeps legacy WSL --remote on DUCK_REMOTE only", () => {
     const codexDir = makeTempCodexDir({});
     registerCodexHooks({
       silent: true,
@@ -477,8 +477,8 @@ describe("Codex official hook installer", () => {
     });
     const command = readJson(path.join(codexDir, "hooks.json"))
       .hooks.SessionStart[0].hooks[0].command;
-    assert.match(command, /^CLAWD_REMOTE='1' /);
-    assert.doesNotMatch(command, /CLAWD_SSH_REMOTE|CLAWD_REMOTE_IDENTITY_PATH/);
+    assert.match(command, /^DUCK_REMOTE='1' /);
+    assert.doesNotMatch(command, /DUCK_SSH_REMOTE|DUCK_REMOTE_IDENTITY_PATH/);
   });
 
   it("registers Windows remote hooks with a PowerShell env prefix on commandWindows only", () => {
@@ -498,7 +498,7 @@ describe("Codex official hook installer", () => {
     // PowerShell env prefix lives on commandWindows (what Windows codex runs).
     assert.strictEqual(
       hook.commandWindows,
-      `$env:CLAWD_REMOTE='1'; & "C:\\node.exe" "${hookScript}"`
+      `$env:DUCK_REMOTE='1'; & "C:\\node.exe" "${hookScript}"`
     );
     // The POSIX command must NOT carry an env prefix: env vars don't cross
     // the WSL interop boundary, so a prefix would only mislead readers.
@@ -569,7 +569,7 @@ describe("Codex official hook installer", () => {
   it("does NOT emit the reminder line on no-op re-install (summary lines still emit)", () => {
     // Semantics being asserted: "no-op re-install does not print the
     // /hooks-review reminder line". This is intentionally narrower than
-    // "no-op re-install is fully silent on stdout" — `Clawd Codex hooks ->`
+    // "no-op re-install is fully silent on stdout" — `Duck Codex hooks ->`
     // and `Added: 0, updated: 0, skipped: N` summary lines are useful for
     // CLI users who re-run the installer (they confirm the install is
     // already in place). Only the reminder is gated on actual changes,
@@ -597,12 +597,12 @@ describe("Codex official hook installer", () => {
       "no-op re-install must NOT print the reminder line");
     // Confirm summary lines DO still emit (this is the contract — keep
     // CLI feedback for users who want to verify the install state).
-    assert.match(joined, /Clawd .* hooks/, "summary header should still print");
+    assert.match(joined, /Duck .* hooks/, "summary header should still print");
     assert.match(joined, /Added: 0/, "Added/updated/skipped count should still print");
   });
 });
 
-// #544: a hooks.json written by Windows Clawd may be shared with WSL codex
+// #544: a hooks.json written by Windows Duck may be shared with WSL codex
 // through CODEX_HOME. Codex resolves commandWindows on Windows and command on
 // POSIX, so Windows installs must write both fields: PowerShell syntax in
 // commandWindows, a WSL-interop (Windows node.exe) form in command.
@@ -617,7 +617,7 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
       windowsPathToWslPath("C:\\Program Files\\nodejs\\node.exe"),
       "/mnt/c/Program Files/nodejs/node.exe"
     );
-    assert.strictEqual(windowsPathToWslPath("D:/Tool/Clawd on Desk/x.js"), "/mnt/d/Tool/Clawd on Desk/x.js");
+    assert.strictEqual(windowsPathToWslPath("D:/Tool/Duck on Desk/x.js"), "/mnt/d/Tool/Duck on Desk/x.js");
     assert.strictEqual(windowsPathToWslPath("node"), null);
     assert.strictEqual(windowsPathToWslPath("/usr/bin/node"), null);
   });
@@ -680,7 +680,7 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
       codexDir,
       nodeBin: "C:\\Program Files\\nodejs\\node.exe",
       platform: "win32",
-      env: { CLAWD_TEST_ENV: "环境 ✓" },
+      env: { DUCK_TEST_ENV: "环境 ✓" },
     });
 
     const settings = readJson(path.join(codexDir, "hooks.json"));
@@ -691,8 +691,8 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
       hook.commandWindows,
       `${buildCodexHookCommand(manifest.nodeBin, manifest.target, "win32")} ${CODEX_WINDOWS_STABLE_ARG}`
     );
-    assert.doesNotMatch(hook.commandWindows, /CLAWD_TEST_ENV|ReadAllLines|FromBase64String/);
-    assert.deepStrictEqual(manifest.env, { CLAWD_TEST_ENV: "环境 ✓" });
+    assert.doesNotMatch(hook.commandWindows, /DUCK_TEST_ENV|ReadAllLines|FromBase64String/);
+    assert.deepStrictEqual(manifest.env, { DUCK_TEST_ENV: "环境 ✓" });
   });
 
   it("updates stable Windows sidecar env without invalidating the trusted command", () => {
@@ -703,11 +703,11 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
       nodeBin: "C:\\Program Files\\nodejs\\node.exe",
       platform: "win32",
     };
-    registerCodexHooks({ ...options, env: { CLAWD_TEST_ENV: "first" } });
+    registerCodexHooks({ ...options, env: { DUCK_TEST_ENV: "first" } });
     const hooksPath = path.join(codexDir, "hooks.json");
     const commandBefore = readJson(hooksPath).hooks.SessionStart[0].hooks[0].commandWindows;
 
-    const result = registerCodexHooks({ ...options, env: { CLAWD_TEST_ENV: "second" } });
+    const result = registerCodexHooks({ ...options, env: { DUCK_TEST_ENV: "second" } });
     const commandAfter = readJson(hooksPath).hooks.SessionStart[0].hooks[0].commandWindows;
     const stable = stableCodexHookPaths(codexDir, { platform: "win32" });
 
@@ -716,12 +716,12 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
     assert.strictEqual(commandAfter, commandBefore);
     assert.deepStrictEqual(
       readStableCodexHookManifest(stable.windowsManifestPath).record.env,
-      { CLAWD_TEST_ENV: "second" }
+      { DUCK_TEST_ENV: "second" }
     );
   });
 
   it("round-trips non-ASCII Windows sidecar data without executing the retired dispatcher", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-unicode-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-unicode-"));
     tempDirs.push(root);
     const unicodeRoot = path.join(root, "张三-ユーザー-café-O'Brien");
     const codexDir = path.join(unicodeRoot, ".codex");
@@ -730,7 +730,7 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
     fs.mkdirSync(codexDir, { recursive: true });
     fs.writeFileSync(
       target,
-      "let body = ''; process.stdin.setEncoding('utf8'); process.stdin.on('data', chunk => { body += chunk; }); process.stdin.on('end', () => process.stdout.write(`${process.env.CLAWD_TEST_ENV}|${body}`));\n",
+      "let body = ''; process.stdin.setEncoding('utf8'); process.stdin.on('data', chunk => { body += chunk; }); process.stdin.on('end', () => process.stdout.write(`${process.env.DUCK_TEST_ENV}|${body}`));\n",
       "utf8"
     );
 
@@ -738,13 +738,13 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
       codexDir,
       nodeBin: process.execPath,
       platform: "win32",
-      env: { CLAWD_TEST_ENV: "环境 ✓" },
+      env: { DUCK_TEST_ENV: "环境 ✓" },
     });
     const command = buildStableCodexHookCommand(stable.windowsRunPath, "win32");
     assert.strictEqual(inspectStableCodexHookCommand(command, { platform: "win32" }).ok, true);
     const manifest = readStableCodexHookManifest(stable.windowsManifestPath).record;
     assert.strictEqual(manifest.target, path.resolve(target));
-    assert.deepStrictEqual(manifest.env, { CLAWD_TEST_ENV: "环境 ✓" });
+    assert.deepStrictEqual(manifest.env, { DUCK_TEST_ENV: "环境 ✓" });
   });
 
   it("never registers the retired Windows data dispatcher as the active command", () => {
@@ -752,7 +752,7 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
     registerCodexHooks({
       silent: true,
       codexDir,
-      nodeBin: "Z:\\clawd-missing-node\\node.exe",
+      nodeBin: "Z:\\duck-missing-node\\node.exe",
       platform: "win32",
     });
     const hook = readJson(path.join(codexDir, "hooks.json")).hooks.SessionStart[0].hooks[0];
@@ -780,7 +780,7 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
     registerCodexHooks({
       silent: true,
       codexDir,
-      nodeBin: "C:\\clawd-node\\node.exe",
+      nodeBin: "C:\\duck-node\\node.exe",
       platform: "win32",
     });
     const hooksPath = path.join(codexDir, "hooks.json");
@@ -800,7 +800,7 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
     assert.strictEqual(fs.readFileSync(stable.launcherPath, "utf8"), artifactBefore);
     assert.strictEqual(
       readStableCodexHookManifest(stable.manifestPath).record.nodeBin,
-      "C:\\clawd-node\\node.exe"
+      "C:\\duck-node\\node.exe"
     );
   });
 
@@ -956,7 +956,7 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
   });
 
   // codex review finding: a POSIX host must never claim an entry whose only
-  // Clawd trace is a leftover commandWindows — its command may be a
+  // Duck trace is a leftover commandWindows — its command may be a
   // third-party hook that reconciliation would silently overwrite.
   it("POSIX reconcile does not overwrite a third-party command with a leftover commandWindows", () => {
     const thirdParty = '"/usr/bin/some-other-tool" --flag';
@@ -982,7 +982,7 @@ describe("Codex hooks on a Windows host write dual command fields (#544)", () =>
 
     const settings = readJson(path.join(codexDir, "hooks.json"));
     const entries = settings.hooks.SessionStart;
-    // The third-party hook survives untouched; Clawd appends its own entry.
+    // The third-party hook survives untouched; Duck appends its own entry.
     assert.strictEqual(entries[0].hooks[0].command, thirdParty);
     assert.strictEqual(entries.length, 2);
     assert.ok(entries[1].hooks[0].command.includes(MARKER));

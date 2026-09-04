@@ -4,7 +4,7 @@
   const {
     getAgentEventSourceBadgeKey,
     sortAgentMetadataForSettings,
-  } = root.ClawdSettingsAgentOrder || {};
+  } = root.DuckSettingsAgentOrder || {};
   let state = null;
   let runtime = null;
   let readers = null;
@@ -109,7 +109,7 @@
     }
   }
 
-  // A catalog of what Clawd supports, not a to-do list — collapsed by default
+  // A catalog of what Duck supports, not a to-do list — collapsed by default
   // so the two actionable blocks above it stay in view, and searchable because
   // it is long enough that scanning it by eye is the slow path.
   function buildUnavailableSection(agents) {
@@ -1391,7 +1391,7 @@
             const warnings = [];
             if (typeof result.warning === "string" && result.warning) warnings.push(result.warning);
             if (result.wslConnectivity === false) {
-              // Hooks installed, but the distro cannot reach Clawd (NAT
+              // Hooks installed, but the distro cannot reach Duck (NAT
               // networking) — sessions would silently never appear.
               warnings.push(t("agentInstancePairedNoConnectivity"));
             }
@@ -1853,5 +1853,5 @@
     };
   }
 
-  root.ClawdSettingsTabAgents = { init };
+  root.DuckSettingsTabAgents = { init };
 })(globalThis);

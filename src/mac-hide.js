@@ -63,7 +63,7 @@ function createMacHideController(options = {}) {
     if (!res.deferred) return;
     if (attempt >= MINI_RETRY_MAX) {
       try {
-        console.warn(`Clawd: mac-hide gave up applying petHidden=${hidden} after ${attempt} retries (mini transition stuck?)`);
+        console.warn(`Duck: mac-hide gave up applying petHidden=${hidden} after ${attempt} retries (mini transition stuck?)`);
       } catch (_) { /* console may be unavailable */ }
       return;
     }

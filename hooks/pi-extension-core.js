@@ -220,9 +220,9 @@ function attach(pi, deps = {}) {
     }
   }
 
-  for (const [nativeName, clawdEvent, state] of DEFAULT_EVENT_BINDINGS) {
+  for (const [nativeName, duckEvent, state] of DEFAULT_EVENT_BINDINGS) {
     const wait = nativeName === "agent_end" || nativeName === "session_shutdown";
-    pi.on(nativeName, (nativeEvent, ctx) => send(state, clawdEvent, nativeEvent, ctx, wait));
+    pi.on(nativeName, (nativeEvent, ctx) => send(state, duckEvent, nativeEvent, ctx, wait));
   }
 
   pi.on("tool_call", handleToolCall);
@@ -230,7 +230,7 @@ function attach(pi, deps = {}) {
   pi.on("tool_result", (nativeEvent, ctx) => {
     const isError = !!(nativeEvent && nativeEvent.isError);
     // Await failed tool delivery so a following lifecycle event cannot hide
-    // the error state before Clawd receives it.
+    // the error state before Duck receives it.
     return send(
       isError ? "error" : "working",
       isError ? "PostToolUseFailure" : "PostToolUse",

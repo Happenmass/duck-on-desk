@@ -2,14 +2,14 @@
 
 > **状态**：已定位为 Claude Code 上游 bug，跟踪 [anthropics/claude-code#46193](https://github.com/anthropics/claude-code/issues/46193)。
 > **影响**：桌宠没在跑时，Claude Code 调用 Edit/Write/Bash 等需要权限确认的工具会被自动 deny，用户看到 "tool use was rejected"。
-> **Clawd 侧动作**：**不兜底**，等上游修。临时方案 = 开桌宠。
+> **Duck 侧动作**：**不兜底**，等上游修。临时方案 = 开桌宠。
 
 ## TL;DR
 
 - CC 2.1.100 给 Edit/Write/Bash 等所有需要权限的工具都发 `PermissionRequest` hook（用 `permission-debug.log` 实证 `tool=Write`）
 - CC 官方文档承诺 HTTP hook 连接失败 → non-blocking → execution continues（已 WebFetch 核实原文）
 - 实际行为：桌宠没在跑 → 端口 ECONNREFUSED → CC silently denies tool call → 用户看到 "tool use was rejected"
-- **实际行为违反 CC 自己的文档** → 这是 CC bug，不是 Clawd 应该兜底的事
+- **实际行为违反 CC 自己的文档** → 这是 CC bug，不是 Duck 应该兜底的事
 
 ## 现象
 
@@ -23,13 +23,13 @@
 
 CC 2.1.100 现在给 Edit/Write/Bash 等所有需要权限的工具都发 `PermissionRequest` hook（matcher 与 `PreToolUse` 共享，覆盖所有工具名）。当 hook 配置为 HTTP 类型且端口无人 listen 时，CC 收到 `ECONNREFUSED` 后会 silently deny tool call，而不是按文档承诺的 non-blocking 行为 fall through 到内置 chat prompt。
 
-这违反 CC 自己的 hook 文档（详见下方"证据链"）。Clawd 无锅。
+这违反 CC 自己的 hook 文档（详见下方"证据链"）。Duck 无锅。
 
 ## 证据链
 
 ### 1. CC 给 Edit/Write 发 PermissionRequest（实证）
 
-`%APPDATA%/clawd-on-desk/permission-debug.log` 行 `2026-04-10T10:56:59.529Z`：
+`%APPDATA%/duck-on-desk/permission-debug.log` 行 `2026-04-10T10:56:59.529Z`：
 
 ```
 [2026-04-10T10:56:59.529Z] showing bubble: tool=Write session=807e3e37-...
@@ -55,7 +55,7 @@ PreToolUse matcher 接受 `Bash`, `Edit|Write`, `mcp__.*` 等所有工具名。
 
 ### 3. 矛盾：实际行为是 fail-closed deny
 
-桌宠没在跑 → 端口 23333 ECONNREFUSED → CC 拒绝 tool call。这与 (2) 矛盾。
+桌宠没在跑 → 端口 24333 ECONNREFUSED → CC 拒绝 tool call。这与 (2) 矛盾。
 
 ## 排除掉的方向（节省未来调查时间）
 
@@ -70,12 +70,12 @@ PreToolUse matcher 接受 `Bash`, `Edit|Write`, `mcp__.*` 等所有工具名。
 ## 复现
 
 1. 关闭桌宠（菜单退出 / kill electron 进程）
-2. 确认 `127.0.0.1:23333` 无监听：`netstat -ano | grep 23333`
+2. 确认 `127.0.0.1:24333` 无监听：`netstat -ano | grep 24333`
 3. 在任意工作目录开 Claude Code session
 4. 让 Claude 调用 Edit / Write / Bash 工具
 5. 观察：立刻被 deny
 
-恢复：开桌宠 → 23333 监听 → hook 正常 → bubble 弹出 → 用户决定。
+恢复：开桌宠 → 24333 监听 → hook 正常 → bubble 弹出 → 用户决定。
 
 ## 临时绕过（按推荐度）
 
@@ -84,12 +84,12 @@ PreToolUse matcher 接受 `Bash`, `Edit|Write`, `mcp__.*` 等所有工具名。
 
 ## 上下文（结案）
 
-最初由鹿鹿 2026-04-10 发现：当时桌宠没开，Edit 调用一直被自动 deny，本以为是 Clawd 的 bug。诊断过程：
+最初由鹿鹿 2026-04-10 发现：当时桌宠没开，Edit 调用一直被自动 deny，本以为是 Duck 的 bug。诊断过程：
 - Claude 用 `permission-debug.log` 实证了 CC 给 Write 发 PermissionRequest
 - Codex 在 review 中找到了 CC 文档的 non-blocking 承诺
 - Claude WebFetch 核实文档原文（两段 quote）
 - 搜了 anthropics/claude-code 18 个相关搜索词，确认没人报过
-- 鹿鹿决定发 issue (#46193)，不在 Clawd 侧加 workaround
+- 鹿鹿决定发 issue (#46193)，不在 Duck 侧加 workaround
 
 ## 未来要做的事（CC 修好后）
 
@@ -101,7 +101,7 @@ PreToolUse matcher 接受 `Bash`, `Edit|Write`, `mcp__.*` 等所有工具名。
 
 ## 不要做的事
 
-不要在 Clawd 侧加 hook fail-deny 的 workaround：
+不要在 Duck 侧加 hook fail-deny 的 workaround：
 - ❌ command hook wrapper（包一层脚本检测端口）
 - ❌ quit-time unregister + start-time register（崩溃路径漏）
 - ❌ 强制 auto-start hook 拉起 Electron（用户体验差 + 冷启动竞态）

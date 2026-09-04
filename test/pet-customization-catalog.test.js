@@ -62,16 +62,16 @@ describe("pet customization catalog", () => {
 
   it("resolves independent per-theme choices and accepts the short-lived legacy scalar", () => {
     const selections = {
-      clawd: "matcha",
+      duck: "matcha",
       cloudling: "vaporwave",
       calico: "custom",
     };
-    assert.strictEqual(getPetTintIdForTheme(selections, "clawd"), "matcha");
+    assert.strictEqual(getPetTintIdForTheme(selections, "duck"), "matcha");
     assert.strictEqual(getPetTintIdForTheme(selections, "cloudling"), "vaporwave");
     assert.strictEqual(getPetTintIdForTheme(selections, "calico"), "none");
     assert.strictEqual(getPetTintIdForTheme(selections, "missing"), "none");
-    assert.strictEqual(getPetTintIdForTheme("gold", "clawd"), "gold");
-    assert.strictEqual(getPetTintIdForTheme(null, "clawd"), "none");
+    assert.strictEqual(getPetTintIdForTheme("gold", "duck"), "gold");
+    assert.strictEqual(getPetTintIdForTheme(null, "duck"), "none");
   });
 
   it("opts unsupported themes out without changing the persisted semantic choice", () => {
@@ -84,11 +84,11 @@ describe("pet customization catalog", () => {
   });
 
   it("keeps semantic labels stable while swapping Cloudling's vaporwave and matcha recipes", () => {
-    const clawd = { _id: "clawd", _builtin: true, _capabilities: { petTint: true } };
+    const duck = { _id: "duck", _builtin: true, _capabilities: { petTint: true } };
     const cloudling = { _id: "cloudling", _builtin: true, _capabilities: { petTint: true } };
 
-    assert.strictEqual(isPetTintSupportedForTheme(clawd), true);
-    assert.deepStrictEqual(resolvePetTintPayload("vaporwave", clawd), {
+    assert.strictEqual(isPetTintSupportedForTheme(duck), true);
+    assert.deepStrictEqual(resolvePetTintPayload("vaporwave", duck), {
       id: "vaporwave",
       filter: getPetTint("vaporwave").filter,
     });
@@ -161,22 +161,22 @@ describe("pet customization catalog", () => {
   });
 
   it("resolves safe accessory payloads only for capable themes", () => {
-    const clawd = { _id: "clawd", _capabilities: { accessories: true } };
+    const duck = { _id: "duck", _capabilities: { accessories: true } };
     const calico = { _id: "calico", _capabilities: { accessories: false } };
 
     assert.strictEqual(isPetAccessoryId("wizard-hat"), true);
     assert.strictEqual(isPetAccessoryId("seasonal"), false);
     assert.strictEqual(getPetAccessory("custom").id, "none");
-    assert.strictEqual(isPetAccessorySupportedForTheme(clawd), true);
+    assert.strictEqual(isPetAccessorySupportedForTheme(duck), true);
     assert.strictEqual(isPetAccessorySupportedForTheme(calico), false);
-    assert.deepStrictEqual(resolvePetAccessoryPayload("wizard-hat", clawd), {
+    assert.deepStrictEqual(resolvePetAccessoryPayload("wizard-hat", duck), {
       id: "wizard-hat",
       assetFile: "wizard-hat.svg",
       aspect: 15 / 16,
       widthScale: 0.95,
       offsetY: 0.3,
     });
-    assert.deepStrictEqual(resolvePetAccessoryPayload("western-cowboy-hat", clawd), {
+    assert.deepStrictEqual(resolvePetAccessoryPayload("western-cowboy-hat", duck), {
       id: "western-cowboy-hat",
       assetFile: "western-cowboy-hat.svg",
       aspect: 17 / 5,
@@ -190,7 +190,7 @@ describe("pet customization catalog", () => {
       widthScale: 1,
       offsetY: 0,
     });
-    assert.deepStrictEqual(resolvePetAccessoryPayload("custom", clawd), {
+    assert.deepStrictEqual(resolvePetAccessoryPayload("custom", duck), {
       id: "none",
       assetFile: null,
       aspect: 1,
@@ -199,9 +199,9 @@ describe("pet customization catalog", () => {
     });
   });
 
-  it("applies the smaller halo scale only to the built-in Clawd theme", () => {
-    const builtinClawd = {
-      _id: "clawd",
+  it("applies the smaller halo scale only to the built-in Duck theme", () => {
+    const builtinDuck = {
+      _id: "duck",
       _builtin: true,
       _capabilities: { accessories: true },
     };
@@ -210,30 +210,30 @@ describe("pet customization catalog", () => {
       _builtin: true,
       _capabilities: { accessories: true },
     };
-    const externalClawd = {
-      _id: "clawd",
+    const externalDuck = {
+      _id: "duck",
       _builtin: false,
       _capabilities: { accessories: true },
     };
 
-    assert.strictEqual(resolvePetAccessoryPayload("halo", builtinClawd).widthScale, 0.9);
+    assert.strictEqual(resolvePetAccessoryPayload("halo", builtinDuck).widthScale, 0.9);
     assert.strictEqual(resolvePetAccessoryPayload("halo", builtinCloudling).widthScale, 1.15);
-    assert.strictEqual(resolvePetAccessoryPayload("halo", externalClawd).widthScale, 1.15);
-    assert.strictEqual(resolvePetAccessoryPayload("wizard-hat", builtinClawd).widthScale, 0.95);
+    assert.strictEqual(resolvePetAccessoryPayload("halo", externalDuck).widthScale, 1.15);
+    assert.strictEqual(resolvePetAccessoryPayload("wizard-hat", builtinDuck).widthScale, 0.95);
   });
 
   it("resolves accessories per theme without accepting the discarded global scalar shape", () => {
     const selections = {
-      clawd: "wizard-hat",
+      duck: "wizard-hat",
       cloudling: "halo",
       calico: "seasonal",
     };
-    assert.strictEqual(getPetAccessoryIdForTheme(selections, "clawd"), "wizard-hat");
+    assert.strictEqual(getPetAccessoryIdForTheme(selections, "duck"), "wizard-hat");
     assert.strictEqual(getPetAccessoryIdForTheme(selections, "cloudling"), "halo");
     assert.strictEqual(getPetAccessoryIdForTheme(selections, "calico"), "none");
     assert.strictEqual(getPetAccessoryIdForTheme(selections, "missing"), "none");
-    assert.strictEqual(getPetAccessoryIdForTheme("wizard-hat", "clawd"), "none");
-    assert.strictEqual(getPetAccessoryIdForTheme(null, "clawd"), "none");
+    assert.strictEqual(getPetAccessoryIdForTheme("wizard-hat", "duck"), "none");
+    assert.strictEqual(getPetAccessoryIdForTheme(null, "duck"), "none");
   });
 
   it("keeps accessory assets and geometry inside a narrow local grammar", () => {
@@ -271,14 +271,14 @@ describe("pet customization catalog", () => {
   });
 
   it("resolves only trusted mouth catalog payloads for mouth-capable themes", () => {
-    const clawd = { _id: "clawd", _capabilities: { mouthAccessories: true } };
+    const duck = { _id: "duck", _capabilities: { mouthAccessories: true } };
     const cloudling = { _id: "cloudling", _capabilities: { mouthAccessories: false } };
     assert.strictEqual(isPetMouthAccessoryId("cigarette"), true);
     assert.strictEqual(isPetMouthAccessoryId("pipe"), false);
     assert.strictEqual(getPetMouthAccessory("pipe").id, "none");
-    assert.strictEqual(isPetMouthAccessorySupportedForTheme(clawd), true);
+    assert.strictEqual(isPetMouthAccessorySupportedForTheme(duck), true);
     assert.strictEqual(isPetMouthAccessorySupportedForTheme(cloudling), false);
-    assert.deepStrictEqual(buildPetMouthAccessoryPayload("cigarette", clawd), {
+    assert.deepStrictEqual(buildPetMouthAccessoryPayload("cigarette", duck), {
       id: "cigarette",
       assetFile: "cigarette.svg",
       aspect: 5 / 9,
@@ -292,8 +292,8 @@ describe("pet customization catalog", () => {
       widthScale: 1,
       offsetY: 0,
     });
-    assert.strictEqual(getPetMouthAccessoryIdForTheme({ clawd: "cigarette" }, "clawd"), "cigarette");
-    assert.strictEqual(getPetMouthAccessoryIdForTheme("cigarette", "clawd"), "none");
+    assert.strictEqual(getPetMouthAccessoryIdForTheme({ duck: "cigarette" }, "duck"), "cigarette");
+    assert.strictEqual(getPetMouthAccessoryIdForTheme("cigarette", "duck"), "none");
     assert.deepStrictEqual(listPetMouthAccessoryOptions(), [
       { id: "none", labelKey: "accessoryNone" },
       { id: "cigarette", labelKey: "accessoryCigarette" },

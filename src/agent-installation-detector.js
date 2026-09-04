@@ -11,10 +11,10 @@ const { identifyCustomApplication } = require("./custom-applications");
 
 // Agents whose detector parent dir the DEFAULT startup sync creates on its own,
 // before the agent has left any evidence of its own. For those, "the directory
-// exists" only proves Clawd ran, so they are excluded from local detection.
+// exists" only proves Duck ran, so they are excluded from local detection.
 //
 // #895: this used to be the whole default-integration list, on the assumption
-// that Clawd creates both ~/.claude and ~/.codex. Only the first is true —
+// that Duck creates both ~/.claude and ~/.codex. Only the first is true —
 // hooks/install.js writes ~/.claude/settings.json into a missing directory,
 // while hooks/codex-install-utils.js bails out when ~/.codex is absent and
 // writes nothing. Codex was therefore excluded on a false premise, and Settings
@@ -133,7 +133,7 @@ function notFound(detail = "No local installation signal found") {
   return installationResult(false, LOW_CONFIDENCE, "not-found", detail);
 }
 
-function hasClawdMarkerText(text, marker) {
+function hasDuckMarkerText(text, marker) {
   if (typeof text !== "string" || typeof marker !== "string" || !marker) return false;
   if (commandMatchesMarker(text, marker)) return true;
 
@@ -229,16 +229,16 @@ function detectCustomAgents(options = {}) {
   }).filter((entry) => entry.agentId && entry.executablePath);
 }
 
-function detectClawdIntegration(descriptor, paths, options) {
+function detectDuckIntegration(descriptor, paths, options) {
   const fsImpl = options.fs;
   if (descriptor.agentId === "pi") {
-    const markerPath = path.join(paths.configPath, descriptor.markerFile || ".clawd-managed.json");
+    const markerPath = path.join(paths.configPath, descriptor.markerFile || ".duck-on-desk-managed.json");
     return fileExists(fsImpl, markerPath)
       ? { detected: true, reason: "marker-file", detail: `${markerPath} exists`, paths: { markerPath } }
-      : { detected: false, reason: "not-found", detail: "No Clawd-managed Pi extension marker found" };
+      : { detected: false, reason: "not-found", detail: "No Duck-managed Pi extension marker found" };
   }
   const text = readText(fsImpl, paths.configPath);
-  if (hasClawdMarkerText(text, descriptor.marker)) {
+  if (hasDuckMarkerText(text, descriptor.marker)) {
     return {
       detected: true,
       reason: "marker-found",
@@ -249,7 +249,7 @@ function detectClawdIntegration(descriptor, paths, options) {
   return {
     detected: false,
     reason: "not-found",
-    detail: `No ${descriptor.marker || "Clawd"} marker found`,
+    detail: `No ${descriptor.marker || "Duck"} marker found`,
   };
 }
 
@@ -272,7 +272,7 @@ function detectAgentInstallation(descriptor, options = {}) {
     reason: installation.reason,
     detail: installation.detail,
     paths,
-    clawdIntegration: detectClawdIntegration(descriptor, paths, normalizedOptions),
+    duckIntegration: detectDuckIntegration(descriptor, paths, normalizedOptions),
   };
 }
 
@@ -389,7 +389,7 @@ async function refreshWslDetection(options = {}) {
 
       // Batch all dir-exists checks into a single wsl.exe spawn.
       // Each line emits "OK N" or "NO N" for the Nth check; two trailing
-      // DEPFILE/DEPREG lines report the distro's Clawd hook deployment
+      // DEPFILE/DEPREG lines report the distro's Duck hook deployment
       // state (see below).
       const batchLines = checks.map((c, i) => {
         const escaped = c.wslParentDir.replace(/'/g, "'\\''");
@@ -400,7 +400,7 @@ async function refreshWslDetection(options = {}) {
       //   DEPFILE — hook files exist in the distro. Pairing ANY agent copies
       //     them, and Unpair keeps them (shared dir). Drives the Unpair
       //     button: there is something to clean up.
-      //   DEPREG — ~/.claude/settings.json references clawd-hook.js, i.e.
+      //   DEPREG — ~/.claude/settings.json references duck-hook.js, i.e.
       //     the claude-code registration is active. File-only checks give
       //     false positives after a claude-code Unpair (uninstall clears
       //     settings.json but keeps shared files). Together with DEPFILE it
@@ -410,11 +410,11 @@ async function refreshWslDetection(options = {}) {
       // truth is a known follow-up; the badge must not gate the Unpair
       // button, or distros paired with only a non-claude agent lose their
       // unpair entry point.
-      const deployedFile = `${wslHome.replace(/\/$/, "")}/.claude/hooks/clawd-hook.js`;
+      const deployedFile = `${wslHome.replace(/\/$/, "")}/.claude/hooks/duck-hook.js`;
       const deployedFileEscaped = deployedFile.replace(/'/g, "'\\''");
       const settingsPathEscaped = `${wslHome.replace(/\/$/, "")}/.claude/settings.json`.replace(/'/g, "'\\''");
       batchLines.push(`test -f '${deployedFileEscaped}' && echo "DEPFILE 1" || echo "DEPFILE 0"`);
-      batchLines.push(`grep -q clawd-hook.js '${settingsPathEscaped}' 2>/dev/null && echo "DEPREG 1" || echo "DEPREG 0"`);
+      batchLines.push(`grep -q duck-hook.js '${settingsPathEscaped}' 2>/dev/null && echo "DEPREG 1" || echo "DEPREG 0"`);
       const batchResult = await execInWsl(
         distro.name,
         batchLines.join("; "),
@@ -424,7 +424,7 @@ async function refreshWslDetection(options = {}) {
       // A failed or timed-out batch has no trustworthy per-agent results;
       // keep whatever the previous scan knew about this distro.
       if (!batchResult || batchResult.error || batchResult.code !== 0) {
-        console.warn("Clawd: WSL batch dir check failed in", distro.name, "—",
+        console.warn("Duck: WSL batch dir check failed in", distro.name, "—",
           (batchResult && (batchResult.error ? batchResult.error.message : `exit ${batchResult.code}`)) || "no result");
         keepPreviousEntries(distro.name);
         continue;
@@ -471,7 +471,7 @@ async function refreshWslDetection(options = {}) {
         if (checks[i].integrationEvidence && !integrationStates.has(i)) markerError = true;
       }
       if (markerError) {
-        console.warn("Clawd: WSL batch marker output was incomplete or ambiguous in", distro.name);
+        console.warn("Duck: WSL batch marker output was incomplete or ambiguous in", distro.name);
         keepPreviousEntries(distro.name);
         continue;
       }
@@ -511,7 +511,7 @@ async function refreshWslDetection(options = {}) {
     // If a newer scan already committed, don't touch the cache.
     if (generation <= _wslRefreshCommitted) return detectAgentInstallations(options);
 
-    console.warn("Clawd: WSL detection scan failed:", err && err.message ? err.message : err);
+    console.warn("Duck: WSL detection scan failed:", err && err.message ? err.message : err);
     _cachedDetected = true;
     // A failed scan must NOT claim the committed slot: _wslRefreshCommitted
     // tracks the newest scan that committed DATA. If a failure bumped it, a

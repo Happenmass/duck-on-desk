@@ -1,4 +1,4 @@
-// Clawd on Desk — opencode plugin (thin family entry)
+// Duck on Desk — opencode plugin (thin family entry)
 //
 // All runtime logic lives in the shared family core; this entry only binds
 // the opencode identity. The four params MUST match the "opencode" entry in

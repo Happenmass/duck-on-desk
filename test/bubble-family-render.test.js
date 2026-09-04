@@ -77,7 +77,7 @@ function makeRenderer() {
   };
 
   const windowStub = {
-    ClawdBubbleFormat: bubbleFormat,
+    DuckBubbleFormat: bubbleFormat,
     bubbleAPI: {
       onPermissionShow(fn) { captured.show = fn; },
       onPermissionHide(fn) { captured.hide = fn; },

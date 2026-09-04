@@ -48,7 +48,7 @@ jobs:
           node scripts/audit-packaged-native.js --app-root dist/win-unpacked --target windows-x64 --output dist/native-package-manifests/windows-x64.json
           node scripts/audit-packaged-native.js --app-root dist/win-arm64-unpacked --target windows-arm64 --output dist/native-package-manifests/windows-arm64.json
       - name: Run native-host packaged Koffi smoke
-        run: node scripts/run-packaged-koffi-smoke.js --executable "dist/win-unpacked/Clawd on Desk.exe" --target windows-x64 --output dist/koffi-smoke/windows-x64.json
+        run: node scripts/run-packaged-koffi-smoke.js --executable "dist/win-unpacked/Duck on Desk.exe" --target windows-x64 --output dist/koffi-smoke/windows-x64.json
       - name: Verify Windows updater metadata
         run: node scripts/verify-updater-metadata.js --metadata dist/latest.yml --artifact-root dist --contract windows --package-json package.json --output dist/updater-metadata-manifests/windows.json
       - uses: actions/upload-artifact@v4
@@ -230,8 +230,8 @@ jobs:
             rm -f -- "$entitlements_file"
           }
 
-          verify_signed_app "dist/mac/Clawd on Desk.app"
-          verify_signed_app "dist/mac-arm64/Clawd on Desk.app"
+          verify_signed_app "dist/mac/Duck on Desk.app"
+          verify_signed_app "dist/mac-arm64/Duck on Desk.app"
 
           active_mount=""
           cleanup_mount() {
@@ -244,7 +244,7 @@ jobs:
           shopt -s nullglob
 
           for arch in x64 arm64; do
-            dmgs=(dist/Clawd-on-Desk-*-"$arch".dmg)
+            dmgs=(dist/Duck-on-Desk-*-"$arch".dmg)
             if (( ${#dmgs[@]} != 1 )); then
               echo "Expected exactly one $arch DMG, found ${#dmgs[@]}" >&2
               exit 1
@@ -252,10 +252,10 @@ jobs:
 
             dmg="${dmgs[0]}"
             hdiutil verify "$dmg"
-            active_mount="$RUNNER_TEMP/clawd-dmg-$arch"
+            active_mount="$RUNNER_TEMP/duck-dmg-$arch"
             mkdir "$active_mount"
             hdiutil attach -readonly -nobrowse -mountpoint "$active_mount" "$dmg"
-            verify_signed_app "$active_mount/Clawd on Desk.app"
+            verify_signed_app "$active_mount/Duck on Desk.app"
             hdiutil detach "$active_mount"
             rmdir "$active_mount"
             active_mount=""
@@ -267,8 +267,8 @@ jobs:
         run: |
           set -euo pipefail
           for app in \
-            "dist/mac/Clawd on Desk.app" \
-            "dist/mac-arm64/Clawd on Desk.app"; do
+            "dist/mac/Duck on Desk.app" \
+            "dist/mac-arm64/Duck on Desk.app"; do
             signature_details="$(codesign -dv --verbose=4 "$app" 2>&1)"
             grep -q "Signature=adhoc" <<<"$signature_details"
             grep -Eq "flags=.*\\(adhoc,runtime\\)" <<<"$signature_details"
@@ -344,30 +344,30 @@ jobs:
           trap cleanup_archive EXIT
 
           for arch in x64 arm64; do
-            zips=(dist/Clawd-on-Desk-*-"$arch".zip)
+            zips=(dist/Duck-on-Desk-*-"$arch".zip)
             if (( ${#zips[@]} != 1 )); then
               echo "Expected exactly one $arch ZIP, found ${#zips[@]}" >&2
               exit 1
             fi
-            active_archive="$(mktemp -d "$RUNNER_TEMP/clawd-zip-$arch.XXXXXX")"
+            active_archive="$(mktemp -d "$RUNNER_TEMP/duck-zip-$arch.XXXXXX")"
             ditto -x -k "${zips[0]}" "$active_archive"
             entries=("$active_archive"/*)
-            expected_app="$active_archive/Clawd on Desk.app"
+            expected_app="$active_archive/Duck on Desk.app"
             if (( ${#entries[@]} != 1 )) || [[ "${entries[0]}" != "$expected_app" ]] || [[ ! -d "$expected_app" ]]; then
-              echo "ZIP must contain exactly Clawd on Desk.app at its root: ${zips[0]}" >&2
+              echo "ZIP must contain exactly Duck on Desk.app at its root: ${zips[0]}" >&2
               exit 1
             fi
             verify_zip_app "$expected_app"
-            node scripts/audit-packaged-native.js --app-root "$expected_app" --target "darwin-$arch" --output "$RUNNER_TEMP/clawd-zip-native-$arch.json"
+            node scripts/audit-packaged-native.js --app-root "$expected_app" --target "darwin-$arch" --output "$RUNNER_TEMP/duck-zip-native-$arch.json"
             rm -rf -- "$active_archive"
             active_archive=""
           done
       - name: Audit packaged native payloads
         run: |
-          node scripts/audit-packaged-native.js --app-root "dist/mac/Clawd on Desk.app" --target darwin-x64 --output dist/native-package-manifests/darwin-x64.json
-          node scripts/audit-packaged-native.js --app-root "dist/mac-arm64/Clawd on Desk.app" --target darwin-arm64 --output dist/native-package-manifests/darwin-arm64.json
+          node scripts/audit-packaged-native.js --app-root "dist/mac/Duck on Desk.app" --target darwin-x64 --output dist/native-package-manifests/darwin-x64.json
+          node scripts/audit-packaged-native.js --app-root "dist/mac-arm64/Duck on Desk.app" --target darwin-arm64 --output dist/native-package-manifests/darwin-arm64.json
       - name: Run native-host packaged Koffi smoke
-        run: node scripts/run-packaged-koffi-smoke.js --executable "dist/mac-arm64/Clawd on Desk.app/Contents/MacOS/Clawd on Desk" --target darwin-arm64 --output dist/koffi-smoke/darwin-arm64.json
+        run: node scripts/run-packaged-koffi-smoke.js --executable "dist/mac-arm64/Duck on Desk.app/Contents/MacOS/Duck on Desk" --target darwin-arm64 --output dist/koffi-smoke/darwin-arm64.json
       - name: Assert macOS updater release files
         shell: bash
         run: |
@@ -384,12 +384,12 @@ jobs:
             exit 1
           fi
           for filename in \
-            "Clawd-on-Desk-$version-x64.dmg" \
-            "Clawd-on-Desk-$version-arm64.dmg" \
-            "Clawd-on-Desk-$version-x64.zip" \
-            "Clawd-on-Desk-$version-arm64.zip" \
-            "Clawd-on-Desk-$version-x64.zip.blockmap" \
-            "Clawd-on-Desk-$version-arm64.zip.blockmap" \
+            "Duck-on-Desk-$version-x64.dmg" \
+            "Duck-on-Desk-$version-arm64.dmg" \
+            "Duck-on-Desk-$version-x64.zip" \
+            "Duck-on-Desk-$version-arm64.zip" \
+            "Duck-on-Desk-$version-x64.zip.blockmap" \
+            "Duck-on-Desk-$version-arm64.zip.blockmap" \
             "latest-mac.yml"; do
             if [[ ! -f "dist/$filename" ]]; then
               echo "Missing required macOS release file: dist/$filename" >&2
@@ -447,7 +447,7 @@ jobs:
           sudo chown root:root dist/linux-unpacked/chrome-sandbox
           sudo chmod 4755 dist/linux-unpacked/chrome-sandbox
       - name: Run packaged Koffi smoke
-        run: node scripts/run-packaged-koffi-smoke.js --executable dist/linux-unpacked/clawd-on-desk --target linux-x64 --output dist/koffi-smoke/linux-x64.json --xvfb
+        run: node scripts/run-packaged-koffi-smoke.js --executable dist/linux-unpacked/duck-on-desk --target linux-x64 --output dist/koffi-smoke/linux-x64.json --xvfb
       - name: Verify Linux updater metadata
         run: node scripts/verify-updater-metadata.js --metadata dist/latest-linux.yml --artifact-root dist --contract linux --package-json package.json --output dist/updater-metadata-manifests/linux.json
       - uses: actions/upload-artifact@v4
@@ -499,12 +499,12 @@ jobs:
             exit 1
           fi
           for filename in \
-            "Clawd-on-Desk-$version-x64.dmg" \
-            "Clawd-on-Desk-$version-arm64.dmg" \
-            "Clawd-on-Desk-$version-x64.zip" \
-            "Clawd-on-Desk-$version-arm64.zip" \
-            "Clawd-on-Desk-$version-x64.zip.blockmap" \
-            "Clawd-on-Desk-$version-arm64.zip.blockmap" \
+            "Duck-on-Desk-$version-x64.dmg" \
+            "Duck-on-Desk-$version-arm64.dmg" \
+            "Duck-on-Desk-$version-x64.zip" \
+            "Duck-on-Desk-$version-arm64.zip" \
+            "Duck-on-Desk-$version-x64.zip.blockmap" \
+            "Duck-on-Desk-$version-arm64.zip.blockmap" \
             "latest-mac.yml"; do
             if [[ ! -f "artifacts/$filename" ]]; then
               echo "Missing required macOS release file: artifacts/$filename" >&2

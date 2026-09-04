@@ -44,7 +44,7 @@ for this current CLI producer.
 
 ## Fence diagnostic probe
 
-In an isolated local Clawd runtime, an official `Stop` boundary was injected
+In an isolated local Duck runtime, an official `Stop` boundary was injected
 for the active captured turn. A real official `PostToolUse` for the same turn
 arrived 321 ms later and was rejected with `reason=closed-turn-id`. The next
 real turn reopened the same session. This proves the late-tail fence path but

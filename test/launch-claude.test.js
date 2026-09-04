@@ -247,8 +247,8 @@ describe("buildTerminalCandidates - Windows", () => {
   it("round-trips a spaced executable path through real cmd.exe", { skip: process.platform !== "win32" }, () => {
     const values = [
       "a&b",
-      "%CLAWD_QUOTE_TEST%",
-      "!CLAWD_QUOTE_TEST!",
+      "%DUCK_QUOTE_TEST%",
+      "!DUCK_QUOTE_TEST!",
       'x" & echo injected & "y',
     ];
     const cands = buildTerminalCandidates(
@@ -260,7 +260,7 @@ describe("buildTerminalCandidates - Windows", () => {
     const cmdLine = cmd.args[cmd.args.length - 1];
     const result = spawnSync("cmd.exe", ["/d", "/v:off", "/s", "/c", cmdLine], {
       encoding: "utf8",
-      env: { ...process.env, CLAWD_QUOTE_TEST: 'bad"&echo injected' },
+      env: { ...process.env, DUCK_QUOTE_TEST: 'bad"&echo injected' },
       windowsVerbatimArguments: true,
     });
     const detail = JSON.stringify({
@@ -468,7 +468,7 @@ describe("buildShellTerminalCandidates (#459)", () => {
   });
 
   it("round-trips a spaced/special dir through real cmd.exe cd", { skip: process.platform !== "win32" }, () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd drop & test^ "));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck drop & test^ "));
     try {
       const cands = buildShellTerminalCandidates(dir, "win32");
       const cmd = cands.find((c) => c.bin === "cmd.exe");

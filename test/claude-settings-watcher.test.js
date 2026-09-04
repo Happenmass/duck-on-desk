@@ -12,10 +12,10 @@ const {
 } = require("../src/claude-settings-watcher");
 const { CLAUDE_CORE_HOOK_EVENTS } = require("../hooks/install");
 
-const EXPECTED_HOOK_SCRIPT_PATH = "C:/app/resources/app.asar.unpacked/hooks/clawd-hook.js";
+const EXPECTED_HOOK_SCRIPT_PATH = "C:/app/resources/app.asar.unpacked/hooks/duck-hook.js";
 const EXPECTED_AUTO_START_SCRIPT_PATH = "C:/app/resources/app.asar.unpacked/hooks/auto-start.js";
-const EXPECTED_PERMISSION_URL = "http://127.0.0.1:23333/permission";
-const OLD_TEMP_SCRIPT_PATH = "C:/Users/tester/AppData/Local/Temp/clawd-on-desk/hooks/clawd-hook.js";
+const EXPECTED_PERMISSION_URL = "http://127.0.0.1:24333/permission";
+const OLD_TEMP_SCRIPT_PATH = "C:/Users/tester/AppData/Local/Temp/duck-on-desk/hooks/duck-hook.js";
 
 class FakeWatcher extends EventEmitter {
   constructor(callback) {
@@ -108,15 +108,15 @@ function envOwnedSettingsObject({ nodeBin = "C:/nodejs/node.exe" } = {}) {
   for (const event of CLAUDE_CORE_HOOK_EVENTS) {
     hooks[event] = [{ matcher: "", hooks: [{
       type: "command",
-      command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" ' + event,
+      command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" ' + event,
       timeout: 5,
     }] }];
   }
   hooks.PermissionRequest = [permissionHook(EXPECTED_PERMISSION_URL)];
   return {
     env: {
-      CLAWD_NODE_BIN: nodeBin,
-      CLAWD_HOOK_PATH: EXPECTED_HOOK_SCRIPT_PATH,
+      DUCK_NODE_BIN: nodeBin,
+      DUCK_HOOK_PATH: EXPECTED_HOOK_SCRIPT_PATH,
     },
     hooks,
   };
@@ -124,12 +124,12 @@ function envOwnedSettingsObject({ nodeBin = "C:/nodejs/node.exe" } = {}) {
 
 function envUnverifiedSettingsObject(options = {}) {
   const settings = envOwnedSettingsObject(options);
-  delete settings.env.CLAWD_HOOK_PATH;
+  delete settings.env.DUCK_HOOK_PATH;
   return settings;
 }
 
 function makeWatcher(overrides = {}) {
-  const { initialSettingsRaw, existingPaths, syncClawdHooksImpl, ...ctxOverrides } = overrides;
+  const { initialSettingsRaw, existingPaths, syncDuckHooksImpl, ...ctxOverrides } = overrides;
   const clock = makeFakeClock();
   const syncCalls = [];
   let watchedDir = null;
@@ -170,7 +170,7 @@ function makeWatcher(overrides = {}) {
     setTimeout: clock.setTimeout,
     clearTimeout: clock.clearTimeout,
     now: clock.now,
-    getHookServerPort: () => 23333,
+    getHookServerPort: () => 24333,
     shouldManageClaudeHooks: () => true,
     isAgentEnabled: () => true,
     shouldSyncAgentIntegration: () => true,
@@ -179,7 +179,7 @@ function makeWatcher(overrides = {}) {
     expectedHookScriptPath: EXPECTED_HOOK_SCRIPT_PATH,
     expectedAutoStartScriptPath: EXPECTED_AUTO_START_SCRIPT_PATH,
     coreEvents: CLAUDE_CORE_HOOK_EVENTS,
-    syncClawdHooks: syncClawdHooksImpl || defaultSyncImpl,
+    syncDuckHooks: syncDuckHooksImpl || defaultSyncImpl,
     ...ctxOverrides,
   });
 
@@ -198,22 +198,22 @@ function makeWatcher(overrides = {}) {
 
 describe("settingsNeedClaudeHookResync", () => {
   it("returns false for empty or invalid settings content", () => {
-    assert.strictEqual(settingsNeedClaudeHookResync("", "http://127.0.0.1:23333/permission"), false);
-    assert.strictEqual(settingsNeedClaudeHookResync("not json", "http://127.0.0.1:23333/permission"), false);
+    assert.strictEqual(settingsNeedClaudeHookResync("", "http://127.0.0.1:24333/permission"), false);
+    assert.strictEqual(settingsNeedClaudeHookResync("not json", "http://127.0.0.1:24333/permission"), false);
   });
 
   it("requires both managed command hooks and the expected PermissionRequest URL", () => {
-    const expectedUrl = "http://127.0.0.1:23333/permission";
+    const expectedUrl = "http://127.0.0.1:24333/permission";
     const intact = JSON.stringify({
       hooks: {
-        Stop: [{ matcher: "", hooks: [{ type: "command", command: "node clawd-hook.js Stop" }] }],
+        Stop: [{ matcher: "", hooks: [{ type: "command", command: "node duck-hook.js Stop" }] }],
         PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: expectedUrl }] }],
       },
     });
     const wrongPermissionPort = JSON.stringify({
       hooks: {
-        Stop: [{ matcher: "", hooks: [{ type: "command", command: "node clawd-hook.js Stop" }] }],
-        PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:23335/permission" }] }],
+        Stop: [{ matcher: "", hooks: [{ type: "command", command: "node duck-hook.js Stop" }] }],
+        PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:24335/permission" }] }],
       },
     });
 
@@ -310,7 +310,7 @@ describe("createClaudeSettingsWatcher — periodic health audit (no fs event req
 
   it("re-verifies after repair and returns to healthy once the fix is reflected on disk", async () => {
     const { watcher, clock, syncCalls, setSettingsRaw, removeExisting } = makeWatcher({
-      syncClawdHooksImpl: (options) => {
+      syncDuckHooksImpl: (options) => {
         syncCalls.push(options);
         // Simulate the installer actually fixing the file before this resolves.
         setSettingsRaw(JSON.stringify(healthySettingsObject()));
@@ -382,7 +382,7 @@ describe("createClaudeSettingsWatcher — fs event path", () => {
 
 describe("createClaudeSettingsWatcher — suspicious shrink guard", () => {
   // The shrink guard needs something to detect a drop FROM — a fixture with
-  // only Clawd's own hooks and a single top-level "hooks" key has zero
+  // only Duck's own hooks and a single top-level "hooks" key has zero
   // third-party hooks and zero spare keys to lose, so it can never look
   // suspicious no matter how much of it disappears. Mirror production
   // settings.json by including unrelated top-level keys and a third-party hook.
@@ -468,7 +468,7 @@ describe("createClaudeSettingsWatcher — retry backoff and manual-fix-required"
 
     // A different root cause (permission URL) appears — must not still be
     // treated as the exhausted core-script-path signature.
-    setSettingsRaw(JSON.stringify(healthySettingsObject({ scriptPath: OLD_TEMP_SCRIPT_PATH, permissionUrl: "http://127.0.0.1:23335/permission" })));
+    setSettingsRaw(JSON.stringify(healthySettingsObject({ scriptPath: OLD_TEMP_SCRIPT_PATH, permissionUrl: "http://127.0.0.1:24335/permission" })));
     await clock.advance(5 * 60 * 1000);
 
     assert.strictEqual(syncCalls.length, 4, "a new repair class must get a fresh attempt, not stay stuck");
@@ -481,13 +481,13 @@ describe("createClaudeSettingsWatcher — retry backoff and manual-fix-required"
     // not from an external edit observed at the start of a later tick.
     let syncCallCount = 0;
     const { watcher, clock, syncCalls, setSettingsRaw, removeExisting } = makeWatcher({
-      syncClawdHooksImpl: (options) => {
+      syncDuckHooksImpl: (options) => {
         syncCallCount++;
         syncCalls.push(options);
         if (syncCallCount === 3) {
           // The 3rd attempt "fixes" the original script-path problem but
           // introduces an unrelated permission-url problem in the same stroke.
-          setSettingsRaw(JSON.stringify(healthySettingsObject({ permissionUrl: "http://127.0.0.1:23335/permission" })));
+          setSettingsRaw(JSON.stringify(healthySettingsObject({ permissionUrl: "http://127.0.0.1:24335/permission" })));
         }
         return { status: "ok" };
       },
@@ -517,7 +517,7 @@ describe("createClaudeSettingsWatcher — retry backoff and manual-fix-required"
   it("clears the failure count once health is actually restored", async () => {
     let fixOnNextSync = false;
     const { watcher, clock, syncCalls, setSettingsRaw, removeExisting } = makeWatcher({
-      syncClawdHooksImpl: (options) => {
+      syncDuckHooksImpl: (options) => {
         syncCalls.push(options);
         if (fixOnNextSync) setSettingsRaw(JSON.stringify(healthySettingsObject()));
         return { status: "ok" };
@@ -571,14 +571,14 @@ describe("createClaudeSettingsWatcher — source script missing", () => {
   });
 });
 
-describe("createClaudeSettingsWatcher — env-indirected Clawd hooks (#852)", () => {
+describe("createClaudeSettingsWatcher — env-indirected Duck hooks (#852)", () => {
   it("does not count strict env-owned hooks as third-party shrink", () => {
     const before = envOwnedSettingsObject();
     before.hooks.Stop.push({ matcher: "", hooks: [{ type: "command", command: 'node "/tmp/user.js" Stop' }] });
     const after = JSON.parse(JSON.stringify(before));
     for (const event of CLAUDE_CORE_HOOK_EVENTS) {
       after.hooks[event] = after.hooks[event].filter((entry) => (
-        !entry.hooks?.some((hook) => hook.command?.includes("CLAWD_HOOK_PATH"))
+        !entry.hooks?.some((hook) => hook.command?.includes("DUCK_HOOK_PATH"))
       ));
     }
 
@@ -596,7 +596,7 @@ describe("createClaudeSettingsWatcher — env-indirected Clawd hooks (#852)", ()
       initialSettingsRaw: JSON.stringify(envUnverifiedSettingsObject({ nodeBin })),
       existingPaths: [EXPECTED_HOOK_SCRIPT_PATH, EXPECTED_AUTO_START_SCRIPT_PATH, nodeBin],
       notifySuspiciousShrink: (...args) => notifyCalls.push(args),
-      syncClawdHooksImpl(options) {
+      syncDuckHooksImpl(options) {
         harness.syncCalls.push(options);
         harness.setSettingsRaw(JSON.stringify(healthySettingsObject()));
         return { status: "ok" };
@@ -640,7 +640,7 @@ describe("createClaudeSettingsWatcher — env-indirected Clawd hooks (#852)", ()
     let setSettingsRaw;
     const harness = makeWatcher({
       initialSettingsRaw: JSON.stringify(healthySettingsObject({ scriptPath: OLD_TEMP_SCRIPT_PATH })),
-      syncClawdHooksImpl() {
+      syncDuckHooksImpl() {
         harness.syncCalls.push({ source: "test-repair", automatic: true });
         setSettingsRaw(JSON.stringify(envOwnedSettingsObject({ nodeBin: "node" })));
         return { status: "ok" };
@@ -666,7 +666,7 @@ describe("createClaudeSettingsWatcher — env-indirected Clawd hooks (#852)", ()
       initialSettingsRaw: JSON.stringify(healthySettingsObject({ scriptPath: OLD_TEMP_SCRIPT_PATH })),
       existingPaths: [EXPECTED_HOOK_SCRIPT_PATH, EXPECTED_AUTO_START_SCRIPT_PATH, nodeBin],
       notifySuspiciousShrink: (...args) => notifyCalls.push(args),
-      syncClawdHooksImpl(options) {
+      syncDuckHooksImpl(options) {
         syncCount += 1;
         harness.syncCalls.push(options);
         harness.setSettingsRaw(JSON.stringify(
@@ -695,17 +695,17 @@ describe("createClaudeSettingsWatcher — env-indirected Clawd hooks (#852)", ()
   });
 });
 
-describe("createClaudeSettingsWatcher — unparseable Clawd command", () => {
+describe("createClaudeSettingsWatcher — unparseable Duck command", () => {
   function unparseableSettingsRaw() {
     return JSON.stringify({
       hooks: {
-        Stop: [{ matcher: "", hooks: [{ type: "command", command: '"clawd-hook.js"' }] }],
+        Stop: [{ matcher: "", hooks: [{ type: "command", command: '"duck-hook.js"' }] }],
         PermissionRequest: [permissionHook(EXPECTED_PERMISSION_URL)],
       },
     });
   }
 
-  it("reports degraded (not healthy) and never attempts a repair when a Clawd command cannot be parsed", async () => {
+  it("reports degraded (not healthy) and never attempts a repair when a Duck command cannot be parsed", async () => {
     const { watcher, clock, syncCalls } = makeWatcher({
       initialSettingsRaw: unparseableSettingsRaw(),
       coreEvents: ["Stop"],
@@ -715,25 +715,25 @@ describe("createClaudeSettingsWatcher — unparseable Clawd command", () => {
     await clock.advance(0);
     await clock.advance(5 * 60 * 1000);
 
-    assert.deepStrictEqual(syncCalls, [], "command-unparseable is automaticRepairable:false — misclassifying it risks rewriting a command Clawd does not own");
+    assert.deepStrictEqual(syncCalls, [], "command-unparseable is automaticRepairable:false — misclassifying it risks rewriting a command Duck does not own");
     const status = watcher.getHealthStatus();
     assert.strictEqual(status.status, "degraded");
     assert.strictEqual(status.degradedReason, "command-unparseable");
-    assert.strictEqual(status.lastSuccessAt, null, "an unparsed Clawd command must never count as a verified-healthy observation");
+    assert.strictEqual(status.lastSuccessAt, null, "an unparsed Duck command must never count as a verified-healthy observation");
     watcher.stop();
   });
 
   it("reports degraded instead of healthy when a repair for an unrelated issue leaves a command-unparseable behind", async () => {
     const { watcher, clock, syncCalls, setSettingsRaw, removeExisting } = makeWatcher({
       coreEvents: ["Stop", "SessionStart"],
-      syncClawdHooksImpl: (options) => {
+      syncDuckHooksImpl: (options) => {
         syncCalls.push(options);
         // Simulate a repair that fixes the missing SessionStart script path
         // but leaves the pre-existing unparseable Stop command untouched —
-        // Clawd never rewrites a command it could not classify as its own.
+        // Duck never rewrites a command it could not classify as its own.
         setSettingsRaw(JSON.stringify({
           hooks: {
-            Stop: [{ matcher: "", hooks: [{ type: "command", command: '"clawd-hook.js"' }] }],
+            Stop: [{ matcher: "", hooks: [{ type: "command", command: '"duck-hook.js"' }] }],
             SessionStart: [coreCommandHook("SessionStart", EXPECTED_HOOK_SCRIPT_PATH)],
             PermissionRequest: [permissionHook(EXPECTED_PERMISSION_URL)],
           },
@@ -743,7 +743,7 @@ describe("createClaudeSettingsWatcher — unparseable Clawd command", () => {
     });
     setSettingsRaw(JSON.stringify({
       hooks: {
-        Stop: [{ matcher: "", hooks: [{ type: "command", command: '"clawd-hook.js"' }] }],
+        Stop: [{ matcher: "", hooks: [{ type: "command", command: '"duck-hook.js"' }] }],
         SessionStart: [coreCommandHook("SessionStart", OLD_TEMP_SCRIPT_PATH)],
         PermissionRequest: [permissionHook(EXPECTED_PERMISSION_URL)],
       },

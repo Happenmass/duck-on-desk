@@ -1,8 +1,8 @@
-// Clawd on Desk — opencode-family plugin core
+// Duck on Desk — opencode-family plugin core
 //
 // Shared runtime for opencode-derived hosts. Runs
 // inside the host process (Bun CLI/TUI or Node-based Desktop sidecar) and forwards session/tool events to
-// the Clawd HTTP server (127.0.0.1:23333-23337).
+// the Duck HTTP server (127.0.0.1:24333-24337).
 //
 // This module is IMPORTED by the thin per-agent entries
 // (hooks/opencode-plugin/index.mjs) and is
@@ -19,7 +19,7 @@
 //
 // Design invariants (unchanged from the original opencode plugin):
 //   - Zero dependencies (runtime fetch + Node built-ins + Bun.serve when present)
-//   - fire-and-forget: event hook never awaits the fetch, so slow/broken Clawd
+//   - fire-and-forget: event hook never awaits the fetch, so slow/broken Duck
 //     cannot stall the host
 //   - same-state dedup — consecutive identical states skip POST
 //   - self-healing state port discovery: cache hit skips I/O; on miss we read
@@ -28,9 +28,9 @@
 // Phase 2 bridge (permission replies):
 //   The host TUI does NOT bind an external HTTP listener (verified via
 //   Phase 2 Spike — ctx.serverUrl is a phantom URL, ctx.client.fetch is
-//   bound to Server.Default().fetch() in-process). So Clawd cannot call
+//   bound to Server.Default().fetch() in-process). So Duck cannot call
 //   the host's REST API directly from outside the Bun process. Instead we
-//   start a tiny loopback bridge here: Clawd POSTs decisions to the
+//   start a tiny loopback bridge here: Duck POSTs decisions to the
 //   bridge, and the bridge calls ctx.client._client.post() — the same
 //   in-process Hono router that `opencode serve` would expose externally.
 //   CLI/TUI uses Bun.serve(); Desktop's Electron utilityProcess runs the
@@ -55,13 +55,13 @@ import {
   createSessionIdHelpers,
 } from "./session-ids.mjs";
 
-const CLAWD_DIR = join(homedir(), ".clawd");
-const RUNTIME_CONFIG_PATH = join(CLAWD_DIR, "runtime.json");
-const SERVER_PORTS = [23333, 23334, 23335, 23336, 23337];
+const DUCK_DIR = join(homedir(), ".duck-on-desk");
+const RUNTIME_CONFIG_PATH = join(DUCK_DIR, "runtime.json");
+const SERVER_PORTS = [24333, 24334, 24335, 24336, 24337];
 const STATE_PATH = "/state";
-const CLAWD_SERVER_HEADER = "x-clawd-server";
-const CLAWD_SERVER_ID = "clawd-on-desk";
-const CLAWD_METADATA_ACCEPTED_HEADER = "x-clawd-metadata-accepted";
+const DUCK_SERVER_HEADER = "x-duck-server";
+const DUCK_SERVER_ID = "duck-on-desk";
+const DUCK_METADATA_ACCEPTED_HEADER = "x-duck-metadata-accepted";
 // Provider limit lookups are in-process HTTP roundtrips to the host's own
 // server; cache positive model limits so the per-message.updated resolution
 // never spams the host router (60s TTL).
@@ -71,11 +71,11 @@ const CONTEXT_LIMIT_CACHE_MS = 60 * 1000;
 // _lastStatePerSession itself is intentionally unbounded.
 const MAX_CONTEXT_USAGE_ENTRIES = 1024;
 // Fire-and-forget: the IIFE never blocks the event hook's return value, so a
-// generous timeout is safe. 200ms was too tight when Clawd's IPC roundtrip
+// generous timeout is safe. 200ms was too tight when Duck's IPC roundtrip
 // (main → renderer → main) ran under load and silently timed out.
 const POST_TIMEOUT_MS = 1000;
 // A native host reply is a completion signal for an already-forwarded
-// permission. Retry only long enough to cover a transient Clawd restart; the
+// permission. Retry only long enough to cover a transient Duck restart; the
 // request-scoped queue keeps every attempt behind the original asked POST.
 const PERMISSION_LIFECYCLE_MAX_ATTEMPTS = 3;
 const PERMISSION_LIFECYCLE_RETRY_DELAYS_MS = [100, 400];
@@ -103,7 +103,7 @@ export function orcaPaneKeyFromEnv(env = process.env) {
   return paneKey;
 }
 
-// Process tree walk config — mirrors hooks/clawd-hook.js exactly, minus the
+// Process tree walk config — mirrors hooks/duck-hook.js exactly, minus the
 // Claude-specific detection. See docs/plans/plan-opencode-integration.md Phase 4.
 // Spike confirmed (2026-04-05): plugin runs in-process with the host, so walk
 // starts at process.pid. Observed chains on Windows:
@@ -132,7 +132,7 @@ const TERMINAL_NAMES_LINUX = new Set([
 const SYSTEM_BOUNDARY_WIN = new Set(["explorer.exe", "services.exe", "winlogon.exe", "svchost.exe"]);
 const SYSTEM_BOUNDARY_MAC = new Set(["launchd", "init", "systemd"]);
 const SYSTEM_BOUNDARY_LINUX = new Set(["systemd", "init"]);
-// Editor detection drives URI-scheme tab focus (code://, cursor://) in Clawd.
+// Editor detection drives URI-scheme tab focus (code://, cursor://) in Duck.
 // Anything absent here is treated as a plain terminal window.
 const EDITOR_MAP_WIN = { "code.exe": "code", "cursor.exe": "cursor" };
 const EDITOR_MAP_MAC = { "code": "code", "cursor": "cursor" };
@@ -206,7 +206,7 @@ function getWindowsProcessSnapshot() {
 
 // Normalize ctx.serverUrl into a string with a trailing slash. The host passes
 // a URL object in practice but we coerce defensively in case future versions
-// hand us a plain string. Trailing slash lets Clawd concat cleanly:
+// hand us a plain string. Trailing slash lets Duck concat cleanly:
 //   `${server_url}permission/${request_id}/reply`
 function normalizeServerUrl(raw) {
   if (!raw) return "";
@@ -220,7 +220,7 @@ function normalizeServerUrl(raw) {
 // reasoning, cache: { read, write } }. The host's own "Context view" shows
 // the component sum INCLUDING reasoning (cache read + write, no `total` —
 // `total` is an internal SessionV1 aggregate, never a message-token field),
-// and Clawd mirrors that exact figure. Values are coerced (hosts may deliver
+// and Duck mirrors that exact figure. Values are coerced (hosts may deliver
 // JSON numbers as strings). Returns null when the payload has no usable numbers.
 export function extractContextUsageUsed(tokens) {
   if (!tokens || typeof tokens !== "object") return null;
@@ -266,7 +266,7 @@ export function createOpencodeFamilyPlugin(config) {
 
   const AGENT_ID = agentId;
   const HOOK_SOURCE = hookSource;
-  const DEBUG_LOG_PATH = join(CLAWD_DIR, logFileName);
+  const DEBUG_LOG_PATH = join(DUCK_DIR, logFileName);
   const {
     DEFAULT_SESSION_ID,
     normalizeSessionId,
@@ -280,7 +280,7 @@ export function createOpencodeFamilyPlugin(config) {
   let _cachedPort = null;
   // Per-session last-state tracking. Keyed by sessionId so that subagent
   // sessions (spawned by the `task` tool) don't clobber the root session's
-  // dedup state. Each value is the last Clawd state sent for that session.
+  // dedup state. Each value is the last Duck state sent for that session.
   const _lastStatePerSession = new Map();
   // Per-session /state delivery tails. State bodies are serialized when they
   // are enqueued, then delivered in causal order for that canonical session.
@@ -297,7 +297,7 @@ export function createOpencodeFamilyPlugin(config) {
   let _lastSeenSessionId = null;
   let _reqCounter = 0;
   // Phase 3: host subtasks are full child sessions (not subtask parts). When
-  // session.created carries event.properties.info.parentID, Clawd treats the
+  // session.created carries event.properties.info.parentID, Duck treats the
   // child as background/headless work owned by its parent: no HUD/focus/fanout,
   // and child session.idle maps to SessionEnd instead of the root happy path.
   // Root session fallback used for legacy idle/permission association.
@@ -343,7 +343,7 @@ export function createOpencodeFamilyPlugin(config) {
   const _contextStateByInstance = new Map();
   const _contextLimitCacheByClient = new WeakMap();
   let _contextGenerationCounter = 0;
-  // Permission requests outlive the event callback: Clawd replies later over
+  // Permission requests outlive the event callback: Duck replies later over
   // the reverse bridge. OpenCode invokes this factory once per directory, so
   // bind each request to the exact SDK client + directory that emitted it.
   // Using the most recently initialized client here routes interleaved replies
@@ -353,7 +353,7 @@ export function createOpencodeFamilyPlugin(config) {
   // cannot cancel a live promise, so tails remove themselves only after
   // settlement and only when their identity is still current.
   const _permissionPostTailByRequestId = new Map();
-  // Reverse bridge state. Set by startBridge() at plugin init. Clawd receives
+  // Reverse bridge state. Set by startBridge() at plugin init. Duck receives
   // _bridgeUrl + _bridgeToken with every /permission forward and POSTs back.
   let _bridgeUrl = "";
   let _bridgeTokenHex = "";
@@ -389,7 +389,7 @@ export function createOpencodeFamilyPlugin(config) {
 
   function resetDebugLog() {
     try {
-      mkdirSync(CLAWD_DIR, { recursive: true });
+      mkdirSync(DUCK_DIR, { recursive: true });
       writeFileSync(DEBUG_LOG_PATH, "", "utf8");
     } catch {}
   }
@@ -421,9 +421,9 @@ export function createOpencodeFamilyPlugin(config) {
 
   // Permission payloads contain the one-time reverse-bridge bearer token. A
   // full port scan is acceptable for state telemetry, but must never disclose
-  // that token to an arbitrary listener which merely copies Clawd's static
+  // that token to an arbitrary listener which merely copies Duck's static
   // response header. Pin permission delivery to the runtime identity written
-  // by a live Clawd process, and require owner-only bytes on POSIX.
+  // by a live Duck process, and require owner-only bytes on POSIX.
   function readPermissionRuntimePort() {
     try {
       const stats = lstatSync(RUNTIME_CONFIG_PATH);
@@ -436,7 +436,7 @@ export function createOpencodeFamilyPlugin(config) {
       const raw = JSON.parse(readFileSync(RUNTIME_CONFIG_PATH, "utf8"));
       const port = Number(raw && raw.port);
       const ownerPid = raw && raw.ownerPid;
-      if (raw?.app !== CLAWD_SERVER_ID) return null;
+      if (raw?.app !== DUCK_SERVER_ID) return null;
       if (!Number.isInteger(port) || !SERVER_PORTS.includes(port)) return null;
       if (!Number.isInteger(ownerPid) || ownerPid <= 0) return null;
       try {
@@ -475,7 +475,7 @@ export function createOpencodeFamilyPlugin(config) {
 
   // Walks past the first terminal match to pick the OUTERMOST terminal —
   // matters for Electron terminals where the chain shows
-  // renderer→main and we want the main process so Clawd activates the right
+  // renderer→main and we want the main process so Duck activates the right
   // window. Cached after first call.
   function getStablePid() {
     if (_stablePid) return _stablePid;
@@ -685,10 +685,10 @@ export function createOpencodeFamilyPlugin(config) {
     const prevTitle = _sessionTitleById.get(sessionId);
     // OpenCode assigns a placeholder title ("New session") at creation and
     // later replaces it with the real summary-based title via session.updated.
-    // That event maps to no Clawd state, so without an explicit push the HUD
+    // That event maps to no Duck state, so without an explicit push the HUD
     // keeps showing the placeholder forever. Forward a title change as a
     // metadata-only POST — the server updates sessionTitle without disturbing
-    // the lifecycle state (mirrors how clawd-hook statusline refreshes work).
+    // the lifecycle state (mirrors how duck-hook statusline refreshes work).
     // If no session exists yet the server drops the metadata POST safely
     // (metadata-only never creates a session), so the first redundant push is
     // harmless — and it covers the "created with no title, titled later" case.
@@ -706,7 +706,7 @@ export function createOpencodeFamilyPlugin(config) {
         metadata_only: true,
         session_title: metadata.title,
       };
-      postStateToClawd(body);
+      postStateToDuck(body);
     }
     return sessionId;
   }
@@ -855,7 +855,7 @@ export function createOpencodeFamilyPlugin(config) {
   function enqueueDisposedSessionEnds(sessionIds) {
     for (const sessionId of sessionIds) {
       const body = buildStateBody("sleeping", "SessionEnd", sessionId);
-      if (body) postStateToClawd(body);
+      if (body) postStateToDuck(body);
     }
   }
 
@@ -975,13 +975,13 @@ export function createOpencodeFamilyPlugin(config) {
           signal: controller.signal,
         });
         const elapsed = Date.now() - t0;
-        const header = res.headers.get(CLAWD_SERVER_HEADER);
-        const metadataAccepted = header === CLAWD_SERVER_ID
-          && res.headers.get(CLAWD_METADATA_ACCEPTED_HEADER) === "1";
+        const header = res.headers.get(DUCK_SERVER_HEADER);
+        const metadataAccepted = header === DUCK_SERVER_ID
+          && res.headers.get(DUCK_METADATA_ACCEPTED_HEADER) === "1";
         debugLog(`POST[${snapshot.reqId}] ${snapshot.logTag} port=${port} status=${res.status} header=${header} metadataAccepted=${metadataAccepted} elapsed=${elapsed}ms`);
         // Port range is unprivileged so another app could answer — require the
-        // Clawd identity header before trusting the response.
-        if (header === CLAWD_SERVER_ID) {
+        // Duck identity header before trusting the response.
+        if (header === DUCK_SERVER_ID) {
           _cachedPort = port;
           try { await res.text(); } catch {}
           debugLog(`POST[${snapshot.reqId}] ${snapshot.logTag} OK port=${port} metadataAccepted=${metadataAccepted}`);
@@ -1125,7 +1125,7 @@ export function createOpencodeFamilyPlugin(config) {
     debugLog(`POST[${incoming.reqId}] ${incoming.logTag} overflow=dropped-old req=${dropped.reqId}`);
   }
 
-  function postStateToClawd(body) {
+  function postStateToDuck(body) {
     const sessionId = normalizeSessionId(body && body.session_id) || DEFAULT_SESSION_ID;
     const snapshot = createStatePostSnapshot(body);
     const replaceable = isReplaceableStateSnapshot(snapshot);
@@ -1209,11 +1209,11 @@ export function createOpencodeFamilyPlugin(config) {
     return current;
   }
 
-  // Fire-and-forget permission forward. Clawd decides allow/deny/always in its
+  // Fire-and-forget permission forward. Duck decides allow/deny/always in its
   // bubble UI and replies through the reverse bridge (POST /reply with the
   // request_id + decision). The event hook never awaits this settled promise;
   // it is returned for ordering and deterministic tests only.
-  function postPermissionToClawd(body, options = {}) {
+  function postPermissionToDuck(body, options = {}) {
     const requestId = body && typeof body.request_id === "string" ? body.request_id : "";
     if (!requestId) return Promise.resolve(false);
     return enqueuePermissionPost(requestId, body, options);
@@ -1221,10 +1221,10 @@ export function createOpencodeFamilyPlugin(config) {
 
   function buildStateBody(state, eventName, sessionId) {
     if (!state || !eventName) return null;
-    const clawdSessionId = normalizeSessionId(sessionId) || DEFAULT_SESSION_ID;
+    const duckSessionId = normalizeSessionId(sessionId) || DEFAULT_SESSION_ID;
     const body = {
       state,
-      session_id: clawdSessionId,
+      session_id: duckSessionId,
       event: eventName,
       agent_id: AGENT_ID,
       hook_source: HOOK_SOURCE,
@@ -1232,20 +1232,20 @@ export function createOpencodeFamilyPlugin(config) {
     // Phase 3 headless: child sessions (identified by parentID in
     // _sessionParentById) get headless: true so downstream session
     // handling can distinguish child sessions.
-    if (isChildSessionId(clawdSessionId, _sessionParentById)) {
+    if (isChildSessionId(duckSessionId, _sessionParentById)) {
       body.headless = true;
     }
     // Session title from OpenCode's own session-info title field. Mirrors the
-    // pattern used by other agents (clawd-hook) that
+    // pattern used by other agents (duck-hook) that
     // include session_title in their state POST body. The server reads
     // this and stores it as sessionTitle, which sessionDisplayTitle()
     // then uses before falling back to path.basename(cwd).
-    const sessionTitle = _sessionTitleById.get(clawdSessionId);
+    const sessionTitle = _sessionTitleById.get(duckSessionId);
     if (sessionTitle) body.session_title = sessionTitle;
     return body;
   }
 
-  // Clawd uses PascalCase event names matching Claude Code's hook vocabulary so
+  // Duck uses PascalCase event names matching Claude Code's hook vocabulary so
   // state.js transition rules (e.g. SubagentStop → working whitelist) are
   // reusable across agents.
   function sendState(state, eventName, sessionId) {
@@ -1262,11 +1262,11 @@ export function createOpencodeFamilyPlugin(config) {
     debugLog(`SEND ${lastState || "null"} → ${body.state} event=${body.event} session=${body.session_id}`);
     _lastStatePerSession.set(body.session_id, body.state);
 
-    postStateToClawd(body);
+    postStateToDuck(body);
   }
 
-  // Translate a host event into a Clawd (state, eventName) pair, or null
-  // if Clawd should ignore it. Event shape (from runtime dumps):
+  // Translate a host event into a Duck (state, eventName) pair, or null
+  // if Duck should ignore it. Event shape (from runtime dumps):
   //   { type: "session.status", properties: { sessionID, status: { type } } }
   //   { type: "message.part.updated", properties: { part: { type, tool, state: { status } } } }
   function translateEvent(event) {
@@ -1314,7 +1314,7 @@ export function createOpencodeFamilyPlugin(config) {
 
       case "session.idle": {
         // Phase 3 headless: child sessions (identified by parentID in
-        // _sessionParentById) end with SessionEnd so Clawd removes them
+        // _sessionParentById) end with SessionEnd so Duck removes them
         // from its tracking map — no happy flash, no menu pollution.
         if (isChildSessionId(sessionId, _sessionParentById)) {
           return { state: "sleeping", event: "SessionEnd" };
@@ -1349,8 +1349,8 @@ export function createOpencodeFamilyPlugin(config) {
     resolveSessionDirectory,
     cleanupSessionDirectory,
     normalizeDirectoryOwnershipKey,
-    postStateToClawd,
-    postPermissionToClawd,
+    postStateToDuck,
+    postPermissionToDuck,
     readPermissionRuntimePort,
     handleContextUsageEvent,
     buildContextUsageBody,
@@ -1575,8 +1575,8 @@ export function createOpencodeFamilyPlugin(config) {
       }
 
       const instanceToken = contextInstanceToken(instance && instance.instanceToken);
-      const clawdSessionId = normalizeSessionId(getEventSessionId(event));
-      if (!clawdSessionId) {
+      const duckSessionId = normalizeSessionId(getEventSessionId(event));
+      if (!duckSessionId) {
         debugLog("CTX skip reason=no-session-id");
         return;
       }
@@ -1585,11 +1585,11 @@ export function createOpencodeFamilyPlugin(config) {
         debugLog(`CTX skip reason=${Number.isFinite(used) ? "zero-tokens" : "no-tokens"}`);
         return;
       }
-      const state = getContextState(instanceToken, clawdSessionId, true);
+      const state = getContextState(instanceToken, duckSessionId, true);
       const sessions = getContextSessionMap(instanceToken);
       if (sessions && sessions.size > MAX_CONTEXT_USAGE_ENTRIES) {
         const oldest = sessions.keys().next().value;
-        if (oldest !== undefined && oldest !== clawdSessionId) sessions.delete(oldest);
+        if (oldest !== undefined && oldest !== duckSessionId) sessions.delete(oldest);
       }
 
       const sequence = ++state.sequence;
@@ -1600,8 +1600,8 @@ export function createOpencodeFamilyPlugin(config) {
       const modelID = info.modelID || null;
       return resolveContextLimit(providerID, modelID, instance && instance.client)
         .then((limit) => {
-          if (!isCurrentContextSample(instanceToken, clawdSessionId, state, generation, sequence)) {
-            debugLog(`CTX discard session=${clawdSessionId} seq=${sequence} reason=stale`);
+          if (!isCurrentContextSample(instanceToken, duckSessionId, state, generation, sequence)) {
+            debugLog(`CTX discard session=${duckSessionId} seq=${sequence} reason=stale`);
             return null;
           }
 
@@ -1611,20 +1611,20 @@ export function createOpencodeFamilyPlugin(config) {
             modelID,
             limit: Number.isFinite(limit) && limit > 0 ? limit : null,
           };
-          debugLog(`CTX resolved used=${used} limit=${sample.limit ?? "unknown"} session=${clawdSessionId} provider=${providerID || "?"} model=${modelID || "unknown"} seq=${sequence} gen=${generation}`);
+          debugLog(`CTX resolved used=${used} limit=${sample.limit ?? "unknown"} session=${duckSessionId} provider=${providerID || "?"} model=${modelID || "unknown"} seq=${sequence} gen=${generation}`);
           if (isSameDeliveredContextSample(state.delivered, sample)) {
-            debugLog(`CTX skip session=${clawdSessionId} seq=${sequence} reason=delivered`);
+            debugLog(`CTX skip session=${duckSessionId} seq=${sequence} reason=delivered`);
             return null;
           }
 
           // Same serialized metadata delivery as the session-title push
           // (#841): state/event scaffolding is inert on the route side because
           // metadata_only short-circuits lifecycle handling.
-          const body = buildContextUsageBody(clawdSessionId, used, sample.limit);
+          const body = buildContextUsageBody(duckSessionId, used, sample.limit);
           body.state = "idle";
           body.event = "SessionUpdate";
-          return postStateToClawd(body).then((delivered) => {
-            if (delivered && isCurrentContextSample(instanceToken, clawdSessionId, state, generation, sequence)) {
+          return postStateToDuck(body).then((delivered) => {
+            if (delivered && isCurrentContextSample(instanceToken, duckSessionId, state, generation, sequence)) {
               state.delivered = sample;
             }
           });
@@ -1645,7 +1645,7 @@ export function createOpencodeFamilyPlugin(config) {
   // sessionID; legacy hosts may omit it, in which case we retain the existing
   // _lastSeenSessionId → _rootSessionId fallback.
   // Phase 1 dedup/state machine logic does not run for permission events — they
-  // ride a parallel channel and never translate to a Clawd state transition.
+  // ride a parallel channel and never translate to a Duck state transition.
   function handlePermissionAsked(event, instance) {
     const p = (event && event.properties) || {};
     const requestId = p.id;
@@ -1670,7 +1670,7 @@ export function createOpencodeFamilyPlugin(config) {
       const oldest = _permissionTargetByRequestId.keys().next().value;
       if (oldest) _permissionTargetByRequestId.delete(oldest);
     }
-    postPermissionToClawd({
+    postPermissionToDuck({
       agent_id: AGENT_ID,
       hook_source: HOOK_SOURCE,
       tool_name: p.permission || "unknown",
@@ -1680,7 +1680,7 @@ export function createOpencodeFamilyPlugin(config) {
       session_id: sessionId,
       request_id: requestId,
       server_url: instance.serverUrl, // debug only, not used for replies
-      bridge_url: _bridgeUrl,         // ← Clawd POSTs decisions here
+      bridge_url: _bridgeUrl,         // ← Duck POSTs decisions here
       bridge_token: _bridgeTokenHex,  // ← and authenticates with this
     });
   }
@@ -1725,7 +1725,7 @@ export function createOpencodeFamilyPlugin(config) {
     }
 
     // Native resolution makes the reverse bridge target stale immediately.
-    // Delete before any network wait so a late Clawd click receives 404 and
+    // Delete before any network wait so a late Duck click receives 404 and
     // never calls the host SDK a second time.
     _permissionTargetByRequestId.delete(requestId);
 
@@ -1738,7 +1738,7 @@ export function createOpencodeFamilyPlugin(config) {
       return Promise.resolve(false);
     }
 
-    return postPermissionToClawd({
+    return postPermissionToDuck({
       agent_id: AGENT_ID,
       hook_source: HOOK_SOURCE,
       permission_event: "replied",
@@ -1762,7 +1762,7 @@ export function createOpencodeFamilyPlugin(config) {
     try { return timingSafeEqual(candidate, _bridgeTokenBuf); } catch { return false; }
   }
 
-  // Handle POST /reply from Clawd. Reads { request_id, reply } and forwards to
+  // Handle POST /reply from Duck. Reads { request_id, reply } and forwards to
   // the host's in-process Hono router via ctx.client._client.post(). Return
   // 200 on success (the host's own route returned 2xx), 4xx on auth/shape
   // errors, 502 if the upstream call itself throws.
@@ -2028,7 +2028,7 @@ export function createOpencodeFamilyPlugin(config) {
 
           // #796: lifecycle info is the only authoritative session-directory
           // source. Capture before translate/drop because session.updated does
-          // not map to a Clawd state and info-only deleted events need its id.
+          // not map to a Duck state and info-only deleted events need its id.
           if (event.type === "server.instance.disposed") {
             cleanupSessionDirectory(event, "before-send", instanceDirectory, instanceToken);
             if (!instanceDisposed) {
@@ -2061,7 +2061,7 @@ export function createOpencodeFamilyPlugin(config) {
             const parentID = getEventParentSessionId(event);
             if (parentID) {
               // Store with normalized keys so lookups from buildStateBody()
-              // (which uses clawdSessionId = normalizeSessionId(sessionId))
+              // (which uses duckSessionId = normalizeSessionId(sessionId))
               // match consistently regardless of raw vs prefixed form.
               const normChild = normalizeSessionId(sid);
               const normParent = normalizeSessionId(parentID);
@@ -2073,7 +2073,7 @@ export function createOpencodeFamilyPlugin(config) {
           }
 
           // permission.asked rides a parallel channel and shares a request FIFO
-          // with permission.replied. Clawd replies through the reverse bridge
+          // with permission.replied. Duck replies through the reverse bridge
           // only when its own bubble wins the race.
           if (event.type === "permission.asked") {
             handlePermissionAsked(event, {
@@ -2089,7 +2089,7 @@ export function createOpencodeFamilyPlugin(config) {
           // hold the session-level totals. Forward as a metadata-only
           // contextUsage POST (same dedup/no-decision semantics as the
           // other metadata-only paths). The event itself never maps to a
-          // Clawd state transition.
+          // Duck state transition.
           if (event.type === "message.updated") {
             handleContextUsageEvent(event, { client: instanceClient, instanceToken });
             return;
@@ -2119,7 +2119,7 @@ export function createOpencodeFamilyPlugin(config) {
 
           debugLog(`MAP ${event.type} → state=${mapped.state} event=${mapped.event}`);
           sendState(mapped.state, mapped.event, sessionId);
-          // Unified cleanup happens only after postStateToClawd synchronously
+          // Unified cleanup happens only after postStateToDuck synchronously
           // snapshots the final SessionEnd body. This preserves cwd, title and
           // child/headless ownership while the queued network delivery waits.
           cleanupSessionDirectory(event, "after-send", instanceDirectory, instanceToken);

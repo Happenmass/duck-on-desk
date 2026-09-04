@@ -23,7 +23,7 @@ describe("durable session recovery leases", () => {
   let recoveryDir;
 
   beforeEach(() => {
-    recoveryDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-recovery-lease-"));
+    recoveryDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-recovery-lease-"));
   });
 
   afterEach(() => {

@@ -12,8 +12,8 @@ This release also welcomes **eight first-time contributors**.
 
 ### New Features
 
-- **Discord Rich Presence** (#215, #508, #644, #649, #650) - Clawd can mirror your agent status to your Discord profile. Ships with the official "Clawd on Desk" Application ID so it works with zero configuration; a custom App ID remains available as a collapsed advanced option. Thanks to first-time contributor @KaiC5504.
-- **WSL auto-discovery and one-click pairing** (#565) - Clawd detects WSL distros, pairs agent hooks into them in one click, and marks sessions with their WSL source so mixed Windows/WSL setups stay legible. Thanks to first-time contributor @V1staz.
+- **Discord Rich Presence** (#215, #508, #644, #649, #650) - Duck can mirror your agent status to your Discord profile. Ships with the official "Duck on Desk" Application ID so it works with zero configuration; a custom App ID remains available as a collapsed advanced option. Thanks to first-time contributor @KaiC5504.
+- **WSL auto-discovery and one-click pairing** (#565) - Duck detects WSL distros, pairs agent hooks into them in one click, and marks sessions with their WSL source so mixed Windows/WSL setups stay legible. Thanks to first-time contributor @V1staz.
 - **Feishu remote-approval channel** (#511) - Permission requests can now be approved or denied from Feishu, joining Telegram as a remote-approval channel. Thanks to first-time contributor @yanguibao1997.
 - **Telegram elicitation (AskUserQuestion), beta** (#609, #651) - When an agent asks a clarifying question, the Telegram and Feishu channels render the options as an interactive card with quote-safe Other answers, fail-closed auth on both approval and elicitation callbacks, secret redaction on the outgoing question/option text, and localized card text in five languages. Beta: two answer-fidelity edge cases (a long question's display form vs. its answer key, and option labels over 32 characters) are deferred and tracked in #659. Thanks to first-time contributor @JasonZH6600.
 - **LAN Approval (beta) and Settings sidebar consolidation** (#645) - Remote Approval settings are consolidated under one sidebar entry with per-channel subtabs, and a LAN-based approval channel ships behind a beta flag.
@@ -53,7 +53,7 @@ This release also welcomes **eight first-time contributors**.
 - The Feishu channel currently supports **Feishu (feishu.cn) only**. The SDK domain is hardcoded to Feishu and there is no region/domain setting, so Lark (international) tenants are not supported in this release.
 - Remote Approval settings moved: Telegram, Feishu, and LAN Approval now live under the consolidated **Remote Approval** sidebar entry with per-channel subtabs.
 - Kimi users: hook registration now targets Kimi Code (`~/.kimi-code`) when present; legacy Kimi CLI installs keep working. Hooks re-sync automatically on startup.
-- After updating, launch Clawd once so hook registrations and the Antigravity wrapper refresh on the next startup sync (automatic — it just needs one launch).
+- After updating, launch Duck once so hook registrations and the Antigravity wrapper refresh on the next startup sync (automatic — it just needs one launch).
 - Codex on Windows: the dual `commandWindows` field (#544) is only honored by Codex builds from ~2026-05 onward. Older Codex builds ignore it and would run the POSIX command form on Windows — update Codex if you run it there.
 
 ### Contributors

@@ -300,7 +300,7 @@ describe("Codex permission response sanitizer", () => {
     assert.strictEqual(api.pendingPermissions.length, 0);
   });
 
-  it("cleans up Claude permissions without deciding when Clawd quits", () => {
+  it("cleans up Claude permissions without deciding when Duck quits", () => {
     const { api } = createCodexDecisionHarness();
     const claudeRes = createFakeRes();
     api.pendingPermissions.push(

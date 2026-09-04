@@ -18,7 +18,7 @@ function electronExecutable() {
 
 test("cigarette SMIL advances and restarts in the production mouth object channel", { timeout: 30_000 }, (t) => {
   const source = fs.readFileSync(path.join(__dirname, "..", "src", "index.html"), "utf8");
-  assert.match(source, /<object id="clawd-mouth-accessory"[^>]*type="image\/svg\+xml"/);
+  assert.match(source, /<object id="duck-mouth-accessory"[^>]*type="image\/svg\+xml"/);
 
   const executable = electronExecutable();
   if (!executable) return t.skip("Electron executable is not installed");
@@ -27,7 +27,7 @@ test("cigarette SMIL advances and restarts in the production mouth object channe
   }
 
   const fixture = path.join(__dirname, "fixtures", "cigarette-accessory-electron.js");
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-cigarette-electron-"));
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "duck-cigarette-electron-"));
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
   const args = ["--disable-gpu", `--user-data-dir=${profile}`];

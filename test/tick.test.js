@@ -6,7 +6,7 @@ const path = require("node:path");
 
 const themeLoader = require("../src/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
-const _defaultTheme = themeLoader.loadTheme("clawd");
+const _defaultTheme = themeLoader.loadTheme("duck");
 
 function cloneTheme(theme) {
   return JSON.parse(JSON.stringify(theme));
@@ -354,7 +354,7 @@ describe("tick adaptive polling", () => {
 
     ctx = makeCtx(theme, statesSeen);
     ctx.currentState = "mini-idle";
-    ctx.currentSvg = "clawd-mini-idle.svg";
+    ctx.currentSvg = "duck-mini-idle.svg";
     ctx.miniMode = true;
     ctx.lowPowerIdlePaused = true;
     tickApi = loader.initTick(ctx);
@@ -371,7 +371,7 @@ describe("tick adaptive polling", () => {
 
     ctx = makeCtx(theme, statesSeen);
     ctx.currentState = "mini-peek";
-    ctx.currentSvg = "clawd-mini-idle.svg";
+    ctx.currentSvg = "duck-mini-idle.svg";
     ctx.miniMode = true;
     ctx.lowPowerIdlePaused = true;
     tickApi = loader.initTick(ctx);
@@ -617,7 +617,7 @@ describe("tick spin detection (dizzy gesture)", () => {
   // so they never fire during a multi-second gesture.
   function dizzyTheme() {
     const theme = cloneTheme(_defaultTheme);
-    theme.states.dizzy = ["clawd-dizzy.svg"];
+    theme.states.dizzy = ["duck-dizzy.svg"];
     theme.timings.autoReturn = theme.timings.autoReturn || {};
     theme.timings.autoReturn.dizzy = 6000;
     theme.timings.mouseIdleTimeout = 100000;
@@ -859,8 +859,8 @@ describe("tick default idle visual", () => {
   }
 
   it("pool play returns to the user-selected idle visual", () => {
-    const theme = makeIdleTheme([{ file: "clawd-idle-look.svg", duration: 500 }]);
-    ctx = makeIdleVisualCtx(theme, "clawd-idle-reading.svg");
+    const theme = makeIdleTheme([{ file: "duck-idle-look.svg", duration: 500 }]);
+    ctx = makeIdleVisualCtx(theme, "duck-idle-reading.svg");
     tickApi = loader.initTick(ctx);
     tickApi.startMainTick();
 
@@ -870,12 +870,12 @@ describe("tick default idle visual", () => {
     const changes = idleStateChanges();
     assert.deepStrictEqual(
       changes.map(([, , svg]) => svg),
-      ["clawd-idle-look.svg", "clawd-idle-reading.svg"]
+      ["duck-idle-look.svg", "duck-idle-reading.svg"]
     );
   });
 
   it("unset choice keeps returning to the theme follow sprite", () => {
-    const theme = makeIdleTheme([{ file: "clawd-idle-look.svg", duration: 500 }]);
+    const theme = makeIdleTheme([{ file: "duck-idle-look.svg", duration: 500 }]);
     ctx = makeIdleVisualCtx(theme);
     tickApi = loader.initTick(ctx);
     tickApi.startMainTick();
@@ -886,12 +886,12 @@ describe("tick default idle visual", () => {
     const changes = idleStateChanges();
     assert.deepStrictEqual(
       changes.map(([, , svg]) => svg),
-      ["clawd-idle-look.svg", "clawd-idle-follow.svg"]
+      ["duck-idle-look.svg", "duck-idle-follow.svg"]
     );
   });
 
   it("unset choice leaves the pool untouched (follow sprite stays a valid pool entry)", () => {
-    const theme = makeIdleTheme([{ file: "clawd-idle-follow.svg", duration: 500 }]);
+    const theme = makeIdleTheme([{ file: "duck-idle-follow.svg", duration: 500 }]);
     ctx = makeIdleVisualCtx(theme);
     tickApi = loader.initTick(ctx);
     tickApi.startMainTick();
@@ -902,16 +902,16 @@ describe("tick default idle visual", () => {
     const changes = idleStateChanges();
     assert.deepStrictEqual(
       changes.map(([, , svg]) => svg),
-      ["clawd-idle-follow.svg", "clawd-idle-follow.svg"],
+      ["duck-idle-follow.svg", "duck-idle-follow.svg"],
       "with no choice set a theme may play its follow sprite from the pool"
     );
   });
 
   it("consumes forceEyeResend while resting on a non-follow visual", () => {
-    const theme = makeIdleTheme([{ file: "clawd-idle-look.svg", duration: 500 }]);
+    const theme = makeIdleTheme([{ file: "duck-idle-look.svg", duration: 500 }]);
     theme.timings.mouseIdleTimeout = 100000; // keep the pool out of this test
-    ctx = makeIdleVisualCtx(theme, "clawd-idle-reading.svg");
-    ctx.currentSvg = "clawd-idle-reading.svg";
+    ctx = makeIdleVisualCtx(theme, "duck-idle-reading.svg");
+    ctx.currentSvg = "duck-idle-reading.svg";
     // Production always exposes this; without it the pointer-bridge key is
     // never recorded and bounds get polled every tick for that reason instead.
     ctx.getAssetPointerPayload = () => ({ x: 0.5, y: 0.5, inside: true });
@@ -929,8 +929,8 @@ describe("tick default idle visual", () => {
   });
 
   it("never picks the chosen file from the pool; skips when it is the only entry", () => {
-    const theme = makeIdleTheme([{ file: "clawd-idle-reading.svg", duration: 500 }]);
-    ctx = makeIdleVisualCtx(theme, "clawd-idle-reading.svg");
+    const theme = makeIdleTheme([{ file: "duck-idle-reading.svg", duration: 500 }]);
+    ctx = makeIdleVisualCtx(theme, "duck-idle-reading.svg");
     tickApi = loader.initTick(ctx);
     tickApi.startMainTick();
 
@@ -939,8 +939,8 @@ describe("tick default idle visual", () => {
   });
 
   it("mouse movement during a pool play reverts to the chosen visual", () => {
-    const theme = makeIdleTheme([{ file: "clawd-idle-look.svg", duration: 5000 }]);
-    ctx = makeIdleVisualCtx(theme, "clawd-idle-reading.svg");
+    const theme = makeIdleTheme([{ file: "duck-idle-look.svg", duration: 5000 }]);
+    ctx = makeIdleVisualCtx(theme, "duck-idle-reading.svg");
     tickApi = loader.initTick(ctx);
     tickApi.startMainTick();
 
@@ -950,12 +950,12 @@ describe("tick default idle visual", () => {
 
     const changes = idleStateChanges();
     assert.ok(changes.length >= 2, "expected play + mouse-move revert");
-    assert.strictEqual(changes[changes.length - 1][2], "clawd-idle-reading.svg");
+    assert.strictEqual(changes[changes.length - 1][2], "duck-idle-reading.svg");
   });
 
   it("does not let a stale idle return timer replace a superseding visual generation", () => {
-    const theme = makeIdleTheme([{ file: "clawd-idle-look.svg", duration: 500 }]);
-    ctx = makeIdleVisualCtx(theme, "clawd-idle-reading.svg");
+    const theme = makeIdleTheme([{ file: "duck-idle-look.svg", duration: 500 }]);
+    ctx = makeIdleVisualCtx(theme, "duck-idle-reading.svg");
     ctx.isVisualGenerationCurrent = () => false;
     tickApi = loader.initTick(ctx);
     tickApi.startMainTick();
@@ -965,15 +965,15 @@ describe("tick default idle visual", () => {
 
     assert.deepStrictEqual(
       idleStateChanges().map(([, , svg]) => svg),
-      ["clawd-idle-look.svg"],
+      ["duck-idle-look.svg"],
       "a superseded idle beat must not fire its old return request"
     );
   });
 
   it("does not eye-track while resting on a non-follow visual", () => {
-    const theme = makeIdleTheme([{ file: "clawd-idle-look.svg", duration: 500 }]);
-    ctx = makeIdleVisualCtx(theme, "clawd-idle-reading.svg");
-    ctx.currentSvg = "clawd-idle-reading.svg";
+    const theme = makeIdleTheme([{ file: "duck-idle-look.svg", duration: 500 }]);
+    ctx = makeIdleVisualCtx(theme, "duck-idle-reading.svg");
+    ctx.currentSvg = "duck-idle-reading.svg";
     tickApi = loader.initTick(ctx);
     tickApi.startMainTick();
 
@@ -986,7 +986,7 @@ describe("tick default idle visual", () => {
   });
 
   it("still eye-tracks when the choice is unset (follow sprite)", () => {
-    const theme = makeIdleTheme([{ file: "clawd-idle-look.svg", duration: 500 }]);
+    const theme = makeIdleTheme([{ file: "duck-idle-look.svg", duration: 500 }]);
     ctx = makeIdleVisualCtx(theme);
     tickApi = loader.initTick(ctx);
     tickApi.startMainTick();
@@ -1011,7 +1011,7 @@ describe("tick conditional idle easter eggs", () => {
   let accessoryIds;
 
   const BENDER = {
-    file: "clawd-outlaw-bender.svg",
+    file: "duck-outlaw-bender.svg",
     duration: 15000,
     chance: 0.5,
     cooldownMs: 1800000,
@@ -1095,28 +1095,28 @@ describe("tick conditional idle easter eggs", () => {
   it("uses the reviewed 50% interval before the ordinary idle pool and returns naturally", () => {
     randomValues.push(0.499);
     start(makeEggTheme({
-      idleAnimations: [{ file: "clawd-idle-look.svg", duration: 500 }],
+      idleAnimations: [{ file: "duck-idle-look.svg", duration: 500 }],
     }));
 
     advanceUntil(() => idleFiles().length === 1);
-    assert.deepStrictEqual(idleFiles(), ["clawd-outlaw-bender.svg"]);
+    assert.deepStrictEqual(idleFiles(), ["duck-outlaw-bender.svg"]);
     assert.strictEqual(randomCalls, 1, "an egg hit must not also draw from the ordinary pool");
 
     mock.timers.tick(15000);
     assert.deepStrictEqual(idleFiles(), [
-      "clawd-outlaw-bender.svg",
-      "clawd-idle-follow.svg",
+      "duck-outlaw-bender.svg",
+      "duck-idle-follow.svg",
     ]);
   });
 
   it("falls through to the ordinary pool on an egg miss", () => {
     randomValues.push(0.5, 0);
     start(makeEggTheme({
-      idleAnimations: [{ file: "clawd-idle-look.svg", duration: 500 }],
+      idleAnimations: [{ file: "duck-idle-look.svg", duration: 500 }],
     }));
 
     advanceUntil(() => idleFiles().length === 1);
-    assert.deepStrictEqual(idleFiles(), ["clawd-idle-look.svg"]);
+    assert.deepStrictEqual(idleFiles(), ["duck-idle-look.svg"]);
     assert.strictEqual(randomCalls, 2, "miss and ordinary pool selection use separate draws");
   });
 
@@ -1147,7 +1147,7 @@ describe("tick conditional idle easter eggs", () => {
     randomValues.push(0, 0);
     start(makeEggTheme({ eggs: [egg] }));
     advanceUntil(() => idleFiles().length === 1);
-    assert.deepStrictEqual(idleFiles(), ["clawd-outlaw-bender.svg"]);
+    assert.deepStrictEqual(idleFiles(), ["duck-outlaw-bender.svg"]);
 
     cursor = { x: 80, y: 80 };
     mock.timers.tick(2000);
@@ -1156,11 +1156,11 @@ describe("tick conditional idle easter eggs", () => {
     mock.timers.tick(9000);
     cursor = { x: 90, y: 90 };
     advanceUntil(
-      () => idleFiles().filter((file) => file === "clawd-outlaw-bender.svg").length === 2,
+      () => idleFiles().filter((file) => file === "duck-outlaw-bender.svg").length === 2,
       { limit: 2000 }
     );
     assert.strictEqual(
-      idleFiles().filter((file) => file === "clawd-outlaw-bender.svg").length,
+      idleFiles().filter((file) => file === "duck-outlaw-bender.svg").length,
       2
     );
     assert.strictEqual(randomCalls, 2);
@@ -1176,15 +1176,15 @@ describe("tick conditional idle easter eggs", () => {
 
     advanceUntil(() => idleFiles().length === 1);
     mock.timers.tick(4000);
-    assert.deepStrictEqual(idleFiles(), ["clawd-outlaw-bender.svg"]);
+    assert.deepStrictEqual(idleFiles(), ["duck-outlaw-bender.svg"]);
 
     ctx.pendingVisualSettlements[0]({ status: "committed", visualGeneration: 2 });
     mock.timers.tick(999);
-    assert.deepStrictEqual(idleFiles(), ["clawd-outlaw-bender.svg"]);
+    assert.deepStrictEqual(idleFiles(), ["duck-outlaw-bender.svg"]);
     mock.timers.tick(1);
     assert.deepStrictEqual(idleFiles(), [
-      "clawd-outlaw-bender.svg",
-      "clawd-idle-follow.svg",
+      "duck-outlaw-bender.svg",
+      "duck-idle-follow.svg",
     ]);
   });
 
@@ -1201,7 +1201,7 @@ describe("tick conditional idle easter eggs", () => {
     mock.timers.tick(100);
     ctx.autoSettleVisualRequests = true;
     advanceUntil(
-      () => idleFiles().filter((file) => file === "clawd-outlaw-bender.svg").length === 2,
+      () => idleFiles().filter((file) => file === "duck-outlaw-bender.svg").length === 2,
       { limit: 2000 }
     );
     assert.strictEqual(randomCalls, 2);
@@ -1237,10 +1237,10 @@ describe("tick conditional idle easter eggs", () => {
     randomValues.push(0);
     start();
     advanceUntil(() => idleFiles().length === 1);
-    assert.deepStrictEqual(idleFiles(), ["clawd-outlaw-bender.svg"]);
+    assert.deepStrictEqual(idleFiles(), ["duck-outlaw-bender.svg"]);
 
     ctx.currentState = "working";
     mock.timers.tick(16000);
-    assert.deepStrictEqual(idleFiles(), ["clawd-outlaw-bender.svg"]);
+    assert.deepStrictEqual(idleFiles(), ["duck-outlaw-bender.svg"]);
   });
 });

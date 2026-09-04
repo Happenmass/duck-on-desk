@@ -1,11 +1,11 @@
 "use strict";
 
 const {
-  CLAWD_SERVER_HEADER,
-  CLAWD_SERVER_ID,
-  CLAWD_HOOK_PID_HEADER,
-  CLAWD_LEGACY_PROCESS_CACHE_HEADER,
-  CLAWD_PROCESS_INSTANCE_HEADER,
+  DUCK_SERVER_HEADER,
+  DUCK_SERVER_ID,
+  DUCK_HOOK_PID_HEADER,
+  DUCK_LEGACY_PROCESS_CACHE_HEADER,
+  DUCK_PROCESS_INSTANCE_HEADER,
 } = require("../hooks/server-config");
 const {
   assessWindowsProcessChainRequest,
@@ -72,7 +72,7 @@ function shouldBypassCCBubble(ctx, interaction, agentId) {
 // surfaces that as source:"subagent". When the per-agent subagent sub-gate is
 // off, dropping the HTTP connection lets CC fall back to its native flow
 // (terminal chat prompt, or the background-subagent auto-deny) exactly as if
-// Clawd weren't installed — never answer allow/deny on the user's behalf.
+// Duck weren't installed — never answer allow/deny on the user's behalf.
 // ExitPlanMode / AskUserQuestion stay exempt for the same reason they're
 // exempt from shouldBypassCCBubble above.
 function shouldBypassCCSubagentBubble(ctx, interaction, agentId, hookIdentity) {
@@ -250,7 +250,7 @@ function buildCodexPermissionSessionOptions(data) {
 }
 
 function sendCodexPermissionNoDecision(res) {
-  res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+  res.writeHead(204, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
   res.end();
 }
 
@@ -263,13 +263,13 @@ function sendPiPermissionAllow(res) {
   });
   res.writeHead(200, {
     "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
+    [DUCK_SERVER_HEADER]: DUCK_SERVER_ID,
   });
   res.end(responseBody);
 }
 
 function sendGenericPermissionNoDecision(res) {
-  res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+  res.writeHead(204, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
   res.end();
 }
 
@@ -364,7 +364,7 @@ function handlePermissionPost(req, res, options) {
     }
     const { agentId } = hookIdentity;
     if (hasPermissionEventDiscriminator && !isOpencodeFamily(agentId)) {
-      res.writeHead(200, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+      res.writeHead(200, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
       res.end("ok");
       ctx.permLog(`permission lifecycle no-op: unsupported agent=${agentId || "unknown"}`);
       return;
@@ -413,7 +413,7 @@ function handlePermissionPost(req, res, options) {
       // leave the TUI hanging until timeout. Instead we route DND
       // through the same reverse bridge the plugin uses for replies.
       if (isOpencodeFamily(agentId)) {
-        res.writeHead(200, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+        res.writeHead(200, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
         res.end("ok");
 
         if (hasPermissionEventDiscriminator) {
@@ -488,7 +488,7 @@ function handlePermissionPost(req, res, options) {
         ctx.permLog(`${agentId} perm: tool=${toolName} session=${sessionId} req=${requestId} bridge=${bridgeUrl} always=${alwaysCandidates.length}`);
 
         // bridge_url/bridge_token are required — this is the reverse
-        // channel Clawd uses to send the decision back to the plugin,
+        // channel Duck uses to send the decision back to the plugin,
         // which then calls the host's in-process Hono route. Without it
         // we have no way to resolve the pending permission.
         if (!requestId || !bridgeUrl || !bridgeToken) {
@@ -636,8 +636,8 @@ function handlePermissionPost(req, res, options) {
             effectivePlatform,
             // All headless paths returned before this resolver is invoked.
             effectiveHeadless: false,
-            hookPidHeader: requestHeaders[CLAWD_HOOK_PID_HEADER.toLowerCase()],
-            instanceGeneration: requestHeaders[CLAWD_PROCESS_INSTANCE_HEADER.toLowerCase()],
+            hookPidHeader: requestHeaders[DUCK_HOOK_PID_HEADER.toLowerCase()],
+            instanceGeneration: requestHeaders[DUCK_PROCESS_INSTANCE_HEADER.toLowerCase()],
           });
           if (!assessment.eligible || typeof resolveWindowsProcessMetadata !== "function") {
             return codexSessionOptions;
@@ -681,7 +681,7 @@ function handlePermissionPost(req, res, options) {
               errorKind: result && result.errorKind || null,
               depth: result && result.depth || 0,
               durationMs: result && result.durationMs || 0,
-              cacheSource: requestHeaders[CLAWD_LEGACY_PROCESS_CACHE_HEADER.toLowerCase()] || null,
+              cacheSource: requestHeaders[DUCK_LEGACY_PROCESS_CACHE_HEADER.toLowerCase()] || null,
               rawEditor: result && result.rawEditor || null,
               effectiveEditor: candidateMetadata.editor,
               legacyMetadata,
@@ -826,10 +826,10 @@ function handlePermissionPost(req, res, options) {
       }
 
       // ── Pi extension legacy PermissionRequest branch ──
-      // Pi is state-only in Clawd. Current extensions never POST /permission.
+      // Pi is state-only in Duck. Current extensions never POST /permission.
       // A pre-state-only managed extension may still be loaded in an existing
       // Pi process, so return "allow" to preserve Pi's native YOLO behavior
-      // instead of turning Clawd fallback into a terminal confirmation prompt.
+      // instead of turning Duck fallback into a terminal confirmation prompt.
       if (agentId === "pi") {
         const toolName = typeof data.tool_name === "string" && data.tool_name ? data.tool_name : "unknown";
         if (ctx.doNotDisturb) {

@@ -1,6 +1,6 @@
 # macOS Developer ID 签名与公证
 
-Clawd on Desk 通过 GitHub Releases 直接分发，不走 Mac App Store。正式
+Duck on Desk 通过 GitHub Releases 直接分发，不走 Mac App Store。正式
 macOS 版本需要用 `Developer ID Application` 证书签名，并由 Apple 公证。
 
 Apple Developer Program 会员生效只是前提，不代表证书或 CI 凭据已经生成。
@@ -23,7 +23,7 @@ Apple Developer Program 会员生效只是前提，不代表证书或 CI 凭据�
 1. 打开“钥匙串访问”（`/Applications/Utilities/Keychain Access.app`）。
 2. 菜单选择“钥匙串访问 → 证书助理 → 从证书颁发机构请求证书”。
 3. “用户电子邮件地址”填写 Apple Developer 账号邮箱。
-4. “常用名称”填写便于识别的名字，例如 `Clawd Release Key`。
+4. “常用名称”填写便于识别的名字，例如 `Duck Release Key`。
 5. “CA 电子邮件地址”留空，选择“存储到磁盘”。
 6. 保存生成的 `.certSigningRequest` 文件。
 
@@ -67,7 +67,7 @@ Developer ID Application: <姓名> (<TEAM_ID>)
 2. 如果尚未启用 API，先由 Account Holder 在 Users and Access → Integrations
    请求 App Store Connect API 访问。
 3. 进入 Team Keys，点击 Generate API Key（或 `+`）。
-4. 名称可填 `Clawd GitHub Release`，Access 选择 **App Manager**。
+4. 名称可填 `Duck GitHub Release`，Access 选择 **App Manager**。
 5. 生成后记录 **Issuer ID** 和 **Key ID**。
 6. 下载 `AuthKey_<KEY_ID>.p8`；Apple 只允许下载一次。
 
@@ -78,7 +78,7 @@ Developer Team ID、Issuer ID 和 Key ID 是三个不同的值，不能混用。
 把 Team API Key 存进本机钥匙串；命令会在线校验凭据：
 
 ```bash
-xcrun notarytool store-credentials "clawd-notary" \
+xcrun notarytool store-credentials "duck-notary" \
   --key "/绝对路径/AuthKey_<KEY_ID>.p8" \
   --key-id "<KEY_ID>" \
   --issuer "<ISSUER_ID>"
@@ -87,7 +87,7 @@ xcrun notarytool store-credentials "clawd-notary" \
 只构建当前常用的 Apple Silicon 版本进行首次验证：
 
 ```bash
-APPLE_KEYCHAIN_PROFILE=clawd-notary \
+APPLE_KEYCHAIN_PROFILE=duck-notary \
   npx electron-builder --mac dmg:arm64 zip:arm64 --publish never \
   -c.mac.identity="Developer ID Application"
 ```
@@ -97,10 +97,10 @@ APPLE_KEYCHAIN_PROFILE=clawd-notary \
 
 ```bash
 codesign --verify --deep --strict --verbose=2 \
-  "dist/mac-arm64/Clawd on Desk.app"
+  "dist/mac-arm64/Duck on Desk.app"
 spctl --assess --type execute --verbose=4 \
-  "dist/mac-arm64/Clawd on Desk.app"
-xcrun stapler validate "dist/mac-arm64/Clawd on Desk.app"
+  "dist/mac-arm64/Duck on Desk.app"
+xcrun stapler validate "dist/mac-arm64/Duck on Desk.app"
 ```
 
 预期 `spctl` 显示 `accepted`，来源为 `Notarized Developer ID`，`stapler`
@@ -164,8 +164,8 @@ base64 -i "/绝对路径/AuthKey_<KEY_ID>.p8" | pbcopy
 5. 确认无需在“隐私与安全”中手动放行，再执行：
 
 ```bash
-spctl --assess --type execute --verbose=4 "/Applications/Clawd on Desk.app"
-xcrun stapler validate "/Applications/Clawd on Desk.app"
+spctl --assess --type execute --verbose=4 "/Applications/Duck on Desk.app"
+xcrun stapler validate "/Applications/Duck on Desk.app"
 ```
 
 6. 旧版 DMG 没有 ZIP 更新载荷，不能自动升级到第一个 updater-capable 版本；

@@ -51,7 +51,7 @@ function assertDeclaredTargetsExist(themeId, raw) {
 describe("built-in accessory capability contracts", () => {
   it("keeps raw metadata and normalized runtime capability aligned", () => {
     for (const [themeId, expected] of [
-      ["clawd", true],
+      ["duck", true],
       ["cloudling", true],
       ["calico", false],
     ]) {
@@ -66,8 +66,8 @@ describe("built-in accessory capability contracts", () => {
     }
   });
 
-  it("projects every Clawd visual usage and verifies its exact dynamic targets", () => {
-    const { raw, normalized } = capabilityPair("clawd");
+  it("projects every Duck visual usage and verifies its exact dynamic targets", () => {
+    const { raw, normalized } = capabilityPair("duck");
     const usages = projectThemeVisualUsages(raw);
     const files = collectRequiredAssetFiles(raw);
 
@@ -78,19 +78,19 @@ describe("built-in accessory capability contracts", () => {
       new Set(fs.readdirSync(path.join(ROOT, "assets", "svg")).filter((file) => file.endsWith(".svg"))),
       "every SVG exposed by the animation picker must have an audited attachment policy"
     );
-    assert.ok(files.includes("clawd-outlaw-bender.svg"));
-    assert.ok(files.includes("clawd-working-typing-boss.svg"));
-    assert.ok(!usages.some((usage) => usage.file === "clawd-working-typing-boss.svg"));
+    assert.ok(files.includes("duck-outlaw-bender.svg"));
+    assert.ok(files.includes("duck-working-typing-boss.svg"));
+    assert.ok(!usages.some((usage) => usage.file === "duck-working-typing-boss.svg"));
     assert.ok(!usages.some((usage) => usage.source === "rendering.objectChannelFiles"));
     assert.strictEqual(normalized._capabilities.accessories, true);
-    assertDeclaredTargetsExist("clawd", raw);
+    assertDeclaredTargetsExist("duck", raw);
 
     for (const hidden of [
-      "clawd-error.svg",
-      "clawd-collapse-sleep.svg",
-      "clawd-wake.svg",
-      "clawd-mini-enter-sleep.svg",
-      "clawd-mini-sleep.svg",
+      "duck-error.svg",
+      "duck-collapse-sleep.svg",
+      "duck-wake.svg",
+      "duck-mini-enter-sleep.svg",
+      "duck-mini-sleep.svg",
     ]) {
       assert.strictEqual(raw.customization.accessories.files[hidden].visibility, "hidden");
       assert.ok(usages.some((usage) => usage.file === hidden), `${hidden} should be reachable`);
@@ -99,7 +99,7 @@ describe("built-in accessory capability contracts", () => {
     const buildingTier = raw.workingTiers.find(({ minSessions }) => minSessions === 3);
     assert.deepStrictEqual(buildingTier, {
       minSessions: 3,
-      file: "clawd-working-building.svg",
+      file: "duck-working-building.svg",
     });
     const buildingAccessory =
       raw.customization.accessories.files[buildingTier.file];
@@ -116,7 +116,7 @@ describe("built-in accessory capability contracts", () => {
     const headphonesTier = raw.workingTiers.find(({ minSessions }) => minSessions === 2);
     assert.deepStrictEqual(headphonesTier, {
       minSessions: 2,
-      file: "clawd-headphones-groove.svg",
+      file: "duck-headphones-groove.svg",
     });
     assert.deepStrictEqual(
       raw.customization.accessories.files[headphonesTier.file],
@@ -130,32 +130,32 @@ describe("built-in accessory capability contracts", () => {
         `${tier.minSessions}-session working accessories should remain visible`
       );
     }
-    assert.deepStrictEqual(raw.fileHitBoxes["clawd-working-typing.svg"], {
+    assert.deepStrictEqual(raw.fileHitBoxes["duck-working-typing.svg"], {
       x: -2, y: -7, w: 20, h: 24,
     });
     assert.strictEqual(
-      raw.fileHitBoxes["clawd-headphones-groove.svg"],
+      raw.fileHitBoxes["duck-headphones-groove.svg"],
       undefined,
       "the 2-session base hitbox must not reserve empty accessory space"
     );
-    assert.deepStrictEqual(raw.fileHitBoxes["clawd-working-building.svg"], {
+    assert.deepStrictEqual(raw.fileHitBoxes["duck-working-building.svg"], {
       x: -1, y: -2, w: 17, h: 19,
     });
 
-    const sleeping = raw.customization.accessories.files["clawd-sleeping.svg"];
+    const sleeping = raw.customization.accessories.files["duck-sleeping.svg"];
     assert.deepStrictEqual(sleeping.staticFrame, { cx: 7.5, baseY: 10, width: 16 });
     assert.strictEqual(sleeping.followTarget.id, "torso-sploot");
     assert.deepStrictEqual(sleeping.followTarget.frame, sleeping.staticFrame);
   });
 
-  it("anchors Clawd idle accessories inside the breathing transform", () => {
-    const raw = readRawTheme("clawd");
+  it("anchors Duck idle accessories inside the breathing transform", () => {
+    const raw = readRawTheme("duck");
     const idleDescriptor =
-      raw.customization.accessories.files["clawd-idle-follow.svg"];
+      raw.customization.accessories.files["duck-idle-follow.svg"];
     assert.strictEqual(idleDescriptor.followTarget.id, "torso");
 
     const source = fs.readFileSync(
-      path.join(ROOT, "assets", "svg", "clawd-idle-follow.svg"),
+      path.join(ROOT, "assets", "svg", "duck-idle-follow.svg"),
       "utf8"
     );
     assert.match(

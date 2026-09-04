@@ -24,7 +24,7 @@ test("outlaw bender completes and restarts in Electron's production object SVG c
   }
 
   const fixture = path.join(__dirname, "fixtures", "outlaw-bender-electron.js");
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-bender-electron-"));
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "duck-bender-electron-"));
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
   const args = ["--disable-gpu"];

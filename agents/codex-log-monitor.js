@@ -202,7 +202,7 @@ class CodexLogMonitor {
     if (this._interval) return;
     this._startedAtMs = Date.now();
     // The agent gate can stop() then start() the SAME instance (disable →
-    // re-enable within one Clawd process run) — each real start() must get
+    // re-enable within one Duck process run) — each real start() must get
     // its own recovery sweep, not just the very first one this instance ever
     // saw.
     this._didInitialRecoveryScan = false;

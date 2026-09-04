@@ -2,7 +2,7 @@
   <defs>
     <style>
       /* ═══ 14s story: idle 挥手 → 抓书 + 戴眼镜 → 读 (眼镜下滑+推回) → 书+眼镜同步退场
-         在 clawd-idle-reading.svg 基础上加:
+         在 duck-idle-reading.svg 基础上加:
          1. 圆框眼镜 (跟书同步 fade in/out + 读书慢下滑 + 推回过冲)
          2. 双手 L 阴影 (clip 到 torso, 跟手 transform 同步, opacity 窗口对齐读书阶段)
          3. z-order 重排: 手阴影 → 眼睛 → 眼镜 → 书 → 手
@@ -185,7 +185,7 @@
   </g>
 
   <g class="body-nod">
-    <g id="accessory-anchor" class="breathe">
+    <g class="breathe">
 
       <!-- 腿 + torso -->
       <g fill="#DE886D">

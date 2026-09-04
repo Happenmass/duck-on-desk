@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Clawd Desktop Pet — Hook Installer
+// Duck Desktop Pet — Hook Installer
 // Safely merges hook commands into ~/.claude/settings.json
 // Does NOT overwrite existing hooks — appends to arrays
 
@@ -481,7 +481,7 @@ async function getClaudeVersionAsync(options = {}) {
   return cachedClaudeVersionPromise;
 }
 
-const MARKER = "clawd-hook.js";
+const MARKER = "duck-hook.js";
 const AUTO_START_MARKER = "auto-start.js";
 const LEGACY_AUTO_START_MARKER = "auto-start.sh";
 const HTTP_MARKER = PERMISSION_PATH;
@@ -494,7 +494,7 @@ const AUTO_START_HOOK_TIMEOUT_SECONDS = 15;
 // (src/claude-hook-health.js) compare against. Computing this in two places
 // would let the installer and the health inspector silently drift apart.
 function getClaudeHookScriptPath() {
-  return asarUnpackedPath(path.resolve(__dirname, "clawd-hook.js").replace(/\\/g, "/"));
+  return asarUnpackedPath(path.resolve(__dirname, "duck-hook.js").replace(/\\/g, "/"));
 }
 
 function getClaudeAutoStartScriptPath() {
@@ -527,7 +527,7 @@ function buildCommandHookSpec(nodeBin, scriptPath, args = "", options = {}) {
   };
 
   // Remote hook deployment targets POSIX shells over SSH and relies on bash-style
-  // env-prefix syntax (`CLAWD_REMOTE=1 cmd`). Keep that legacy form even if tests
+  // env-prefix syntax (`DUCK_REMOTE=1 cmd`). Keep that legacy form even if tests
   // force win32 here; Windows + remote is not a supported deployment target.
   if (options.remote) {
     return withHookOptions({
@@ -565,13 +565,13 @@ function buildCommandHookSpec(nodeBin, scriptPath, args = "", options = {}) {
 }
 
 function buildRemoteHookEnvPrefix() {
-  return "CLAWD_REMOTE=1";
+  return "DUCK_REMOTE=1";
 }
 
 function resolveRemotePermissionTransport(options = {}) {
   if (options.remote !== true) return "path";
   const value = options.remotePermissionTransport
-    || (options.env || process.env).CLAWD_REMOTE_PERMISSION_TRANSPORT
+    || (options.env || process.env).DUCK_REMOTE_PERMISSION_TRANSPORT
     || "path";
   return value === "query" || value === "native" ? value : "path";
 }
@@ -759,16 +759,16 @@ function foldManagedStateHooks(entries, settings, event, expectedHook, options =
   };
 }
 
-function isClawdPermissionUrl(url) {
+function isDuckPermissionUrl(url) {
   return isManagedPermissionUrl(url);
 }
 
-function isClawdPermissionHook(entry) {
+function isDuckPermissionHook(entry) {
   return !!entry
     && typeof entry === "object"
     && entry.type === "http"
     && typeof entry.url === "string"
-    && isClawdPermissionUrl(entry.url);
+    && isDuckPermissionUrl(entry.url);
 }
 
 function removeMatchingCommandHooks(entries, predicate) {
@@ -831,7 +831,7 @@ function removeMatchingHttpHooks(entries, predicate) {
       continue;
     }
 
-    if (isClawdPermissionHook(entry) && predicate(entry)) {
+    if (isDuckPermissionHook(entry) && predicate(entry)) {
       removed++;
       changed = true;
       continue;
@@ -843,7 +843,7 @@ function removeMatchingHttpHooks(entries, predicate) {
     }
 
     const nextHooks = entry.hooks.filter((hook) => {
-      if (!isClawdPermissionHook(hook)) return true;
+      if (!isDuckPermissionHook(hook)) return true;
       if (!predicate(hook)) return true;
       removed++;
       changed = true;
@@ -871,7 +871,7 @@ function syncHttpHook(entries, expectedUrl) {
   if (!Array.isArray(entries)) return { found, changed };
   for (const entry of entries) {
     if (!entry || typeof entry !== "object") continue;
-    if (isClawdPermissionHook(entry)) {
+    if (isDuckPermissionHook(entry)) {
       found = true;
       if (entry.url !== expectedUrl) {
         entry.url = expectedUrl;
@@ -880,7 +880,7 @@ function syncHttpHook(entries, expectedUrl) {
     }
     if (!Array.isArray(entry.hooks)) continue;
     for (const hook of entry.hooks) {
-      if (!isClawdPermissionHook(hook)) continue;
+      if (!isDuckPermissionHook(hook)) continue;
       found = true;
       if (hook.url !== expectedUrl) {
         hook.url = expectedUrl;
@@ -903,7 +903,7 @@ const HTTP_HOOKS = {
     matcher: "",
     hook: {
       type: "http",
-      url: "http://127.0.0.1:23333/permission",
+      url: "http://127.0.0.1:24333/permission",
       timeout: 600,
     },
   },
@@ -962,7 +962,7 @@ function reconcileVersionedHooks(settings, supportedEvents, versionInfo) {
 }
 
 /**
- * Register Clawd hooks into ~/.claude/settings.json.
+ * Register Duck hooks into ~/.claude/settings.json.
  * Safe to call multiple times — skips already-registered hooks.
  * @param {object} [options]
  * @param {boolean} [options.silent] - suppress console output (for auto-registration)
@@ -971,7 +971,7 @@ function reconcileVersionedHooks(settings, supportedEvents, versionInfo) {
  * @param {{ version: string|null, source: string|null, status: "known"|"unknown" }} [options.claudeVersionInfo]
  * @returns {{ added: number, skipped: number, updated: number, removed: number, version: string|null, versionStatus: "known"|"unknown", versionSource: string|null }}
  */
-// WSL detection for the hook command format. CLAWD_WSL_DISTRO is injected
+// WSL detection for the hook command format. DUCK_WSL_DISTRO is injected
 // by the Windows-side one-click deploy; WSL_DISTRO_NAME is set by WSL init
 // itself, so a manual `node install.js` inside WSL also gets the plain
 // command format (the quoted form silently fails there — see
@@ -979,7 +979,7 @@ function reconcileVersionedHooks(settings, supportedEvents, versionInfo) {
 // environment cannot flip the format.
 function resolveInstallWslDistro(options = {}) {
   if (options.wslDistro) return options.wslDistro;
-  if (process.env.CLAWD_WSL_DISTRO) return process.env.CLAWD_WSL_DISTRO;
+  if (process.env.DUCK_WSL_DISTRO) return process.env.DUCK_WSL_DISTRO;
   if (process.platform === "linux" && process.env.WSL_DISTRO_NAME) {
     return process.env.WSL_DISTRO_NAME;
   }
@@ -1296,7 +1296,7 @@ function registerHooks(options = {}) {
   if (!options.silent) {
     const versionLabel = versionInfo.status === "known" ? versionInfo.version : "unknown";
     const versionSource = versionInfo.source || "unavailable";
-    console.log(`Clawd hooks installed to ${writePath}`);
+    console.log(`Duck hooks installed to ${writePath}`);
     console.log(`  Claude Code version: ${versionLabel}`);
     console.log(`  Detection source: ${versionSource}`);
     if (versionInfo.status === "unknown") {
@@ -1589,7 +1589,7 @@ async function registerHooksAsync(options = {}) {
   if (!options.silent) {
     const versionLabel = versionInfo.status === "known" ? versionInfo.version : "unknown";
     const versionSource = versionInfo.source || "unavailable";
-    console.log(`Clawd hooks installed to ${writePath}`);
+    console.log(`Duck hooks installed to ${writePath}`);
     console.log(`  Claude Code version: ${versionLabel}`);
     console.log(`  Detection source: ${versionSource}`);
     if (versionInfo.status === "unknown") {
@@ -1651,7 +1651,7 @@ function unregisterHooks(options = {}) {
     );
     const httpResult = removeMatchingHttpHooks(
       commandResult.entries,
-      (hook) => isClawdPermissionHook(hook)
+      (hook) => isDuckPermissionHook(hook)
     );
 
     if (!commandResult.changed && !httpResult.changed) continue;
@@ -1700,7 +1700,7 @@ async function unregisterHooksAsync(options = {}) {
     );
     const httpResult = removeMatchingHttpHooks(
       commandResult.entries,
-      (hook) => isClawdPermissionHook(hook)
+      (hook) => isDuckPermissionHook(hook)
     );
 
     if (!commandResult.changed && !httpResult.changed) continue;
@@ -1800,7 +1800,7 @@ function hasClaudeSettingsDir(homeDir, options = {}) {
 // one-liners - embedding one inside another quoted command is exactly the
 // escaping swamp buildPortableStatuslineCommand exists to avoid.
 function statuslineChainSidecarPath(homeDir) {
-  return path.join(resolveClaudeHooksDir({ homeDir }), "clawd-statusline-chain.json");
+  return path.join(resolveClaudeHooksDir({ homeDir }), "duck-statusline-chain.json");
 }
 
 function readChainSidecarStatusLine(sidecarPath) {
@@ -1827,7 +1827,7 @@ function registerClaudeStatusline(options = {}) {
   const writePath = resolveWritePath(settingsPath);
 
   if (!options.settingsPath && !hasClaudeSettingsDir(homeDir, options)) {
-    if (!options.silent) console.log("Clawd: Claude Code settings not found - skipping statusline registration");
+    if (!options.silent) console.log("Duck: Claude Code settings not found - skipping statusline registration");
     return { installed: false, changed: false, skippedExisting: false, settingsPath };
   }
 
@@ -1848,10 +1848,10 @@ function registerClaudeStatusline(options = {}) {
   const chainRequested = options.remote === true && options.chainExisting === true;
   const chainExplicitlyDisabled = options.remote === true && options.chainExisting === false;
   const sidecarPath = options.chainSidecarPath
-    || path.join(resolveClaudeHooksDir({ ...options, homeDir }), "clawd-statusline-chain.json");
+    || path.join(resolveClaudeHooksDir({ ...options, homeDir }), "duck-statusline-chain.json");
 
   if (existing && !existingIsOurs && !chainRequested) {
-    if (!options.silent) console.log(`Clawd: existing Claude Code statusline detected at ${settingsPath} - leaving it in place`);
+    if (!options.silent) console.log(`Duck: existing Claude Code statusline detected at ${settingsPath} - leaving it in place`);
     return { installed: true, changed: false, skippedExisting: true, settingsPath };
   }
 
@@ -1872,7 +1872,7 @@ function registerClaudeStatusline(options = {}) {
       settings.statusLine = chainedOriginal;
       writeJsonAtomic(writePath, settings);
       try { fs.unlinkSync(sidecarPath); } catch {}
-      if (!options.silent) console.log(`Clawd: restored existing Claude Code statusline at ${settingsPath}`);
+      if (!options.silent) console.log(`Duck: restored existing Claude Code statusline at ${settingsPath}`);
       return {
         installed: true,
         changed: true,
@@ -1902,7 +1902,7 @@ function registerClaudeStatusline(options = {}) {
   // Remote installs (install.js --remote, run ON the remote from
   // ~/.claude/hooks/) target POSIX shells only (deploy aborts on cmd.exe),
   // so the bash-style env prefix is safe - same convention as
-  // buildCommandHookSpec's remote hook form. CLAWD_REMOTE=1 is what makes
+  // buildCommandHookSpec's remote hook form. DUCK_REMOTE=1 is what makes
   // claude-statusline.js stamp body.host so its best-effort quota POSTs ride
   // the reverse tunnel onto the right sessions.
   // nodeBin needs no remote resolution here: this code already runs under
@@ -1921,7 +1921,7 @@ function registerClaudeStatusline(options = {}) {
   }
 
   if (!options.silent) {
-    console.log(`Clawd Claude Code statusline -> ${settingsPath}${changed ? " (updated)" : " (already up to date)"}${chainActive ? " (chained)" : ""}`);
+    console.log(`Duck Claude Code statusline -> ${settingsPath}${changed ? " (updated)" : " (already up to date)"}${chainActive ? " (chained)" : ""}`);
   }
 
   return { installed: true, changed, skippedExisting: false, chained: chainActive, settingsPath };
@@ -1950,7 +1950,7 @@ function unregisterClaudeStatusline(options = {}) {
   // sidecar instead of leaving the slot empty; the sidecar is consumed
   // either way so no stale copy outlives the registration it served.
   const sidecarPath = options.chainSidecarPath
-    || path.join(resolveClaudeHooksDir({ ...options, homeDir }), "clawd-statusline-chain.json");
+    || path.join(resolveClaudeHooksDir({ ...options, homeDir }), "duck-statusline-chain.json");
   const chained = existing.command.includes(STATUSLINE_CHAIN_FLAG)
     ? readChainSidecarStatusLine(sidecarPath)
     : null;
@@ -1959,7 +1959,7 @@ function unregisterClaudeStatusline(options = {}) {
   const backupPath = writeJsonAtomicWithBackup(writePath, settings, options);
   try { fs.unlinkSync(sidecarPath); } catch {}
   if (!options.silent) {
-    console.log(`Clawd Claude Code statusline ${chained ? "restored chained original" : "removed"} -> ${settingsPath}`);
+    console.log(`Duck Claude Code statusline ${chained ? "restored chained original" : "removed"} -> ${settingsPath}`);
   }
   const result = { installed: true, removed: 1, changed: true, settingsPath };
   if (chained) result.restoredChained = true;
@@ -2011,8 +2011,8 @@ module.exports = {
     readClaudeVersionFallbackAsync,
     getClaudeVersion,
     getClaudeVersionAsync,
-    isClawdPermissionHook,
-    isClawdPermissionUrl,
+    isDuckPermissionHook,
+    isDuckPermissionUrl,
     removeMatchingHttpHooks,
     versionLessThan,
     removeMatchingCommandHooks,
@@ -2043,7 +2043,7 @@ if (require.main === module) {
     registerHooks({ remote });
     if (installStatusline) {
       // Remote installs register the statusline automatically (with the
-      // CLAWD_REMOTE=1 env prefix) so quota can ride the SSH tunnel. Local
+      // DUCK_REMOTE=1 env prefix) so quota can ride the SSH tunnel. Local
       // debug/reinstall commands require --statusline and otherwise preserve
       // the default-off collection preference and the user's visible slot.
       registerClaudeStatusline({ remote, chainExisting });

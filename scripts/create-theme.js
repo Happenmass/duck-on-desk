@@ -24,7 +24,7 @@ function humanizeThemeId(themeId) {
 }
 
 function guessAuthor(env = process.env) {
-  return env.CLAWD_THEME_AUTHOR
+  return env.DUCK_THEME_AUTHOR
     || env.GIT_AUTHOR_NAME
     || env.GIT_COMMITTER_NAME
     || env.USERNAME
@@ -36,13 +36,13 @@ function getDefaultThemesRoot(platform = process.platform, env = process.env, ho
   const pathApi = platform === "win32" ? path.win32 : path.posix;
   if (platform === "win32") {
     const appData = env.APPDATA || pathApi.join(homeDir, "AppData", "Roaming");
-    return pathApi.join(appData, "clawd-on-desk", "themes");
+    return pathApi.join(appData, "duck-on-desk", "themes");
   }
   if (platform === "darwin") {
-    return pathApi.join(homeDir, "Library", "Application Support", "clawd-on-desk", "themes");
+    return pathApi.join(homeDir, "Library", "Application Support", "duck-on-desk", "themes");
   }
   const configHome = env.XDG_CONFIG_HOME || pathApi.join(homeDir, ".config");
-  return pathApi.join(configHome, "clawd-on-desk", "themes");
+  return pathApi.join(configHome, "duck-on-desk", "themes");
 }
 
 function parseArgs(argv) {
@@ -190,7 +190,7 @@ function formatSuccess(result) {
     "  1. Edit theme.json metadata and file mappings",
     "  2. Replace assets/idle-follow.svg and add your own assets/",
     `  3. Validate with: node scripts/validate-theme.js ${result.targetDir}`,
-    "  4. Restart Clawd and select the theme from Settings -> Theme",
+    "  4. Restart Duck and select the theme from Settings -> Theme",
   ].join("\n");
 }
 

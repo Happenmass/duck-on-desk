@@ -73,7 +73,7 @@ function loadSettingsContributors(root) {
   const context = {};
   context.globalThis = context;
   vm.runInNewContext(source, context, { filename: "settings-i18n.js" });
-  return Array.from(context.ClawdSettingsI18n.CONTRIBUTORS || []);
+  return Array.from(context.DuckSettingsI18n.CONTRIBUTORS || []);
 }
 
 function verifyReleaseContributors(options = {}) {

@@ -75,7 +75,7 @@ function querySupersetWorkspaceId(dbPath, cwd, callback) {
 
 module.exports = function initFocus(ctx) {
 
-const FOCUS_RESULT_PREFIX = "__CLAWD_FOCUS_RESULT__ ";
+const FOCUS_RESULT_PREFIX = "__DUCK_FOCUS_RESULT__ ";
 
 const PS_FOCUS_ADDTYPE = `
 Add-Type @"
@@ -206,7 +206,7 @@ public class WinFocus {
 }
 "@
 
-function Write-ClawdFocusResult([string]$token, [string]$reason, [IntPtr]$targetHwnd, [IntPtr]$foregroundHwnd, [bool]$confirmed) {
+function Write-DuckFocusResult([string]$token, [string]$reason, [IntPtr]$targetHwnd, [IntPtr]$foregroundHwnd, [bool]$confirmed) {
     if (-not $token) { $token = '' }
     if (-not $reason) { $reason = 'unknown' }
     $status = if ($confirmed) { 'confirmed' } else { 'unconfirmed' }
@@ -270,13 +270,13 @@ function makeFocusCmd(sourcePid, cwdCandidates, focusCacheKey = null, wtHwnd = n
             if ($matches.Count -eq 1) {
                 [WinFocus]::Focus($matches[0])
                 $selectedTargetHwnd = $matches[0]
-                Save-ClawdFocusCache $matches[0]
+                Save-DuckFocusCache $matches[0]
                 $focused = $true
                 $reason = 'wt-parent-title-match'
             } elseif ($matches.Count -gt 1) {
                 $reason = 'wt-parent-title-ambiguous'
             } else {
-                $pidWindows = @(Get-ClawdVisiblePidWindows -pids @([int]$curPid))
+                $pidWindows = @(Get-DuckVisiblePidWindows -pids @([int]$curPid))
                 if ($pidWindows.Count -eq 1) {
                     [WinFocus]::Focus($pidWindows[0])
                     $selectedTargetHwnd = $pidWindows[0]
@@ -293,7 +293,7 @@ function makeFocusCmd(sourcePid, cwdCandidates, focusCacheKey = null, wtHwnd = n
             if ($matches.Count -eq 1) {
                 [WinFocus]::Focus($matches[0])
                 $selectedTargetHwnd = $matches[0]
-                Save-ClawdFocusCache $matches[0]
+                Save-DuckFocusCache $matches[0]
                 $focused = $true
                 $reason = 'editor-parent-title-match'
             } elseif ($matches.Count -gt 1) {
@@ -304,7 +304,7 @@ function makeFocusCmd(sourcePid, cwdCandidates, focusCacheKey = null, wtHwnd = n
         } else {
             [WinFocus]::Focus($proc.MainWindowHandle)
             $selectedTargetHwnd = $proc.MainWindowHandle
-            Save-ClawdFocusCache $proc.MainWindowHandle
+            Save-DuckFocusCache $proc.MainWindowHandle
             $focused = $true
             $reason = 'parent-direct'
         }
@@ -314,7 +314,7 @@ function makeFocusCmd(sourcePid, cwdCandidates, focusCacheKey = null, wtHwnd = n
         } elseif ($wtProcessNames -notcontains $proc.ProcessName) {
             [WinFocus]::Focus($proc.MainWindowHandle)
             $selectedTargetHwnd = $proc.MainWindowHandle
-            Save-ClawdFocusCache $proc.MainWindowHandle
+            Save-DuckFocusCache $proc.MainWindowHandle
             $focused = $true
             $reason = 'parent-direct-no-title'
         } else {
@@ -341,13 +341,13 @@ function makeFocusCmd(sourcePid, cwdCandidates, focusCacheKey = null, wtHwnd = n
     if ($wtMatches.Count -eq 1) {
         [WinFocus]::Focus($wtMatches[0])
         $selectedTargetHwnd = $wtMatches[0]
-        Save-ClawdFocusCache $wtMatches[0]
+        Save-DuckFocusCache $wtMatches[0]
         $focused = $true
         $reason = 'wt-title-match'
     } elseif ($wtMatches.Count -gt 1) {
         $reason = 'wt-title-ambiguous'
     } else {
-        $pidWindows = @(Get-ClawdVisiblePidWindows -pids $chainWindowsTerminalPids)
+        $pidWindows = @(Get-DuckVisiblePidWindows -pids $chainWindowsTerminalPids)
         if ($pidWindows.Count -eq 1) {
             [WinFocus]::Focus($pidWindows[0])
             $selectedTargetHwnd = $pidWindows[0]
@@ -356,7 +356,7 @@ function makeFocusCmd(sourcePid, cwdCandidates, focusCacheKey = null, wtHwnd = n
         } elseif ($pidWindows.Count -gt 1) {
             $reason = 'wt-title-mismatch-pid-window-ambiguous'
         } else {
-            $singleWtWindows = @(Get-ClawdWindowsTerminalWindows)
+            $singleWtWindows = @(Get-DuckWindowsTerminalWindows)
             if ($singleWtWindows.Count -eq 1) {
                 [WinFocus]::Focus($singleWtWindows[0])
                 $selectedTargetHwnd = $singleWtWindows[0]
@@ -383,10 +383,10 @@ $chainWindowsTerminalPids = @()
 $focusCacheKey = ${cacheKey}
 $focusCacheSourcePid = [int64]${sourcePid}
 $wtHwndFromHook = [IntPtr]([int64]${wtHwndLiteral})
-if ($null -eq $global:ClawdFocusWindowCache) {
-    $global:ClawdFocusWindowCache = @{}
+if ($null -eq $global:DuckFocusWindowCache) {
+    $global:DuckFocusWindowCache = @{}
 }
-function Test-ClawdWindowTitleMatch([IntPtr]$hwnd, [string[]]$names) {
+function Test-DuckWindowTitleMatch([IntPtr]$hwnd, [string[]]$names) {
     if ($hwnd -eq [IntPtr]::Zero -or -not $names -or $names.Count -eq 0) { return $false }
     $len = [WinFocus]::GetWindowTextLength($hwnd)
     if ($len -le 0) { return $false }
@@ -400,19 +400,19 @@ function Test-ClawdWindowTitleMatch([IntPtr]$hwnd, [string[]]$names) {
     }
     return $false
 }
-function Save-ClawdFocusCache([IntPtr]$hwnd) {
+function Save-DuckFocusCache([IntPtr]$hwnd) {
     if (-not $focusCacheKey -or $hwnd -eq [IntPtr]::Zero) { return }
     if (-not $cacheTitleNames -or $cacheTitleNames.Count -eq 0) { return }
-    $global:ClawdFocusWindowCache[$focusCacheKey] = @{
+    $global:DuckFocusWindowCache[$focusCacheKey] = @{
         hwnd = $hwnd.ToInt64()
         sourcePid = $focusCacheSourcePid
         titleNames = @($cacheTitleNames)
     }
 }
-function Get-ClawdCachedWindow() {
+function Get-DuckCachedWindow() {
     if (-not $focusCacheKey) { return [IntPtr]::Zero }
-    if (-not $global:ClawdFocusWindowCache.ContainsKey($focusCacheKey)) { return [IntPtr]::Zero }
-    $rawEntry = $global:ClawdFocusWindowCache[$focusCacheKey]
+    if (-not $global:DuckFocusWindowCache.ContainsKey($focusCacheKey)) { return [IntPtr]::Zero }
+    $rawEntry = $global:DuckFocusWindowCache[$focusCacheKey]
     $rawHwnd = $rawEntry
     $entrySourcePid = 0
     if ($rawEntry -is [System.Collections.IDictionary]) {
@@ -422,28 +422,28 @@ function Get-ClawdCachedWindow() {
     try {
         $hwnd = [IntPtr]([int64]$rawHwnd)
     } catch {
-        $global:ClawdFocusWindowCache.Remove($focusCacheKey)
+        $global:DuckFocusWindowCache.Remove($focusCacheKey)
         return [IntPtr]::Zero
     }
     if (-not [WinFocus]::IsUsableWindow($hwnd)) {
-        $global:ClawdFocusWindowCache.Remove($focusCacheKey)
+        $global:DuckFocusWindowCache.Remove($focusCacheKey)
         return [IntPtr]::Zero
     }
     if ($entrySourcePid -gt 0 -and $focusCacheSourcePid -gt 0 -and $entrySourcePid -ne $focusCacheSourcePid) {
-        $global:ClawdFocusWindowCache.Remove($focusCacheKey)
+        $global:DuckFocusWindowCache.Remove($focusCacheKey)
         return [IntPtr]::Zero
     }
     if (-not $cacheTitleNames -or $cacheTitleNames.Count -eq 0) {
-        $global:ClawdFocusWindowCache.Remove($focusCacheKey)
+        $global:DuckFocusWindowCache.Remove($focusCacheKey)
         return [IntPtr]::Zero
     }
-    if (-not (Test-ClawdWindowTitleMatch $hwnd ([string[]]$cacheTitleNames))) {
-        $global:ClawdFocusWindowCache.Remove($focusCacheKey)
+    if (-not (Test-DuckWindowTitleMatch $hwnd ([string[]]$cacheTitleNames))) {
+        $global:DuckFocusWindowCache.Remove($focusCacheKey)
         return [IntPtr]::Zero
     }
     return $hwnd
 }
-function Get-ClawdVisiblePidWindows([int[]]$pids) {
+function Get-DuckVisiblePidWindows([int[]]$pids) {
     $windows = @()
     foreach ($pidValue in @($pids)) {
         if (-not $pidValue -or $pidValue -le 0) { continue }
@@ -457,7 +457,7 @@ function Get-ClawdVisiblePidWindows([int[]]$pids) {
     }
     return @($windows)
 }
-function Get-ClawdWindowsTerminalWindows() {
+function Get-DuckWindowsTerminalWindows() {
     $wtPids = @()
     foreach ($wtName in $wtProcessNames) {
         foreach ($wtProc in @(Get-Process -Name $wtName -ErrorAction SilentlyContinue)) {
@@ -466,9 +466,9 @@ function Get-ClawdWindowsTerminalWindows() {
             }
         }
     }
-    return @(Get-ClawdVisiblePidWindows -pids $wtPids)
+    return @(Get-DuckVisiblePidWindows -pids $wtPids)
 }
-function Get-ClawdOrcaWindows() {
+function Get-DuckOrcaWindows() {
     $orcaPids = @()
     foreach ($orcaName in $orcaProcessNames) {
         foreach ($orcaProc in @(Get-Process -Name $orcaName -ErrorAction SilentlyContinue)) {
@@ -477,7 +477,7 @@ function Get-ClawdOrcaWindows() {
             }
         }
     }
-    return @(Get-ClawdVisiblePidWindows -pids $orcaPids)
+    return @(Get-DuckVisiblePidWindows -pids $orcaPids)
 }
 $curPid = ${sourcePid}
 $focused = $false
@@ -500,7 +500,7 @@ $wtHwndFromHookInvalid = $false
 # Nothing here saves to the focus cache: a cached entry is re-validated against
 # the cwd candidates on read, and the live text "Orca" never satisfies it.
 if ($orcaHosted) {
-    $orcaWindows = @(Get-ClawdOrcaWindows)
+    $orcaWindows = @(Get-DuckOrcaWindows)
     if ($orcaWindows.Count -eq 1) {
         [WinFocus]::Focus($orcaWindows[0])
         $selectedTargetHwnd = $orcaWindows[0]
@@ -521,7 +521,7 @@ if ($orcaHosted) {
 if (-not $focused -and -not $orcaHosted) {
     # Called inside the gate, not before it: on a validation miss this evicts the
     # stored entry, and an Orca focus has no business dropping another path's cache.
-    $cachedHwnd = Get-ClawdCachedWindow
+    $cachedHwnd = Get-DuckCachedWindow
     if ($cachedHwnd -ne [IntPtr]::Zero) {
         [WinFocus]::Focus($cachedHwnd)
         $selectedTargetHwnd = $cachedHwnd
@@ -533,7 +533,7 @@ if (-not $focused -and -not $orcaHosted -and $wtHwndFromHook -ne [IntPtr]::Zero)
     if ([WinFocus]::IsUsableWindowsTerminalWindow($wtHwndFromHook)) {
         [WinFocus]::Focus($wtHwndFromHook)
         $selectedTargetHwnd = $wtHwndFromHook
-        Save-ClawdFocusCache $wtHwndFromHook
+        Save-DuckFocusCache $wtHwndFromHook
         $focused = $true
         $reason = 'wt-hwnd-from-hook'
     } else {
@@ -610,7 +610,7 @@ if ($focused -and $selectedTargetHwnd -ne [IntPtr]::Zero) {
     }
 }
 $confirmed = $focused -and $selectedTargetHwnd -ne [IntPtr]::Zero -and $foregroundHwnd -eq $selectedTargetHwnd
-Write-ClawdFocusResult $focusToken $reason $selectedTargetHwnd $foregroundHwnd $confirmed
+Write-DuckFocusResult $focusToken $reason $selectedTargetHwnd $foregroundHwnd $confirmed
 `;
 }
 
@@ -958,7 +958,7 @@ function scheduleTerminalTabFocus(editor, pidChain) {
   if (!editor || !pidChain || !pidChain.length) return;
   setTimeout(() => {
     const body = JSON.stringify({ pids: pidChain });
-    for (let port = 23456; port <= 23460; port++) {
+    for (let port = 24456; port <= 24460; port++) {
       const tabReq = http.request({
         hostname: "127.0.0.1", port, path: "/focus-tab", method: "POST",
         headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },

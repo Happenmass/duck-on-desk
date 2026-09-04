@@ -35,14 +35,14 @@ const CODEX_HOOK_EVENTS = [
 ];
 const CODEX_HOOKS_FEATURE_KEY = "hooks";
 const LEGACY_CODEX_HOOKS_FEATURE_KEY = "codex_hooks";
-const CODEX_STABLE_HOOK_DIRNAME = "clawd-hooks";
+const CODEX_STABLE_HOOK_DIRNAME = "duck-hooks";
 const CODEX_STABLE_LAUNCHER_VERSION = 3;
-const CODEX_STABLE_LAUNCHER_SIGNATURE = "clawd-codex-stable-launcher-v3";
-const CODEX_STABLE_WINDOWS_RUN_SIGNATURE = "clawd-codex-stable-windows-run-v1";
+const CODEX_STABLE_LAUNCHER_SIGNATURE = "duck-codex-stable-launcher-v3";
+const CODEX_STABLE_WINDOWS_RUN_SIGNATURE = "duck-codex-stable-windows-run-v1";
 const LEGACY_CODEX_STABLE_LAUNCHER_SIGNATURES = new Set([
-  "clawd-codex-stable-launcher-v2",
+  "duck-codex-stable-launcher-v2",
 ]);
-const CODEX_STABLE_GENERATION_PREFIX = "clawd-generation:";
+const CODEX_STABLE_GENERATION_PREFIX = "duck-generation:";
 
 function stableCodexHookPaths(codexDir, options = {}) {
   const stableDir = options.stableHookDir || path.join(codexDir, CODEX_STABLE_HOOK_DIRNAME);
@@ -61,7 +61,7 @@ function stableCodexHookPaths(codexDir, options = {}) {
     posixManifestPath,
     // Windows stable entries use a direct call-operator command; the data
     // sidecar is read by codex-hook.js itself (Defender ML false positive on
-    // the old inline dispatcher, clawd-on-desk#986). POSIX still needs a
+    // the old inline dispatcher, duck-on-desk#986). POSIX still needs a
     // tiny /bin/sh launcher.
     launcherPath: platform === "win32" ? windowsRunPath : posixLauncherPath,
     manifestPath: platform === "win32" ? windowsManifestPath : posixManifestPath,
@@ -202,7 +202,7 @@ function readStableCodexHookManifest(manifestPath, options = {}) {
     const record = JSON.parse(fsApi.readFileSync(manifestPath, "utf8"));
     if (
       !record
-      || record.managedBy !== "clawd-on-desk"
+      || record.managedBy !== "duck-on-desk"
       || record.version !== CODEX_STABLE_LAUNCHER_VERSION
       || !["win32", "posix"].includes(record.platform)
       || !["native", "windows-interop"].includes(record.mode)
@@ -234,7 +234,7 @@ function readLegacyStableCodexHookManifest(manifestPath, options = {}) {
     const record = JSON.parse(fsApi.readFileSync(manifestPath, "utf8"));
     if (
       !record
-      || record.managedBy !== "clawd-on-desk"
+      || record.managedBy !== "duck-on-desk"
       || record.version !== 2
       || !["win32", "posix"].includes(record.platform)
       || !["native", "windows-interop"].includes(record.mode)
@@ -272,7 +272,7 @@ function writeStableCodexHookLauncher(launcherPath, manifestPath, spec) {
   const args = Array.isArray(spec.args) ? spec.args.map(String) : [];
   const env = Object.fromEntries(filterCommandEnvEntries(spec.env));
   const manifestBase = {
-    managedBy: "clawd-on-desk",
+    managedBy: "duck-on-desk",
     version: CODEX_STABLE_LAUNCHER_VERSION,
     platform: spec.platform === "win32" ? "win32" : "posix",
     mode: spec.mode,
@@ -347,7 +347,7 @@ function inspectStableWindowsRunSource(source) {
 function writeStableCodexHookWindowsArtifacts(runPath, manifestPath, spec) {
   const runSource = buildStableWindowsRunSource(spec);
   const manifestBase = {
-    managedBy: "clawd-on-desk",
+    managedBy: "duck-on-desk",
     version: CODEX_STABLE_LAUNCHER_VERSION,
     platform: "win32",
     mode: "native",
@@ -426,7 +426,7 @@ function materializeStableCodexHookLauncher(entryPath, options = {}) {
       // Windows startup sync must never point it back at a Windows-only target.
       posixPreserved = true;
     } else if (!existingPosix.ok && !legacyPosix.ok && fs.existsSync(paths.posixLauncherPath)) {
-      // Unknown/corrupt POSIX state may belong to WSL or a newer Clawd.
+      // Unknown/corrupt POSIX state may belong to WSL or a newer Duck.
       // Preserve it so a POSIX installer can inspect or repair its own artifact.
       posixPreserved = true;
     } else {
@@ -464,7 +464,7 @@ function buildStableCodexHookCommand(launcherPath, platform = process.platform) 
     // inline dispatcher — Windows Defender's ML heuristic flags the
     // "ReadAllLines + FromBase64String + SetEnvironmentVariable + & $n $t"
     // shape as Trojan:Win32/Commando.A!ml on every Codex PowerShell launch
-    // (clawd-on-desk#986). Production registers the direct call-operator form
+    // (duck-on-desk#986). Production registers the direct call-operator form
     // (desiredCommandWindows / buildCodexHookCommand) and codex-hook.js reads
     // the sidecar itself. This branch remains only for recognizing/removing
     // legacy entries and for non-executing compatibility tests.
@@ -722,7 +722,7 @@ function windowsPathToWslPath(value) {
 // `command` is only executed by POSIX shells — for a Windows-authored
 // hooks.json that means WSL. Run the WINDOWS node.exe via WSL interop rather
 // than a Linux node: the hook then lives in a Windows process whose
-// 127.0.0.1 is the Windows loopback, so events reach Clawd's server (which
+// 127.0.0.1 is the Windows loopback, so events reach Duck's server (which
 // binds 127.0.0.1 only) even in WSL's default NAT mode, where a Linux-side
 // process gets connection-refused. Requires WSL interop (on by default).
 // Env-var prefixes (`KEY=value node.exe ...`) do NOT cross the interop
@@ -993,7 +993,7 @@ function ensureCodexHooksFeature(configPath, options = {}) {
 
 // includeWindowsVariant widens the match to commandWindows. Registration
 // passes it only on win32 hosts: a POSIX host must never claim (and rewrite
-// the command of) an entry whose only Clawd trace is a leftover
+// the command of) an entry whose only Duck trace is a leftover
 // commandWindows — that command could be a third-party hook. Uninstall, by
 // contrast, always matches both fields: removal must be complete on every
 // platform.
@@ -1114,7 +1114,7 @@ function registerCodexCommandHooks(options = {}) {
 
   const { codexDir, hooksPath, configPath } = getCodexPaths(options);
   if (!options.hooksPath && !options.codexDir && !fs.existsSync(codexDir)) {
-    if (!options.silent) console.log("Clawd: ~/.codex/ not found - skipping Codex hook registration");
+    if (!options.silent) console.log("Duck: ~/.codex/ not found - skipping Codex hook registration");
     return { added: 0, skipped: 0, updated: 0, configChanged: false, warnings: [] };
   }
 
@@ -1147,7 +1147,7 @@ function registerCodexCommandHooks(options = {}) {
     || stableNodeBin
     || legacyNodeBin
     || "node";
-  const remoteEnv = options.remote ? { CLAWD_REMOTE: "1" } : {};
+  const remoteEnv = options.remote ? { DUCK_REMOTE: "1" } : {};
   const commandEnv = {
     ...(options.env || {}),
     ...remoteEnv,
@@ -1169,7 +1169,7 @@ function registerCodexCommandHooks(options = {}) {
   // (node path, hook path, env) before `& $node $target`. Windows Defender's
   // ML heuristic flags that dispatcher's command line as
   // Trojan:Win32/Commando.A!ml on every Codex PowerShell launch (2026-09-03,
-  // Threat ID 2147840094, clawd-on-desk#986), so the entry is now the direct
+  // Threat ID 2147840094, duck-on-desk#986), so the entry is now the direct
   // call-operator form — AGENTS.md requires the PowerShell call operator; a
   // bare `"node" "hook.js"` exits 1 — and codex-hook.js reads the same
   // mutable sidecar itself and applies env before any hook code runs. The
@@ -1279,7 +1279,7 @@ function registerCodexCommandHooks(options = {}) {
 
   if (!options.silent) {
     const label = options.label || "Codex hooks";
-    console.log(`Clawd ${label} -> ${hooksPath}`);
+    console.log(`Duck ${label} -> ${hooksPath}`);
     console.log(`  Added: ${added}, updated: ${updated}, skipped: ${skipped}`);
     if (feature.changed) console.log(`  Updated [features].hooks in ${configPath}`);
     for (const warning of warnings) console.warn(`  Warning: ${warning}`);
@@ -1333,7 +1333,7 @@ function unregisterCodexCommandHooks(options = {}) {
 
   let backupPath = null;
   if (changed) backupPath = writeJsonAtomicWithBackup(hooksPath, settings, options);
-  if (!options.silent) console.log(`Clawd Codex hooks removed: ${removed}`);
+  if (!options.silent) console.log(`Duck Codex hooks removed: ${removed}`);
   const result = { removed, changed };
   if (options.backup === true) result.backupPath = backupPath;
   return result;

@@ -1,5 +1,5 @@
 <!--
-  clawd-experiment-headphones-groove-v6.svg
+  duck-experiment-headphones-groove-v6.svg
   v5 基础上鹿鹿两个微调:
   1. 眼睛 V 字 y +0.5 (顶 8->8.5 底 9->9.5) — v5 位置偏高
   2. 耳罩压缩 0.78 -> 0.85 (缩量 22%->15%), 过冲 1.04 -> 1.02 一起收 — v5 压太多
@@ -138,7 +138,7 @@
     <rect class="leg-right-outer" x="11" y="13" width="1" height="2"/>
   </g>
 
-  <g class="body-sway">
+  <g id="accessory-anchor" class="body-sway">
     <rect x="2" y="6" width="11" height="7" fill="#DE886D"/>
 
     <!-- 头带 (不参与 squeeze, 只跟随 body-sway) -->

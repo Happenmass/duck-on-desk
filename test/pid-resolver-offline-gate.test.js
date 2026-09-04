@@ -1,14 +1,14 @@
 // test/pid-resolver-offline-gate.test.js — #681 Slice A1.
 //
-// The contract under test: when Clawd is not running, a leftover CLI hook must
+// The contract under test: when Duck is not running, a leftover CLI hook must
 // not snapshot the machine's process list. Before this, resolve() spawned a
 // PowerShell that read ProcessId/ParentProcessId/Name/CommandLine for EVERY
 // process, and only afterwards discovered nobody was listening — so a user who
-// had quit Clawd hours ago still paid a hidden PowerShell per hook event, which
+// had quit Duck hours ago still paid a hidden PowerShell per hook event, which
 // is what their security software flagged (#681).
 //
 // Two separate guarantees, tested separately:
-//   1. GATE      — Clawd offline ⇒ zero spawn, and structurally so (the gate
+//   1. GATE      — Duck offline ⇒ zero spawn, and structurally so (the gate
 //                  runs before child_process is even required).
 //   2. NO-DEGRADE — the snapshot ran but produced nothing ⇒ report nothing,
 //                  rather than the ephemeral hook wrapper's process.ppid.
@@ -24,7 +24,7 @@ const AGENT_OPTS = {
   agentCmdlineCheck: (c) => c.includes("claude-code"),
 };
 
-const LIVE_IDENTITY = { ok: true, reason: null, port: 23333, ownerPid: process.pid };
+const LIVE_IDENTITY = { ok: true, reason: null, port: 24333, ownerPid: process.pid };
 
 function snapshotJson(procs) {
   return JSON.stringify(procs.map((p) => ({
@@ -39,7 +39,7 @@ const LIVE_TREE = () => snapshotJson([
 
 // Builds a resolver over a mock-loaded shared-process and counts every
 // execFileSync. `identity` is what the injected gate reads; `env` drives
-// CLAWD_REMOTE. Nothing here reads the real ~/.clawd/runtime.json.
+// DUCK_REMOTE. Nothing here reads the real ~/.duck-on-desk/runtime.json.
 function mk({ platform = "win32", identity = LIVE_IDENTITY, env = {}, snapshot, startPid = 500, alive } = {}) {
   let spawns = 0;
   let identityReads = 0;
@@ -61,11 +61,11 @@ function mk({ platform = "win32", identity = LIVE_IDENTITY, env = {}, snapshot, 
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 1. The gate: Clawd offline ⇒ zero spawn
+// 1. The gate: Duck offline ⇒ zero spawn
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("#681 offline gate — Windows resolver refuses to spawn when Clawd is gone", () => {
-  // Each row is a distinct way "Clawd is not usefully running" presents on disk.
+describe("#681 offline gate — Windows resolver refuses to spawn when Duck is gone", () => {
+  // Each row is a distinct way "Duck is not usefully running" presents on disk.
   const OFFLINE_IDENTITIES = [
     ["runtime.json missing (the normal case — Quit deletes it)",
       { ok: false, reason: "runtime-missing", port: null, ownerPid: null }],
@@ -73,8 +73,8 @@ describe("#681 offline gate — Windows resolver refuses to spawn when Clawd is 
       { ok: false, reason: "runtime-app-mismatch", port: null, ownerPid: null }],
     ["port outside the bindable range",
       { ok: false, reason: "runtime-port-invalid", port: null, ownerPid: null }],
-    ["no ownerPid (a pre-#681 Clawd wrote it) — fail closed, do not guess",
-      { ok: false, reason: "runtime-owner-invalid", port: 23333, ownerPid: null }],
+    ["no ownerPid (a pre-#681 Duck wrote it) — fail closed, do not guess",
+      { ok: false, reason: "runtime-owner-invalid", port: 24333, ownerPid: null }],
   ];
 
   for (const [label, identity] of OFFLINE_IDENTITIES) {
@@ -85,7 +85,7 @@ describe("#681 offline gate — Windows resolver refuses to spawn when Clawd is 
         assert.strictEqual(h.spawns(), 0, "MUST NOT spawn PowerShell — this is the whole point of #681");
         assert.strictEqual(h.identityReads(), 1, "the gate reads the identity exactly once");
         assert.strictEqual(r.attempted, false, "we never tried");
-        assert.strictEqual(r.skipReason, "clawd-offline");
+        assert.strictEqual(r.skipReason, "duck-offline");
         assert.strictEqual(r.snapshotOk, false);
         assert.strictEqual(r.stablePid, null);
         assert.strictEqual(r.terminalPid, null);
@@ -104,36 +104,36 @@ describe("#681 offline gate — Windows resolver refuses to spawn when Clawd is 
     // A crash leaves runtime.json behind. File existence alone would say
     // "online" — the ownerPid liveness check is what catches this.
     const deadPid = 2147483646;
-    const h = mk({ identity: { ok: true, reason: null, port: 23333, ownerPid: deadPid } });
+    const h = mk({ identity: { ok: true, reason: null, port: 24333, ownerPid: deadPid } });
     try {
       const r = h.resolve();
       assert.strictEqual(h.spawns(), 0, "a dead owner must not spawn — file presence is not liveness");
-      assert.strictEqual(r.skipReason, "clawd-offline");
+      assert.strictEqual(r.skipReason, "duck-offline");
       assert.strictEqual(r.attempted, false);
       assert.strictEqual(r.stablePid, null);
     } finally { h.cleanup(); }
   });
 
-  it("CLAWD_REMOTE never resolves the local tree, even when the local runtime is perfectly live", () => {
+  it("DUCK_REMOTE never resolves the local tree, even when the local runtime is perfectly live", () => {
     // A remote hook's parents are on the REMOTE box. Resolving the local tree
     // would attribute this machine's terminal to a session that isn't here.
-    const h = mk({ identity: LIVE_IDENTITY, env: { CLAWD_REMOTE: "1" } });
+    const h = mk({ identity: LIVE_IDENTITY, env: { DUCK_REMOTE: "1" } });
     try {
       const r = h.resolve();
       assert.strictEqual(h.spawns(), 0);
-      assert.strictEqual(r.skipReason, "clawd-remote", "distinct from clawd-offline: Clawd IS running, just not for us");
+      assert.strictEqual(r.skipReason, "duck-remote", "distinct from duck-offline: Duck IS running, just not for us");
       assert.strictEqual(r.attempted, false);
       assert.strictEqual(r.stablePid, null);
       assert.deepStrictEqual(r.pidChain, []);
     } finally { h.cleanup(); }
   });
 
-  it("CLAWD_REMOTE=0 / false are not remote (matches isRemoteHookMode)", () => {
+  it("DUCK_REMOTE=0 / false are not remote (matches isRemoteHookMode)", () => {
     for (const value of ["0", "false", "FALSE"]) {
-      const h = mk({ env: { CLAWD_REMOTE: value } });
+      const h = mk({ env: { DUCK_REMOTE: value } });
       try {
         const r = h.resolve();
-        assert.strictEqual(h.spawns(), 1, `CLAWD_REMOTE=${value} must NOT suppress the local walk`);
+        assert.strictEqual(h.spawns(), 1, `DUCK_REMOTE=${value} must NOT suppress the local walk`);
         assert.strictEqual(r.stablePid, 600);
       } finally { h.cleanup(); }
     }
@@ -155,7 +155,7 @@ describe("#681 offline gate — Windows resolver refuses to spawn when Clawd is 
 // 2. Online success is untouched
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("#681 gate — a live Clawd leaves the online success path exactly as it was", () => {
+describe("#681 gate — a live Duck leaves the online success path exactly as it was", () => {
   it("live runtime + live owner ⇒ the walk runs and every field survives", () => {
     const h = mk({ identity: LIVE_IDENTITY });
     try {
@@ -321,7 +321,7 @@ describe("#681 no-degraded — an attempted-but-failed snapshot reports nothing,
 
 describe("#681 — POSIX never consults the runtime gate", () => {
   for (const platform of ["darwin", "linux"]) {
-    it(`${platform}: resolves via ps with the runtime file missing and CLAWD_REMOTE unset`, () => {
+    it(`${platform}: resolves via ps with the runtime file missing and DUCK_REMOTE unset`, () => {
       let identityReads = 0;
       const { mod, cleanup } = loadSharedProcessWithMock({
         execFileSyncMock: (cmd, args) => {
@@ -374,9 +374,9 @@ describe("#681 — processAlive is the gate's liveness primitive (and only that)
 
   it("EPERM ⇒ true — the PID EXISTS, which is all we may conclude", () => {
     // EPERM means "you may not signal it", not "it isn't there". Treating it as
-    // dead would gate off a Clawd running as another user in the same session.
+    // dead would gate off a Duck running as another user in the same session.
     // Treating it as ALIVE is deliberately permissive, and is NOT an ownership
-    // proof: it does not show the PID is still Clawd (plan §14.1).
+    // proof: it does not show the PID is still Duck (plan §14.1).
     const origKill = process.kill;
     try {
       process.kill = () => { throw Object.assign(new Error("EPERM"), { code: "EPERM" }); };

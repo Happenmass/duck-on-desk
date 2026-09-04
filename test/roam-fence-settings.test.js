@@ -11,8 +11,8 @@ const createRoamFenceSettings = require("../src/roam-fence-settings");
 const { normalizeFence, publicStatus } = require("../src/roam-fence-settings");
 
 function makeRuntime() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-roam-fence-settings-"));
-  const filePath = path.join(dir, ".clawd", "roam-area.json");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-roam-fence-settings-"));
+  const filePath = path.join(dir, ".duck-on-desk", "roam-area.json");
   const loader = createRoamFenceLoader({ filePath, warn: () => {} });
   return {
     dir,
@@ -108,8 +108,8 @@ test("invalid selections never touch the existing file", async (t) => {
 });
 
 test("concurrent Settings writes are serialized and the last request wins", async (t) => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-roam-fence-settings-serial-"));
-  const filePath = path.join(dir, ".clawd", "roam-area.json");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-roam-fence-settings-serial-"));
+  const filePath = path.join(dir, ".duck-on-desk", "roam-area.json");
   const loader = createRoamFenceLoader({ filePath, warn: () => {} });
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
@@ -154,8 +154,8 @@ test("concurrent Settings writes are serialized and the last request wins", asyn
 });
 
 test("save reports an error when the live loader does not accept the written fence", async (t) => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-roam-fence-settings-reject-"));
-  const filePath = path.join(dir, ".clawd", "roam-area.json");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-roam-fence-settings-reject-"));
+  const filePath = path.join(dir, ".duck-on-desk", "roam-area.json");
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const loader = {
     filePath,
@@ -171,8 +171,8 @@ test("save reports an error when the live loader does not accept the written fen
 });
 
 test("save reports an error when the loader keeps a different last-known-good fence", async (t) => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-roam-fence-settings-stale-"));
-  const filePath = path.join(dir, ".clawd", "roam-area.json");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-roam-fence-settings-stale-"));
+  const filePath = path.join(dir, ".duck-on-desk", "roam-area.json");
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const loader = {
     filePath,

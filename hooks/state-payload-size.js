@@ -3,9 +3,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook /state payload byte-fitting.
 //
-// The Clawd server caps inbound /state bodies at MAX_STATE_BODY_BYTES and, when
+// The Duck server caps inbound /state bodies at MAX_STATE_BODY_BYTES and, when
 // a body exceeds it, replies a *headerless* 413. The hook post helper only
-// treats a response as delivered when it carries the Clawd header, so an
+// treats a response as delivered when it carries the Duck header, so an
 // oversized body reads back as posted=false and the turn-completion (the "happy"
 // celebration) is silently dropped.
 //
@@ -15,7 +15,7 @@
 // a byte cap that the same text would clear in English. This helper closes the
 // gap on the SEND side: it guarantees the serialized body fits a byte budget,
 // sacrificing only assistant_last_output (first truncating it, then dropping it)
-// so the completion + #406 gate fields always reach Clawd.
+// so the completion + #406 gate fields always reach Duck.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Server cap is 16 KiB (src/server-route-state.js MAX_STATE_BODY_BYTES); keep a

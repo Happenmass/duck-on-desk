@@ -10,7 +10,7 @@ const { pathToFileURL } = require("node:url");
 const createThemeContext = require("../src/theme-context");
 
 function makeRoot() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-theme-context-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-theme-context-"));
   const assetsSvgDir = path.join(root, "assets", "svg");
   const assetsSoundsDir = path.join(root, "assets", "sounds");
   fs.mkdirSync(assetsSvgDir, { recursive: true });

@@ -11,7 +11,7 @@ This document holds the state machine, theme system, UI runtime, and platform ca
 
 输入事件流：`hitWin renderer → IPC → main → renderWin renderer`
 
-Windows 的 hit window 在原生 activation controller 可用时按前台全屏状态切换 `WS_EX_NOACTIVATE`：非全屏时清除样式以恢复普通 activation 语义，全屏时设置样式以避免点击和拖拽把前台切到 Clawd。Electron 内部保持 non-focusable，避免 Chromium 在 pointerdown 时绕过原生样式主动激活窗口。真实合成点击已确认样式置位和清除时 pointer 都能到达 renderer，因此不能把 pointer 路由归因于清除样式。输入窗口仍和渲染窗口分离，并永久接收 mouse events，避免旧单窗口 alpha hit-test 路径的拖拽失效。
+Windows 的 hit window 在原生 activation controller 可用时按前台全屏状态切换 `WS_EX_NOACTIVATE`：非全屏时清除样式以恢复普通 activation 语义，全屏时设置样式以避免点击和拖拽把前台切到 Duck。Electron 内部保持 non-focusable，避免 Chromium 在 pointerdown 时绕过原生样式主动激活窗口。真实合成点击已确认样式置位和清除时 pointer 都能到达 renderer，因此不能把 pointer 路由归因于清除样式。输入窗口仍和渲染窗口分离，并永久接收 mouse events，避免旧单窗口 alpha hit-test 路径的拖拽失效。
 
 ## State Machine
 
@@ -25,14 +25,14 @@ Windows 的 hit window 在原生 activation controller 可用时按前台全屏�
 - DND 模式：跳过 dozing，直接 yawning → collapsing → sleeping；同时屏蔽 hook 事件
 - 隐藏桌宠（petHidden，入口：托盘 / 右键菜单 / 快捷键）：语义是「看不见宠物」而非免打扰——隐藏时收起宠物、Session HUD、update bubble 和当时 pending 的权限气泡（恢复显示时回来），但隐藏期间新到的权限请求仍照常弹气泡，这是有意设计、不要当 bug 修；要连权限气泡都静默是 DND 的职责（它有回终端确认的 fallback）。Allow/Deny 全局快捷键跟随「可见气泡」：隐藏期间只要有可见气泡就保持注册，但只作用于可见的请求，收起的旧气泡不会被盲操作（#601）。petHidden 不持久化，重启恢复显示
 - Windows 全屏自动隐藏会同时收起桌宠与浮层，并压住全屏期间新到的本地权限请求；退出全屏只恢复仍 pending 且未被其他隐藏条件排除的请求。它不同于手动 petHidden 的新请求例外。隐藏本身不产生决定，远程审批通道与用户配置的 auto-close 仍按原合同运行。
-- working 子动画：Clawd 主题为 1 个会话 → typing，2 个 → headphones groove，3+ → building；Calico / Cloudling 仍为 typing / juggling / building
+- working 子动画：Duck 主题为 1 个会话 → typing，2 个 → headphones groove，3+ → building；Calico / Cloudling 仍为 typing / juggling / building
 - juggling 子动画：1 个 subagent → juggling，2+ → conducting
 
 ## Theme System
 
-Clawd 是主题化桌宠：动画资源、计时、hitbox、眼球追踪参数都来自主题配置。
+Duck 是主题化桌宠：动画资源、计时、hitbox、眼球追踪参数都来自主题配置。
 
-- 内置主题目录：`themes/clawd/`、`themes/calico/`、`themes/cloudling/`；`themes/template/` 是脚手架模板
+- 内置主题目录：`themes/duck/`、`themes/calico/`、`themes/cloudling/`；`themes/template/` 是脚手架模板
 - 用户主题目录：`<userData>/themes/<id>/theme.json`
 - `theme.json` 必需状态：`idle`、`working`、`thinking`
 - `states.idle[0]` 是主题默认的 follow-idle；Settings 的“默认待机动画”选项来自该主题声明的 idle 状态与 idle animation pool，并按主题分别持久化到 `prefs.idleVisual`
@@ -125,21 +125,21 @@ Mini 状态映射：
 
 | 状态 | SVG | 用途 |
 |------|-----|------|
-| `mini-idle` | `clawd-mini-idle.svg` | 待机：呼吸、眨眼、手臂晃动、眼球追踪 |
-| `mini-enter` | `clawd-mini-enter.svg` | 一次性滑入弹跳 |
-| `mini-peek` | `clawd-mini-peek.svg` | Hover 探头 |
-| `mini-alert` | `clawd-mini-alert.svg` | 通知 |
-| `mini-happy` | `clawd-mini-happy.svg` | 完成 |
-| `mini-crabwalk` | `clawd-mini-crabwalk.svg` | 右键进入时的螃蟹步 |
-| `mini-enter-sleep` | `clawd-mini-enter-sleep.svg` | DND 下入场 |
-| `mini-sleep` | `clawd-mini-sleep.svg` | DND 休眠 |
+| `mini-idle` | `duck-mini-idle.svg` | 待机：呼吸、眨眼、手臂晃动、眼球追踪 |
+| `mini-enter` | `duck-mini-enter.svg` | 一次性滑入弹跳 |
+| `mini-peek` | `duck-mini-peek.svg` | Hover 探头 |
+| `mini-alert` | `duck-mini-alert.svg` | 通知 |
+| `mini-happy` | `duck-mini-happy.svg` | 完成 |
+| `mini-crabwalk` | `duck-mini-crabwalk.svg` | 右键进入时的螃蟹步 |
+| `mini-enter-sleep` | `duck-mini-enter-sleep.svg` | DND 下入场 |
+| `mini-sleep` | `duck-mini-sleep.svg` | DND 休眠 |
 | `mini-working` | 主题可选 | 1 会话 mini typing；缺失则静默跳过 |
 
 ## State To Animation Mapping
 
 权威表格见 `docs/guides/state-mapping.md`。这里只保留实现层面的补充：
 
-- working 子动画：Clawd 主题为 1 会话 → typing，2 → headphones groove，3+ → building；Calico / Cloudling 仍为 typing / juggling / building
+- working 子动画：Duck 主题为 1 会话 → typing，2 → headphones groove，3+ → building；Calico / Cloudling 仍为 typing / juggling / building
 - juggling 子动画：1 subagent → juggling，2+ → conducting
 - mini 状态有独立动画槽；`mini-working` 是可选能力
 - 睡眠序列和 DND 行为见上面的 State Machine
@@ -148,7 +148,7 @@ Mini 状态映射：
 ## Assets
 
 - 素材按主题组织：每个主题目录自带 `assets/`
-- `assets/svg/` 与 `assets/gif/` 是默认 Clawd 主题使用的公共根路径
+- `assets/svg/` 与 `assets/gif/` 是默认 Duck 主题使用的公共根路径
 - 文档预览 GIF 放在 `assets/gif/`，运行时不直接读
 - 需要编辑的源素材先复制到 `assets/source/`
 - SVG 运行时用 `<object type="image/svg+xml">`，其他位图格式走 `<img>`
@@ -202,13 +202,13 @@ Mini 状态映射：
 - 路径统一用 `path.join(__dirname, ...)`
 - 透明无边框浮窗：`frame: false`, `transparent: true`, `alwaysOnTop: true`
 - 使用单实例锁：`app.requestSingleInstanceLock()`
-- 位置持久化到 `clawd-prefs.json`
+- 位置持久化到 `duck-prefs.json`
 - 多显示器钳制走 `clampToScreen()` + `getNearestWorkArea()`
 
 ## Known Limits
 
 - Windows 原生 activation controller 依赖打包目标内的 Koffi；不可用时不调用会扰动前台的 Electron `setFocusable(false)`，而以旧的 focusable 输入窗降级，桌面交互仍可用但全屏点击可能短暂抢前台
-- Windows 非全屏态为恢复普通 activation 语义会清除输入窗的 `WS_EX_NOACTIVATE`；点击桌宠可能短暂把 OS 前台归属切到 Clawd，即使 Electron `win.isFocused()` 仍为 false
+- Windows 非全屏态为恢复普通 activation 语义会清除输入窗的 `WS_EX_NOACTIVATE`；点击桌宠可能短暂把 OS 前台归属切到 Duck，即使 Electron `win.isFocused()` 仍为 false
 - 当前开发环境没有 macOS 手测机；所有 macOS 特定路径都只能做 code review + best-effort 推断，真正行为变化需要额外人工验证
 - 启动恢复依赖 `detectRunningClaudeProcesses()` 与后续 hook 事件
 - Windows 前台窗口锁通过 ALT trick + `koffi` FFI 绕过，仍有边缘失败可能

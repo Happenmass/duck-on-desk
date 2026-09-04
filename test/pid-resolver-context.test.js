@@ -4,7 +4,7 @@
 // The resolver's fresh path re-requires child_process at call time, so
 // loadSharedProcessWithMock injects a counting execFileSync (spawn counter) and
 // forces process.platform. The cache side uses the REAL pid-cache with real temp
-// files (like clawd-hook-pid-cache.test.js), and node:test's t.mock.method spies
+// files (like duck-hook-pid-cache.test.js), and node:test's t.mock.method spies
 // on the pid-cache module object to assert call counts / inject failures.
 const { describe, it, before, after, afterEach } = require("node:test");
 const assert = require("node:assert");
@@ -41,9 +41,9 @@ const AGENT_OPTS = {
   headlessCheck: (c) => /\s(-p|--print)(\s|$)/.test(c || ""),
   // #681: without a passing gate the Windows resolver refuses to spawn at all,
   // and every lifecycle assertion below would pass for the wrong reason (zero
-  // spawn because Clawd looks offline, not because the cache was hit). Injected,
-  // never read from the real ~/.clawd. See test/shared-process.test.js LIVE_GATE.
-  readRuntimeIdentity: () => ({ ok: true, reason: null, port: 23333, ownerPid: process.pid }),
+  // spawn because Duck looks offline, not because the cache was hit). Injected,
+  // never read from the real ~/.duck. See test/shared-process.test.js LIVE_GATE.
+  readRuntimeIdentity: () => ({ ok: true, reason: null, port: 24333, ownerPid: process.pid }),
   env: {},
 };
 
@@ -97,7 +97,7 @@ function mkResolver({ platform = "win32", procs, startPid, snapshot, identity } 
     startPid: startPid || process.pid,
     ...AGENT_OPTS,
     // #681: AGENT_OPTS declares a live gate by default; `identity` overrides it
-    // for the cases that need Clawd to look offline.
+    // for the cases that need Duck to look offline.
     ...(identity ? { readRuntimeIdentity: () => identity } : {}),
   });
   return { mod, resolve, cleanup, spawns: () => spawns };
@@ -148,11 +148,11 @@ describe("resolver no-arg compatibility (§5.1 red line)", () => {
     } finally { cleanup(); }
   });
 
-  it("no-arg path produces no clawd-pidcache2-* file (never calls a v2 write)", (t) => {
+  it("no-arg path produces no duck-pidcache2-* file (never calls a v2 write)", (t) => {
     // Asserted via the write mechanism rather than a global tmpdir scan: the
     // temp dir is shared with concurrently-running tests that legitimately
     // create v2 files, so a before/after directory diff is racy. Zero calls to
-    // either v2 write path deterministically means no clawd-pidcache2-* file can
+    // either v2 write path deterministically means no duck-pidcache2-* file can
     // be produced from here.
     const { resolve, cleanup } = mkResolver();
     const wrote = t.mock.method(pc, "writePidCacheV2");
@@ -183,7 +183,7 @@ describe("resolver no-arg compatibility (§5.1 red line)", () => {
         platformConfig: cfg, startPid: process.pid,
         agentNames: { win: new Set(["node.exe"]), mac: new Set(["node"]) },
         agentCmdlineCheck: (c) => c.includes("someagent"),
-        readRuntimeIdentity: () => ({ ok: true, reason: null, port: 23333, ownerPid: process.pid }),
+        readRuntimeIdentity: () => ({ ok: true, reason: null, port: 24333, ownerPid: process.pid }),
         env: {},
       });
       const r1 = resolve();
@@ -435,7 +435,7 @@ describe("resolver v1→v2 promotion (Claude only)", () => {
 
   it("after a v2 write failure dropped v1, the next OFFLINE event is still zero spawn", (t) => {
     // The cost of the privacy choice above is bounded: the next event misses and
-    // re-resolves — but only if Clawd is actually running. Offline, the #681 gate
+    // re-resolves — but only if Duck is actually running. Offline, the #681 gate
     // still refuses, so the failure mode this whole issue is about cannot return.
     const sid = freshSid();
     pc.writePidCache(sid, CWD, liveSubset());
@@ -447,7 +447,7 @@ describe("resolver v1→v2 promotion (Claude only)", () => {
       offline.resolve(ctx(sid, "prompt"));
       assert.strictEqual(pc.readPidCache(sid, CWD), null, "v1 dropped");
       const second = offline.resolve(ctx(freshSid(), "event")); // a miss → would fresh, if allowed
-      assert.strictEqual(offline.spawns(), 0, "still zero spawn while Clawd is offline");
+      assert.strictEqual(offline.spawns(), 0, "still zero spawn while Duck is offline");
       assert.strictEqual(second.stablePid, null);
     } finally { offline.cleanup(); }
   });

@@ -1,7 +1,7 @@
 "use strict";
 
 (function initSettingsTabAnimOverrides(root) {
-  const animMergeApi = root.ClawdSettingsAnimOverridesMerge || {};
+  const animMergeApi = root.DuckSettingsAnimOverridesMerge || {};
   const getAssetPreviewUrl = animMergeApi.getAssetPreviewUrl || ((asset) => {
     if (!asset) return null;
     if (asset.previewImageUrl) return asset.previewImageUrl;
@@ -745,7 +745,7 @@
     // The "on / off" subtab owns its own theme-override patching (it re-syncs
     // the mounted switches in place, or rebuilds on a theme switch).
     if (runtime.animOverridesSubtab === "map") {
-      const handled = root.ClawdSettingsTabAnimMap.patchMapInPlace(changes);
+      const handled = root.DuckSettingsTabAnimMap.patchMapInPlace(changes);
       // patchMapInPlace only returns true for a themeOverrides (and possibly
       // theme) broadcast — which also makes the cached animation & sound cards
       // stale (e.g. "reset all" wipes the whole theme's overrides). Drop the
@@ -1102,7 +1102,7 @@
     // "On / off" reads themeOverrides directly, so it does not wait for the
     // animation asset payload used by the other two subtabs.
     if (subtab === "map") {
-      root.ClawdSettingsTabAnimMap.renderMapSubtab(body);
+      root.DuckSettingsTabAnimMap.renderMapSubtab(body);
       return;
     }
 
@@ -1377,7 +1377,7 @@
     themeMeta.className = "anim-override-meta";
     const themeLabel = document.createElement("div");
     themeLabel.className = "anim-override-meta-label";
-    themeLabel.textContent = `${t("animOverridesCurrentTheme")}: ${(data.theme && data.theme.name) || "clawd"}`;
+    themeLabel.textContent = `${t("animOverridesCurrentTheme")}: ${(data.theme && data.theme.name) || "duck"}`;
     themeMeta.appendChild(themeLabel);
 
     const primaryActions = document.createElement("div");
@@ -2318,5 +2318,5 @@
     };
   }
 
-  root.ClawdSettingsTabAnimOverrides = { init };
+  root.DuckSettingsTabAnimOverrides = { init };
 })(globalThis);

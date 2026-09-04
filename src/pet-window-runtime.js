@@ -75,7 +75,7 @@ function createRenderProcessGoneReloadGuard(options = {}) {
     const key = crashKey || "default";
     const reason = getRenderGoneReason(details);
     if (NON_RELOADABLE_RENDER_GONE_REASONS.has(reason)) {
-      log(`Clawd: not reloading ${key} after render-process-gone (${reason})`);
+      log(`Duck: not reloading ${key} after render-process-gone (${reason})`);
       return false;
     }
 
@@ -83,7 +83,7 @@ function createRenderProcessGoneReloadGuard(options = {}) {
     const cutoff = ts - crashReloadWindowMs;
     const recent = (reloadsByKey.get(key) || []).filter((value) => value >= cutoff);
     if (recent.length >= crashReloadLimit) {
-      log(`Clawd: stopped reloading ${key} after ${recent.length} crashes in ${crashReloadWindowMs}ms`);
+      log(`Duck: stopped reloading ${key} after ${recent.length} crashes in ${crashReloadWindowMs}ms`);
       reloadsByKey.set(key, recent);
       return false;
     }
@@ -184,15 +184,15 @@ function createPetWindowRuntime(options = {}) {
   // native-window reconciliation into warning spam. Tests and diagnostics can
   // still inject edgeLog directly and therefore do not depend on process env.
   const edgeLog = options.edgeLog || ((message) => {
-    if (process.env.CLAWD_WINDOW_DEBUG === "1") console.warn(message);
+    if (process.env.DUCK_WINDOW_DEBUG === "1") console.warn(message);
   });
   // Phase 2 item 8's escape hatch (plan §4.3 point 12 / §11.11). A live
   // function (not a value captured once) so tests can flip it and so a
-  // real CLAWD_DISABLE_EDGE_VIRTUALIZATION env change take effect without a
+  // real DUCK_DISABLE_EDGE_VIRTUALIZATION env change take effect without a
   // restart being architecturally required, matching how isLinux/isWin etc.
   // are otherwise treated as fixed per-process facts but env vars are not.
   const isEdgeVirtualizationDisabled = options.isEdgeVirtualizationDisabled
-    || (() => process.env.CLAWD_DISABLE_EDGE_VIRTUALIZATION === "1");
+    || (() => process.env.DUCK_DISABLE_EDGE_VIRTUALIZATION === "1");
   const flushRuntimeStateToPrefs = options.flushRuntimeStateToPrefs || noop;
   const handleMiniDisplayChange = options.handleMiniDisplayChange || noop;
   // Issue #690 plan §4.5 point 4.5-4: handleDisplayMetricsChanged() must hand
@@ -522,7 +522,7 @@ function createPetWindowRuntime(options = {}) {
   function logEdgeOnce(reason, detail) {
     if (loggedEdgeReasons.has(reason)) return;
     loggedEdgeReasons.add(reason);
-    edgeLog(`Clawd: edge-${reason} ${detail}`);
+    edgeLog(`Duck: edge-${reason} ${detail}`);
   }
 
   function clearLoggedEdgeReason(reason) {
@@ -606,7 +606,7 @@ function createPetWindowRuntime(options = {}) {
     const prev = observedClampInsets.get(key);
     if (prev === inset) return;
     observedClampInsets.set(key, inset);
-    edgeLog(`Clawd: inset-drift display=${displayId} edge=${edge} old=${Number.isFinite(prev) ? prev : 0} new=${inset}`);
+    edgeLog(`Duck: inset-drift display=${displayId} edge=${edge} old=${Number.isFinite(prev) ? prev : 0} new=${inset}`);
   }
 
   // PR #751 Codex review #3 (rework batch A-3): the gate in front of
@@ -685,7 +685,7 @@ function createPetWindowRuntime(options = {}) {
   }
 
   // §4.2's leftBound/rightBound: null means "don't clamp that side". I3 is
-  // enforced right here — Windows/macOS, the CLAWD_DISABLE_EDGE_VIRTUALIZATION
+  // enforced right here — Windows/macOS, the DUCK_DISABLE_EDGE_VIRTUALIZATION
   // escape hatch (Phase 2 item 8, plan §4.3 point 12), and any edge the shared
   // helper reports as an internal seam all get { null, null }, which
   // reproduces byte-identical pre-#690 physical-overflow behavior via
@@ -881,7 +881,7 @@ function createPetWindowRuntime(options = {}) {
       ? `${actual.x - predicted.x},${actual.y - predicted.y},${actual.width - predicted.width},${actual.height - predicted.height}`
       : "n/a";
     edgeLog(
-      `Clawd: edge-reconcile window=${windowLabel} predicted=${rectStr(predicted)} actual=${rectStr(actual)} `
+      `Duck: edge-reconcile window=${windowLabel} predicted=${rectStr(predicted)} actual=${rectStr(actual)} `
       + `delta=${delta} writeGen=${writeGen} settleState=${settleState} sinceWriteMs=${sinceWriteMs} `
       + `action=${action}${extra ? ` ${extra}` : ""}`
     );
@@ -2150,7 +2150,7 @@ function createPetWindowRuntime(options = {}) {
   // call site.
   function handleHitExternalMoveCandidate(actualHit) {
     edgeLog(
-      `Clawd: edge-hit-external-move-candidate action=log-only `
+      `Duck: edge-hit-external-move-candidate action=log-only `
       + `actual=${actualHit.x},${actualHit.y},${actualHit.width},${actualHit.height} `
       + `lastRequestedHitRect=${lastRequestedHitRect.x},${lastRequestedHitRect.y},${lastRequestedHitRect.width},${lastRequestedHitRect.height} `
       + `note=P1-4-pending-real-machine-data`
@@ -2217,7 +2217,7 @@ function createPetWindowRuntime(options = {}) {
       });
       renderWin.on("unresponsive", () => {
         if (isQuitting()) return;
-        console.warn("Clawd: renderer unresponsive — reloading");
+        console.warn("Duck: renderer unresponsive — reloading");
         reloadWindowWebContents(renderWin);
       });
     }
@@ -2231,7 +2231,7 @@ function createPetWindowRuntime(options = {}) {
         try {
           flushRuntimeStateToPrefs();
         } catch (err) {
-          console.warn("Clawd: failed to persist prefs during Windows session end:", err && err.message);
+          console.warn("Duck: failed to persist prefs during Windows session end:", err && err.message);
         }
       };
       renderWin.on("query-session-end", flushForSessionEnd);
@@ -2294,7 +2294,7 @@ function createPetWindowRuntime(options = {}) {
       // Windows normally starts with Electron's activation path disabled. The
       // native controller removes WS_EX_NOACTIVATE outside fullscreen, while
       // Electron remains non-focusable so Chromium does not explicitly
-      // activate Clawd on a fullscreen click/drag. If that controller could
+      // activate Duck on a fullscreen click/drag. If that controller could
       // not initialize, main opts into the legacy focusable construction so
       // desktop pointer interaction is not stranded behind an FFI failure.
       // Linux keeps its existing non-focusable behavior; macOS is normalized

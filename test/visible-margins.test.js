@@ -19,15 +19,15 @@ describe("visible margin envelopes", () => {
   const bounds = { x: 0, y: 0, width: 280, height: 280 };
 
   it("prefers layout.marginBox over contentBox when present", () => {
-    const clawd = themeLoader.loadTheme("clawd");
-    assert.deepStrictEqual(getThemeMarginBox(clawd), clawd.layout.marginBox);
+    const duck = themeLoader.loadTheme("duck");
+    assert.deepStrictEqual(getThemeMarginBox(duck), duck.layout.marginBox);
 
-    const idleFile = clawd.states.idle[0];
-    const contentRect = hitGeometry.getContentRectScreen(clawd, bounds, "idle", idleFile, {
-      box: clawd.layout.contentBox,
+    const idleFile = duck.states.idle[0];
+    const contentRect = hitGeometry.getContentRectScreen(duck, bounds, "idle", idleFile, {
+      box: duck.layout.contentBox,
     });
-    const marginRect = hitGeometry.getContentRectScreen(clawd, bounds, "idle", idleFile, {
-      box: clawd.layout.marginBox,
+    const marginRect = hitGeometry.getContentRectScreen(duck, bounds, "idle", idleFile, {
+      box: duck.layout.marginBox,
     });
 
     assert.ok(marginRect.top < contentRect.top);
@@ -38,12 +38,12 @@ describe("visible margin envelopes", () => {
   });
 
   it("collects a non-mini envelope file set", () => {
-    const clawd = themeLoader.loadTheme("clawd");
-    const files = collectThemeEnvelopeFiles(clawd);
+    const duck = themeLoader.loadTheme("duck");
+    const files = collectThemeEnvelopeFiles(duck);
 
-    assert.ok(files.includes("clawd-working-typing.svg"));
-    assert.ok(files.includes("clawd-react-drag.svg"));
-    assert.ok(!files.includes("clawd-mini-idle.svg"));
+    assert.ok(files.includes("duck-working-typing.svg"));
+    assert.ok(files.includes("duck-react-drag.svg"));
+    assert.ok(!files.includes("duck-mini-idle.svg"));
     assert.ok(!files.some((file) => file.startsWith("mini-")));
   });
 
@@ -72,22 +72,22 @@ describe("visible margin envelopes", () => {
   });
 
   it("builds the update anchor from marginBox and the idle file", () => {
-    const clawd = themeLoader.loadTheme("clawd");
-    const expected = hitGeometry.getContentRectScreen(clawd, bounds, "idle", clawd.states.idle[0], {
-      box: clawd.layout.marginBox,
+    const duck = themeLoader.loadTheme("duck");
+    const expected = hitGeometry.getContentRectScreen(duck, bounds, "idle", duck.states.idle[0], {
+      box: duck.layout.marginBox,
     });
 
-    assert.deepStrictEqual(computeThemeAnchorRect(clawd, bounds), expected);
+    assert.deepStrictEqual(computeThemeAnchorRect(duck, bounds), expected);
   });
 
   it("prefers updateBubbleAnchorBox over layout-derived boxes when present", () => {
-    const clawd = structuredClone(themeLoader.loadTheme("clawd"));
-    clawd.updateBubbleAnchorBox = { x: -2, y: -1, width: 12, height: 11 };
+    const duck = structuredClone(themeLoader.loadTheme("duck"));
+    duck.updateBubbleAnchorBox = { x: -2, y: -1, width: 12, height: 11 };
 
     assert.deepStrictEqual(
-      computeThemeAnchorRect(clawd, bounds),
-      hitGeometry.getContentRectScreen(clawd, bounds, "idle", clawd.states.idle[0], {
-        box: clawd.updateBubbleAnchorBox,
+      computeThemeAnchorRect(duck, bounds),
+      hitGeometry.getContentRectScreen(duck, bounds, "idle", duck.states.idle[0], {
+        box: duck.updateBubbleAnchorBox,
       })
     );
   });
@@ -120,13 +120,13 @@ describe("visible margin envelopes", () => {
   });
 
   it("returns null for the update anchor when the theme has no layout", () => {
-    const theme = structuredClone(themeLoader.loadTheme("clawd"));
+    const theme = structuredClone(themeLoader.loadTheme("duck"));
     delete theme.layout;
     assert.strictEqual(computeThemeAnchorRect(theme, bounds), null);
   });
 
   it("still returns an anchor without layout when updateBubbleAnchorBox is present", () => {
-    const theme = structuredClone(themeLoader.loadTheme("clawd"));
+    const theme = structuredClone(themeLoader.loadTheme("duck"));
     delete theme.layout;
     theme.updateBubbleAnchorBox = { x: 0, y: 0, width: 20, height: 10 };
 

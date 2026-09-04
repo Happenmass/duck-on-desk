@@ -22,7 +22,7 @@ function submit(action) {
 bridge.onState((state = {}) => {
   const isError = state.kind === "error";
   document.documentElement.lang = state.lang || "en";
-  document.title = state.title || "Clawd";
+  document.title = state.title || "Duck";
   root.dataset.kind = isError ? "error" : "confirm";
   title.textContent = state.title || "";
   message.textContent = state.message || "";

@@ -15,7 +15,7 @@ const path = require("path");
 
 const themeLoader = require("../src/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
-const _defaultTheme = themeLoader.loadTheme("clawd");
+const _defaultTheme = themeLoader.loadTheme("duck");
 
 const {
   commandRegistry,
@@ -193,20 +193,20 @@ describe("setThemeOverrideDisabled", () => {
 
   it("enable (disabled:true) 首次写入生成 {disabled:true}", () => {
     const r = action(
-      { themeId: "clawd", stateKey: "attention", disabled: true },
+      { themeId: "duck", stateKey: "attention", disabled: true },
       { snapshot: baseSnap() },
     );
     assert.strictEqual(r.status, "ok");
     assert.deepStrictEqual(r.commit.themeOverrides, {
-      clawd: { states: { attention: { disabled: true } } },
+      duck: { states: { attention: { disabled: true } } },
     });
   });
 
   it("同值 noop 不产生 commit", () => {
     const snap = baseSnap();
-    snap.themeOverrides = { clawd: { states: { attention: { disabled: true } } } };
+    snap.themeOverrides = { duck: { states: { attention: { disabled: true } } } };
     const r = action(
-      { themeId: "clawd", stateKey: "attention", disabled: true },
+      { themeId: "duck", stateKey: "attention", disabled: true },
       { snapshot: snap },
     );
     assert.strictEqual(r.status, "ok");
@@ -216,9 +216,9 @@ describe("setThemeOverrideDisabled", () => {
 
   it("disabled:false 清理 key 且整个 theme map 空后删除 theme 条目", () => {
     const snap = baseSnap();
-    snap.themeOverrides = { clawd: { states: { attention: { disabled: true } } } };
+    snap.themeOverrides = { duck: { states: { attention: { disabled: true } } } };
     const r = action(
-      { themeId: "clawd", stateKey: "attention", disabled: false },
+      { themeId: "duck", stateKey: "attention", disabled: false },
       { snapshot: snap },
     );
     assert.strictEqual(r.status, "ok");
@@ -228,7 +228,7 @@ describe("setThemeOverrideDisabled", () => {
   it("disabled:false 保留其他被禁用的 state", () => {
     const snap = baseSnap();
     snap.themeOverrides = {
-      clawd: {
+      duck: {
         states: {
           attention: { disabled: true },
           sweeping:  { disabled: true },
@@ -236,29 +236,29 @@ describe("setThemeOverrideDisabled", () => {
       },
     };
     const r = action(
-      { themeId: "clawd", stateKey: "attention", disabled: false },
+      { themeId: "duck", stateKey: "attention", disabled: false },
       { snapshot: snap },
     );
     assert.deepStrictEqual(r.commit.themeOverrides, {
-      clawd: { states: { sweeping: { disabled: true } } },
+      duck: { states: { sweeping: { disabled: true } } },
     });
   });
 
   it("disabled:false 遇到 file-form 条目时保留 file 字段（forward-compat）", () => {
     const snap = baseSnap();
     snap.themeOverrides = {
-      clawd: {
+      duck: {
         states: {
-          attention: { disabled: true, sourceThemeId: "clawd", file: "clawd-happy.svg" },
+          attention: { disabled: true, sourceThemeId: "duck", file: "duck-happy.svg" },
         },
       },
     };
     const r = action(
-      { themeId: "clawd", stateKey: "attention", disabled: false },
+      { themeId: "duck", stateKey: "attention", disabled: false },
       { snapshot: snap },
     );
     assert.deepStrictEqual(r.commit.themeOverrides, {
-      clawd: { states: { attention: { sourceThemeId: "clawd", file: "clawd-happy.svg" } } },
+      duck: { states: { attention: { sourceThemeId: "duck", file: "duck-happy.svg" } } },
     });
   });
 
@@ -266,19 +266,19 @@ describe("setThemeOverrideDisabled", () => {
     const snap = baseSnap();
     snap.themeOverrides = { calico: { states: { attention: { disabled: true } } } };
     const r = action(
-      { themeId: "clawd", stateKey: "attention", disabled: true },
+      { themeId: "duck", stateKey: "attention", disabled: true },
       { snapshot: snap },
     );
     assert.deepStrictEqual(r.commit.themeOverrides, {
       calico: { states: { attention: { disabled: true } } },
-      clawd:  { states: { attention: { disabled: true } } },
+      duck:  { states: { attention: { disabled: true } } },
     });
   });
 
   it("非白名单 stateKey 被拒绝", () => {
     for (const badKey of ["idle", "working", "juggling", "thinking", "sleeping", "waking"]) {
       const r = action(
-        { themeId: "clawd", stateKey: badKey, disabled: true },
+        { themeId: "duck", stateKey: badKey, disabled: true },
         { snapshot: baseSnap() },
       );
       assert.strictEqual(r.status, "error", `${badKey} 应该被拒绝`);
@@ -288,7 +288,7 @@ describe("setThemeOverrideDisabled", () => {
   it("白名单 stateKey 全部接受", () => {
     for (const key of ONESHOT_OVERRIDE_STATES) {
       const r = action(
-        { themeId: "clawd", stateKey: key, disabled: true },
+        { themeId: "duck", stateKey: key, disabled: true },
         { snapshot: baseSnap() },
       );
       assert.strictEqual(r.status, "ok", `${key} 应该被接受`);
@@ -297,7 +297,7 @@ describe("setThemeOverrideDisabled", () => {
 
   it("disabled 必须是 boolean", () => {
     const r = action(
-      { themeId: "clawd", stateKey: "attention", disabled: "yes" },
+      { themeId: "duck", stateKey: "attention", disabled: "yes" },
       { snapshot: baseSnap() },
     );
     assert.strictEqual(r.status, "error");
@@ -318,7 +318,7 @@ describe("setThemeOverrideDisabled", () => {
 
   it("payload 非 object 报错", () => {
     assert.strictEqual(action(null, { snapshot: baseSnap() }).status, "error");
-    assert.strictEqual(action("clawd", { snapshot: baseSnap() }).status, "error");
+    assert.strictEqual(action("duck", { snapshot: baseSnap() }).status, "error");
   });
 });
 
@@ -330,7 +330,7 @@ describe("resetThemeOverrides", () => {
     const snap = baseSnap();
     snap.theme = "calico";
     snap.themeOverrides = {
-      clawd: {
+      duck: {
         states: {
           attention: { disabled: true },
           notification: { disabled: true },
@@ -338,16 +338,16 @@ describe("resetThemeOverrides", () => {
       },
       calico: { states: { error: { disabled: true } } },
     };
-    const r = action({ themeId: "clawd" }, { snapshot: snap });
+    const r = action({ themeId: "duck" }, { snapshot: snap });
     assert.strictEqual(r.status, "ok");
-    // clawd 整条清掉，calico 保留
+    // duck 整条清掉，calico 保留
     assert.deepStrictEqual(r.commit.themeOverrides, {
       calico: { states: { error: { disabled: true } } },
     });
   });
 
   it("该主题没有 override 时 noop", () => {
-    const r = action({ themeId: "clawd" }, { snapshot: baseSnap() });
+    const r = action({ themeId: "duck" }, { snapshot: baseSnap() });
     assert.strictEqual(r.status, "ok");
     assert.strictEqual(r.noop, true);
     assert.ok(!r.commit);
@@ -356,8 +356,8 @@ describe("resetThemeOverrides", () => {
   it("接受字符串 payload 简写", () => {
     const snap = baseSnap();
     snap.theme = "calico";
-    snap.themeOverrides = { clawd: { states: { attention: { disabled: true } } } };
-    const r = action("clawd", { snapshot: snap });
+    snap.themeOverrides = { duck: { states: { attention: { disabled: true } } } };
+    const r = action("duck", { snapshot: snap });
     assert.strictEqual(r.status, "ok");
     assert.deepStrictEqual(r.commit.themeOverrides, {});
   });
@@ -369,13 +369,13 @@ describe("resetThemeOverrides", () => {
 
   it("当前主题 reset 时会显式重载运行时 theme（overrideMap=null）", () => {
     const snap = baseSnap();
-    snap.theme = "clawd";
+    snap.theme = "duck";
     snap.themeOverrides = {
-      clawd: { states: { attention: { disabled: true } } },
+      duck: { states: { attention: { disabled: true } } },
     };
     const calls = [];
     const r = action(
-      { themeId: "clawd" },
+      { themeId: "duck" },
       {
         snapshot: snap,
         activateTheme: (themeId, variantId, overrideMap) => {
@@ -385,7 +385,7 @@ describe("resetThemeOverrides", () => {
     );
     assert.strictEqual(r.status, "ok");
     assert.deepStrictEqual(calls, [{
-      themeId: "clawd",
+      themeId: "duck",
       variantId: null,
       overrideMap: null,
     }]);
@@ -394,11 +394,11 @@ describe("resetThemeOverrides", () => {
 
   it("当前主题 reset 缺少 activateTheme 依赖时返回 error", () => {
     const snap = baseSnap();
-    snap.theme = "clawd";
+    snap.theme = "duck";
     snap.themeOverrides = {
-      clawd: { states: { attention: { disabled: true } } },
+      duck: { states: { attention: { disabled: true } } },
     };
-    const r = action({ themeId: "clawd" }, { snapshot: snap });
+    const r = action({ themeId: "duck" }, { snapshot: snap });
     assert.strictEqual(r.status, "error");
     assert.match(r.message, /activateTheme/);
   });
@@ -406,13 +406,13 @@ describe("resetThemeOverrides", () => {
 
 describe("setAnimationOverride", () => {
   const action = commandRegistry.setAnimationOverride;
-  const baseSnap = () => ({ ...prefs.getDefaults(), theme: "clawd", themeOverrides: {} });
+  const baseSnap = () => ({ ...prefs.getDefaults(), theme: "duck", themeOverrides: {} });
 
   it("写 state file + transition + autoReturn 到嵌套 schema", () => {
     const calls = [];
     const r = action(
       {
-        themeId: "clawd",
+        themeId: "duck",
         slotType: "state",
         stateKey: "attention",
         file: "custom-attention.svg",
@@ -430,7 +430,7 @@ describe("setAnimationOverride", () => {
     assert.strictEqual(r.status, "ok");
     assert.strictEqual(calls.length, 1);
     assert.deepStrictEqual(r.commit.themeOverrides, {
-      clawd: {
+      duck: {
         states: {
           attention: {
             file: "custom-attention.svg",
@@ -447,24 +447,24 @@ describe("setAnimationOverride", () => {
   it("写 tier file + transition，用 originalFile 作 key", () => {
     const r = action(
       {
-        themeId: "clawd",
+        themeId: "duck",
         slotType: "tier",
         tierGroup: "workingTiers",
-        originalFile: "clawd-working-typing.svg",
+        originalFile: "duck-working-typing.svg",
         file: "custom-working.svg",
         transition: { in: 0, out: 90 },
       },
       {
         snapshot: baseSnap(),
-        activateTheme: () => ({ themeId: "clawd", variantId: "default" }),
+        activateTheme: () => ({ themeId: "duck", variantId: "default" }),
       },
     );
     assert.strictEqual(r.status, "ok");
     assert.deepStrictEqual(r.commit.themeOverrides, {
-      clawd: {
+      duck: {
         tiers: {
           workingTiers: {
-            "clawd-working-typing.svg": {
+            "duck-working-typing.svg": {
               file: "custom-working.svg",
               transition: { in: 0, out: 90 },
             },
@@ -477,7 +477,7 @@ describe("setAnimationOverride", () => {
   it("写 idleAnimation file + transition + duration，用 originalFile 作 key", () => {
     const r = action(
       {
-        themeId: "clawd",
+        themeId: "duck",
         slotType: "idleAnimation",
         originalFile: "idle-look.svg",
         file: "custom-idle-look.svg",
@@ -486,12 +486,12 @@ describe("setAnimationOverride", () => {
       },
       {
         snapshot: baseSnap(),
-        activateTheme: () => ({ themeId: "clawd", variantId: "default" }),
+        activateTheme: () => ({ themeId: "duck", variantId: "default" }),
       },
     );
     assert.strictEqual(r.status, "ok");
     assert.deepStrictEqual(r.commit.themeOverrides, {
-      clawd: {
+      duck: {
         idleAnimations: {
           "idle-look.svg": {
             file: "custom-idle-look.svg",
@@ -509,7 +509,7 @@ describe("setAnimationOverride", () => {
     snap.theme = "calico";
     const r = action(
       {
-        themeId: "clawd",
+        themeId: "duck",
         slotType: "state",
         stateKey: "error",
         file: "x.svg",
@@ -522,14 +522,14 @@ describe("setAnimationOverride", () => {
     assert.strictEqual(r.status, "ok");
     assert.strictEqual(calls.length, 0);
     assert.deepStrictEqual(r.commit.themeOverrides, {
-      clawd: { states: { error: { file: "x.svg" } } },
+      duck: { states: { error: { file: "x.svg" } } },
     });
   });
 
   it("当前主题缺少 activateTheme 依赖时返回 error", () => {
     const r = action(
       {
-        themeId: "clawd",
+        themeId: "duck",
         slotType: "state",
         stateKey: "attention",
         file: "x.svg",

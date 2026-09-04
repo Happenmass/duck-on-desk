@@ -11,7 +11,7 @@
 // one process (and tests, which create many) must get independent queues that
 // never observe each other's operations. See src/server.js for the single
 // instance created per running server and the business-level wrappers
-// (syncClawdHooks, setClaudeAutoStart, uninstallClaudeHooks) built on top.
+// (syncDuckHooks, setClaudeAutoStart, uninstallClaudeHooks) built on top.
 
 function createClaudeHookOperations(options = {}) {
   const shouldRunAutomatic = typeof options.shouldRunAutomatic === "function"

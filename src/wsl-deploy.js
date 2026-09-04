@@ -19,7 +19,7 @@ function collectHookFiles(hooksDir) {
       files.push({ name, relativePath: name, path: full, content: fs.readFileSync(full, "utf8") });
     }
   } catch (err) {
-    console.warn("Clawd: collectHookFiles failed:", err && err.message ? err.message : err);
+    console.warn("Duck: collectHookFiles failed:", err && err.message ? err.message : err);
     throw err;
   }
   return files;
@@ -236,7 +236,7 @@ async function deployPersistentToWsl(distro, agentId, installScript, entries, op
   const installArgs = getAgentInstallArgs(agentId);
   const runResult = await execInWsl(
     distro,
-    `cd ${quotePosix(hooksTargetDir)} && CLAWD_WSL_DISTRO='${distroEscaped}' node ${installScript}${installArgs ? ` ${installArgs}` : ""}`,
+    `cd ${quotePosix(hooksTargetDir)} && DUCK_WSL_DISTRO='${distroEscaped}' node ${installScript}${installArgs ? ` ${installArgs}` : ""}`,
     { ...options, shell: "bash", shellFlags: ["-l", "-i", "-c"], timeout: 60000 }
   );
   if (!runResult || runResult.code !== 0) {
@@ -254,7 +254,7 @@ async function deployPersistentToWsl(distro, agentId, installScript, entries, op
   );
   const connectivity = parseConnectivityProbe(probeResult && probeResult.stdout);
   if (connectivity.reachable === true) emit("verify-connectivity", "ok", null, { port: connectivity.port });
-  else if (connectivity.reachable === false) emit("verify-connectivity", "warn", "Clawd HTTP server unreachable from WSL (NAT networking?)");
+  else if (connectivity.reachable === false) emit("verify-connectivity", "warn", "Duck HTTP server unreachable from WSL (NAT networking?)");
   else emit("verify-connectivity", "skip", (probeResult && probeResult.stderr) || null);
 
   return {

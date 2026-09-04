@@ -93,11 +93,11 @@ function buildKoffiFfi(koffi) {
   const kernel32 = koffi.load("kernel32.dll");
   const ntdll = koffi.load("ntdll.dll");
 
-  const FileTime = koffi.struct("ClawdProcessFILETIME", {
+  const FileTime = koffi.struct("DuckProcessFILETIME", {
     low: "uint32",
     high: "uint32",
   });
-  const ProcessBasicInformation = koffi.struct("ClawdPROCESS_BASIC_INFORMATION", {
+  const ProcessBasicInformation = koffi.struct("DuckPROCESS_BASIC_INFORMATION", {
     ExitStatus: "int32",
     PebBaseAddress: "void *",
     AffinityMask: "uintptr_t",
@@ -109,10 +109,10 @@ function buildKoffiFfi(koffi) {
   return {
     OpenProcess: kernel32.func("void * __stdcall OpenProcess(uint32 dwDesiredAccess, bool bInheritHandle, uint32 dwProcessId)"),
     QueryFullProcessImageNameW: kernel32.func("bool __stdcall QueryFullProcessImageNameW(void *hProcess, uint32 dwFlags, _Out_ uint16_t *lpExeName, _Inout_ uint32 *lpdwSize)"),
-    GetProcessTimes: kernel32.func("bool __stdcall GetProcessTimes(void *hProcess, _Out_ ClawdProcessFILETIME *lpCreationTime, _Out_ ClawdProcessFILETIME *lpExitTime, _Out_ ClawdProcessFILETIME *lpKernelTime, _Out_ ClawdProcessFILETIME *lpUserTime)"),
+    GetProcessTimes: kernel32.func("bool __stdcall GetProcessTimes(void *hProcess, _Out_ DuckProcessFILETIME *lpCreationTime, _Out_ DuckProcessFILETIME *lpExitTime, _Out_ DuckProcessFILETIME *lpKernelTime, _Out_ DuckProcessFILETIME *lpUserTime)"),
     CloseHandle: kernel32.func("bool __stdcall CloseHandle(void *hObject)"),
     GetLastError: kernel32.func("uint32 __stdcall GetLastError()"),
-    NtQueryInformationProcess: ntdll.func("int32 __stdcall NtQueryInformationProcess(void *ProcessHandle, uint32 ProcessInformationClass, _Out_ ClawdPROCESS_BASIC_INFORMATION *ProcessInformation, uint32 ProcessInformationLength, _Out_ uint32 *ReturnLength)"),
+    NtQueryInformationProcess: ntdll.func("int32 __stdcall NtQueryInformationProcess(void *ProcessHandle, uint32 ProcessInformationClass, _Out_ DuckPROCESS_BASIC_INFORMATION *ProcessInformation, uint32 ProcessInformationLength, _Out_ uint32 *ReturnLength)"),
     processBasicInformationSize: koffi.sizeof(ProcessBasicInformation),
     fileTimeSize: koffi.sizeof(FileTime),
     pointerSize: koffi.sizeof("void *"),
@@ -133,11 +133,11 @@ function buildKoffiFfi(koffi) {
 
 function buildToolhelpKoffiFfi(koffi) {
   const kernel32 = koffi.load("kernel32.dll");
-  const FileTime = koffi.struct("ClawdToolhelpFILETIME", {
+  const FileTime = koffi.struct("DuckToolhelpFILETIME", {
     low: "uint32",
     high: "uint32",
   });
-  const ProcessEntry = koffi.struct("ClawdPROCESSENTRY32W", {
+  const ProcessEntry = koffi.struct("DuckPROCESSENTRY32W", {
     dwSize: "uint32",
     cntUsage: "uint32",
     th32ProcessID: "uint32",
@@ -151,10 +151,10 @@ function buildToolhelpKoffiFfi(koffi) {
   });
   return {
     CreateToolhelp32Snapshot: kernel32.func("void * __stdcall CreateToolhelp32Snapshot(uint32 dwFlags, uint32 th32ProcessID)"),
-    Process32FirstW: kernel32.func("bool __stdcall Process32FirstW(void *hSnapshot, _Inout_ ClawdPROCESSENTRY32W *lppe)"),
-    Process32NextW: kernel32.func("bool __stdcall Process32NextW(void *hSnapshot, _Inout_ ClawdPROCESSENTRY32W *lppe)"),
+    Process32FirstW: kernel32.func("bool __stdcall Process32FirstW(void *hSnapshot, _Inout_ DuckPROCESSENTRY32W *lppe)"),
+    Process32NextW: kernel32.func("bool __stdcall Process32NextW(void *hSnapshot, _Inout_ DuckPROCESSENTRY32W *lppe)"),
     OpenProcess: kernel32.func("void * __stdcall OpenProcess(uint32 dwDesiredAccess, bool bInheritHandle, uint32 dwProcessId)"),
-    GetProcessTimes: kernel32.func("bool __stdcall GetProcessTimes(void *hProcess, _Out_ ClawdToolhelpFILETIME *lpCreationTime, _Out_ ClawdToolhelpFILETIME *lpExitTime, _Out_ ClawdToolhelpFILETIME *lpKernelTime, _Out_ ClawdToolhelpFILETIME *lpUserTime)"),
+    GetProcessTimes: kernel32.func("bool __stdcall GetProcessTimes(void *hProcess, _Out_ DuckToolhelpFILETIME *lpCreationTime, _Out_ DuckToolhelpFILETIME *lpExitTime, _Out_ DuckToolhelpFILETIME *lpKernelTime, _Out_ DuckToolhelpFILETIME *lpUserTime)"),
     CloseHandle: kernel32.func("bool __stdcall CloseHandle(void *hObject)"),
     GetLastError: kernel32.func("uint32 __stdcall GetLastError()"),
     processEntrySize: koffi.sizeof(ProcessEntry),

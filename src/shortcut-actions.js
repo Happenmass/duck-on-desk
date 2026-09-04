@@ -6,7 +6,7 @@
     module.exports = api;
   }
   if (root) {
-    root.ClawdShortcutActions = api;
+    root.DuckShortcutActions = api;
   }
 })(typeof globalThis !== "undefined" ? globalThis : this, function factory() {
   const SHORTCUT_ACTIONS = Object.freeze({

@@ -96,7 +96,7 @@ function wardrobeTheme() {
 }
 
 function makeFixture() {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-accessory-overrides-"));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "duck-accessory-overrides-"));
   const appDir = path.join(tmp, "src");
   const builtinDir = path.join(tmp, "themes", "wardrobe");
   const miniFallbackDir = path.join(tmp, "themes", "wardrobe-mini-fallback");

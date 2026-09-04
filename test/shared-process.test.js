@@ -15,16 +15,16 @@ const {
 } = require("../hooks/shared-process");
 
 // #681: the Windows resolver refuses to spawn unless it can read a runtime.json
-// naming a LIVE Clawd. Every test below that exercises the WALK (rather than the
+// naming a LIVE Duck. Every test below that exercises the WALK (rather than the
 // gate itself) must therefore declare a passing gate — otherwise it silently
 // stops testing the walk and starts testing the gate.
 //
 // ownerPid is this test process, which is trivially alive, and the identity is
 // injected rather than read: a test must never depend on the developer's real
-// ~/.clawd/runtime.json (whose contents change with whether Clawd is running).
-// env:{} keeps a CLAWD_REMOTE in the developer's shell from skipping the walk.
+// ~/.duck-on-desk/runtime.json (whose contents change with whether Duck is running).
+// env:{} keeps a DUCK_REMOTE in the developer's shell from skipping the walk.
 const LIVE_GATE = {
-  readRuntimeIdentity: () => ({ ok: true, reason: null, port: 23333, ownerPid: process.pid }),
+  readRuntimeIdentity: () => ({ ok: true, reason: null, port: 24333, ownerPid: process.pid }),
   env: {},
 };
 
@@ -385,7 +385,7 @@ describe("buildElectronLaunchConfig()", () => {
   it("strips ELECTRON_RUN_AS_NODE and preserves forwarded args", () => {
     const sourceEnv = {
       ELECTRON_RUN_AS_NODE: "1",
-      CLAWD_DISABLE_SANDBOX: "0",
+      DUCK_DISABLE_SANDBOX: "0",
       KEEP_ME: "yes",
     };
 
@@ -406,7 +406,7 @@ describe("buildElectronLaunchConfig()", () => {
     const cfg = buildElectronLaunchConfig("/app", {
       platform: "linux",
       env: {
-        CLAWD_DISABLE_SANDBOX: "1",
+        DUCK_DISABLE_SANDBOX: "1",
         ELECTRON_RUN_AS_NODE: "1",
       },
       forwardedArgs: ["--foo"],

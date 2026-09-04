@@ -73,7 +73,7 @@ function loadSettingsI18nBundleForTest() {
   context.globalThis = context;
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(SETTINGS_I18N, "utf8"), context);
-  return context.ClawdSettingsI18n;
+  return context.DuckSettingsI18n;
 }
 
 function loadSettingsI18nForTest() {
@@ -106,7 +106,7 @@ function loadSettingsCoreForTest(settingsAPI, {
     window: null,
     globalThis: null,
     settingsAPI,
-    ClawdSettingsSizeSlider: {
+    DuckSettingsSizeSlider: {
       SIZE_UI_MIN: 1,
       SIZE_UI_MAX: 100,
       SIZE_TICK_VALUES: [25, 50, 75, 100],
@@ -117,7 +117,7 @@ function loadSettingsCoreForTest(settingsAPI, {
       getSizeSliderAnchorPx: () => 0,
       createSizeSliderController: () => ({}),
     },
-    ClawdSettingsI18n: {
+    DuckSettingsI18n: {
       STRINGS: { en: {} },
       CONTRIBUTORS: [],
       MAINTAINERS: [],
@@ -128,7 +128,7 @@ function loadSettingsCoreForTest(settingsAPI, {
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(SETTINGS_ANIM_OVERRIDES_MERGE, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
-  return context.ClawdSettingsCore;
+  return context.DuckSettingsCore;
 }
 
 function createQueuedRaf() {
@@ -579,7 +579,7 @@ function loadSharedLanguagePickerForTest({
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(LANGUAGE_PICKER_JS, "utf8"), context);
 
-  const control = context.ClawdLanguagePicker.createLanguagePicker({
+  const control = context.DuckLanguagePicker.createLanguagePicker({
     value,
     options: options.map((option) => ({ value: option, label: option.toUpperCase() })),
     ariaLabel: "Language",
@@ -681,7 +681,7 @@ function loadGeneralLanguageRowForTest({
     window: null,
     globalThis: null,
     settingsAPI,
-    ClawdSettingsSizeSlider: {
+    DuckSettingsSizeSlider: {
       SIZE_UI_MIN: 1,
       SIZE_UI_MAX: 100,
       SIZE_TICK_VALUES: [25, 50, 75, 100],
@@ -692,7 +692,7 @@ function loadGeneralLanguageRowForTest({
       getSizeSliderAnchorPx: () => 0,
       createSizeSliderController: () => ({}),
     },
-    ClawdSettingsI18n: {
+    DuckSettingsI18n: {
       STRINGS: {
         en: {
           rowLanguage: "Language",
@@ -725,22 +725,22 @@ function loadGeneralLanguageRowForTest({
   vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
   const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8")
     .replace(
-      "root.ClawdSettingsTabGeneral = { init };",
-      "root.ClawdSettingsTabGeneral = { init, __test: { buildLanguageRow } };"
+      "root.DuckSettingsTabGeneral = { init };",
+      "root.DuckSettingsTabGeneral = { init, __test: { buildLanguageRow } };"
     );
   vm.runInContext(generalSource, context);
 
-  const core = context.ClawdSettingsCore;
+  const core = context.DuckSettingsCore;
   core.state.snapshot = snapshot || { lang: "en" };
   core.state.activeTab = "general";
-  context.ClawdSettingsTabGeneral.init(core);
+  context.DuckSettingsTabGeneral.init(core);
 
   let contentRenderCount = 0;
   function renderLanguageOnly() {
     contentRenderCount++;
     core.ops.clearMountedControls();
     content.innerHTML = "";
-    content.appendChild(context.ClawdSettingsTabGeneral.__test.buildLanguageRow());
+    content.appendChild(context.DuckSettingsTabGeneral.__test.buildLanguageRow());
   }
   core.ops.installRenderHooks({ content: renderLanguageOnly });
 
@@ -818,7 +818,7 @@ function loadGeneralTabForTest({
       openDashboard: () => {},
       ...settingsAPI,
     },
-    ClawdSettingsSizeSlider: {
+    DuckSettingsSizeSlider: {
       SIZE_UI_MIN: 1,
       SIZE_UI_MAX: 100,
       SIZE_TICK_VALUES: [25, 50, 75, 100],
@@ -838,7 +838,7 @@ function loadGeneralTabForTest({
         change: () => {},
       }),
     },
-    ClawdSettingsI18n: {
+    DuckSettingsI18n: {
       STRINGS: loadSettingsI18nForTest(),
       CONTRIBUTORS: [],
       MAINTAINERS: [],
@@ -852,10 +852,10 @@ function loadGeneralTabForTest({
   vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
   vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8"), context);
 
-  const core = context.ClawdSettingsCore;
+  const core = context.DuckSettingsCore;
   core.state.snapshot = snapshot || {};
   core.state.activeTab = "general";
-  context.ClawdSettingsTabGeneral.init(core);
+  context.DuckSettingsTabGeneral.init(core);
 
   let contentRenderCount = 0;
   function renderContent() {
@@ -882,7 +882,7 @@ function loadGeneralTabForTest({
 function makeGeneralSnapshot(overrides = {}) {
   return {
     lang: "en",
-    theme: "clawd",
+    theme: "duck",
     petTint: {},
     petAccessory: {},
     holidayAccessoryEnabled: {},
@@ -1040,7 +1040,7 @@ function loadThemeTabForTest({
     window: null,
     globalThis: null,
     settingsAPI: api,
-    ClawdSettingsSizeSlider: {
+    DuckSettingsSizeSlider: {
       SIZE_UI_MIN: 1,
       SIZE_UI_MAX: 100,
       SIZE_TICK_VALUES: [25, 50, 75, 100],
@@ -1051,7 +1051,7 @@ function loadThemeTabForTest({
       getSizeSliderAnchorPx: () => 0,
       createSizeSliderController: () => ({}),
     },
-    ClawdSettingsI18n: {
+    DuckSettingsI18n: {
       STRINGS: loadSettingsI18nForTest(),
       CONTRIBUTORS: [],
       MAINTAINERS: [],
@@ -1065,7 +1065,7 @@ function loadThemeTabForTest({
   vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
   vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-theme.js"), "utf8"), context);
 
-  const core = context.ClawdSettingsCore;
+  const core = context.DuckSettingsCore;
   core.state.snapshot = {
     lang: "en",
     petTint: {},
@@ -1083,7 +1083,7 @@ function loadThemeTabForTest({
   core.runtime.petMouthAccessoryOptions = Array.isArray(petMouthAccessoryOptions)
     ? petMouthAccessoryOptions
     : [];
-  context.ClawdSettingsTabTheme.init(core);
+  context.DuckSettingsTabTheme.init(core);
   const renderContent = () => {
     content.innerHTML = "";
     core.tabs.theme.render(content, core);
@@ -1108,7 +1108,7 @@ function loadAgentsTabForTest({
   body.appendChild(content);
 
   const localStorageData = {
-    "clawd.settings.collapsedGroups.v1": JSON.stringify(collapsedGroups),
+    "duck.settings.collapsedGroups.v1": JSON.stringify(collapsedGroups),
   };
 
   const document = {
@@ -1139,7 +1139,7 @@ function loadAgentsTabForTest({
       ...settingsAPI,
     },
     doctor,
-    ClawdSettingsSizeSlider: {
+    DuckSettingsSizeSlider: {
       SIZE_UI_MIN: 1,
       SIZE_UI_MAX: 100,
       SIZE_TICK_VALUES: [25, 50, 75, 100],
@@ -1150,7 +1150,7 @@ function loadAgentsTabForTest({
       getSizeSliderAnchorPx: () => 0,
       createSizeSliderController: () => ({}),
     },
-    ClawdSettingsI18n: {
+    DuckSettingsI18n: {
       STRINGS: {
         en: {
           agentsTitle: "Agents",
@@ -1238,11 +1238,11 @@ function loadAgentsTabForTest({
   vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-agent-order.js"), "utf8"), context);
   vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8"), context);
 
-  const core = context.ClawdSettingsCore;
+  const core = context.DuckSettingsCore;
   core.state.snapshot = snapshot || { agents: {} };
   core.state.activeTab = "agents";
   core.runtime.agentMetadata = Array.isArray(agentMetadata) ? agentMetadata : [];
-  context.ClawdSettingsTabAgents.init(core);
+  context.DuckSettingsTabAgents.init(core);
 
   let contentRenderCount = 0;
   function renderContent() {
@@ -1296,7 +1296,7 @@ function loadAnimMapTabForTest({
       command: () => Promise.resolve({ status: "ok" }),
       ...settingsAPI,
     },
-    ClawdSettingsSizeSlider: {
+    DuckSettingsSizeSlider: {
       SIZE_UI_MIN: 1,
       SIZE_UI_MAX: 100,
       SIZE_TICK_VALUES: [25, 50, 75, 100],
@@ -1307,7 +1307,7 @@ function loadAnimMapTabForTest({
       getSizeSliderAnchorPx: () => 0,
       createSizeSliderController: () => ({}),
     },
-    ClawdSettingsI18n: {
+    DuckSettingsI18n: {
       STRINGS: { en: {} },
       CONTRIBUTORS: [],
       MAINTAINERS: [],
@@ -1321,13 +1321,13 @@ function loadAnimMapTabForTest({
   vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-map.js"), "utf8"), context);
   vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-overrides.js"), "utf8"), context);
 
-  const core = context.ClawdSettingsCore;
-  core.state.snapshot = snapshot || { theme: "clawd", themeOverrides: {} };
+  const core = context.DuckSettingsCore;
+  core.state.snapshot = snapshot || { theme: "duck", themeOverrides: {} };
   // The Animation Map now lives as the default "on / off" subtab of the
   // Animation & Sound Overrides tab, so patching flows through that tab.
   core.state.activeTab = "animOverrides";
-  context.ClawdSettingsTabAnimMap.init(core);
-  context.ClawdSettingsTabAnimOverrides.init(core);
+  context.DuckSettingsTabAnimMap.init(core);
+  context.DuckSettingsTabAnimOverrides.init(core);
 
   let contentRenderCount = 0;
   core.ops.installRenderHooks({
@@ -1426,7 +1426,7 @@ function loadAboutTabForTest({
     i18n: { CONTRIBUTORS: [], MAINTAINERS: [] },
     tabs: {},
   };
-  context.ClawdSettingsTabAbout.init(core);
+  context.DuckSettingsTabAbout.init(core);
   core.tabs.about.render(content, core);
   return { core, content, updateCalls, toasts, disposableHarness };
 }
@@ -1480,7 +1480,7 @@ function loadAnimOverridesTabForTest({
       },
     },
     globalThis: null,
-    ClawdSettingsAnimOverridesMerge: require(SETTINGS_ANIM_OVERRIDES_MERGE),
+    DuckSettingsAnimOverridesMerge: require(SETTINGS_ANIM_OVERRIDES_MERGE),
   };
   context.globalThis = context;
   vm.createContext(context);
@@ -1504,7 +1504,7 @@ function loadAnimOverridesTabForTest({
         if (typeof invoke === "function") el.addEventListener("click", () => invoke());
         return el;
       },
-      buildSettingsSelect: (config) => context.ClawdLanguagePicker.createSettingsSelect(config),
+      buildSettingsSelect: (config) => context.DuckLanguagePicker.createSettingsSelect(config),
       ...helpersOverrides,
     },
     ops: {
@@ -1532,7 +1532,7 @@ function loadAnimOverridesTabForTest({
     renderHooks: {},
     tabs: {},
   };
-  context.ClawdSettingsTabAnimOverrides.init(core);
+  context.DuckSettingsTabAnimOverrides.init(core);
   return {
     core,
     content,
@@ -1546,17 +1546,17 @@ function createIdleVisualRuntime(selectedFile = null) {
   const card = createAnimOverrideCard({ id: "state:idle", stateKey: "idle", triggerKind: "idle" });
   return createAnimOverridesRuntime(card, {
     animationOverridesData: {
-      theme: { id: "clawd", name: "Clawd" },
+      theme: { id: "duck", name: "Duck" },
       assets: [],
       sections: [{ id: "idle", cards: [card] }],
       cards: [card],
       sounds: [],
       idleDefaultVisual: {
-        themeId: "clawd",
+        themeId: "duck",
         selectedFile,
         options: [
-          { file: "clawd-idle-follow.svg", isThemeDefault: true, label: "Idle Follow" },
-          { file: "clawd-idle-reading.svg", isThemeDefault: false, label: "Idle Reading" },
+          { file: "duck-idle-follow.svg", isThemeDefault: true, label: "Idle Follow" },
+          { file: "duck-idle-reading.svg", isThemeDefault: false, label: "Idle Reading" },
         ],
       },
     },
@@ -1619,7 +1619,7 @@ describe("settings renderer browser environment", () => {
     const doctorModalSource = fs.readFileSync(SETTINGS_DOCTOR_MODAL, "utf8");
     const agentOrderSource = fs.readFileSync(path.join(SRC_DIR, "settings-agent-order.js"), "utf8");
 
-    assert.ok(rendererSource.includes("globalThis.ClawdSettingsCore"));
+    assert.ok(rendererSource.includes("globalThis.DuckSettingsCore"));
     assert.ok(rendererSource.includes("settingsAPI.getPetTintOptions"));
     assert.ok(rendererSource.includes("settingsAPI.getPetAccessoryOptions"));
     assert.ok(rendererSource.includes("settingsAPI.getPetMouthAccessoryOptions"));
@@ -1632,10 +1632,10 @@ describe("settings renderer browser environment", () => {
     assert.ok(fs.readFileSync(PRELOAD_SETTINGS, "utf8").includes(
       'getPetMouthAccessoryOptions: () => ipcRenderer.invoke("settings:get-pet-mouth-accessory-options")'
     ));
-    assert.ok(coreSource.includes("ClawdSettingsSizeSlider"));
+    assert.ok(coreSource.includes("DuckSettingsSizeSlider"));
     assert.ok(i18nSource.includes("globalThis"));
     assert.ok(doctorModalSource.includes("globalThis"));
-    assert.ok(doctorModalSource.includes("ClawdSettingsDoctorModal"));
+    assert.ok(doctorModalSource.includes("DuckSettingsDoctorModal"));
     assert.ok(agentOrderSource.includes("globalThis"));
     assert.ok(agentOrderSource.includes("module.exports"));
 
@@ -1900,7 +1900,7 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(harness.content.querySelector(".about-update-error-card"), null);
   });
 
-  it("wires Clawd Doctor through Settings with Step 2 connection actions", () => {
+  it("wires Duck Doctor through Settings with Step 2 connection actions", () => {
     const html = fs.readFileSync(SETTINGS_HTML, "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
     const rendererSource = fs.readFileSync(SETTINGS_RENDERER, "utf8");
@@ -1913,20 +1913,20 @@ describe("settings renderer browser environment", () => {
     assert.ok(html.includes('<script src="settings-doctor-modal.js"></script>'));
     assert.ok(css.includes(".doctor-indicator"));
     assert.ok(css.includes(".doctor-modal"));
-    assert.ok(rendererSource.includes("ClawdSettingsDoctorModal.renderSidebarIndicator"));
+    assert.ok(rendererSource.includes("DuckSettingsDoctorModal.renderSidebarIndicator"));
     assert.ok(doctorModalSource.includes("initialRunStarted"));
     assert.ok(doctorModalSource.includes("runningPromise"));
     assert.ok(doctorModalSource.includes("root.doctor.runChecks"));
     assert.ok(doctorModalSource.includes("root.doctor.getReport"));
     assert.ok(doctorModalSource.includes("root.doctor.testConnection"));
-    assert.ok(doctorModalSource.includes("root.doctor.openClawdLog"));
+    assert.ok(doctorModalSource.includes("root.doctor.openDuckLog"));
     assert.ok(doctorModalSource.includes('root.settingsAPI.command("repairDoctorIssue"'));
     assert.ok(doctorModalSource.includes("requiresFixConfirmation"));
     assert.ok(doctorModalSource.includes("renderFixConfirm"));
     assert.ok(doctorModalSource.includes("doctorFixConfirmCodexDetail"));
     assert.ok(doctorModalSource.includes("doctorRestartConfirmDetail"));
     assert.ok(doctorModalSource.includes("doctorRestartButton"));
-    assert.ok(doctorModalSource.includes('commandAction.type !== "restart-clawd"'));
+    assert.ok(doctorModalSource.includes('commandAction.type !== "restart-duck"'));
     assert.ok(doctorModalSource.includes("repairFeedback"));
     assert.ok(doctorModalSource.includes("lastRepairFeedback"));
     assert.ok(doctorModalSource.includes("actionNotice"));
@@ -2030,7 +2030,7 @@ describe("settings renderer browser environment", () => {
     assert.ok(css.includes(".doctor-action-notice-icon"));
     assert.ok(/@media \(prefers-color-scheme:\s*dark\)\s*\{[\s\S]*\.doctor-action-notice\.ok[\s\S]*color:\s*#8ce99a;[\s\S]*\.doctor-action-notice\.error[\s\S]*color:\s*#fca5a5;/.test(css));
     assert.ok(css.includes("@keyframes doctor-notice-in"));
-    assert.ok(/\.doctor-modal\s*\{[\s\S]*width:\s*min\(728px,\s*100%\);[\s\S]*max-height:\s*calc\(100vh \/ var\(--clawd-text-zoom, 1\) - 32px\);/.test(css));
+    assert.ok(/\.doctor-modal\s*\{[\s\S]*width:\s*min\(728px,\s*100%\);[\s\S]*max-height:\s*calc\(100vh \/ var\(--duck-text-zoom, 1\) - 32px\);/.test(css));
     assert.ok(/\.doctor-modal\s*\{[\s\S]*gap:\s*8px;[\s\S]*padding:\s*14px;/.test(css));
     assert.ok(css.includes(".doctor-modal-entering"));
     assert.ok(css.includes("@keyframes doctor-modal-in"));
@@ -2075,12 +2075,12 @@ describe("settings renderer browser environment", () => {
     assert.ok(preloadSource.includes('ipcRenderer.invoke("doctor:run-checks")'));
     assert.ok(preloadSource.includes('ipcRenderer.invoke("doctor:get-report")'));
     assert.ok(preloadSource.includes('ipcRenderer.invoke("doctor:test-connection"'));
-    assert.ok(preloadSource.includes('ipcRenderer.invoke("doctor:open-clawd-log"'));
+    assert.ok(preloadSource.includes('ipcRenderer.invoke("doctor:open-duck-log"'));
     assert.ok(mainSource.includes("registerDoctorIpc"));
     assert.ok(doctorIpcSource.includes('ipcMain.handle("doctor:run-checks"'));
     assert.ok(doctorIpcSource.includes('ipcMain.handle("doctor:get-report"'));
     assert.ok(doctorIpcSource.includes('ipcMain.handle("doctor:test-connection"'));
-    assert.ok(doctorIpcSource.includes('ipcMain.handle("doctor:open-clawd-log"'));
+    assert.ok(doctorIpcSource.includes('ipcMain.handle("doctor:open-duck-log"'));
     assert.ok(doctorIpcSource.includes("createConnectionTestDeduper"));
     assert.ok(doctorIpcSource.includes("createDoctorRunChecksDeduper"));
     assert.ok(doctorIpcSource.includes("runDedupedDoctorChecks"));
@@ -2088,7 +2088,7 @@ describe("settings renderer browser environment", () => {
     assert.ok(doctorIpcSource.includes("normalizeDoctorConnectionTestPayload"));
     assert.ok(doctorIpcSource.includes("normalizeDoctorOpenLogPayload"));
     assert.ok(doctorIpcSource.includes("runConnectionTest"));
-    assert.ok(doctorIpcSource.includes("openClawdLog"));
+    assert.ok(doctorIpcSource.includes("openDuckLog"));
     assert.ok(doctorIpcSource.includes("formatDiagnosticReport"));
     assert.ok(doctorIpcSource.includes("getDoctorRedactionOptions"));
     assert.ok(doctorIpcSource.includes("redactDoctorResult(await runDedupedDoctorChecks(), getDoctorRedactionOptions(app))"));
@@ -2155,11 +2155,11 @@ describe("settings renderer browser environment", () => {
     // box renders S× the window height under the injected root zoom), so any
     // bare viewport unit overflows the window at scale > 1 — symptom:
     // settings pages that cannot scroll to the bottom. Every occurrence must
-    // divide by --clawd-text-zoom or use the zoom-aware 100% chain instead.
+    // divide by --duck-text-zoom or use the zoom-aware 100% chain instead.
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
     const dashboardHtml = fs.readFileSync(path.join(SRC_DIR, "dashboard.html"), "utf8");
     const mainSource = fs.readFileSync(MAIN_PROCESS, "utf8");
-    const bare = css.match(/\d+(?:\.\d+)?v[hw]\b(?!\s*\/\s*var\(--clawd-text-zoom)/g) || [];
+    const bare = css.match(/\d+(?:\.\d+)?v[hw]\b(?!\s*\/\s*var\(--duck-text-zoom)/g) || [];
     assert.deepStrictEqual(bare, [], "settings.css has uncompensated viewport units");
     assert.doesNotMatch(dashboardHtml, /\d+(?:\.\d+)?v[hw]\b/, "dashboard.html must not use viewport units");
     assert.match(mainSource, /height:calc\(100vh \/ \$\{resumeScale\}\)/);
@@ -3765,7 +3765,7 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(toasts.length, 1);
     assert.strictEqual(
       toasts[0].message,
-      "Clawd is larger than this display's work area. Reduce the pet size before choosing an activity area.",
+      "Duck is larger than this display's work area. Reduce the pet size before choosing an activity area.",
     );
     assert.strictEqual(toasts[0].options.error, true);
   });
@@ -4284,7 +4284,7 @@ describe("settings renderer browser environment", () => {
       /\bapp\.dock\b/,
       /\bcreateTray\s*\(/,
       /\bdestroyTray\s*\(/,
-      /clawd-prefs\.json/,
+      /duck-prefs\.json/,
       /\bfs\.(?:writeFile|writeFileSync|promises\.writeFile)\b/,
     ]) {
       assert.doesNotMatch(generalSource, forbidden);
@@ -5209,7 +5209,7 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(strings.en.themeActionGroupCodexPets, "Codex Pets");
     assert.strictEqual(strings.en.themeActionGroupUserThemes, "User themes");
     assert.strictEqual(strings.en.themeImportPetZip, "Import Codex Pet package (.zip)");
-    assert.strictEqual(strings.en.themeImportUserThemeZip, "Import Clawd theme package (.zip)");
+    assert.strictEqual(strings.en.themeImportUserThemeZip, "Import Duck theme package (.zip)");
     assert.ok(strings.en.themeImportUserThemeZipHint.includes("theme.json"));
     assert.strictEqual(strings.en.themeOpenUserThemesFolder, "Open themes folder");
     assert.strictEqual(strings.en.themeRefreshThemes, "Refresh themes");
@@ -5227,7 +5227,7 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(strings.zh.themeImportPetZip, "导入 Codex Pet 包（.zip）");
     assert.strictEqual(strings.zh.themeCapabilityFineMotion, "精细动效");
     assert.strictEqual(strings.zh.themeActionGroupCodexPets, "Codex Pets");
-    assert.strictEqual(strings.zh.themeImportUserThemeZip, "导入 Clawd 主题包（.zip）");
+    assert.strictEqual(strings.zh.themeImportUserThemeZip, "导入 Duck 主题包（.zip）");
     assert.ok(strings.zh.themeImportUserThemeZipHint.includes("theme.json"));
     assert.strictEqual(strings.zh.themeOpenUserThemesFolder, "打开主题文件夹");
   });
@@ -5235,7 +5235,7 @@ describe("settings renderer browser environment", () => {
   it("keeps Theme card footers reserved without leaking button keyboard events to card activation", async () => {
     const { content, commands } = loadThemeTabForTest({
       themes: [
-        { id: "clawd", name: "Clawd", builtin: true, active: true },
+        { id: "duck", name: "Duck", builtin: true, active: true },
         { id: "calico", name: "Calico", builtin: true, active: false },
         { id: "pet-active", name: "Pet Active", managedCodexPet: true, active: true },
         { id: "pet-inactive", name: "Pet Inactive", managedCodexPet: true, active: false },
@@ -5342,8 +5342,8 @@ describe("settings renderer browser environment", () => {
     const supported = loadThemeTabForTest({
       themes: [
         {
-          id: "clawd",
-          name: "Clawd",
+          id: "duck",
+          name: "Duck",
           builtin: true,
           active: true,
           capabilities: { petTint: true },
@@ -5368,9 +5368,9 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(buttons.length, 2);
     assert.deepStrictEqual(
       buttons.map((button) => collectText(findAncestorByClass(button, "theme-card")))
-        .map((text) => (text.includes("Cloudling") ? "Cloudling" : "Clawd"))
+        .map((text) => (text.includes("Cloudling") ? "Cloudling" : "Duck"))
         .sort(),
-      ["Clawd", "Cloudling"]
+      ["Cloudling", "Duck"]
     );
 
     const calicoActive = loadThemeTabForTest({
@@ -5393,8 +5393,8 @@ describe("settings renderer browser environment", () => {
     const harness = loadThemeTabForTest({
       themes: [
         {
-          id: "clawd",
-          name: "Clawd",
+          id: "duck",
+          name: "Duck",
           builtin: true,
           active: true,
           capabilities: { petTint: true },
@@ -5442,8 +5442,8 @@ describe("settings renderer browser environment", () => {
     const harness = loadThemeTabForTest({
       themes: [
         {
-          id: "clawd",
-          name: "Clawd",
+          id: "duck",
+          name: "Duck",
           builtin: true,
           active: true,
           capabilities: { petTint: true, accessories: true, mouthAccessories: true },
@@ -5492,8 +5492,8 @@ describe("settings renderer browser environment", () => {
     const harness = loadThemeTabForTest({
       themes: [
         {
-          id: "clawd",
-          name: "Clawd",
+          id: "duck",
+          name: "Duck",
           builtin: true,
           active: true,
           capabilities: { petTint: true, accessories: true, mouthAccessories: true },
@@ -5545,8 +5545,8 @@ describe("settings renderer browser environment", () => {
     const harness = loadThemeTabForTest({
       themes: [
         {
-          id: "clawd",
-          name: "Clawd",
+          id: "duck",
+          name: "Duck",
           builtin: true,
           active: true,
           capabilities: { petTint: true },
@@ -5572,18 +5572,18 @@ describe("settings renderer browser environment", () => {
     const harness = loadThemeTabForTest({
       themes: [
         {
-          id: "clawd",
-          name: "Clawd",
+          id: "duck",
+          name: "Duck",
           builtin: true,
           active: true,
-          previewFileUrl: "file:///clawd.svg",
+          previewFileUrl: "file:///duck.svg",
           capabilities: { petTint: true, accessories: true, mouthAccessories: true },
         },
       ],
       snapshot: {
-        petTint: { clawd: "matcha", cloudling: "vaporwave" },
-        petAccessory: { clawd: "wizard-hat", cloudling: "halo" },
-        petMouthAccessory: { clawd: "cigarette" },
+        petTint: { duck: "matcha", cloudling: "vaporwave" },
+        petAccessory: { duck: "wizard-hat", cloudling: "halo" },
+        petMouthAccessory: { duck: "cigarette" },
         holidayAccessoryEnabled: {},
       },
       petTintOptions: [
@@ -5624,7 +5624,7 @@ describe("settings renderer browser environment", () => {
       JSON.parse(JSON.stringify(harness.updates)),
       [{
         key: "petTint",
-        value: { clawd: "gold", cloudling: "vaporwave" },
+        value: { duck: "gold", cloudling: "vaporwave" },
       }]
     );
     assert.strictEqual(select.querySelector(".language-picker-trigger").disabled, false);
@@ -5648,7 +5648,7 @@ describe("settings renderer browser environment", () => {
       JSON.parse(JSON.stringify(harness.updates[1])),
       {
         key: "petAccessory",
-        value: { clawd: "halo", cloudling: "halo" },
+        value: { duck: "halo", cloudling: "halo" },
       }
     );
     assert.strictEqual(accessorySelect.querySelector(".language-picker-trigger").disabled, false);
@@ -5683,7 +5683,7 @@ describe("settings renderer browser environment", () => {
       JSON.parse(JSON.stringify(harness.updates[3])),
       {
         key: "holidayAccessoryEnabled",
-        value: { clawd: true },
+        value: { duck: true },
       }
     );
     assert.strictEqual(holidaySwitch.getAttribute("aria-checked"), "true");
@@ -5712,18 +5712,18 @@ describe("settings renderer browser environment", () => {
     const harness = loadThemeTabForTest({
       themes: [
         {
-          id: "clawd",
-          name: "Clawd",
+          id: "duck",
+          name: "Duck",
           builtin: true,
           active: true,
-          previewFileUrl: "file:///clawd.svg",
+          previewFileUrl: "file:///duck.svg",
           capabilities: { petTint: true, accessories: true, mouthAccessories: true },
         },
       ],
       snapshot: {
-        petTint: { clawd: "matcha" },
-        petAccessory: { clawd: "wizard-hat" },
-        petMouthAccessory: { clawd: "cigarette" },
+        petTint: { duck: "matcha" },
+        petAccessory: { duck: "wizard-hat" },
+        petMouthAccessory: { duck: "cigarette" },
         holidayAccessoryEnabled: {},
       },
       petTintOptions: [
@@ -5752,10 +5752,10 @@ describe("settings renderer browser environment", () => {
 
     const nextSnapshot = {
       ...harness.core.state.snapshot,
-      petTint: { clawd: "gold" },
-      petAccessory: { clawd: "halo" },
+      petTint: { duck: "gold" },
+      petAccessory: { duck: "halo" },
       petMouthAccessory: {},
-      holidayAccessoryEnabled: { clawd: true },
+      holidayAccessoryEnabled: { duck: true },
     };
     harness.core.ops.applyChanges({
       changes: {
@@ -5847,7 +5847,7 @@ describe("settings renderer browser environment", () => {
     assert.ok(agentOrderSource.includes("function sortAgentMetadataForSettings("));
     assert.ok(agentOrderSource.includes("COLLAPSIBLE_AGENT_PRIORITY"));
     assert.ok(agentOrderSource.includes("NON_COLLAPSIBLE_AGENT_PRIORITY"));
-    assert.ok(agentsSource.includes("ClawdSettingsAgentOrder"));
+    assert.ok(agentsSource.includes("DuckSettingsAgentOrder"));
     assert.ok(agentsSource.includes("sortAgentMetadataForSettings(metadata)"));
     assert.ok(agentsSource.includes("function categorizeAgentsForSections("));
     assert.ok(agentsSource.includes("function renderConnectedSubtab("));
@@ -6296,7 +6296,7 @@ describe("settings renderer browser environment", () => {
       sourcePath: pickedPath,
       executablePath: pickedPath,
       processName: "NovaAI.exe",
-      stateEndpoint: "http://127.0.0.1:23333/state",
+      stateEndpoint: "http://127.0.0.1:24333/state",
       lastStateEvent: null,
       capabilities: { httpHook: true, permissionApproval: false, interactiveBubble: false, notificationHook: true },
     };
@@ -6578,7 +6578,7 @@ describe("settings renderer browser environment", () => {
 
   // #895 T9: before the first detection resolves there is no evidence at all, so
   // the catalog must not be phrased as a detection result. It carries agents
-  // Clawd never examines even after the scan lands.
+  // Duck never examines even after the scan lands.
   it("keeps the catalog title free of detection claims before hints arrive", () => {
     const harness = loadAgentsTabForTest({
       snapshot: { agents: { codex: { integrationInstalled: false, enabled: false } } },
@@ -7541,14 +7541,14 @@ describe("settings renderer browser environment", () => {
     assert.ok(animMapSource.includes('Object.prototype.hasOwnProperty.call(changes, "themeOverrides")'));
     assert.ok(animMapSource.includes("helpers.setSwitchVisual(meta.element, readAnimMapVisualOn(meta.themeId, meta.stateKey), { pending: false });"));
     // Folded in: the Animation & Sound Overrides tab renders + patches the map subtab.
-    assert.ok(overridesSource.includes("ClawdSettingsTabAnimMap.renderMapSubtab"));
-    assert.ok(overridesSource.includes("ClawdSettingsTabAnimMap.patchMapInPlace"));
+    assert.ok(overridesSource.includes("DuckSettingsTabAnimMap.renderMapSubtab"));
+    assert.ok(overridesSource.includes("DuckSettingsTabAnimMap.patchMapInPlace"));
     assert.ok(coreSource.includes("activeTab.patchInPlace(changes"));
   });
 
   it("renders the Animation Map switches inside the Animation Overrides 'on / off' subtab", () => {
     const harness = loadAnimMapTabForTest({
-      snapshot: { theme: "clawd", themeOverrides: {} },
+      snapshot: { theme: "duck", themeOverrides: {} },
     });
     // Map is the default subtab; rendering the overrides tab should mount the
     // five interrupt on/off switches under it (folded in, not a standalone tab).
@@ -7562,10 +7562,10 @@ describe("settings renderer browser environment", () => {
 
   it("keeps the Animation shell mounted and restores scroll per subtab", () => {
     const harness = loadAnimMapTabForTest({
-      snapshot: { theme: "clawd", themeOverrides: {} },
+      snapshot: { theme: "duck", themeOverrides: {} },
     });
     harness.core.runtime.animationOverridesData = {
-      theme: { id: "clawd", name: "Clawd" },
+      theme: { id: "duck", name: "Duck" },
       assets: [],
       sections: [],
       cards: [],
@@ -7615,9 +7615,9 @@ describe("settings renderer browser environment", () => {
   it("keeps Animation Map theme override broadcasts in place and syncs the mounted switch", () => {
     const harness = loadAnimMapTabForTest({
       snapshot: {
-        theme: "clawd",
+        theme: "duck",
         themeOverrides: {
-          clawd: {
+          duck: {
             states: {
               error: { disabled: false },
             },
@@ -7628,9 +7628,9 @@ describe("settings renderer browser environment", () => {
     const sw = new FakeElement("div");
     sw.className = "switch on";
     harness.content.appendChild(sw);
-    harness.core.state.mountedControls.animMapSwitches.set("clawd:error", {
+    harness.core.state.mountedControls.animMapSwitches.set("duck:error", {
       element: sw,
-      themeId: "clawd",
+      themeId: "duck",
       stateKey: "error",
     });
     const before = harness.getContentRenderCount();
@@ -7638,7 +7638,7 @@ describe("settings renderer browser environment", () => {
     harness.core.ops.applyChanges({
       changes: {
         themeOverrides: {
-          clawd: {
+          duck: {
             states: {
               error: { disabled: true },
             },
@@ -7646,9 +7646,9 @@ describe("settings renderer browser environment", () => {
         },
       },
       snapshot: {
-        theme: "clawd",
+        theme: "duck",
         themeOverrides: {
-          clawd: {
+          duck: {
             states: {
               error: { disabled: true },
             },
@@ -7665,16 +7665,16 @@ describe("settings renderer browser environment", () => {
   it("rebuilds Animation Map instead of patching with stale theme ids when the theme changes", () => {
     const harness = loadAnimMapTabForTest({
       snapshot: {
-        theme: "clawd",
+        theme: "duck",
         themeOverrides: {},
       },
     });
     const sw = new FakeElement("div");
     sw.className = "switch on";
     harness.content.appendChild(sw);
-    harness.core.state.mountedControls.animMapSwitches.set("clawd:error", {
+    harness.core.state.mountedControls.animMapSwitches.set("duck:error", {
       element: sw,
-      themeId: "clawd",
+      themeId: "duck",
       stateKey: "error",
     });
     const before = harness.getContentRenderCount();
@@ -7713,14 +7713,14 @@ describe("settings renderer browser environment", () => {
     let listThemesCalls = 0;
     const harness = loadAnimMapTabForTest({
       snapshot: {
-        theme: "clawd",
-        themeOverrides: { clawd: { states: { error: { disabled: false } } } },
+        theme: "duck",
+        themeOverrides: { duck: { states: { error: { disabled: false } } } },
       },
       settingsAPI: {
         listThemes: () => {
           listThemesCalls++;
           return Promise.resolve([{
-            id: "clawd",
+            id: "duck",
             active: true,
             capabilities: { petTint: true, accessories: false },
           }]);
@@ -7728,9 +7728,9 @@ describe("settings renderer browser environment", () => {
       },
     });
     // Simulate having opened the Animations subtab earlier: its card data is cached.
-    harness.core.runtime.animationOverridesData = { theme: { id: "clawd" }, cards: [], sounds: [] };
+    harness.core.runtime.animationOverridesData = { theme: { id: "duck" }, cards: [], sounds: [] };
     harness.core.runtime.themeList = [{
-      id: "clawd",
+      id: "duck",
       active: true,
       capabilities: { petTint: true, accessories: true },
     }];
@@ -7738,15 +7738,15 @@ describe("settings renderer browser environment", () => {
     const sw = new FakeElement("div");
     sw.className = "switch on";
     harness.content.appendChild(sw);
-    harness.core.state.mountedControls.animMapSwitches.set("clawd:error", {
+    harness.core.state.mountedControls.animMapSwitches.set("duck:error", {
       element: sw,
-      themeId: "clawd",
+      themeId: "duck",
       stateKey: "error",
     });
 
     harness.core.ops.applyChanges({
-      changes: { themeOverrides: { clawd: { states: { error: { disabled: true } } } } },
-      snapshot: { theme: "clawd", themeOverrides: { clawd: { states: { error: { disabled: true } } } } },
+      changes: { themeOverrides: { duck: { states: { error: { disabled: true } } } } },
+      snapshot: { theme: "duck", themeOverrides: { duck: { states: { error: { disabled: true } } } } },
     });
 
     assert.strictEqual(
@@ -8281,7 +8281,7 @@ describe("settings renderer browser environment", () => {
     // prototype fails deepStrictEqual against test-realm literals.
     assert.deepStrictEqual(
       { ...commandCalls[0].payload },
-      { themeId: "clawd", file: "clawd-idle-reading.svg" }
+      { themeId: "duck", file: "duck-idle-reading.svg" }
     );
     assert.strictEqual(valueEl.textContent, "Idle Reading", "optimistic display should show the pick immediately");
   });
@@ -8323,9 +8323,9 @@ describe("settings renderer browser environment", () => {
     const valueEl = parent.querySelector(".anim-idle-visual-row .language-picker-value");
     assert.strictEqual(valueEl.textContent, "animIdleVisualThemeDefault");
 
-    const handled = core.tabs.animOverrides.patchInPlace({ idleVisual: { clawd: "clawd-idle-reading.svg" } });
+    const handled = core.tabs.animOverrides.patchInPlace({ idleVisual: { duck: "duck-idle-reading.svg" } });
     assert.strictEqual(handled, true, "idleVisual-only broadcast must not trigger a full re-render");
-    assert.strictEqual(runtime.animationOverridesData.idleDefaultVisual.selectedFile, "clawd-idle-reading.svg");
+    assert.strictEqual(runtime.animationOverridesData.idleDefaultVisual.selectedFile, "duck-idle-reading.svg");
     assert.strictEqual(valueEl.textContent, "Idle Reading");
 
     const handledReset = core.tabs.animOverrides.patchInPlace({ idleVisual: {} });

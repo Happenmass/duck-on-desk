@@ -43,7 +43,7 @@ function makeFakeServerFactory({ occupied = [] } = {}) {
   return { createHttpServer, listenCalls };
 }
 
-function makeApi({ occupied = [], candidates = [23333, 23334, 23335], runtimePort = null } = {}) {
+function makeApi({ occupied = [], candidates = [24333, 24334, 24335], runtimePort = null } = {}) {
   const { createHttpServer, listenCalls } = makeFakeServerFactory({ occupied });
   const api = initServer({
     createHttpServer,
@@ -61,28 +61,28 @@ function makeApi({ occupied = [], candidates = [23333, 23334, 23335], runtimePor
 test("startHttpServer resolves the bound port once the server is listening", async () => {
   const { api, listenCalls } = makeApi({ occupied: [] });
   const port = await api.startHttpServer();
-  assert.strictEqual(port, 23333);
-  assert.strictEqual(api.getHookServerPort(), 23333);
-  assert.deepStrictEqual(listenCalls, [23333]);
+  assert.strictEqual(port, 24333);
+  assert.strictEqual(api.getHookServerPort(), 24333);
+  assert.deepStrictEqual(listenCalls, [24333]);
 });
 
 test("startHttpServer resolves the actually-bound port when the first candidate is occupied", async () => {
   // The connect-on-launch port-drift hazard: a synchronous (pre-listening)
-  // sweep would have read the stale fallback 23333, but the server actually
-  // bound 23334. Awaiting startHttpServer() guarantees the port the sweep sees
+  // sweep would have read the stale fallback 24333, but the server actually
+  // bound 24334. Awaiting startHttpServer() guarantees the port the sweep sees
   // is the real one, so the reverse tunnel targets the live local server.
-  const { api, listenCalls } = makeApi({ occupied: [23333] });
+  const { api, listenCalls } = makeApi({ occupied: [24333] });
   const port = await api.startHttpServer();
-  assert.strictEqual(port, 23334);
-  assert.strictEqual(api.getHookServerPort(), 23334);
-  assert.deepStrictEqual(listenCalls, [23333, 23334]);
+  assert.strictEqual(port, 24334);
+  assert.strictEqual(api.getHookServerPort(), 24334);
+  assert.deepStrictEqual(listenCalls, [24333, 24334]);
 });
 
 test("startHttpServer resolves null when every candidate port is occupied", async () => {
-  const { api, listenCalls } = makeApi({ occupied: [23333, 23334, 23335] });
+  const { api, listenCalls } = makeApi({ occupied: [24333, 24334, 24335] });
   const port = await api.startHttpServer();
   assert.strictEqual(port, null);
-  assert.deepStrictEqual(listenCalls, [23333, 23334, 23335]);
+  assert.deepStrictEqual(listenCalls, [24333, 24334, 24335]);
 });
 
 test("startHttpServer resolves null when listen() throws synchronously", async () => {
@@ -100,7 +100,7 @@ test("startHttpServer resolves null when listen() throws synchronously", async (
   const api = initServer({
     createHttpServer,
     setImmediate: () => {},
-    getPortCandidates: () => [23333],
+    getPortCandidates: () => [24333],
     writeRuntimeConfig: () => true,
     clearRuntimeConfig: () => true,
     readRuntimePort: () => null,

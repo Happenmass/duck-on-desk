@@ -1027,7 +1027,7 @@ describe("topmost runtime macOS visibility", () => {
 
   it("honors deferred macOS visibility markers", () => {
     const win = new FakeWindow();
-    win.__clawdMacDeferredVisibilityUntil = Date.now() + 10000;
+    win.__duckMacDeferredVisibilityUntil = Date.now() + 10000;
     const runtime = createTopmostRuntime({
       isMac: true,
       getWin: () => win,
@@ -1045,8 +1045,8 @@ describe("topmost runtime macOS visibility", () => {
     // stay cross-space visible so a Space switch mid-edit doesn't strand it. It
     // must NOT get topmost or the native stationary path (both re-occlude IME).
     const bubble = new FakeWindow();
-    bubble.__clawdMacImeEditing = true;
-    bubble.__clawdMacTextInputBubble = true;
+    bubble.__duckMacImeEditing = true;
+    bubble.__duckMacTextInputBubble = true;
     const stationaryCalls = [];
     const runtime = createTopmostRuntime({
       isMac: true,
@@ -1071,7 +1071,7 @@ describe("topmost runtime macOS visibility", () => {
     // Defensive: the editing flag is only ever set on text-input bubbles, but if
     // it lands on any other window the branch still just drops always-on-top.
     const win = new FakeWindow();
-    win.__clawdMacImeEditing = true;
+    win.__duckMacImeEditing = true;
     const runtime = createTopmostRuntime({
       isMac: true,
       getWin: () => win,
@@ -1086,10 +1086,10 @@ describe("topmost runtime macOS visibility", () => {
   it("keeps a text-input bubble cross-space visible via Electron, skipping the native SkyLight path", () => {
     // The native stationary path delegates the window into a SkyLight private
     // space that occludes the OS IME candidate window, so text-input bubbles
-    // opt out of it (permission.js __clawdMacTextInputBubble) and rely on
+    // opt out of it (permission.js __duckMacTextInputBubble) and rely on
     // Electron's own cross-space visibility instead.
     const bubble = new FakeWindow();
-    bubble.__clawdMacTextInputBubble = true;
+    bubble.__duckMacTextInputBubble = true;
     const stationaryCalls = [];
     const runtime = createTopmostRuntime({
       isMac: true,
@@ -1117,10 +1117,10 @@ describe("IME editing pet dodge (#640)", () => {
     const hit = new FakeWindow();
     const bubble = new FakeWindow({ bounds: { x: 100, y: 100, width: 300, height: 200 } });
     // #640 phase 2: the dodge triggers on overlapping a TEXT-INPUT bubble, set
-    // at bubble creation — NOT on a focused field (__clawdMacImeEditing). No ime
+    // at bubble creation — NOT on a focused field (__duckMacImeEditing). No ime
     // flag here on purpose: the pet must step back the moment the bubble appears,
     // before the user ever clicks into the box.
-    bubble.__clawdMacTextInputBubble = true;
+    bubble.__duckMacTextInputBubble = true;
     // I5: syncImeEditingPetDodge() now reports its intent through this
     // injected setter (pet-window-runtime's single ignore-mouse writer)
     // instead of calling hit.setIgnoreMouseEvents() directly. The real
@@ -1189,9 +1189,9 @@ describe("IME editing pet dodge (#640)", () => {
     const { pet, hit, bubble, runtime } = makeDodgeSetup();
 
     runtime.syncImeEditingPetDodge();          // bubble overlaps → pet drops behind
-    bubble.__clawdMacImeEditing = true;        // user focuses the field
+    bubble.__duckMacImeEditing = true;        // user focuses the field
     runtime.syncImeEditingPetDodge();
-    delete bubble.__clawdMacImeEditing;         // user blurs the field, bubble still up
+    delete bubble.__duckMacImeEditing;         // user blurs the field, bubble still up
     runtime.syncImeEditingPetDodge();
 
     // Focus/blur must not retrigger anything — the trigger is overlap, not focus.
@@ -1204,7 +1204,7 @@ describe("IME editing pet dodge (#640)", () => {
     const { pet, hit, bubble, runtime } = makeDodgeSetup();
 
     runtime.syncImeEditingPetDodge();
-    delete bubble.__clawdMacTextInputBubble;
+    delete bubble.__duckMacTextInputBubble;
     runtime.syncImeEditingPetDodge();
 
     assert.deepStrictEqual(pet.calls, [
@@ -1341,7 +1341,7 @@ describe("IME editing pet dodge (#640)", () => {
       const { pet, hit, bubble, runtime } = makeDodgeSetup({ isDragLocked: () => dragging });
 
       runtime.syncImeEditingPetDodge();       // overlap while dragging → step back
-      delete bubble.__clawdMacTextInputBubble; // bubble closes mid-drag
+      delete bubble.__duckMacTextInputBubble; // bubble closes mid-drag
       runtime.syncImeEditingPetDodge();       // restore, still no write
       dragging = false;
       runtime.syncImeEditingPetDodge();       // drag ends: nothing left to apply
@@ -1393,7 +1393,7 @@ describe("IME editing pet dodge (#640)", () => {
         "while fading in place, the baseline is the faded value"
       );
 
-      delete bubble.__clawdMacTextInputBubble;
+      delete bubble.__duckMacTextInputBubble;
       runtime.syncImeEditingPetDodge();
       assert.strictEqual(runtime.getPetTargetOpacity(), 1);
     });
@@ -1412,7 +1412,7 @@ describe("IME editing pet dodge (#640)", () => {
     assert.strictEqual(runtime.getPetTargetOpacity(), 1,
       "de-delegated behind the bubble, the pet is fully opaque");
 
-    delete bubble.__clawdMacTextInputBubble;
+    delete bubble.__duckMacTextInputBubble;
     runtime.syncImeEditingPetDodge();
     assert.strictEqual(runtime.getPetTargetOpacity(), 1);
   });

@@ -246,7 +246,7 @@ describe("macOS visibility toggles live in the tray, not the right-click menu", 
 });
 
 describe("macOS runtime Dock visibility", () => {
-  it("installs the padded Clawd icon before showing Dock after a tray-only launch", async () => {
+  it("installs the padded Duck icon before showing Dock after a tray-only launch", async () => {
     const calls = [];
     const electron = fakeElectron();
     electron.app = {

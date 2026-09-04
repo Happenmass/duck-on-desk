@@ -14,17 +14,17 @@ test("the runner always passes a per-test timeout by default", () => {
   assert.ok(DEFAULT_TEST_TIMEOUT_MS >= 60000, "the ceiling must be generous enough for slow suites");
 });
 
-test("CLAWD_TEST_TIMEOUT_MS overrides it, and 0 disables it", () => {
-  assert.deepStrictEqual(resolveTimeoutArgs({ CLAWD_TEST_TIMEOUT_MS: "5000" }), ["--test-timeout=5000"]);
-  assert.deepStrictEqual(resolveTimeoutArgs({ CLAWD_TEST_TIMEOUT_MS: "0" }), []);
+test("DUCK_TEST_TIMEOUT_MS overrides it, and 0 disables it", () => {
+  assert.deepStrictEqual(resolveTimeoutArgs({ DUCK_TEST_TIMEOUT_MS: "5000" }), ["--test-timeout=5000"]);
+  assert.deepStrictEqual(resolveTimeoutArgs({ DUCK_TEST_TIMEOUT_MS: "0" }), []);
 });
 
 test("a malformed override falls back to the default rather than disabling the timeout", () => {
   for (const value of ["", "abc", "-1", "NaN", undefined]) {
     assert.deepStrictEqual(
-      resolveTimeoutArgs({ CLAWD_TEST_TIMEOUT_MS: value }),
+      resolveTimeoutArgs({ DUCK_TEST_TIMEOUT_MS: value }),
       [`--test-timeout=${DEFAULT_TEST_TIMEOUT_MS}`],
-      `CLAWD_TEST_TIMEOUT_MS=${JSON.stringify(value)} must not silently remove the timeout`,
+      `DUCK_TEST_TIMEOUT_MS=${JSON.stringify(value)} must not silently remove the timeout`,
     );
   }
 });

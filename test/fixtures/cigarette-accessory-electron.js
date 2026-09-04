@@ -85,12 +85,12 @@ async function inspect(win, seconds) {
 
 async function assertProductionRendererBootsMouthObject() {
   themeLoader.init(path.join(ROOT, "src"), app.getPath("userData"));
-  const theme = themeLoader.loadTheme("clawd", { strict: true });
+  const theme = themeLoader.loadTheme("duck", { strict: true });
   const config = themeLoader.createThemeContext(theme).getRendererConfig();
-  config.idleDefaultVisual = "clawd-idle-follow.svg";
+  config.idleDefaultVisual = "duck-idle-follow.svg";
   config.petTintPayload = { id: "none", filter: "none" };
   config.accessorySlots = {
-    themeId: "clawd",
+    themeId: "duck",
     accessoryGeneration: 1,
     head: {
       supported: true,
@@ -128,7 +128,7 @@ async function assertProductionRendererBootsMouthObject() {
       const deadline = Date.now() + 5000;
       const check = () => {
         const slot = _accessorySlots.mouth;
-        const object = document.getElementById("clawd-mouth-accessory");
+        const object = document.getElementById("duck-mouth-accessory");
         if (
           slot.assetReady
           && object.contentDocument
@@ -161,7 +161,7 @@ async function assertProductionRendererBootsMouthObject() {
       };
       check();
     })`);
-    assert(result.file === "clawd-idle-follow.svg", "production renderer did not settle on idle");
+    assert(result.file === "duck-idle-follow.svg", "production renderer did not settle on idle");
     assert(result.assetFile === "cigarette.svg", "production renderer selected the wrong mouth asset");
     assert(result.width > 0 && result.height > 0, "production renderer gave the cigarette an empty layout");
     assert(result.rootWidth === "100%" && result.rootHeight === "100%", "production cigarette root did not fill its object");

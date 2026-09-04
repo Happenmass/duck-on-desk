@@ -71,20 +71,20 @@ function validateContractShape(metadata, contract, expectedVersion) {
   let expectedUrls;
   if (contract === "windows") {
     expectedUrls = new Set([
-      `Clawd-on-Desk-Setup-${expectedVersion}-x64.exe`,
-      `Clawd-on-Desk-Setup-${expectedVersion}-arm64.exe`,
+      `Duck-on-Desk-Setup-${expectedVersion}-x64.exe`,
+      `Duck-on-Desk-Setup-${expectedVersion}-arm64.exe`,
     ]);
   } else if (contract === "mac") {
     expectedUrls = new Set([
-      `Clawd-on-Desk-${expectedVersion}-x64.zip`,
-      `Clawd-on-Desk-${expectedVersion}-arm64.zip`,
-      `Clawd-on-Desk-${expectedVersion}-x64.dmg`,
-      `Clawd-on-Desk-${expectedVersion}-arm64.dmg`,
+      `Duck-on-Desk-${expectedVersion}-x64.zip`,
+      `Duck-on-Desk-${expectedVersion}-arm64.zip`,
+      `Duck-on-Desk-${expectedVersion}-x64.dmg`,
+      `Duck-on-Desk-${expectedVersion}-arm64.dmg`,
     ]);
   } else if (contract === "linux") {
     expectedUrls = new Set([
-      `Clawd-on-Desk-${expectedVersion}-x86_64.AppImage`,
-      `Clawd-on-Desk-${expectedVersion}-amd64.deb`,
+      `Duck-on-Desk-${expectedVersion}-x86_64.AppImage`,
+      `Duck-on-Desk-${expectedVersion}-amd64.deb`,
     ]);
   }
   if (!expectedUrls) throw new Error(`Unknown updater contract: ${contract || "<empty>"}`);
@@ -108,7 +108,7 @@ function validateContractShape(metadata, contract, expectedVersion) {
         !urls.some((url) => /-arm64\.dmg$/i.test(url))) {
       errors.push("latest-mac.yml must list exactly the x64 and arm64 ZIPs and DMGs");
     }
-    if (String(metadata.path || "") !== `Clawd-on-Desk-${expectedVersion}-x64.zip`) {
+    if (String(metadata.path || "") !== `Duck-on-Desk-${expectedVersion}-x64.zip`) {
       errors.push("latest-mac.yml top-level path must point at the exact-version x64 ZIP");
     }
   } else if (contract === "linux") {
@@ -160,7 +160,7 @@ function verifyUpdaterMetadata({ metadataPath, artifactRoot, contract, expectedV
 
   if (contract === "mac") {
     for (const arch of ["x64", "arm64"]) {
-      const url = `Clawd-on-Desk-${expectedVersion}-${arch}.zip.blockmap`;
+      const url = `Duck-on-Desk-${expectedVersion}-${arch}.zip.blockmap`;
       const filename = path.join(resolvedArtifacts, url);
       if (!fs.existsSync(filename) || !fs.statSync(filename).isFile()) {
         errors.push(`Updater blockmap does not exist: ${url}`);

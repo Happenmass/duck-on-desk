@@ -67,13 +67,13 @@ function makeCtx(overrides = {}) {
     // Required HTTP/server deps — injected to avoid real file/network I/O.
     createHttpServer: null, // caller fills in
     setImmediate: () => {}, // no-op: don't fire sync routines during /state tests
-    getPortCandidates: () => [23333],
+    getPortCandidates: () => [24333],
     writeRuntimeConfig: () => true,
     clearRuntimeConfig: () => true,
     readRuntimePort: () => null,
 
     // Hook sync impls — keep them all as no-ops
-    syncClawdHooksImpl: () => {},
+    syncDuckHooksImpl: () => {},
     syncOpencodePluginImpl: () => {},
 
     // /state handler deps

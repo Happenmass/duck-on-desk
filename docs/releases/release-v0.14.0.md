@@ -28,7 +28,7 @@ transport and welcomes **six first-time contributors**.
   hook path is payload-bounded, accepts only explicit runner summaries, and is
   disabled by default.
 - **Live Discord animation mirror** (#738) — Discord Rich Presence can mirror
-  Clawd's current on-screen animation through repository-hosted GIFs. The
+  Duck's current on-screen animation through repository-hosted GIFs. The
   animation mirror is a separate off-by-default option and keeps public status
   text coarse. Thanks to returning contributor @KaiC5504.
 - **Codex Pet V2 import** (#786) — current Codex Pet V2 atlases can be imported
@@ -54,14 +54,14 @@ transport and welcomes **six first-time contributors**.
   with the parent session.
 - **ZCode integration** (#677) — ZCode gains state-only hooks, additive config
   registration, Claude-import cleanup, lifecycle/process detection, and Windows
-  process-cache support. Clawd observes state but leaves permission decisions to
+  process-cache support. Duck observes state but leaves permission decisions to
   ZCode. Thanks to first-time contributor @liugou27.
 - **Shared stable PID cache** (#634, #729) — twelve remaining hook adapters now
   share the stable process-tree cache while preserving agent-specific session
   boundaries and SessionEnd cleanup. Thanks to first-time contributor
   @LinYsssss.
 - **Startup recovery** (#653, #769) — active Claude sessions can be restored
-  after Clawd restarts, and Codex SessionStart can safely cold-launch the
+  after Duck restarts, and Codex SessionStart can safely cold-launch the
   packaged app without bypassing the agent gate. Thanks to returning
   contributor @200780381 and first-time contributor @He-wei-gui.
 - **Reasonix lifecycle and Windows delivery** (#733, #745) — encoded hook
@@ -144,10 +144,10 @@ remote, and platform behavior.
 - ZCode is state-only. Its native permission flow remains authoritative, and an
   explicitly disabled ZCode hook configuration is preserved rather than
   overwritten.
-- Local Claude quota collection is opt-in because it installs Clawd's visible
+- Local Claude quota collection is opt-in because it installs Duck's visible
   statusline. An existing third-party statusline is preserved; Remote SSH
   chaining is a separate per-profile opt-in.
-- Launch Clawd once after upgrading so installed and enabled integrations can
+- Launch Duck once after upgrading so installed and enabled integrations can
   reconcile their managed hooks/plugins against the packaged v0.14.0 files.
 
 ### Validation Status

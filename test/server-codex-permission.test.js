@@ -77,11 +77,11 @@ function startServer(overrides = {}) {
   const ctx = {
     createHttpServer: http.createHttpServer,
     setImmediate: () => {},
-    getPortCandidates: () => [23333],
+    getPortCandidates: () => [24333],
     writeRuntimeConfig: () => true,
     clearRuntimeConfig: () => true,
     readRuntimePort: () => null,
-    syncClawdHooksImpl: () => {},
+    syncDuckHooksImpl: () => {},
     syncCodexHooksImpl: () => {},
     syncOpencodePluginImpl: () => {},
     pendingPermissions,

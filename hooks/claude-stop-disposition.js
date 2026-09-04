@@ -4,13 +4,13 @@ const HEADLESS_COMPLETION_DEBOUNCE_MS = 2000;
 const BACKGROUND_TASKS_COMPLETION_DEBOUNCE_MS = 2000;
 
 function getCompletionDebounceMs(headless, env = process.env) {
-  const n = Number.parseInt(env && env.CLAWD_COMPLETION_DEBOUNCE_MS, 10);
+  const n = Number.parseInt(env && env.DUCK_COMPLETION_DEBOUNCE_MS, 10);
   if (Number.isFinite(n) && n >= 0 && n <= 10000) return n;
   return headless ? HEADLESS_COMPLETION_DEBOUNCE_MS : 0;
 }
 
 function getBackgroundTasksCompletionDebounceMs(headless, env = process.env) {
-  const n = Number.parseInt(env && env.CLAWD_COMPLETION_DEBOUNCE_MS, 10);
+  const n = Number.parseInt(env && env.DUCK_COMPLETION_DEBOUNCE_MS, 10);
   if (Number.isFinite(n) && n >= 0 && n <= 10000) return n;
   return Math.max(getCompletionDebounceMs(headless, env), BACKGROUND_TASKS_COMPLETION_DEBOUNCE_MS);
 }

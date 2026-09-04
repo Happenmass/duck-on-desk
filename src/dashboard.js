@@ -230,15 +230,15 @@ module.exports = function initDashboard(ctx) {
               return;
             }
             if (sameBounds(lastSavedBounds, attemptedBounds)) lastSavedBounds = null;
-            console.warn("Clawd: failed to persist Dashboard window bounds:", response.message);
+            console.warn("Duck: failed to persist Dashboard window bounds:", response.message);
           },
           (err) => {
             if (sameBounds(lastSavedBounds, attemptedBounds)) lastSavedBounds = null;
-            console.warn("Clawd: failed to persist Dashboard window bounds:", err && err.message);
+            console.warn("Duck: failed to persist Dashboard window bounds:", err && err.message);
           },
         );
       } else if (result && result.status === "error") {
-        console.warn("Clawd: failed to persist Dashboard window bounds:", result.message);
+        console.warn("Duck: failed to persist Dashboard window bounds:", result.message);
         return false;
       }
       if (!result || typeof result.then !== "function") clearPersistedUserBounds(attempt);
@@ -246,7 +246,7 @@ module.exports = function initDashboard(ctx) {
       lastSavedBounds = bounds;
       return true;
     } catch (err) {
-      console.warn("Clawd: failed to persist Dashboard window bounds:", err && err.message);
+      console.warn("Duck: failed to persist Dashboard window bounds:", err && err.message);
       return false;
     }
   }

@@ -67,7 +67,7 @@ describe("repositionBubbles freeze while editing (#640)", () => {
     const { repositionBubbles, pendingPermissions } = initPermission(ctx);
 
     const frozen = makeBubble();
-    frozen.__clawdMacImeEditing = true;
+    frozen.__duckMacImeEditing = true;
     const normal = makeBubble();
     pendingPermissions.push(
       { bubble: frozen, suggestions: [], measuredHeight: 120 },
@@ -87,13 +87,13 @@ describe("repositionBubbles freeze while editing (#640)", () => {
     const { repositionBubbles, pendingPermissions } = initPermission(ctx);
 
     const bubble = makeBubble();
-    bubble.__clawdMacImeEditing = true;
+    bubble.__duckMacImeEditing = true;
     pendingPermissions.push({ bubble, suggestions: [], measuredHeight: 120 });
 
     repositionBubbles();
     assert.strictEqual(bubble.setBoundsCalls.length, 0);
 
-    delete bubble.__clawdMacImeEditing;
+    delete bubble.__duckMacImeEditing;
     repositionBubbles();
     assert.strictEqual(bubble.setBoundsCalls.length, 1);
   });
@@ -113,7 +113,7 @@ describe("pendingPermissions changes re-run the dodge scan (#640)", () => {
     const { removePendingPermission, pendingPermissions } = initPermission(ctx);
 
     const bubble = makeBubble();
-    bubble.__clawdMacImeEditing = true;
+    bubble.__duckMacImeEditing = true;
     const perm = { bubble, suggestions: [] };
     pendingPermissions.push(perm);
 
@@ -129,7 +129,7 @@ describe("pendingPermissions changes re-run the dodge scan (#640)", () => {
     const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
 
     const bubble = makeBubble({ webContents: { send: () => {} } });
-    bubble.__clawdMacImeEditing = true;
+    bubble.__duckMacImeEditing = true;
     const perm = {
       bubble,
       suggestions: [],
@@ -169,11 +169,11 @@ describe("handleBubbleRendererGone (#640)", () => {
     const { handleBubbleRendererGone } = initPermission(ctx);
 
     const bubble = makeBubble();
-    bubble.__clawdMacImeEditing = true;
+    bubble.__duckMacImeEditing = true;
 
     handleBubbleRendererGone(bubble);
 
-    assert.strictEqual(bubble.__clawdMacImeEditing, undefined,
+    assert.strictEqual(bubble.__duckMacImeEditing, undefined,
       "a dead renderer can't clear the flag itself — this must");
     assert.strictEqual(reapply.length, 1);
   });

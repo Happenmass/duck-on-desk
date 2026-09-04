@@ -51,7 +51,7 @@ const AGENT_OPTS = {
   agentNames: { win: new Set(["claude.exe"]), mac: new Set(["claude"]) },
   agentCmdlineCheck: (c) => c.includes("claude-code"),
   headlessCheck: (c) => /\s(-p|--print)(\s|$)/.test(c || ""),
-  readRuntimeIdentity: () => ({ ok: true, reason: null, port: 23333, ownerPid: process.pid }),
+  readRuntimeIdentity: () => ({ ok: true, reason: null, port: 24333, ownerPid: process.pid }),
   env: {},
 };
 
@@ -86,7 +86,7 @@ function mkResolver({ cmd = `node C:/x/claude-code/cli.js --print --token ${SECR
 const ctx = (sessionId, lifecycle) => ({ namespace: NS, sessionId, cacheCwd: CWD, lifecycle, cacheable: true });
 const readV2Raw = (sid) => fs.readFileSync(pc.cacheFilePathV2(NS, sid, CWD), "utf8");
 
-// A legacy v1 as a pre-#681 Clawd would have left it: raw command line included.
+// A legacy v1 as a pre-#681 Duck would have left it: raw command line included.
 function plantLegacyV1(sid, { cmd = `node claude-code --print --token ${SECRET_SENTINEL}` } = {}) {
   pc.writePidCache(sid, CWD, {
     // Same live-pid requirement as mkResolver: a v1 whose pids are dead is not

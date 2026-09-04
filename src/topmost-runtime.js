@@ -249,19 +249,19 @@ function createTopmostRuntime(options = {}) {
     };
     const apply = (win) => {
       if (!isLiveWindow(win)) return;
-      const deferUntil = Number(win.__clawdMacDeferredVisibilityUntil) || 0;
+      const deferUntil = Number(win.__duckMacDeferredVisibilityUntil) || 0;
       if (deferUntil > Date.now()) return;
-      if (deferUntil) delete win.__clawdMacDeferredVisibilityUntil;
+      if (deferUntil) delete win.__duckMacDeferredVisibilityUntil;
       // While a text field inside a bubble is focused it must drop out of
       // always-on-top so the OS IME candidate window can surface (permission.js
-      // handleImeEditing sets __clawdMacImeEditing). This branch is the single
+      // handleImeEditing sets __duckMacImeEditing). This branch is the single
       // source of truth for that editing state: force non-topmost, but keep the
       // bubble cross-space visible so switching Spaces mid-edit doesn't strand
       // it. Re-asserting topmost or the native stationary path here would
       // re-occlude the IME, so both are skipped until the flag clears.
-      if (win.__clawdMacImeEditing) {
+      if (win.__duckMacImeEditing) {
         win.setAlwaysOnTop(false);
-        if (win.__clawdMacTextInputBubble) applyElectronCrossSpace(win);
+        if (win.__duckMacTextInputBubble) applyElectronCrossSpace(win);
         return;
       }
       // #640 phase 2: while the editing-overlap dodge is active, the pet's
@@ -278,8 +278,8 @@ function createTopmostRuntime(options = {}) {
       // Text-input bubbles stay cross-space visible via Electron only — the
       // native stationary path (applyStationaryCollectionBehavior) delegates the
       // window into a SkyLight private space that occludes the OS IME candidate
-      // window, so it's skipped here (permission.js __clawdMacTextInputBubble).
-      if (win.__clawdMacTextInputBubble) {
+      // window, so it's skipped here (permission.js __duckMacTextInputBubble).
+      if (win.__duckMacTextInputBubble) {
         applyElectronCrossSpace(win);
         return;
       }
@@ -304,8 +304,8 @@ function createTopmostRuntime(options = {}) {
   }
 
   // #640 Phase 2: the dodge triggers on the pet OVERLAPPING a text-input bubble
-  // (permission.js flags elicitation / ExitPlanMode bubbles __clawdMacTextInputBubble
-  // at creation) — NOT merely on a focused text field (__clawdMacImeEditing).
+  // (permission.js flags elicitation / ExitPlanMode bubbles __duckMacTextInputBubble
+  // at creation) — NOT merely on a focused text field (__duckMacImeEditing).
   // Why: #626 deliberately keeps text-input bubbles OUT of the SkyLight private
   // space so the OS IME candidate window can surface, but that same treatment
   // leaves the pet (private space, assistive-tech level) sitting ON TOP of them
@@ -322,7 +322,7 @@ function createTopmostRuntime(options = {}) {
       const bubble = perm && perm.bubble;
       if (
         !isLiveWindow(bubble)
-        || !bubble.__clawdMacTextInputBubble
+        || !bubble.__duckMacTextInputBubble
         || (typeof bubble.isVisible === "function" && !bubble.isVisible())
       ) continue;
       if (typeof bubble.getBounds !== "function") continue;
@@ -766,7 +766,7 @@ function createTopmostRuntime(options = {}) {
 
   function startFocusablePoll() {
     if (!isWin || focusablePoll) return;
-    // Sync once up front: if Clawd starts (or this re-arms) while a fullscreen
+    // Sync once up front: if Duck starts (or this re-arms) while a fullscreen
     // game is already foreground, drop the hit window's activation immediately
     // rather than leaving it activatable for up to one poll interval (the hit
     // window could otherwise retain activating native styles). Idempotent, so

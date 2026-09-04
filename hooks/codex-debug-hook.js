@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Phase 0 Codex official-hooks sampler.
 //
-// This hook intentionally does not talk to Clawd's runtime server and writes
+// This hook intentionally does not talk to Duck's runtime server and writes
 // nothing to stdout. For PermissionRequest, empty stdout means "no hook
 // decision" in current Codex source, so Codex can continue its native flow.
 
@@ -9,7 +9,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const DEFAULT_LOG_PATH = path.join(os.homedir(), ".clawd", "codex-hook-debug.jsonl");
+const DEFAULT_LOG_PATH = path.join(os.homedir(), ".duck-on-desk", "codex-hook-debug.jsonl");
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -67,7 +67,7 @@ function buildDebugEntry(raw, now = new Date()) {
   };
 }
 
-function appendDebugEntry(entry, logPath = process.env.CLAWD_CODEX_DEBUG_LOG || DEFAULT_LOG_PATH) {
+function appendDebugEntry(entry, logPath = process.env.DUCK_CODEX_DEBUG_LOG || DEFAULT_LOG_PATH) {
   fs.mkdirSync(path.dirname(logPath), { recursive: true });
   fs.appendFileSync(logPath, `${JSON.stringify(entry)}\n`, "utf8");
   return logPath;

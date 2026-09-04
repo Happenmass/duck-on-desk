@@ -10,8 +10,8 @@ const prefs = require("../src/prefs");
 
 const tempDirs = [];
 
-function makeTempPath(name = "clawd-prefs.json") {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-prefs-"));
+function makeTempPath(name = "duck-prefs.json") {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-prefs-"));
   tempDirs.push(dir);
   return path.join(dir, name);
 }
@@ -340,9 +340,9 @@ describe("prefs.validate", () => {
       size: "P:15",
       miniEdge: "left",
       theme: "calico",
-      petTint: { clawd: "gold", cloudling: "matcha" },
-      petAccessory: { clawd: "wizard-hat", cloudling: "halo" },
-      petMouthAccessory: { clawd: "cigarette" },
+      petTint: { duck: "gold", cloudling: "matcha" },
+      petAccessory: { duck: "wizard-hat", cloudling: "halo" },
+      petMouthAccessory: { duck: "cigarette" },
     });
     assert.strictEqual(v.lang, "ko");
     assert.strictEqual(v.soundMuted, true);
@@ -367,9 +367,9 @@ describe("prefs.validate", () => {
     assert.strictEqual(v.size, "P:15");
     assert.strictEqual(v.miniEdge, "left");
     assert.strictEqual(v.theme, "calico");
-    assert.deepStrictEqual(v.petTint, { clawd: "gold", cloudling: "matcha" });
-    assert.deepStrictEqual(v.petAccessory, { clawd: "wizard-hat", cloudling: "halo" });
-    assert.deepStrictEqual(v.petMouthAccessory, { clawd: "cigarette" });
+    assert.deepStrictEqual(v.petTint, { duck: "gold", cloudling: "matcha" });
+    assert.deepStrictEqual(v.petAccessory, { duck: "wizard-hat", cloudling: "halo" });
+    assert.deepStrictEqual(v.petMouthAccessory, { duck: "cigarette" });
   });
 
   it("accepts soundVolume 0 (silent playback is valid)", () => {
@@ -694,14 +694,14 @@ describe("prefs.validate", () => {
   it("themeVariant drops malformed entries but keeps string/string pairs", () => {
     const v = prefs.validate({
       themeVariant: {
-        clawd: "chill",
+        duck: "chill",
         calico: "default",
         bogus: 42,           // wrong value type
         "": "chill",         // empty themeId
         nullVal: "",         // empty variantId
       },
     });
-    assert.deepStrictEqual(v.themeVariant, { clawd: "chill", calico: "default" });
+    assert.deepStrictEqual(v.themeVariant, { duck: "chill", calico: "default" });
   });
 
   it("themeVariant falls back to defaults when not an object", () => {
@@ -720,7 +720,7 @@ describe("prefs.validate", () => {
   it("idleVisual keeps string/string pairs, drops malformed and path-y entries", () => {
     const v = prefs.validate({
       idleVisual: {
-        clawd: "clawd-idle-reading.svg",
+        duck: "duck-idle-reading.svg",
         calico: "calico-idle-stretch.svg",
         bogus: 42,                          // wrong value type
         "": "x.svg",                        // empty themeId
@@ -730,7 +730,7 @@ describe("prefs.validate", () => {
       },
     });
     assert.deepStrictEqual(v.idleVisual, {
-      clawd: "clawd-idle-reading.svg",
+      duck: "duck-idle-reading.svg",
       calico: "calico-idle-stretch.svg",
     });
   });
@@ -767,7 +767,7 @@ describe("prefs.validate", () => {
   it("drops legacy workspaceAliases because they are no longer in the schema", () => {
     const v = prefs.validate({
       workspaceAliases: {
-        "local|d:/animation": "Clawd main repo",
+        "local|d:/animation": "Duck main repo",
       },
     });
     assert.strictEqual(Object.prototype.hasOwnProperty.call(v, "workspaceAliases"), false);
@@ -1272,19 +1272,19 @@ describe("prefs.migrate v16 → v17 (mouth accessory slot)", () => {
   it("adds an empty map without inferring a cigarette from the head slot", () => {
     const upgraded = prefs.validate(prefs.migrate({
       version: 16,
-      petAccessory: { clawd: "cowboy-hat" },
+      petAccessory: { duck: "cowboy-hat" },
     }));
     assert.strictEqual(upgraded.version, prefs.CURRENT_VERSION);
-    assert.deepStrictEqual(upgraded.petAccessory, { clawd: "cowboy-hat" });
+    assert.deepStrictEqual(upgraded.petAccessory, { duck: "cowboy-hat" });
     assert.deepStrictEqual(upgraded.petMouthAccessory, {});
   });
 
   it("preserves a valid mouth selection from an unreleased v16 development snapshot", () => {
     const upgraded = prefs.validate(prefs.migrate({
       version: 16,
-      petMouthAccessory: { clawd: "cigarette" },
+      petMouthAccessory: { duck: "cigarette" },
     }));
-    assert.deepStrictEqual(upgraded.petMouthAccessory, { clawd: "cigarette" });
+    assert.deepStrictEqual(upgraded.petMouthAccessory, { duck: "cigarette" });
   });
 
   it("does not share the new default map between snapshots", () => {
@@ -1770,16 +1770,16 @@ describe("prefs.save", () => {
     const p = makeTempPath();
     prefs.save(p, {
       ...prefs.getDefaults(),
-      petTint: { clawd: "vaporwave", cloudling: "matcha" },
+      petTint: { duck: "vaporwave", cloudling: "matcha" },
     });
     assert.deepStrictEqual(
       prefs.load(p).snapshot.petTint,
-      { clawd: "vaporwave", cloudling: "matcha" }
+      { duck: "vaporwave", cloudling: "matcha" }
     );
 
     prefs.save(p, {
       ...prefs.getDefaults(),
-      petTint: { clawd: "custom", "../unsafe": "gold", calico: "none" },
+      petTint: { duck: "custom", "../unsafe": "gold", calico: "none" },
     });
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(p, "utf8")).petTint, {});
   });
@@ -1787,7 +1787,7 @@ describe("prefs.save", () => {
   it("migrates the short-lived global pet tint to supported built-in themes", () => {
     assert.deepStrictEqual(
       prefs.validate({ petTint: "gold" }).petTint,
-      { clawd: "gold", cloudling: "gold" }
+      { duck: "gold", cloudling: "gold" }
     );
     assert.deepStrictEqual(prefs.validate({ petTint: "none" }).petTint, {});
   });
@@ -1796,17 +1796,17 @@ describe("prefs.save", () => {
     const p = makeTempPath();
     prefs.save(p, {
       ...prefs.getDefaults(),
-      petAccessory: { clawd: "wizard-hat", cloudling: "halo" },
+      petAccessory: { duck: "wizard-hat", cloudling: "halo" },
     });
     assert.deepStrictEqual(
       prefs.load(p).snapshot.petAccessory,
-      { clawd: "wizard-hat", cloudling: "halo" }
+      { duck: "wizard-hat", cloudling: "halo" }
     );
 
     prefs.save(p, {
       ...prefs.getDefaults(),
       petAccessory: {
-        clawd: "seasonal",
+        duck: "seasonal",
         "../unsafe": "halo",
         calico: "none",
       },
@@ -1819,17 +1819,17 @@ describe("prefs.save", () => {
     const p = makeTempPath();
     prefs.save(p, {
       ...prefs.getDefaults(),
-      petMouthAccessory: { clawd: "cigarette" },
+      petMouthAccessory: { duck: "cigarette" },
     });
     assert.deepStrictEqual(
       prefs.load(p).snapshot.petMouthAccessory,
-      { clawd: "cigarette" }
+      { duck: "cigarette" }
     );
 
     prefs.save(p, {
       ...prefs.getDefaults(),
       petMouthAccessory: {
-        clawd: "pipe",
+        duck: "pipe",
         "../unsafe": "cigarette",
         calico: "none",
       },
@@ -1843,7 +1843,7 @@ describe("prefs.save", () => {
     prefs.save(p, {
       ...prefs.getDefaults(),
       holidayAccessoryEnabled: {
-        clawd: true,
+        duck: true,
         cloudling: false,
         "../unsafe": true,
         calico: "true",
@@ -1851,7 +1851,7 @@ describe("prefs.save", () => {
     });
     assert.deepStrictEqual(
       prefs.load(p).snapshot.holidayAccessoryEnabled,
-      { clawd: true }
+      { duck: true }
     );
     assert.deepStrictEqual(
       prefs.validate({ holidayAccessoryEnabled: true }).holidayAccessoryEnabled,
@@ -1876,7 +1876,7 @@ describe("prefs.save", () => {
     const p = makeTempPath();
     const snap = prefs.getDefaults();
     snap.themeOverrides = {
-      clawd: {
+      duck: {
         states: {
           sweeping: { disabled: true },
         },
@@ -1884,19 +1884,19 @@ describe("prefs.save", () => {
     };
     prefs.save(p, snap);
     const { snapshot } = prefs.load(p);
-    assert.deepStrictEqual(snapshot.themeOverrides.clawd.states.sweeping, { disabled: true });
+    assert.deepStrictEqual(snapshot.themeOverrides.duck.states.sweeping, { disabled: true });
   });
 
   it("themeOverrides: nested state entry preserves file + transition while keeping disabled", () => {
     const p = makeTempPath();
     const snap = prefs.getDefaults();
     snap.themeOverrides = {
-      clawd: {
+      duck: {
         states: {
           attention: {
             disabled: true,
-            sourceThemeId: "clawd",
-            file: "clawd-happy.svg",
+            sourceThemeId: "duck",
+            file: "duck-happy.svg",
             transition: { in: 100, out: 220 },
           },
         },
@@ -1904,10 +1904,10 @@ describe("prefs.save", () => {
     };
     prefs.save(p, snap);
     const { snapshot } = prefs.load(p);
-    assert.deepStrictEqual(snapshot.themeOverrides.clawd.states.attention, {
+    assert.deepStrictEqual(snapshot.themeOverrides.duck.states.attention, {
       disabled: true,
-      sourceThemeId: "clawd",
-      file: "clawd-happy.svg",
+      sourceThemeId: "duck",
+      file: "duck-happy.svg",
       transition: { in: 100, out: 220 },
     });
   });
@@ -1916,16 +1916,16 @@ describe("prefs.save", () => {
     const p = makeTempPath();
     const snap = prefs.getDefaults();
     snap.themeOverrides = {
-      clawd: {
+      duck: {
         states: {
           attention: {
-            file: "clawd-happy.svg",
+            file: "duck-happy.svg",
             transition: { in: 80, out: 140 },
           },
         },
         tiers: {
           workingTiers: {
-            "clawd-working-typing.svg": {
+            "duck-working-typing.svg": {
               file: "custom-working.svg",
               transition: { in: 0, out: 90 },
             },
@@ -1938,16 +1938,16 @@ describe("prefs.save", () => {
     };
     prefs.save(p, snap);
     const { snapshot } = prefs.load(p);
-    assert.deepStrictEqual(snapshot.themeOverrides.clawd, {
+    assert.deepStrictEqual(snapshot.themeOverrides.duck, {
       states: {
         attention: {
-          file: "clawd-happy.svg",
+          file: "duck-happy.svg",
           transition: { in: 80, out: 140 },
         },
       },
       tiers: {
         workingTiers: {
-          "clawd-working-typing.svg": {
+          "duck-working-typing.svg": {
             file: "custom-working.svg",
             transition: { in: 0, out: 90 },
           },
@@ -1963,7 +1963,7 @@ describe("prefs.save", () => {
     const p = makeTempPath();
     const snap = prefs.getDefaults();
     snap.themeOverrides = {
-      clawd: {
+      duck: {
         sounds: {
           complete: { file: "my-done.mp3" },
           confirm: { file: "nope.wav" },
@@ -1972,7 +1972,7 @@ describe("prefs.save", () => {
     };
     prefs.save(p, snap);
     const { snapshot } = prefs.load(p);
-    assert.deepStrictEqual(snapshot.themeOverrides.clawd.sounds, {
+    assert.deepStrictEqual(snapshot.themeOverrides.duck.sounds, {
       complete: { file: "my-done.mp3" },
       confirm: { file: "nope.wav" },
     });
@@ -1982,7 +1982,7 @@ describe("prefs.save", () => {
     const validated = prefs.validate({
       ...prefs.getDefaults(),
       themeOverrides: {
-        clawd: {
+        duck: {
           sounds: {
             complete: { file: "ok.mp3" },
             confirm: { file: "" },    // empty
@@ -1992,7 +1992,7 @@ describe("prefs.save", () => {
         },
       },
     });
-    assert.deepStrictEqual(validated.themeOverrides.clawd.sounds, {
+    assert.deepStrictEqual(validated.themeOverrides.duck.sounds, {
       complete: { file: "ok.mp3" },
     });
   });
@@ -2001,14 +2001,14 @@ describe("prefs.save", () => {
     const validated = prefs.validate({
       ...prefs.getDefaults(),
       themeOverrides: {
-        clawd: {
+        duck: {
           sounds: {
             complete: { file: "ok.mp3", durationMs: 1000, transition: { in: 50 }, sourceThemeId: "x" },
           },
         },
       },
     });
-    assert.deepStrictEqual(validated.themeOverrides.clawd.sounds, {
+    assert.deepStrictEqual(validated.themeOverrides.duck.sounds, {
       complete: { file: "ok.mp3" },
     });
   });
@@ -2021,7 +2021,7 @@ describe("prefs.save", () => {
     const validated = prefs.validate({
       ...prefs.getDefaults(),
       themeOverrides: {
-        clawd: {
+        duck: {
           sounds: {
             complete: { file: "complete.mp3", originalName: "cat-demo.mp3" },
             confirm:  { file: "confirm.wav", originalName: "../../etc/passwd.wav" }, // basenamed
@@ -2032,11 +2032,11 @@ describe("prefs.save", () => {
         },
       },
     });
-    assert.strictEqual(validated.themeOverrides.clawd.sounds.complete.originalName, "cat-demo.mp3");
-    assert.strictEqual(validated.themeOverrides.clawd.sounds.confirm.originalName, "passwd.wav");
-    assert.strictEqual(validated.themeOverrides.clawd.sounds.hiss.originalName, undefined);
-    assert.strictEqual(validated.themeOverrides.clawd.sounds.purr.originalName, undefined);
-    assert.strictEqual(validated.themeOverrides.clawd.sounds.growl.originalName.length, 256);
+    assert.strictEqual(validated.themeOverrides.duck.sounds.complete.originalName, "cat-demo.mp3");
+    assert.strictEqual(validated.themeOverrides.duck.sounds.confirm.originalName, "passwd.wav");
+    assert.strictEqual(validated.themeOverrides.duck.sounds.hiss.originalName, undefined);
+    assert.strictEqual(validated.themeOverrides.duck.sounds.purr.originalName, undefined);
+    assert.strictEqual(validated.themeOverrides.duck.sounds.growl.originalName.length, 256);
   });
 
   it("themeOverrides.sounds: rejects path-unsafe soundName keys and basename-sanitises file", () => {
@@ -2046,7 +2046,7 @@ describe("prefs.save", () => {
     const validated = prefs.validate({
       ...prefs.getDefaults(),
       themeOverrides: {
-        clawd: {
+        duck: {
           sounds: {
             complete:      { file: "ok.mp3" },
             "../../evil":  { file: "x.mp3" },           // unsafe key → dropped
@@ -2058,7 +2058,7 @@ describe("prefs.save", () => {
         },
       },
     });
-    assert.deepStrictEqual(validated.themeOverrides.clawd.sounds, {
+    assert.deepStrictEqual(validated.themeOverrides.duck.sounds, {
       complete: { file: "ok.mp3" },
       confirm:  { file: "passwd" },
     });
@@ -2068,13 +2068,13 @@ describe("prefs.save", () => {
     const validated = prefs.validate({
       ...prefs.getDefaults(),
       themeOverrides: {
-        clawd: {
+        duck: {
           attention: { disabled: true },
         },
       },
     });
     assert.deepStrictEqual(validated.themeOverrides, {
-      clawd: {
+      duck: {
         states: {
           attention: { disabled: true },
         },
@@ -2086,7 +2086,7 @@ describe("prefs.save", () => {
     const p = makeTempPath();
     const snap = prefs.getDefaults();
     snap.themeOverrides = {
-      clawd: {
+      duck: {
         reactions: {
           clickLeft: {
             file: "my-poke.svg",
@@ -2099,7 +2099,7 @@ describe("prefs.save", () => {
     };
     prefs.save(p, snap);
     const { snapshot } = prefs.load(p);
-    assert.deepStrictEqual(snapshot.themeOverrides.clawd.reactions, {
+    assert.deepStrictEqual(snapshot.themeOverrides.duck.reactions, {
       clickLeft: {
         file: "my-poke.svg",
         durationMs: 2200,
@@ -2113,21 +2113,21 @@ describe("prefs.save", () => {
     const p = makeTempPath();
     const snap = prefs.getDefaults();
     snap.themeOverrides = {
-      clawd: {
+      duck: {
         hitbox: {
           wide: {
-            "clawd-error.svg": true,
-            "clawd-idle.svg": false,
+            "duck-error.svg": true,
+            "duck-idle.svg": false,
           },
         },
       },
     };
     prefs.save(p, snap);
     const { snapshot } = prefs.load(p);
-    assert.deepStrictEqual(snapshot.themeOverrides.clawd.hitbox, {
+    assert.deepStrictEqual(snapshot.themeOverrides.duck.hitbox, {
       wide: {
-        "clawd-error.svg": true,
-        "clawd-idle.svg": false,
+        "duck-error.svg": true,
+        "duck-idle.svg": false,
       },
     });
   });
@@ -2136,7 +2136,7 @@ describe("prefs.save", () => {
     const validated = prefs.validate({
       ...prefs.getDefaults(),
       themeOverrides: {
-        clawd: {
+        duck: {
           hitbox: {
             wide: {
               "ok.svg": true,
@@ -2147,7 +2147,7 @@ describe("prefs.save", () => {
         },
       },
     });
-    assert.deepStrictEqual(validated.themeOverrides.clawd.hitbox, {
+    assert.deepStrictEqual(validated.themeOverrides.duck.hitbox, {
       wide: { "ok.svg": true },
     });
   });
@@ -2156,7 +2156,7 @@ describe("prefs.save", () => {
     const validated = prefs.validate({
       ...prefs.getDefaults(),
       themeOverrides: {
-        clawd: {
+        duck: {
           reactions: {
             explode: { file: "bogus.svg" },           // invalid key
             drag: { file: "my-drag.svg", durationMs: 9999 },  // drag can't have duration
@@ -2165,7 +2165,7 @@ describe("prefs.save", () => {
         },
       },
     });
-    assert.deepStrictEqual(validated.themeOverrides.clawd.reactions, {
+    assert.deepStrictEqual(validated.themeOverrides.duck.reactions, {
       drag: { file: "my-drag.svg" },     // durationMs stripped
       clickLeft: { file: "p.svg" },
       // explode: absent

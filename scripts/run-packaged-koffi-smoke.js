@@ -55,9 +55,9 @@ function runPackagedSmoke(options) {
     "--disable-gpu",
     "--disable-gpu-compositing",
     "--disable-software-rasterizer",
-    "--clawd-package-smoke",
-    `--clawd-package-smoke-target=${options.targetId}`,
-    `--clawd-package-smoke-output=${options.output}`,
+    "--duck-package-smoke",
+    `--duck-package-smoke-target=${options.targetId}`,
+    `--duck-package-smoke-output=${options.output}`,
   ];
   const command = options.useXvfb ? "xvfb-run" : options.executable;
   const args = options.useXvfb ? ["-a", options.executable, ...appArgs] : appArgs;

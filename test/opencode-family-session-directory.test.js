@@ -7,17 +7,17 @@ const path = require("node:path");
 const { after, before, describe, it } = require("node:test");
 const { pathToFileURL } = require("node:url");
 
-// core.mjs resolves ~/.clawd at module evaluation and every plugin init resets
+// core.mjs resolves ~/.duck at module evaluation and every plugin init resets
 // its debug log. Keep the production-shaped fixture entirely inside a temp HOME.
-const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-family-session-cwd-"));
+const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "duck-family-session-cwd-"));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
-const runtimeDir = path.join(TMP_HOME, ".clawd");
+const runtimeDir = path.join(TMP_HOME, ".duck-on-desk");
 fs.mkdirSync(runtimeDir, { recursive: true, mode: 0o700 });
 const runtimePath = path.join(runtimeDir, "runtime.json");
 fs.writeFileSync(runtimePath, JSON.stringify({
-  app: "clawd-on-desk",
-  port: 23333,
+  app: "duck-on-desk",
+  port: 24333,
   ownerPid: process.pid,
 }), { mode: 0o600 });
 if (process.platform !== "win32") fs.chmodSync(runtimePath, 0o600);
@@ -57,9 +57,9 @@ before(async () => {
     };
     fetchCalls.push(call);
     const headers = {
-      "x-clawd-server": "clawd-on-desk",
+      "x-duck-server": "duck-on-desk",
       ...(call.body && call.body.metadata_only === true
-        ? { "x-clawd-metadata-accepted": "1" }
+        ? { "x-duck-metadata-accepted": "1" }
         : {}),
     };
     return {
@@ -164,7 +164,7 @@ describe("opencode-family session directory ownership (#796)", () => {
     assert.strictEqual(Object.hasOwn(unknownPost.body, "cwd"), false);
   });
 
-  it("captures session.updated even though it does not map to a Clawd state", async () => {
+  it("captures session.updated even though it does not map to a Duck state", async () => {
     const plugin = createOpencodeFamilyPlugin(OPENCODE_CONFIG);
     const hooks = await plugin(createContext("C:\\active-project"));
 

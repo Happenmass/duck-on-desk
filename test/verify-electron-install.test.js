@@ -18,7 +18,7 @@ const {
 const temporaryRoots = new Set();
 
 function temporaryRoot() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-electron-verify-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-electron-verify-"));
   temporaryRoots.add(root);
   return root;
 }

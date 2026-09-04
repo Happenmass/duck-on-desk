@@ -2230,5 +2230,5 @@
     };
   }
 
-  root.ClawdSettingsTabGeneral = { init };
+  root.DuckSettingsTabGeneral = { init };
 })(globalThis);

@@ -56,7 +56,7 @@ function installStartupDockIcon({
     dock.setIcon(dockIconPath);
     return true;
   } catch (err) {
-    warn(logWarn, "Clawd: failed to install startup macOS Dock icon:", err);
+    warn(logWarn, "Duck: failed to install startup macOS Dock icon:", err);
     return false;
   }
 }

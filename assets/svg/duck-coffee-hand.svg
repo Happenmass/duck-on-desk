@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
   <!--
-    clawd 右手咖啡杯动画版
+    duck 右手咖啡杯动画版
 
     基准:
-    - 静帧来自 clawd-coffee-hand-static.svg
+    - 静帧来自 duck-coffee-hand-static.svg
     - 原静态帧文件保持不变
 
     动画:
@@ -11,10 +11,10 @@
     - 左手想接杯子
     - 杯子太烫，左手缩回
     - 杯子脱手落地并洒出咖啡
-    - 杯子落地后 clawd 呆住并失落下沉
+    - 杯子落地后 duck 呆住并失落下沉
   -->
 
-  <title>clawd coffee hand animated v3</title>
+  <title>duck coffee hand animated v3</title>
 
   <defs>
     <clipPath id="inside-torso">

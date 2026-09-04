@@ -7,8 +7,8 @@ This document holds the deeper runtime and integration notes that were previousl
 ```text
 Claude Code 状态同步（command hook，非阻塞）：
   Claude Code 触发事件
-    → hooks/clawd-hook.js（零依赖 Node 脚本，stdin 读 JSON 取 session_id + source_pid）
-    → HTTP POST 127.0.0.1:23333/state { state, session_id, event, source_pid, cwd }
+    → hooks/duck-hook.js（零依赖 Node 脚本，stdin 读 JSON 取 session_id + source_pid）
+    → HTTP POST 127.0.0.1:24333/state { state, session_id, event, source_pid, cwd }
     → src/server.js HTTP 壳 → src/server-route-state.js → src/agent-runtime-main.js → src/state.js 状态机（多会话追踪 + 优先级 + 最小显示时长 + 睡眠序列）
     → IPC state-change 事件
     → src/renderer.js（<object> SVG 预加载 + 淡入切换 + 眼球追踪）
@@ -26,23 +26,23 @@ Cursor Agent 状态同步（command hook，stdin JSON，非阻塞）：
 Codex CLI 状态同步（official hooks primary + JSONL fallback）：
   Codex 触发 SessionStart / UserPromptSubmit / PreToolUse / PostToolUse / Stop
     → hooks/codex-hook.js（stdin JSON，session_id 优先与 transcript_path 的 rollout UUID 对齐）
-    → HTTP POST 127.0.0.1:23333/state { state, session_id, event, turn_id, hook_source }
+    → HTTP POST 127.0.0.1:24333/state { state, session_id, event, turn_id, hook_source }
     → 同上状态机（agent_id: codex）
 
-本机 Codex `SessionStart` 首次 POST 发现 Clawd 离线时，只有 durable gate 同时满足 `integrationInstalled=true`、`enabled=true`、`autoStartWithCodex=true` 才调用 `auto-start.js` 冷启动桌面应用并重试事件。全新安装的独立开关默认关闭；prefs v17→v18 为已有用户回填 true 以保持升级前行为。remote、WSL 与 WSL interop 路径一律不冷启动。
+本机 Codex `SessionStart` 首次 POST 发现 Duck 离线时，只有 durable gate 同时满足 `integrationInstalled=true`、`enabled=true`、`autoStartWithCodex=true` 才调用 `auto-start.js` 冷启动桌面应用并重试事件。全新安装的独立开关默认关闭；prefs v17→v18 为已有用户回填 true 以保持升级前行为。remote、WSL 与 WSL interop 路径一律不冷启动。
   Codex 写入 ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl
     → agents/codex-log-monitor.js（fallback：hook 未覆盖事件、hook 禁用/不可用、历史兼容）
     → src/agent-runtime-main.js 对 hook-active session 做事件级 suppression，避免重复状态/重复气泡；本地 JSONL 路径不经过 HTTP server
 
 本机 Codex 注册使用每个 `CODEX_HOME` 下固定的分平台入口。Windows 的固定
 `commandWindows` 使用 PowerShell call-operator 直连：
-`& "node" "codex-hook.js" --clawd-windows-stable`；
-hook 进程启动时自读 UTF-8/Base64 `clawd-hooks/codex-hook.js.windows.run`
+`& "node" "codex-hook.js" --duck-windows-stable`；
+hook 进程启动时自读 UTF-8/Base64 `duck-hooks/codex-hook.js.windows.run`
 数据 sidecar 注入 env（2026-09-04 起由内联 PowerShell dispatcher 改为直连：
 原 dispatcher 的“解码并执行”命令行被 Windows Defender ML 判为
-Trojan:Win32/Commando.A!ml，见 clawd-on-desk#986）；不落地或二次启动 `.ps1`。
+Trojan:Win32/Commando.A!ml，见 duck-on-desk#986）；不落地或二次启动 `.ps1`。
 旁路 JSON manifest 供安装器恢复与 Doctor 做完整性、目标健康校验。POSIX 使用
-`clawd-hooks/codex-hook.js.sh` 与对应 manifest。
+`duck-hooks/codex-hook.js.sh` 与对应 manifest。
 Windows 原地升级只要 Node 与安装目录不变就保持同一命令；切换正式包、开发目录、
 worktree 或 Node 安装路径会改写直连命令，并需要重新完成一次 `/hooks` review。
 sidecar 中仅有 env 变化时不改命令。POSIX 仍只原子更新受管 wrapper，不改
@@ -55,24 +55,24 @@ trusted。
 Gemini CLI 状态同步（hook-only，stdin JSON + stdout JSON）：
   Gemini CLI 触发 SessionStart / BeforeAgent / BeforeTool / AfterTool / AfterAgent / SessionEnd 等事件
     → hooks/gemini-hook.js（hook_event_name 或 argv 事件名 → agents/gemini-cli.js 映射）
-    → HTTP POST 127.0.0.1:23333/state
+    → HTTP POST 127.0.0.1:24333/state
     → 同上状态机（agent_id: gemini-cli）
 
 Antigravity CLI (agy) 状态同步（hook-only，stdin JSON + stdout JSON）：
   agy 触发 PreInvocation / PostToolUse / PostInvocation / Stop
     → hooks/antigravity-hook.js（camelCase payload + argv 事件名 → agents/antigravity-cli.js 映射）
-    → HTTP POST 127.0.0.1:23333/state（状态）
+    → HTTP POST 127.0.0.1:24333/state（状态）
     → 同上状态机（agent_id: antigravity-cli）
-  Hook 注册到 ~/.gemini/config/hooks.json 的 clawd hook group，**仅状态事件**。PreToolUse **故意不注册**，权限完全交给 agy 自己 5 选项 native menu（agy 1.0.1 LLM 主动调内置 ask_permission 工具触发，含 "Persist to settings.json" 持久规则）。Stop stdout 返回允许停止的 JSON。
+  Hook 注册到 ~/.gemini/config/hooks.json 的 duck hook group，**仅状态事件**。PreToolUse **故意不注册**，权限完全交给 agy 自己 5 选项 native menu（agy 1.0.1 LLM 主动调内置 ask_permission 工具触发，含 "Persist to settings.json" 持久规则）。Stop stdout 返回允许停止的 JSON。
 
 Kiro CLI 状态同步（per-agent hook，stdin JSON）：
   Kiro CLI 触发事件
     → hooks/kiro-hook.js（camelCase 事件 → agents/kiro-cli.js 映射 → HTTP POST）
     → 同上状态机（agent_id: kiro-cli）
   注意：Kiro 无 global hooks，hooks/kiro-install.js 把 hook 注入到 ~/.kiro/agents/ 下每个
-  custom agent 配置里，并额外维护一个 "clawd" agent（继承 kiro_default，启动时从 kiro_default
-  重新同步以避免行为漂移）。内置 kiro_default 没有可编辑 JSON，用户需 `kiro-cli --agent clawd`
-  或 `/agent swap clawd` 才能启用 hooks。
+  custom agent 配置里，并额外维护一个 "duck" agent（继承 kiro_default，启动时从 kiro_default
+  重新同步以避免行为漂移）。内置 kiro_default 没有可编辑 JSON，用户需 `kiro-cli --agent duck`
+  或 `/agent swap duck` 才能启用 hooks。
 
 CodeBuddy 状态同步（Claude Code 兼容 hook，command）：
   CodeBuddy 触发事件
@@ -83,7 +83,7 @@ CodeBuddy 状态同步（Claude Code 兼容 hook，command）：
 自定义 HTTP Agent（动态注册，state-only）：
   Settings 选择本机可执行文件
     → customApplications 生成稳定 custom-... ID（只代表注册，不证明应用是 AI，也不安装 hook）
-    → 应用或外部 adapter 读取 ~/.clawd/runtime.json 的当前端口
+    → 应用或外部 adapter 读取 ~/.duck-on-desk/runtime.json 的当前端口
     → HTTP POST 127.0.0.1:<runtime-port>/state { agent_id, session_id, state, event }
     → server-agent-id.js 只接受当前仍注册的 custom ID，enabled gate 决定是否进入状态机
   v1 不支持 /permission；已注册 custom 的权限请求返回 204 no-decision，删除/伪造的 custom- ID 直接拒绝，不能降级成 Claude Code subagent。
@@ -104,7 +104,7 @@ QwenWork（千问办公）状态同步（hook-only / state-only，settings.json�
   Windows command 用 portable 形态（`windowsWrapper:"portable"`），PowerShell `-EncodedCommand` 只用于识别并原地迁移旧条目。
   PermissionRequest / PermissionDenied 仅作观察映射成 working（每任务 40+ 次），stdout 恒为 `{}`：不注册 /permission、
   不进 permission automation eligibility，Allow / Deny 全部留在 QwenWork 原生权限流程。
-  只发送 tool_input 的 sha1 fingerprint，不把原始 tool_input POST 给 Clawd。
+  只发送 tool_input 的 sha1 fingerprint，不把原始 tool_input POST 给 Duck。
   平台边界：官方只提供 macOS 14+ / Windows 10+ / HarmonyOS 6.1+（https://qwenwork.cn/download），没有 Linux 客户端，
   因此 processNames.linux 与 resolver linux agent name 均为空，也不进 WSL Pair；桌面主进程长驻，无 startup recovery。
 
@@ -116,7 +116,7 @@ TraeCode（Trae CN）状态同步（hook-only / state-only，hooks.json）：
   Windows command 用无引号外壳的 PowerShell `-EncodedCommand`（解码后为 `& 'node' 'hook'`，无 `shell` 字段），避免 Trae sandbox 的 native argv 包装拆坏带空格路径；Trae 通过 PowerShell 执行 hook 命令（cloudide.icube-agent-shell-exec）。
   必须在 Trae IDE 里手动开启 hooks（Settings → Hooks → Enable，运行方式：沙箱运行），无程序化绕过。
   stdout 恒为 `{}`：不注册 /permission、不进 permission automation eligibility，Allow / Deny 全部留在 Trae 原生权限流程。
-  Trae 服务端存储会话标题，Clawd 从首次 prompt 首行派生并保持首个标题（server 端 first-wins）。
+  Trae 服务端存储会话标题，Duck 从首次 prompt 首行派生并保持首个标题（server 端 first-wins）。
   无 SessionEnd：关闭的会话由 traecode-desktop-idle-timeout 桌面空闲清理退役。
   首版只覆盖 Trae CN（~/.trae-cn、进程名 Trae CN.exe）；国际版 Trae（~/.trae/hooks.json）不在范围内。
 
@@ -124,7 +124,7 @@ Kimi Code CLI（Kimi-CLI）状态同步（hook-only，config.toml）：
   Kimi Code CLI（Kimi-CLI）触发事件
     → hooks/kimi-hook.js（hook 事件 → agents/kimi-cli.js 映射 → HTTP POST）
     → 同上状态机（agent_id: kimi-cli）
-  Hook 注册到 ~/.kimi/config.toml 的 [[hooks]] 条目；Clawd 启动时会自动同步这些条目。
+  Hook 注册到 ~/.kimi/config.toml 的 [[hooks]] 条目；Duck 启动时会自动同步这些条目。
 
 ZCode 状态同步与权限审批（hook-only，config.json）：
   状态事件 SessionStart / UserPromptSubmit / PreToolUse / PostToolUse / PostToolUseFailure / Stop
@@ -137,7 +137,7 @@ ZCode 状态同步与权限审批（hook-only，config.json）：
     → 有决定时 stdout 返回最小 hookSpecificOutput（allow 裸 behavior；deny 可带 message），
       无决定 / 超时 / 断连输出 "{}" 并 exit 0，ZCode 回退原生权限流程
   Hook 注册到 ~/.zcode/cli/config.json 的 hooks.events.*（7 个支持事件全部注册）。显式 hooks.enabled=false
-  或 Clawd 单项 hook enabled=false 是用户选择，启动同步 / Settings Repair 均保留，Doctor 只提示。
+  或 Duck 单项 hook enabled=false 是用户选择，启动同步 / Settings Repair 均保留，Doctor 只提示。
   旧版 zcode-cli 与当前 Electron Node-mode Resources/glm/zcode.cjs 进程均受支持；GUI shell 只有在
   命令行同时含 zcode.cjs 时才会被认作 runtime。ZCode 不进入 permission automation 白名单：
   在工具面与会话身份审计完成前，global / per-session automation 全部 defer。prefs v14→v15 迁移翻转 Phase 1 的
@@ -146,70 +146,70 @@ ZCode 状态同步与权限审批（hook-only，config.json）：
 opencode 状态同步（in-process plugin，~0ms 延迟）：
   opencode 触发事件（session.created / session.status / message.part.updated 等）
     → hooks/opencode-plugin/index.mjs（CLI/TUI 运行于 Bun；Desktop sidecar 运行于 Electron utilityProcess / Node）
-    → translateEvent 映射（opencode v2 事件名 → PascalCase Clawd event 名）
+    → translateEvent 映射（opencode v2 事件名 → PascalCase Duck event 名）
     → session.created 的 event.properties.info.parentID 会被记录为 child → parent 映射，child 状态上报带 headless: true
-    → fire-and-forget HTTP POST 127.0.0.1:23333/state
+    → fire-and-forget HTTP POST 127.0.0.1:24333/state
     → 同上状态机（agent_id: opencode）
-  permission.asked 通过 plugin POST /permission 进入 Clawd；决定经随机 localhost 端口上的反向 bridge 返回，
+  permission.asked 通过 plugin POST /permission 进入 Duck；决定经随机 localhost 端口上的反向 bridge 返回，
   CLI/TUI bridge 使用 Bun.serve，Desktop bridge 使用 node:http，再由 plugin 调用宿主 SDK 的 permission reply route。
   permission.replied 使用 current requestID/sessionID 契约回送 completion lifecycle；同一 request 的 asked/replied
-  在 plugin 内因果串行，lifecycle 最多投递 3 次。Clawd 只按 agent/request/canonical session/bridge generation
+  在 plugin 内因果串行，lifecycle 最多投递 3 次。Duck 只按 agent/request/canonical session/bridge generation
   精确清理 pending UI、timer 与 notification，不向宿主反向发送第二次决定。
 
 MiMo Code 状态同步（in-process plugin，~0ms 延迟）：
   MiMo Code 触发事件（session.created / session.status / message.part.updated 等）
     → hooks/mimocode-plugin/index.mjs（插件跑在 mimo.exe 进程内，共享 @mimo-ai/plugin SDK）
-    → translateEvent 映射（与 opencode 同源的事件名 → PascalCase Clawd event 名）
+    → translateEvent 映射（与 opencode 同源的事件名 → PascalCase Duck event 名）
     → session.created 的 event.properties.info.parentID 会被记录为 child → parent 映射，child 状态上报带 headless: true
-    → fire-and-forget HTTP POST 127.0.0.1:23333/state
+    → fire-and-forget HTTP POST 127.0.0.1:24333/state
     → 同上状态机（agent_id: mimocode）
 
 Pi 状态同步（global extension，state-only）：
   Pi 触发 session_start / before_agent_start / tool_call / tool_result / agent_end 等事件
-    → ~/.pi/agent/extensions/clawd-on-desk/index.ts（Pi extension runtime）
-    → hooks/pi-extension-core.js 映射为 PascalCase Clawd event 名
-    → HTTP POST 127.0.0.1:23333/state
+    → ~/.pi/agent/extensions/duck-on-desk/index.ts（Pi extension runtime）
+    → hooks/pi-extension-core.js 映射为 PascalCase Duck event 名
+    → HTTP POST 127.0.0.1:24333/state
     → 同上状态机（agent_id: pi）
 
 OpenClaw 状态同步（in-process plugin，state-only）：
   OpenClaw 触发 session_start / model_call_started / before_tool_call / after_tool_call / model_call_ended 等事件
     → hooks/openclaw-plugin/index.js（plain ESM default object，OpenClaw plugin loader 直接识别）
-    → 映射为 PascalCase Clawd event 名，POST body 只发送 allowlist 字段
-    → fire-and-forget HTTP POST 127.0.0.1:23333/state
+    → 映射为 PascalCase Duck event 名，POST body 只发送 allowlist 字段
+    → fire-and-forget HTTP POST 127.0.0.1:24333/state
     → 同上状态机（agent_id: openclaw）
 
 Hermes Agent 状态同步（Python plugin，Hermes SDK）：
   Hermes 触发 on_session_start / pre_llm_call / post_llm_call / pre_tool_call / post_tool_call / on_session_end / on_session_finalize / on_session_reset
     → hooks/hermes-plugin/__init__.py（plugin 跑在 Hermes worker 进程内）
-    → 映射为 Clawd event + 同步 HTTP POST 127.0.0.1:23333/state
+    → 映射为 Duck event + 同步 HTTP POST 127.0.0.1:24333/state
     → 同上状态机（agent_id: hermes）
   终端聚焦 metadata 在 plugin register 时用 daemon thread 异步解析进程树；首个 hook 可不带 source_pid。
 
 DeepSeek Harness 状态同步（in-process plugin，web profile，experimental）：
   DSH 公开 session/created / session/event / session/disposed
-    → @dsh-external/dsh-clawd-bridge（Node ESM plugin，运行在 DSH 进程内）
-    → 每个 session 独立 FIFO POST 动态发现的 127.0.0.1:23333-23337/state
+    → @dsh-external/dsh-duck-bridge（Node ESM plugin，运行在 DSH 进程内）
+    → 每个 session 独立 FIFO POST 动态发现的 127.0.0.1:24333-24337/state
     → src/dsh-state-sequence.js 用持久 event.seq / exclusive session.seq watermark 拒绝 stale、duplicate 和 dispose 后 late event
     → 同上状态机（agent_id: deepseek-harness，session_id: deepseek-harness:<raw>）
   bridge 只发送 event、state、工具名、cwd 和 seq 等 allowlist 字段；不发送 prompt、arguments、result 或 conversation。
 
 opencode 权限气泡（event hook + 反向 bridge，非阻塞）：
   opencode 请求权限 → event hook 收到 permission.asked
-    → plugin POST /permission（带 bridge_url + bridge_token）→ Clawd 立即 200 ACK（不挂连接）
-    → Clawd 创建 bubble 窗口 → 用户 Allow/Always/Deny
-    → Clawd POST plugin 的反向 bridge → bridge 用 ctx.client._client.post() 调 opencode 内置 Hono 路由 /permission/:id/reply
+    → plugin POST /permission（带 bridge_url + bridge_token）→ Duck 立即 200 ACK（不挂连接）
+    → Duck 创建 bubble 窗口 → 用户 Allow/Always/Deny
+    → Duck POST plugin 的反向 bridge → bridge 用 ctx.client._client.post() 调 opencode 内置 Hono 路由 /permission/:id/reply
     → opencode 执行对应行为（once/always/reject）
   用户先在 opencode 原生 UI 回答 → event hook 收到 permission.replied（sessionID/requestID/reply）
     → plugin 同步失效 request 的反向 target，并在同 request asked POST 之后发送 replied lifecycle
-    → lifecycle 使用 lifecycle_bridge_url/token（不复用普通 bridge 字段，对旧 Clawd fail-safe）
-    → Clawd exact-match 删除该 request 的本地 pending、bubble、timer 与 notification
+    → lifecycle 使用 lifecycle_bridge_url/token（不复用普通 bridge 字段，对旧 Duck fail-safe）
+    → Duck exact-match 删除该 request 的本地 pending、bubble、timer 与 notification
     → 不调用 reverse bridge，不复制 reply，不产生第二次宿主决定
 
 MiMo Code 权限气泡（event hook + 反向 bridge，非阻塞，与 opencode 同源协议）：
   MiMo Code 请求权限 → event hook 收到 permission.asked
-    → plugin POST /permission（带 bridge_url + bridge_token）→ Clawd 立即 200 ACK（不挂连接）
-    → Clawd 创建 bubble 窗口 → 用户 Allow/Always/Deny
-    → Clawd POST plugin 的反向 bridge → bridge 用 ctx.client._client.post() 调 MiMo Code 内置 Hono 路由 /permission/:id/reply
+    → plugin POST /permission（带 bridge_url + bridge_token）→ Duck 立即 200 ACK（不挂连接）
+    → Duck 创建 bubble 窗口 → 用户 Allow/Always/Deny
+    → Duck POST plugin 的反向 bridge → bridge 用 ctx.client._client.post() 调 MiMo Code 内置 Hono 路由 /permission/:id/reply
     → MiMo Code 执行对应行为（once/always/reject）
   MiMo Code 原生 UI 的 permission.replied 走同一 request-specific completion lifecycle；共享 core 与自动化已覆盖，
   但发布物真机验证必须单列，不能从 OpenCode 真机结果推断。
@@ -219,20 +219,20 @@ DeepSeek Harness 权限气泡（approval waterfall，阻塞）：
     → 独立 DSH adapter 创建仅 Allow Once / Deny 的 bubble（无 suggestions / Always / Go to Terminal）
     → allow / deny 分别映射为 allowed-once / rejected
     → 204、断连、DND、disabled 或所有审批通道无决定时 bridge 调 next()，交还 DSH web answerer
-  ask_user_question 不进入 Clawd；DSH 原生 provider 始终是唯一 question owner。
+  ask_user_question 不进入 Duck；DSH 原生 provider 始终是唯一 question owner。
 
 远程 SSH 状态同步（反向端口转发）：
   远程服务器上的 Claude Code / Codex CLI
     → secure hooks 只 POST 到 profile pin 住的远端转发端口
     → SSH 隧道落到该 profile 的临时本地 ingress
     → ingress 校验 routing nonce 并写入 profileId canonical namespace
-    → 同上状态机（CLAWD_REMOTE=1 + CLAWD_SSH_REMOTE=1，跳过远端 PID 聚焦）
-  secure identity 缺失/损坏时 fail closed，不回退 23333-23337 扫描；
+    → 同上状态机（DUCK_REMOTE=1 + DUCK_SSH_REMOTE=1，跳过远端 PID 聚焦）
+  secure identity 缺失/损坏时 fail closed，不回退 24333-24337 扫描；
   通用本地 /state 与 /permission 不作为 SSH 隧道目标
 
 权限决策流（Claude Code HTTP hook，阻塞）：
   Claude Code PermissionRequest
-    → HTTP POST 127.0.0.1:23333/permission { tool_name, tool_input, session_id, permission_suggestions }
+    → HTTP POST 127.0.0.1:24333/permission { tool_name, tool_input, session_id, permission_suggestions }
     → main.js 创建 bubble 窗口（bubble.html）显示权限卡片
     → 用户点击 Allow / Deny / suggestion → HTTP 响应 { behavior }
     → Claude Code 执行对应行为
@@ -245,14 +245,14 @@ DeepSeek Harness 权限气泡（approval waterfall，阻塞）：
     → hooks/codex-hook.js POST /permission { tool_name, tool_input, tool_input_description, session_id, turn_id }
     → 默认 intercept 模式：main.js 创建普通 Allow / Deny bubble，用户点击后 codex-hook.js stdout 输出官方 JSON decision
     → 显式 native 模式：server 记录 notification 并立即返回 no-decision，Codex AutoReview / 原生审批继续处理
-    → DND / disabled / bubble hidden / Clawd unavailable 时 stdout "{}"，Codex 回到原生审批提示
+    → DND / disabled / bubble hidden / Duck unavailable 时 stdout "{}"，Codex 回到原生审批提示
 ```
 
 ## Local Recap Projection
 
 The recap is a local projection of accepted runtime activity, not a second observer at the HTTP or `updateSession()` entry. After agent gates, Codex source/replay arbitration, permission provenance handling, subagent filtering, and completion arbitration settle, `src/state.js` maps the accepted boundary through `src/recap-metrics.js` and sends an allowlisted canonical event to `src/recap-runtime.js`.
 
-`src/recap-journal.js` freezes the desktop civil time and replaces any stable scope/session/dedupe identities with installation-local HMACs before appending a 14-day ticket. The same normalized record updates `src/recap-aggregate.js`; `src/recap-coverage.js` independently records when Clawd could receive signals. Daily aggregates and coverage remain bounded to 400 local days under `~/.clawd/recap-v1/`. Query IPC returns only the broad `local` / `wsl` / `remote` scope class and never returns HMAC values, profile IDs, or distribution names. Startup rebuilds the 14-day aggregate in bounded event-loop batches; unsupported pre-release aggregate/coverage schemas are quarantined instead of migrated.
+`src/recap-journal.js` freezes the desktop civil time and replaces any stable scope/session/dedupe identities with installation-local HMACs before appending a 14-day ticket. The same normalized record updates `src/recap-aggregate.js`; `src/recap-coverage.js` independently records when Duck could receive signals. Daily aggregates and coverage remain bounded to 400 local days under `~/.duck-on-desk/recap-v1/`. Query IPC returns only the broad `local` / `wsl` / `remote` scope class and never returns HMAC values, profile IDs, or distribution names. Startup rebuilds the 14-day aggregate in bounded event-loop batches; unsupported pre-release aggregate/coverage schemas are quarantined instead of migrated.
 
 DND remains an interaction/visual gate and does not stop recap or coverage. Suspend, process shutdown, and `recapEnabled=false` close coverage. Historical records retain the time zone, UTC offset, local date, and local hour captured at acceptance; Codex JSONL uses only an accepted line's trusted timestamp. See `docs/guides/recap.md` for the full metric, privacy, and DST contract.
 
@@ -273,13 +273,13 @@ DND remains an interaction/visual gate and does not stop recap or coverage. Susp
 
 ## Windows B1a Process Metadata Capability (#694)
 
-Codex、Cursor Agent、Kiro CLI、CodeBuddy 和 Reasonix 的本地 Windows hook 支持一套版本化的 server-side process-chain capability。Clawd runtime owner 把以下数据写入 `~/.clawd/runtime.json`：随机 `instanceGeneration`，以及每个 agent 的 `legacy | shadow | b1a-authoritative` mode。默认始终是 `legacy`；`shadow` 和 `b1a-authoritative` 仅用于显式开发/验证，resolver 初始化或 ABI 校验失败时在写 runtime 前降级回 `legacy`。
+Codex、Cursor Agent、Kiro CLI、CodeBuddy 和 Reasonix 的本地 Windows hook 支持一套版本化的 server-side process-chain capability。Duck runtime owner 把以下数据写入 `~/.duck-on-desk/runtime.json`：随机 `instanceGeneration`，以及每个 agent 的 `legacy | shadow | b1a-authoritative` mode。默认始终是 `legacy`；`shadow` 和 `b1a-authoritative` 仅用于显式开发/验证，resolver 初始化或 ABI 校验失败时在写 runtime 前降级回 `legacy`。
 
-本地 Windows、非 remote/WSL 的 hook 可以把当前 hook Node PID 和 runtime generation 放入 `X-Clawd-Hook-Pid` / `X-Clawd-Process-Instance`；headless/official/subagent 分类在 server 收到请求后完成，只有通过 effective eligibility 的请求才消费这些 header。header 只发往同一次 immutable runtime observation 指定的端口；扫描到其他 fallback server 时自动剥离。PID/generation 是 capability routing metadata，不是认证凭据。B1b adapter、自定义 HTTP Agent 和 Remote SSH 不进入该协议。
+本地 Windows、非 remote/WSL 的 hook 可以把当前 hook Node PID 和 runtime generation 放入 `X-Duck-Hook-Pid` / `X-Duck-Process-Instance`；headless/official/subagent 分类在 server 收到请求后完成，只有通过 effective eligibility 的请求才消费这些 header。header 只发往同一次 immutable runtime observation 指定的端口；扫描到其他 fallback server 时自动剥离。PID/generation 是 capability routing metadata，不是认证凭据。B1b adapter、自定义 HTTP Agent 和 Remote SSH 不进入该协议。
 
 `shadow` 下 hook 仍提供 legacy metadata，server 用新 Windows resolver 做逐请求 fresh walk 并只记录 bounded parity；`b1a-authoritative` 下五个 hook 的 eligible 路径不再启动 legacy snapshot PowerShell，`/state` 和 Codex `/permission` 以 server 结果 replace/clear `sourcePid`、`agentPid`、`pidChain` 与 walk-derived editor。replace 失败必须清 stale process identity、重新计算 `pidReachable`，身份变化时清关联的 Windows Terminal HWND / Orca pane；Cursor 的 `editor="cursor"` 属于 adapter 常量而非 walk-derived 字段。Codex Desktop 保持 `sourcePid=agentPid`，普通 CLI 保持最外层 terminal 优先。Kiro 的 `sessionId="default"` 不得用于 process-chain reuse，每个请求都使用自己的 hook PID。
 
-CodeBuddy direct HTTP `PermissionRequest` 不经过 Clawd command hook，因此没有可信 hook PID。B1a 当前只覆盖其 command state；permission-first 仍需真实协议/session identity 证据，不得伪造或从别的 session 猜测 PID。
+CodeBuddy direct HTTP `PermissionRequest` 不经过 Duck command hook，因此没有可信 hook PID。B1a 当前只覆盖其 command state；permission-first 仍需真实协议/session identity 证据，不得伪造或从别的 session 猜测 PID。
 
 ## Multi-Agent Registry
 
@@ -295,7 +295,7 @@ CodeBuddy direct HTTP `PermissionRequest` 不经过 Clawd command hook，因此�
 - `agents/zcode.js` — ZCode config-file hook 事件映射与阻塞式 PermissionRequest 人工权限审批（automation 未审计，全部 defer）
 - `agents/kiro-cli.js` — Kiro CLI 事件映射（camelCase），无 HTTP hook / 无权限 / 无 subagent
 - `agents/codebuddy.js` — CodeBuddy 事件映射（PascalCase，Claude Code 兼容），支持权限
-- `agents/workbuddy.js` — WorkBuddy 事件映射（PascalCase，Claude Code 兼容），state + Notification only，无 Clawd 权限审批
+- `agents/workbuddy.js` — WorkBuddy 事件映射（PascalCase，Claude Code 兼容），state + Notification only，无 Duck 权限审批
 - `agents/qwenwork.js` — QwenWork（千问办公）hook 事件映射（state-only，无权限气泡，无 startup recovery；`processNames.linux` 为空）
 - `agents/opencode.js` — opencode 事件映射 + 能力（plugin、permission、terminal focus）
 - `agents/mimocode.js` — MiMo Code 事件映射 + 能力（plugin、permission、terminal focus），与 opencode 同源
@@ -306,7 +306,7 @@ CodeBuddy direct HTTP `PermissionRequest` 不经过 Clawd command hook，因此�
 - `agents/codex-log-monitor.js` — Codex JSONL fallback 增量轮询器（文件监视 + 增量读取 + 状态 / metadata fallback，不再做审批猜测）
 - `agents/gemini-log-monitor.js` — legacy Gemini session JSON 轮询器；当前 hook-only 路径不启动
 
-运行时的 agent 安装意图 / 启停 / 权限气泡开关通过 `src/agent-gate.js` 读 `prefs.agents[id].integrationInstalled` / `.enabled` / `.permissionsEnabled`。`enabled` 仍然只表示是否处理该 agent 的事件：关闭会让 `state.js` / `server.js` 停止处理事件、清理 session / bubble；`integrationInstalled` 才表示本机 hook/plugin/extension 是否由 Clawd 维护。snapshot 缺字段时 gate 保守默认 true 以兼容旧版；新安装的 schema 会显式把 Claude Code / Codex 设为已安装且启用，其余 agent 设为未安装且未启用。Claude Code 额外有 `.subagentPermissionsEnabled` 子开关（#451，仅 claude-code 默认条目携带该 flag），控制 Task 子 agent 发起的 PermissionRequest 是否弹泡泡。
+运行时的 agent 安装意图 / 启停 / 权限气泡开关通过 `src/agent-gate.js` 读 `prefs.agents[id].integrationInstalled` / `.enabled` / `.permissionsEnabled`。`enabled` 仍然只表示是否处理该 agent 的事件：关闭会让 `state.js` / `server.js` 停止处理事件、清理 session / bubble；`integrationInstalled` 才表示本机 hook/plugin/extension 是否由 Duck 维护。snapshot 缺字段时 gate 保守默认 true 以兼容旧版；新安装的 schema 会显式把 Claude Code / Codex 设为已安装且启用，其余 agent 设为未安装且未启用。Claude Code 额外有 `.subagentPermissionsEnabled` 子开关（#451，仅 claude-code 默认条目携带该 flag），控制 Task 子 agent 发起的 PermissionRequest 是否弹泡泡。
 
 动态 custom Agent 是上述安装模型的明确例外：`customApplications` 是注册真相，validate post-pass 保证每个已注册 ID 都有 gate entry，且始终显式写 `integrationInstalled=false`、`permissionsEnabled=false`。它不会进入 integration sync map；`enabled` 只控制 `/state` ingress。删除注册项会同步清 session、权限残留和该 ID 的 recent-event ring，并删除 stale custom gate；未知的非-custom agent entry 仍保留向前兼容。
 
@@ -317,11 +317,11 @@ CodeBuddy direct HTTP `PermissionRequest` 不经过 Clawd command hook，因此�
 启动链路只会自动补齐 `integrationInstalled=true` 且 `enabled=true` 的缺失集成；若 prefs 文件不可读（`locked && recovered`），内存 snapshot 只是非权威 defaults fallback，整条 prefs-backed agent runtime gate 会 fail closed，本次进程不自动同步集成、不启动 monitor、不接受 state/permission ingress，也不恢复旧 session：
 
 - `server.js` 启动后异步同步已安装且已启用的 Claude / Codex / Copilot / Gemini / Antigravity / Cursor / CodeBuddy / WorkBuddy / Kiro / Kimi / Qwen / ZCode / CodeWhale / Qoder / QoderWork / QwenWork / Reasonix hooks、opencode / MiMo Code / OpenClaw / Hermes / DeepSeek Harness plugins 和 Pi extension；Hermes 同步会先做无副作用安装探测，未安装时不创建 `~/.hermes`；DSH startup sync 不初始化缺失的 web profile，只 repair 已 opt-in 的 marker-owned entry
-- Claude hook 同步时还会扫 `DEPRECATED_CORE_HOOKS`（当前含 `WorktreeCreate`）清掉旧版本留下的过时 Clawd hook。常规所有权仍认 command 中的字面 `clawd-hook.js` marker；兼容 #852 的外部 env 间接形式时，只有“单条简单 Node 调用 + 精确 `CLAWD_HOOK_PATH` token + 唯一事件参数”，且 `settings.env.CLAWD_HOOK_PATH` 的跨平台 basename 恰为 `clawd-hook.js` 才视为 owned。复合命令、间接 env 值和第三方同事件 hook 均 fail closed。deprecated / versioned / HTTP-only / uninstall 路径删除全部 owned 命中；active state hook 则按子项位置折叠成一条，优先保留已 canonical 的命令并保留 mixed wrapper 的 matcher / 第三方 sibling。迁移不会改写 `settings.env`；严格的反注入规则只校验外部 env Node 候选，不会拒绝安装器已解析/保留的绝对路径（如含括号的 Windows 路径）。若 env-only 事件无法验证可用的绝对 Node 路径，会保留一条 env hook 而不是降级成裸 `node`；若已有 literal hook，则保留 literal 而不让不可迁移的 env duplicate 取代它
+- Claude hook 同步时还会扫 `DEPRECATED_CORE_HOOKS`（当前含 `WorktreeCreate`）清掉旧版本留下的过时 Duck hook。常规所有权仍认 command 中的字面 `duck-hook.js` marker；兼容 #852 的外部 env 间接形式时，只有“单条简单 Node 调用 + 精确 `DUCK_HOOK_PATH` token + 唯一事件参数”，且 `settings.env.DUCK_HOOK_PATH` 的跨平台 basename 恰为 `duck-hook.js` 才视为 owned。复合命令、间接 env 值和第三方同事件 hook 均 fail closed。deprecated / versioned / HTTP-only / uninstall 路径删除全部 owned 命中；active state hook 则按子项位置折叠成一条，优先保留已 canonical 的命令并保留 mixed wrapper 的 matcher / 第三方 sibling。迁移不会改写 `settings.env`；严格的反注入规则只校验外部 env Node 候选，不会拒绝安装器已解析/保留的绝对路径（如含括号的 Windows 路径）。若 env-only 事件无法验证可用的绝对 Node 路径，会保留一条 env hook 而不是降级成裸 `node`；若已有 literal hook，则保留 literal 而不让不可迁移的 env duplicate 取代它
 
 Settings Agent 页的 Install 会执行对应 sync 并把 `integrationInstalled=true, enabled=true` 一起提交；Uninstall 会调用 marker-scoped 卸载器，并把 `integrationInstalled=false, enabled=false` 一起提交。单独重新启用一个未安装 agent 只打开事件入口，不会写本机配置；手动安装命令主要用于调试、重装或远程机部署。
 
-CodeBuddy 的 PermissionRequest HTTP 所有权只认严格的本机 managed URL，或版本化 marker `clawd-on-desk.permission.v1`。旧 `name:"clawd"` 只有在 URL 同时属于 managed local endpoint 时才会迁移；同名第三方/custom URL 注册和卸载均不触碰。进程内 startup、Settings install/clear/repair 显式传 `{mode:"local"}` 或 `{mode:"custom",url}`；裸 CLI 与 WSL deploy 用 `{mode:"preserve"}`，防止把 marker-owned custom URL 意外改回 localhost。
+CodeBuddy 的 PermissionRequest HTTP 所有权只认严格的本机 managed URL，或版本化 marker `duck-on-desk.permission.v1`。旧 `name:"duck"` 只有在 URL 同时属于 managed local endpoint 时才会迁移；同名第三方/custom URL 注册和卸载均不触碰。进程内 startup、Settings install/clear/repair 显式传 `{mode:"local"}` 或 `{mode:"custom",url}`；裸 CLI 与 WSL deploy 用 `{mode:"preserve"}`，防止把 marker-owned custom URL 意外改回 localhost。
 
 ### Claude hook 健康巡检与自愈（#657）
 
@@ -329,7 +329,7 @@ CodeBuddy 的 PermissionRequest HTTP 所有权只认严格的本机 managed URL�
 
 - 默认周期 5 分钟，不依赖任何 settings.json fs 事件——hook 脚本在其他目录（如系统 Temp）被删除也能发现，watcher 和周期巡检共用同一个 `runHealthCheck(reason)` 决策函数。
 - 判断逻辑收敛在 `src/claude-hook-health.js` 的 `inspectClaudeHookHealth()`：解析 command、校验 nodeBin/scriptPath、比对当前权威路径（`hooks/install.js` 的 `getClaudeHookScriptPath()` / `getClaudeAutoStartScriptPath()` / `CLAUDE_CORE_HOOK_EVENTS`），复用 Doctor 的 `agent-node-bin-parser.js` 解析器，不另起一套正则。
-- env-indirected state hook 先复用 `hooks/json-utils.js` 的严格 ownership classifier，再进入健康判定；它不会把未展开的 `${CLAWD_NODE_BIN}` / `${CLAWD_HOOK_PATH}` 交给普通 target validator。可安全迁移和 owned duplicate 产生专属 automatic repair class；Node 路径无法验证或 ownership 证据不足只产生 degraded 诊断，不消耗 3 次自动修复预算。watcher 的 suspicious-shrink snapshot 也复用同一 classifier，避免把待迁移的 Clawd env hook 误记成第三方 hook。
+- env-indirected state hook 先复用 `hooks/json-utils.js` 的严格 ownership classifier，再进入健康判定；它不会把未展开的 `${DUCK_NODE_BIN}` / `${DUCK_HOOK_PATH}` 交给普通 target validator。可安全迁移和 owned duplicate 产生专属 automatic repair class；Node 路径无法验证或 ownership 证据不足只产生 degraded 诊断，不消耗 3 次自动修复预算。watcher 的 suspicious-shrink snapshot 也复用同一 classifier，避免把待迁移的 Duck env hook 误记成第三方 hook。
 - 可自动修复的问题（`buildClaudeRepairSignature()` 判定）经 `src/claude-hook-operations.js` 的实例级队列串行 repair，repair 后重新读盘用同一 inspector 复验，不只信 installer 的 `updated>0`。
 - 同一 repair signature 连续 3 次修复+复验失败后进入 `manual-fix-required`，停止自动 mutation，只保留 5 分钟只读复查；健康恢复或 repair class 集合实际变化时清计数。
 - `settings.json` suspicious-shrink 期间只弹一次 `notifySuspiciousShrink`，不会每个周期重复通知。
@@ -337,7 +337,7 @@ CodeBuddy 的 PermissionRequest HTTP 所有权只认严格的本机 managed URL�
 - 巡检严格受 `manageClaudeHooksAutomatically`、`claude-code.integrationInstalled`、`claude-code.enabled` 三个 gate 保护，和目录 watcher 共用同一套 gate。
 - 所有 mutation 入口（启动 reconcile、watcher 自动恢复、周期自愈、Settings Agent Install/Enable、Doctor Fix、`autoStartWithClaude` 开关、Settings Agent Uninstall、legacy hooks Install/Uninstall、About 页 `cleanupIntegrations`）都经过 `src/server.js` 持有的同一个 `claude-hook-operations.js` 队列实例，串行执行、互不覆盖；statusline 注册/卸载只在 startup、Settings Agent Install/Enable、Settings Agent Uninstall、About cleanup 这几个来源触发，周期巡检和 Doctor Fix 不碰 statusline。
 - 历史 key `claudeQuotaCollectionEnabled` 现在是本机 Claude statusline metadata（context window + 可用 quota）的唯一用户授权。关闭或卸载时，server 先用进程内 suppression 挡住未结尾包，再 ownership-safe 卸载并清除 `profileId="local"`（含 WSL）会话的 statusline 分母所有权，同时从 account-quota store 定向删除所有非 `remote:` 来源的 `claudeQuota` 并立即广播、持久化；同源 Codex / Antigravity provider 与 Remote SSH quota 保留。关闭态启动也会执行同一缓存迁移。statusline 上报拥有 limit，普通 transcript hook 仍可更新 used，并按保留的权威 limit 重算 percent。
-- Kimi Code quota 是独立的 main-process、manual-only transport：只有 Settings 中显式 Connect/Replace/Reconnect/Refresh 才会请求固定的 `https://api.kimi.com/coding/v1/usages`，app ready、hook、resume、Dashboard show 都不联网。Kimi Code API Key 以 Electron `safeStorage` 密文保存在 `~/.clawd/kimi-code-quota-credential.json`，不进入 prefs、settings snapshot、日志或 `account-quota.json`；Linux `basic_text` backend fail closed。每次保存生成与 Key 无关的随机 `credentialId`，`~/.clawd/kimi-quota-runtime.json` 在 quota store 同步 flush 后才记录该 id；启动发现 id 缺失/不一致会先清理本机 Kimi cache，避免 Replace Key 的 crash 窗口把旧账户额度标成新连接。`kimiQuotaCollectionEnabled` 是 command-only durable gate，runtime 在请求 admission 和 response commit 两端都重读该 gate 与 `kimi-cli.enabled`；hook payload 永远不是 Kimi quota 来源。Disconnect 后的重连走专用 trusted IPC `settings:kimi-quota-reconnect` → `runtime.reconnect()`：只读校验本地密文可用后 re-enable 并立即走与 Refresh 完全相同的 admission/commit 路径，属于用户显式手动动作，Key 始终不离开 main process。
+- Kimi Code quota 是独立的 main-process、manual-only transport：只有 Settings 中显式 Connect/Replace/Reconnect/Refresh 才会请求固定的 `https://api.kimi.com/coding/v1/usages`，app ready、hook、resume、Dashboard show 都不联网。Kimi Code API Key 以 Electron `safeStorage` 密文保存在 `~/.duck-on-desk/kimi-code-quota-credential.json`，不进入 prefs、settings snapshot、日志或 `account-quota.json`；Linux `basic_text` backend fail closed。每次保存生成与 Key 无关的随机 `credentialId`，`~/.duck-on-desk/kimi-quota-runtime.json` 在 quota store 同步 flush 后才记录该 id；启动发现 id 缺失/不一致会先清理本机 Kimi cache，避免 Replace Key 的 crash 窗口把旧账户额度标成新连接。`kimiQuotaCollectionEnabled` 是 command-only durable gate，runtime 在请求 admission 和 response commit 两端都重读该 gate 与 `kimi-cli.enabled`；hook payload 永远不是 Kimi quota 来源。Disconnect 后的重连走专用 trusted IPC `settings:kimi-quota-reconnect` → `runtime.reconnect()`：只读校验本地密文可用后 re-enable 并立即走与 Refresh 完全相同的 admission/commit 路径，属于用户显式手动动作，Key 始终不离开 main process。
 - `server.getClaudeHookHealthStatus()` 暴露供 Doctor 使用的只读状态（`healthy` / `repairing` / `degraded` / `manual-fix-required` / `guarded` / `stopped`），与既有的 `getClaudeHookGuardStatus()`（仅覆盖 suspicious-shrink 一种通知）并存，互不替代。
 
 ## Permission Bubble
@@ -346,7 +346,7 @@ CodeBuddy 的 PermissionRequest HTTP 所有权只认严格的本机 managed URL�
 - `agents/registry.js` 的 capability 声明是 agent 是否进入权限、interactive bubble、subagent 等路径的权威来源；文档里的 agent 名单只是说明，不可替代 capability gate。automation 的 agent/family eligibility 另有显式白名单，故意不能从 `permissionApproval` 自动推导；工具 eligibility 是 mode/adapter-specific，不是单一逐工具 allowlist
 - 动态 custom HTTP Agent v1 是 state-only：`/permission` 恒不返回 Allow/Deny，也不创建权限 bubble
 - WorkBuddy 不进入 `/permission`：权限请求只以 Notification 驱动提醒，Allow / Deny 决策留在 WorkBuddy 原生 GUI
-- QwenWork 不进入 `/permission`：`PermissionRequest` / `PermissionDenied` 只被观察并映射成 `working`，hook stdout 恒为 `{}`，Clawd 不产生 allow/deny，也不在 permission automation eligibility 名单内
+- QwenWork 不进入 `/permission`：`PermissionRequest` / `PermissionDenied` 只被观察并映射成 `working`，hook stdout 恒为 `{}`，Duck 不产生 allow/deny，也不在 permission automation eligibility 名单内
 - DeepSeek Harness 普通 approval 进入独立 blocking adapter；人工 Allow/Deny 可用，但 auto-tools、unattended 与 per-session grant 全部 DEFER。`ask_user_question` 返回 204 交给 DSH 原生 provider
 - Codex 的 PermissionRequest 是 official command hook；hook 脚本挂起等待 `/permission`，再把 sanitized allow/deny JSON 写到 stdout
 - `POST /permission` 接收 `{ tool_name, tool_input, session_id, permission_suggestions }`；Codex 额外带 `turn_id`、`tool_input_description`、`tool_input_fingerprint`
@@ -386,10 +386,10 @@ opencode、MiMo Code、OpenClaw、Hermes 和 DeepSeek Harness 是 plugin 形式�
 - 由于 `permission.ask` hook 在 opencode 1.3.13 上未被调用，权限只能走 event hook + 反向 bridge；MiMo Code 同源，权限同样走 event hook + 反向 bridge
 - plugin 内发出的 POST 必须 fire-and-forget，避免拖慢 TUI
 - 打包后需要把 `app.asar/` 重写为 `app.asar.unpacked/`
-- Hermes plugin 使用同步 POST，避免短命 `hermes -z` 进程退出前丢事件；Clawd 未启动时有短 cooldown，避免反复扫端口
+- Hermes plugin 使用同步 POST，避免短命 `hermes -z` 进程退出前丢事件；Duck 未启动时有短 cooldown，避免反复扫端口
 - Hermes 的 `agent_pid` 当前是 plugin worker 进程 PID；`source_pid` 来自异步进程树解析，给终端聚焦使用
-- Hermes config.yaml 是用户 YAML，不做 line-oriented 编辑；安装只复制托管 plugin 文件并调用 `hermes plugins enable clawd-on-desk`
-- DeepSeek Harness 首发只支持 web profile，并维护一张 verified 版本契约表（`0.1.1-rc.2` 优先、`0.1.0-rc.6` 保留），每个版本绑定自己的 npm artifact 与 integrity；Install/Repair 按检测到的 host 版本（无 CLI 时按 owned marker）选择契约，Uninstall 与手动 npx 命令按 marker 契约选择，未列入表内的版本一律禁止 mutation。安装器按 canonical `DSH_HOME` 哈希命名空间把 bridge 复制成 immutable hash generation，再用官方 `dsh plugin --profile web add/remove` mutation；dependency、bundle row、installation-first/profile-second resolution 与 Clawd marker 必须同时验证，foreign 同名 package 永不覆盖或删除；不同 DSH_HOME 不共享可删除 generation、mutation lock 或 inspection latch
+- Hermes config.yaml 是用户 YAML，不做 line-oriented 编辑；安装只复制托管 plugin 文件并调用 `hermes plugins enable duck-on-desk`
+- DeepSeek Harness 首发只支持 web profile，并维护一张 verified 版本契约表（`0.1.1-rc.2` 优先、`0.1.0-rc.6` 保留），每个版本绑定自己的 npm artifact 与 integrity；Install/Repair 按检测到的 host 版本（无 CLI 时按 owned marker）选择契约，Uninstall 与手动 npx 命令按 marker 契约选择，未列入表内的版本一律禁止 mutation。安装器按 canonical `DSH_HOME` 哈希命名空间把 bridge 复制成 immutable hash generation，再用官方 `dsh plugin --profile web add/remove` mutation；dependency、bundle row、installation-first/profile-second resolution 与 Duck marker 必须同时验证，foreign 同名 package 永不覆盖或删除；不同 DSH_HOME 不共享可删除 generation、mutation lock 或 inspection latch
 - DSH mutation lock 只在 owner/schema/token/PID/timestamp/owner-recorded operation timeout 全合法、年龄超过该 owner timeout 的两倍、且 PID probe 明确返回 `ESRCH` 时通过 sibling atomic rename 接管；live PID、`EPERM`、unknown、corrupt/foreign owner 均 fail closed，错误必须暴露精确 lock path。owner write/release 只允许隔离并删除 exact owner file 与空 lock dir，禁止 recursive canonical cleanup。无全局 CLI 的手动 npx generation 通过同 namespace 的 owned reference 持久保活，直到验证或显式卸载；命令显式 pin shell-quoted canonical `DSH_HOME`，malformed/foreign/concurrent anchor 一律保留 generation 并要求人工检查
 - DSH state listener 是 fire-and-forget FIFO；approval listener 是唯一例外，必须阻塞等待决定或 `next()`。`session/created` observer 顶层 non-throwing，避免同步异常 veto DSH session 创建
 - DSH projection storage 不是稳定协议：首发不读取 workspace/projcache，也不运行 fallback monitor
@@ -397,10 +397,10 @@ opencode、MiMo Code、OpenClaw、Hermes 和 DeepSeek Harness 是 plugin 形式�
 
 ## Pi Notes
 
-- Pi 使用 global extension 目录 `~/.pi/agent/extensions/clawd-on-desk`；安装器复制 `pi-extension.ts` 和自包含的 `pi-extension-core.js`
-- Extension 运行目录不在 Clawd repo 内，不能依赖 `hooks/shared-process.js`；需要的进程树和 HTTP 逻辑保持在 extension 文件内
+- Pi 使用 global extension 目录 `~/.pi/agent/extensions/duck-on-desk`；安装器复制 `pi-extension.ts` 和自包含的 `pi-extension-core.js`
+- Extension 运行目录不在 Duck repo 内，不能依赖 `hooks/shared-process.js`；需要的进程树和 HTTP 逻辑保持在 extension 文件内
 - 只在 `ctx.hasUI === true` 或交互式 TTY 模式上报状态，避免 print/RPC 模式污染桌宠状态
-- Pi 是 state-only：`tool_call` 只上报 `PreToolUse` 状态，不等待 Clawd `/permission`，不弹权限气泡，也不调用 `ctx.ui.confirm()`
+- Pi 是 state-only：`tool_call` 只上报 `PreToolUse` 状态，不等待 Duck `/permission`，不弹权限气泡，也不调用 `ctx.ui.confirm()`
 - 旧版 managed extension 如果仍在已启动的 Pi 进程里向 `/permission` 发请求，server 返回 allow，保持 Pi 默认 YOLO 行为，而不是把 fallback 变成手动确认
 - `tool_call` handler 必须顶层 catch 并返回 `undefined`；Pi 的 `emitToolCall()` 不 catch extension 异常，未捕获异常可能变成通用 `Extension failed, blocking execution`
 - `tool_result` 按 `isError` 拆成 `PostToolUse` / `PostToolUseFailure`
@@ -426,7 +426,7 @@ opencode、MiMo Code、OpenClaw、Hermes 和 DeepSeek Harness 是 plugin 形式�
 - 右键 Sessions 子菜单点击后，`focusTerminalWindow()` 会用 PowerShell（Windows）或 `osascript`（macOS）聚焦终端
 - 远程场景只通过 Settings Remote SSH controller 部署：`runtimeKey → layout` 解析、
   installId/profileId/nonce 身份、原子 lease/fencing、持久部署事务和 profile 专属 ingress
-  共同把远端 hook 事件回送到本地 Clawd；`scripts/remote-deploy.sh` 已 fail-fast 停用
+  共同把远端 hook 事件回送到本地 Duck；`scripts/remote-deploy.sh` 已 fail-fast 停用
 - `account-default` 用于不同 Unix 账号；同 Unix 账号默认冲突阻止。实验
   `profile-isolated` 仅在显式验证开关下出现，分开 Claude/Codex/Copilot 用户级
   config/session/runtime roots 与 wrapper，不虚拟化整个 HOME，也不是同 UID 安全边界
@@ -463,4 +463,4 @@ Remote SSH 有两条明确分开的 transport 路径：
 
 - 支持 en / zh / zh-TW / ko / ja / pt-BR / es
 - 文案集中在 `src/i18n.js`
-- 语言偏好持久化到 `clawd-prefs.json`，启动时通过 `hydrate()` 灌入 controller
+- 语言偏好持久化到 `duck-prefs.json`，启动时通过 `hydrate()` 灌入 controller

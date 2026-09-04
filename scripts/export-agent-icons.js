@@ -34,7 +34,7 @@ const SOURCE_DIR = path.join(__dirname, "..", "assets", "source", "agent-icons")
 const SOURCE_MANIFEST_PATH = path.join(SOURCE_DIR, "source-manifest.json");
 const OUTPUT_DIR = path.join(__dirname, "..", "assets", "icons", "agents");
 const SOURCE_EXTENSIONS = [".png", ".svg"];
-const EXPORTER_ENV = "CLAWD_AGENT_ICON_EXPORTER";
+const EXPORTER_ENV = "DUCK_AGENT_ICON_EXPORTER";
 const LOBE_ICONS_UPSTREAM = Object.freeze({
   upstreamPackage: "@lobehub/icons-static-png",
   upstreamVersion: "1.95.0",
@@ -495,7 +495,7 @@ function main() {
   }
 
   try {
-    if (!dryRun) stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-agent-icon-outputs-"));
+    if (!dryRun) stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-agent-icon-outputs-"));
     for (const agent of agents) {
       exported.push(exportIcon(agent.id, {
         dryRun,
@@ -546,7 +546,7 @@ function runInElectron() {
     throw new Error("Electron is not installed. Run npm install before exporting agent icons.");
   }
 
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-agent-icons-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-agent-icons-"));
   const entryPath = path.join(tempDir, "main.js");
   const packagePath = path.join(tempDir, "package.json");
 

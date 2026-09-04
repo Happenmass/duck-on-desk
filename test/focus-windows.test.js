@@ -108,8 +108,8 @@ describe("Windows terminal focus", () => {
       assert.match(helperScript, /unownedTitled\.Count > 0/);
       assert.match(helperScript, /titled\.Count > 0/);
       assert.doesNotMatch(helperScript, /skip owned helper\/pop-up windows/);
-      assert.match(cmd, /Get-ClawdVisiblePidWindows/);
-      assert.match(cmd, /Get-ClawdWindowsTerminalWindows/);
+      assert.match(cmd, /Get-DuckVisiblePidWindows/);
+      assert.match(cmd, /Get-DuckWindowsTerminalWindows/);
       assert.match(cmd, /\$chainWindowsTerminalPids/);
       assert.match(cmd, /wt-parent-title-match/);
       assert.match(cmd, /wt-parent-title-ambiguous/);
@@ -139,12 +139,12 @@ describe("Windows terminal focus", () => {
       const cmd = focus.__test.makeFocusCmd(1234, ["repo"], null, null, "tok-1");
       const helperScript = focus.__test.PS_FOCUS_ADDTYPE;
 
-      assert.match(cmd, /Write-ClawdFocusResult/);
+      assert.match(cmd, /Write-DuckFocusResult/);
       assert.match(cmd, /\$focusToken = 'tok-1'/);
       assert.match(cmd, /\$selectedTargetHwnd = \[IntPtr\]::Zero/);
       assert.match(cmd, /GetForegroundWindow\(\)/);
       assert.match(cmd, /Start-Sleep -Milliseconds 25/);
-      assert.match(helperScript, /__CLAWD_FOCUS_RESULT__/);
+      assert.match(helperScript, /__DUCK_FOCUS_RESULT__/);
       assert.match(helperScript, /targetHwnd/);
       assert.match(helperScript, /foregroundHwnd/);
       assert.match(helperScript, /confirmed/);
@@ -166,20 +166,20 @@ describe("Windows terminal focus", () => {
 
       assert.match(helperScript, /IsUsableWindow/);
       assert.match(cmd, /\$focusCacheKey = \(\[Text\.Encoding\]::UTF8\.GetString/);
-      assert.match(cmd, /\$global:ClawdFocusWindowCache/);
+      assert.match(cmd, /\$global:DuckFocusWindowCache/);
       assert.match(cmd, /\$cacheTitleNames = @\(/);
-      assert.match(cmd, /Test-ClawdWindowTitleMatch/);
+      assert.match(cmd, /Test-DuckWindowTitleMatch/);
       assert.match(cmd, /sourcePid = \$focusCacheSourcePid/);
       assert.match(cmd, /titleNames = @\(\$cacheTitleNames\)/);
-      assert.match(cmd, /Get-ClawdCachedWindow/);
+      assert.match(cmd, /Get-DuckCachedWindow/);
       assert.match(cmd, /reason = 'cached-window'/);
       assert.match(cmd, /Remove\(\$focusCacheKey\)/);
-      assert.match(cmd, /Save-ClawdFocusCache \$matches\[0\]/);
-      assert.match(cmd, /Save-ClawdFocusCache \$wtMatches\[0\]/);
-      assert.match(cmd, /Save-ClawdFocusCache \$wtHwndFromHook/);
-      assert.doesNotMatch(cmd, /Save-ClawdFocusCache \$pidWindows\[0\]/);
-      assert.doesNotMatch(cmd, /Save-ClawdFocusCache \$singleWtWindows\[0\]/);
-      assert.doesNotMatch(cmd, /Save-ClawdFocusCache \$pendingConsoleHwnd/);
+      assert.match(cmd, /Save-DuckFocusCache \$matches\[0\]/);
+      assert.match(cmd, /Save-DuckFocusCache \$wtMatches\[0\]/);
+      assert.match(cmd, /Save-DuckFocusCache \$wtHwndFromHook/);
+      assert.doesNotMatch(cmd, /Save-DuckFocusCache \$pidWindows\[0\]/);
+      assert.doesNotMatch(cmd, /Save-DuckFocusCache \$singleWtWindows\[0\]/);
+      assert.doesNotMatch(cmd, /Save-DuckFocusCache \$pendingConsoleHwnd/);
     } finally {
       cleanup();
     }
@@ -195,7 +195,7 @@ describe("Windows terminal focus", () => {
       assert.match(helperScript, /IsUsableWindowsTerminalWindow/);
       assert.match(cmd, /\$wtHwndFromHook = \[IntPtr\]\(\[int64\]123456\)/);
       assert.match(cmd, /IsUsableWindowsTerminalWindow\(\$wtHwndFromHook\)/);
-      assert.match(cmd, /Save-ClawdFocusCache \$wtHwndFromHook/);
+      assert.match(cmd, /Save-DuckFocusCache \$wtHwndFromHook/);
       assert.match(cmd, /reason = 'wt-hwnd-from-hook'/);
       assert.ok(cmd.indexOf("reason = 'wt-hwnd-from-hook'") < cmd.indexOf("for ($i = 0; $i -lt 8; $i++)"));
     } finally {
@@ -270,7 +270,7 @@ describe("Windows terminal focus", () => {
     const { initFocus, cleanup } = loadFocusWithMock();
     try {
       const focus = initFocus({ focusLog: (msg) => logs.push(msg) });
-      focus.__test.handleFocusHelperCompleteOutput("noise\n__CLAWD_FOCUS_RESULT__ parent-direct\n");
+      focus.__test.handleFocusHelperCompleteOutput("noise\n__DUCK_FOCUS_RESULT__ parent-direct\n");
 
       assert.match(logs.join("\n"), /focus result branch=windows-helper reason=parent-direct/);
     } finally {
@@ -465,7 +465,7 @@ describe("Windows terminal focus", () => {
       focus.initFocusHelper();
       focus.focusTerminalWindow({
         sourcePid: 3333,
-        cwd: "D:\\Repos\\Apps\\clawd-on-desk",
+        cwd: "D:\\Repos\\Apps\\duck-on-desk",
         sessionId: "session-orca-switch",
         agentId: "claude-code",
         orcaPaneKey: "8ce1fff7-tab:9813824b-leaf",
@@ -533,14 +533,14 @@ describe("Windows terminal focus", () => {
 
       const pending = focus.focusTerminalWindow({
         sourcePid: 3333,
-        cwd: "D:\\Repos\\Apps\\clawd-on-desk",
+        cwd: "D:\\Repos\\Apps\\duck-on-desk",
         sessionId: "session-orca-gate",
         agentId: "claude-code",
         orcaPaneKey: "8ce1fff7-tab:9813824b-leaf",
         requestSource: "dashboard-click",
       });
       const token = writes[0].match(/\$focusToken = '([^']+)'/)[1];
-      stdout.emit("data", `__CLAWD_FOCUS_RESULT__ {"token":"${token}","reason":"orca-window","targetHwnd":"787468","foregroundHwnd":"787468","confirmed":true,"status":"confirmed"}\n`);
+      stdout.emit("data", `__DUCK_FOCUS_RESULT__ {"token":"${token}","reason":"orca-window","targetHwnd":"787468","foregroundHwnd":"787468","confirmed":true,"status":"confirmed"}\n`);
 
       let settledEarly = false;
       pending.then(() => { settledEarly = true; });
@@ -580,13 +580,13 @@ describe("Windows terminal focus", () => {
 
       const pending = focus.focusTerminalWindow({
         sourcePid: 4444,
-        cwd: "D:\\Repos\\Apps\\clawd-on-desk",
+        cwd: "D:\\Repos\\Apps\\duck-on-desk",
         sessionId: "session-plain",
         agentId: "claude-code",
         requestSource: "dashboard-click",
       });
       const token = writes[0].match(/\$focusToken = '([^']+)'/)[1];
-      stdout.emit("data", `__CLAWD_FOCUS_RESULT__ {"token":"${token}","reason":"parent-direct","targetHwnd":"111","foregroundHwnd":"111","confirmed":true,"status":"confirmed"}\n`);
+      stdout.emit("data", `__DUCK_FOCUS_RESULT__ {"token":"${token}","reason":"parent-direct","targetHwnd":"111","foregroundHwnd":"111","confirmed":true,"status":"confirmed"}\n`);
 
       const result = await pending;
       assert.equal(result.confirmed, true);
@@ -642,13 +642,13 @@ describe("Windows terminal focus", () => {
       const tokenB = writes[1].match(/\$focusToken = '([^']+)'/)[1];
       assert.notEqual(tokenA, tokenB);
 
-      stdout.emit("data", `__CLAWD_FOCUS_RESULT__ {"token":"${tokenB}","reason":"parent-direct","targetHwnd":"222","foregroundHwnd":"222","confirmed":true,"status":"confirmed"}\n`);
+      stdout.emit("data", `__DUCK_FOCUS_RESULT__ {"token":"${tokenB}","reason":"parent-direct","targetHwnd":"222","foregroundHwnd":"222","confirmed":true,"status":"confirmed"}\n`);
       const secondResult = await second;
       assert.equal(secondResult.token, tokenB);
       assert.equal(secondResult.confirmed, true);
       assert.equal(secondResult.targetHwnd, "222");
 
-      stdout.emit("data", `__CLAWD_FOCUS_RESULT__ {"token":"${tokenA}","reason":"wt-title-ambiguous","targetHwnd":"111","foregroundHwnd":"111","confirmed":true,"status":"confirmed"}\n`);
+      stdout.emit("data", `__DUCK_FOCUS_RESULT__ {"token":"${tokenA}","reason":"wt-title-ambiguous","targetHwnd":"111","foregroundHwnd":"111","confirmed":true,"status":"confirmed"}\n`);
       const firstResult = await first;
       assert.equal(firstResult.token, tokenA);
       assert.equal(firstResult.confirmed, false);
@@ -668,7 +668,7 @@ describe("Windows terminal focus", () => {
       execFile: (cmd, args, opts, cb) => {
         if (typeof opts === "function") cb = opts;
         execCalls.push({ cmd, args: [...args] });
-        if (cb) cb(null, "__CLAWD_FOCUS_RESULT__ parent-direct\n", "");
+        if (cb) cb(null, "__DUCK_FOCUS_RESULT__ parent-direct\n", "");
       },
       spawn: () => ({
         pid: 9999,

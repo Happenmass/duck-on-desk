@@ -10,7 +10,7 @@ const BUBBLE_CSS = fs.readFileSync(path.join(ROOT, "src", "bubble.css"), "utf8")
 const TEXT_SCALE = 1.25;
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: "clawd-bubble-layout", privileges: { standard: true, secure: true } },
+  { scheme: "duck-bubble-layout", privileges: { standard: true, secure: true } },
 ]);
 
 function option(label, description, inputType) {
@@ -28,7 +28,7 @@ function pageHtml(kind) {
   const options = [
     ["Keep the existing layout", "Retain the current structure and verify its behavior on every supported desktop platform."],
     ["Use one outer scroller", "Keep every part of the interactive form in normal document flow inside one scroll area."],
-    ["Test fractional scaling", "Cover Windows device scaling and the independent per-display Clawd text scale."],
+    ["Test fractional scaling", "Cover Windows device scaling and the independent per-display Duck text scale."],
     ["Preserve keyboard input", "Keep radio, checkbox, textarea, and IME behavior intact while the detail content scrolls."],
     ["Verify long content", "Exercise enough option content to exceed the expanded card's fixed viewport from first paint."],
   ];
@@ -81,9 +81,9 @@ async function readLayout(win) {
 }
 
 async function verifyKind(win, kind) {
-  await win.loadURL(`clawd-bubble-layout://fixture/${kind}`);
+  await win.loadURL(`duck-bubble-layout://fixture/${kind}`);
   await win.webContents.insertCSS(
-    `:root { zoom: ${TEXT_SCALE} !important; --clawd-text-zoom: ${TEXT_SCALE}; }`
+    `:root { zoom: ${TEXT_SCALE} !important; --duck-text-zoom: ${TEXT_SCALE}; }`
   );
   const layout = await readLayout(win);
   assert.ok(
@@ -102,7 +102,7 @@ async function verifyKind(win, kind) {
 
 async function main() {
   await app.whenReady();
-  protocol.handle("clawd-bubble-layout", (request) => {
+  protocol.handle("duck-bubble-layout", (request) => {
     const kind = new URL(request.url).pathname.slice(1) === "multi" ? "multi" : "single";
     return new Response(pageHtml(kind), {
       headers: { "content-type": "text/html; charset=utf-8" },

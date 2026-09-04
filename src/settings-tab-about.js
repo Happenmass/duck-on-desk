@@ -288,11 +288,11 @@
 
     const crabWrap = document.createElement("div");
     crabWrap.className = "about-crab-wrap";
-    crabWrap.title = "Clawd";
+    crabWrap.title = "Duck";
 
     const title = document.createElement("h2");
     title.className = "about-title";
-    title.textContent = "Clawd on Desk";
+    title.textContent = "Duck on Desk";
 
     const tagline = document.createElement("p");
     tagline.className = "about-tagline";
@@ -600,5 +600,5 @@
     };
   }
 
-  root.ClawdSettingsTabAbout = { init };
+  root.DuckSettingsTabAbout = { init };
 })(globalThis);

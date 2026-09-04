@@ -8,12 +8,12 @@ const { checkLocalServer } = require("../src/doctor-detectors/local-server");
 // #681: identity defaults to a valid file owned by this (alive) process, so the
 // pre-existing port cases below keep testing the PORT branch. Injected rather
 // than read — a Doctor test must not depend on the developer's real
-// ~/.clawd/runtime.json, nor on whether their Clawd is running right now.
+// ~/.duck-on-desk/runtime.json, nor on whether their Duck is running right now.
 function makeServer({
-  runtimePort = 23333,
-  addressPort = 23333,
+  runtimePort = 24333,
+  addressPort = 24333,
   listening = true,
-  identity = { ok: true, reason: null, port: 23333, ownerPid: process.pid },
+  identity = { ok: true, reason: null, port: 24333, ownerPid: process.pid },
   isProcessAlive = () => true,
 } = {}) {
   function createHttpServer() {
@@ -51,7 +51,7 @@ describe("checkLocalServer", () => {
   });
 
   it("warns when runtime port is missing or stale", () => {
-    const api = makeServer({ runtimePort: 23334, addressPort: 23333 });
+    const api = makeServer({ runtimePort: 24334, addressPort: 24333 });
     api.startHttpServer();
 
     const result = checkLocalServer(api);
@@ -67,9 +67,9 @@ describe("checkLocalServer", () => {
     assert.strictEqual(result.status, "fail");
     assert.strictEqual(result.level, "critical");
     // Critical fail can't be repaired by repairRuntimeStatus (httpServer is
-    // already non-null but not listening), so surface a restart-clawd action
+    // already non-null but not listening), so surface a restart-duck action
     // instead of a misleading Fix button.
-    assert.deepStrictEqual(result.fixAction, { type: "restart-clawd" });
+    assert.deepStrictEqual(result.fixAction, { type: "restart-duck" });
   });
 
   // ── #681: runtime IDENTITY, not just the port ─────────────────────────────
@@ -80,7 +80,7 @@ describe("checkLocalServer", () => {
 
   it("warns when the runtime file carries no ownerPid, even with a matching port", () => {
     const api = makeServer({
-      identity: { ok: false, reason: "runtime-owner-invalid", port: 23333, ownerPid: null },
+      identity: { ok: false, reason: "runtime-owner-invalid", port: 24333, ownerPid: null },
     });
     api.startHttpServer();
 
@@ -96,7 +96,7 @@ describe("checkLocalServer", () => {
 
   it("warns when the runtime file names a dead owner (crashed instance's leftover)", () => {
     const api = makeServer({
-      identity: { ok: true, reason: null, port: 23333, ownerPid: 4242 },
+      identity: { ok: true, reason: null, port: 24333, ownerPid: 4242 },
       isProcessAlive: (pid) => pid !== 4242,
     });
     api.startHttpServer();

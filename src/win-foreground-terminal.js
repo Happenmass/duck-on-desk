@@ -49,7 +49,7 @@ function utf16BufToString(buf, len) {
 // IFF it is a real Windows Terminal window, or null when: the foreground
 // isn't WT, the FFI is unavailable, or any step along the way is uncertain
 // (including expected misses like an elevated WT with a non-elevated
-// Clawd). Never spawns a subprocess and never throws.
+// Duck). Never spawns a subprocess and never throws.
 function createForegroundWindowsTerminalProbe(options = {}) {
   const isWin = options.isWin != null ? !!options.isWin : process.platform === "win32";
   const noop = () => null;
@@ -103,7 +103,7 @@ function createForegroundWindowsTerminalProbe(options = {}) {
       let hProcess = null;
       try {
         hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-        if (!hProcess) return null; // expected miss: e.g. elevated WT vs non-elevated Clawd
+        if (!hProcess) return null; // expected miss: e.g. elevated WT vs non-elevated Duck
 
         const nameBuf = new Uint16Array(IMAGE_NAME_BUF_LEN);
         const sizeOut = [IMAGE_NAME_BUF_LEN];

@@ -30,7 +30,7 @@ function loadPermissionWithElectron(fakeElectron) {
 function createTempLogPath() {
   const logPath = path.join(
     os.tmpdir(),
-    `clawd-permission-debug-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.log`
+    `duck-permission-debug-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.log`
   );
   tempLogPaths.add(logPath);
   return logPath;

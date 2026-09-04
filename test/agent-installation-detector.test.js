@@ -14,7 +14,7 @@ const { getAgentDescriptor } = require("../src/doctor-detectors/agent-descriptor
 const tempDirs = [];
 
 function makeHome() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-agent-detect-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-agent-detect-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -54,12 +54,12 @@ afterEach(() => {
 });
 
 describe("agent installation detector", () => {
-  // #895 T11a/T11b: only Claude is skipped. Its parent dir is created by Clawd's
+  // #895 T11a/T11b: only Claude is skipped. Its parent dir is created by Duck's
   // own default sync, so ~/.claude proves nothing; ~/.codex is never created by
-  // Clawd, so it stays real evidence and Codex must be reported like any other
+  // Duck, so it stays real evidence and Codex must be reported like any other
   // agent. This is one code-level route consistent with #895; the reporter's
   // exact on-disk layout remains unconfirmed.
-  it("skips only the agent whose parent dir Clawd creates itself", () => {
+  it("skips only the agent whose parent dir Duck creates itself", () => {
     const homeDir = makeHome();
 
     const report = detectAgentInstallations({ homeDir, now: 12345 });
@@ -89,7 +89,7 @@ describe("agent installation detector", () => {
   });
 
   // #895 T11c: the whole reason Codex may be detected from its directory is that
-  // Clawd never creates it. Claude's installer does, which is why Claude stays
+  // Duck never creates it. Claude's installer does, which is why Claude stays
   // skipped. If either half of that asymmetry ever changes, this fails.
   it("keeps the create-vs-skip asymmetry the skip list is derived from", async () => {
     const codexHome = makeHome();
@@ -236,7 +236,7 @@ describe("agent installation detector", () => {
       agentName: "Nova AI",
       parentDir: path.join(root, ".nova-ai"),
       configPath: path.join(root, ".nova-ai", "settings.json"),
-      marker: "clawd",
+      marker: "duck",
     };
     const result = detectAgentInstallation(descriptor, {
       homeDir: root,

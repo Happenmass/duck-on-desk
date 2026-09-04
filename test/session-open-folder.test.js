@@ -9,7 +9,7 @@ const test = require("node:test");
 const { createSessionFolderOpener } = require("../src/session-open-folder");
 
 test("session folder opener re-resolves a local session and opens its existing cwd", async (t) => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-session-folder-"));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "duck-session-folder-"));
   t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
   const opened = [];
   const sessions = new Map([["s1", { cwd, host: null, platform: null, headless: false }]]);
@@ -23,7 +23,7 @@ test("session folder opener re-resolves a local session and opens its existing c
 });
 
 test("session folder opener rejects renderer-supplied paths and unsafe sessions", async (t) => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-session-folder-"));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "duck-session-folder-"));
   const file = path.join(cwd, "file.txt");
   fs.writeFileSync(file, "x");
   t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
@@ -56,7 +56,7 @@ test("session folder opener rejects renderer-supplied paths and unsafe sessions"
 });
 
 test("session folder opener reports shell.openPath failures", async (t) => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-session-folder-"));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "duck-session-folder-"));
   t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
   const openSessionFolder = createSessionFolderOpener({
     getSession: () => ({ cwd, host: null, platform: null }),

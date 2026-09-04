@@ -1,9 +1,9 @@
 {
-  "name": "clawd-terminal-focus",
-  "displayName": "Clawd Terminal Focus",
-  "description": "Enables Clawd desktop pet to focus the correct terminal tab via URI",
+  "name": "duck-terminal-focus",
+  "displayName": "Duck Terminal Focus",
+  "description": "Enables Duck desktop pet to focus the correct terminal tab via URI",
   "version": "0.1.1",
-  "publisher": "clawd",
+  "publisher": "duck",
   "engines": {
     "vscode": "^1.70.0"
   },

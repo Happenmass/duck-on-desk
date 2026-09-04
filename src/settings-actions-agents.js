@@ -731,7 +731,7 @@ async function _wslCommand(payload, deps, { commandName, depName, action }) {
         status: "ok",
         message: (typeof result.message === "string" && result.message) || `${action} WSL ${distro}`,
       };
-      // deploy-only: false = hooks installed but Clawd is unreachable from
+      // deploy-only: false = hooks installed but Duck is unreachable from
       // the distro (NAT networking) — renderer shows a localized warning.
       if (result.connectivity === false) okResult.wslConnectivity = false;
       if (typeof result.warning === "string" && result.warning) okResult.warning = result.warning;

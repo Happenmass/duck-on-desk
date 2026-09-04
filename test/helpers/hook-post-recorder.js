@@ -9,9 +9,9 @@
 //      nothing escapes the test box and a hung socket never keeps the process
 //      alive.
 //   2. Dump the recording on exit. The parent points USERPROFILE/HOME at an
-//      empty dir, so there is no ~/.clawd/runtime.json and every port looks
+//      empty dir, so there is no ~/.duck-on-desk/runtime.json and every port looks
 //      offline. That is deliberate: it means the ONLY thing that can make the
-//      recording empty is the hook choosing not to contact Clawd at all.
+//      recording empty is the hook choosing not to contact Duck at all.
 //
 // The distinction that matters:
 //   - A payload WITH session_id enters postStateToRunningServer, which probes
@@ -27,11 +27,11 @@ const { EventEmitter } = require("events");
 
 const attempts = [];
 
-if (process.env.CLAWD_RECORD_RUNTIME_READS === "1") {
+if (process.env.DUCK_RECORD_RUNTIME_READS === "1") {
   const originalReadFileSync = fs.readFileSync;
   const runtimePath = path.resolve(
     process.env.USERPROFILE || process.env.HOME || "",
-    ".clawd",
+    ".duck-on-desk",
     "runtime.json",
   ).toLowerCase();
   fs.readFileSync = function recordedReadFileSync(filePath, ...args) {
@@ -52,7 +52,7 @@ function record(kind, args) {
     method: (opts && opts.method) || (kind === "get" ? "GET" : "POST"),
     path: (opts && opts.path) || null,
   };
-  if (process.env.CLAWD_POST_RECORDER_SUCCEED === "1") {
+  if (process.env.DUCK_POST_RECORDER_SUCCEED === "1") {
     attempt.headers = opts && opts.headers && typeof opts.headers === "object" ? { ...opts.headers } : {};
   }
   attempts.push(attempt);
@@ -72,7 +72,7 @@ function blockedRequest() {
 function successfulResponse(callback, body = "ok") {
   const res = new EventEmitter();
   res.statusCode = 200;
-  res.headers = { "x-clawd-server": "clawd-on-desk" };
+  res.headers = { "x-duck-server": "duck-on-desk" };
   res.setEncoding = () => res;
   res.resume = () => res;
   process.nextTick(() => {
@@ -99,13 +99,13 @@ function successfulRequest(callback, body, attempt) {
 
 http.get = (...args) => {
   record("get", args);
-  if (process.env.CLAWD_POST_RECORDER_SUCCEED === "1") {
+  if (process.env.DUCK_POST_RECORDER_SUCCEED === "1") {
     const callback = typeof args[1] === "function" ? args[1] : () => {};
     const req = new EventEmitter();
     req.setTimeout = () => req;
     req.destroy = () => req;
     req.end = () => req;
-    successfulResponse(callback, JSON.stringify({ ok: true, app: "clawd-on-desk", port: args[0] && args[0].port }));
+    successfulResponse(callback, JSON.stringify({ ok: true, app: "duck-on-desk", port: args[0] && args[0].port }));
     return req;
   }
   const req = blockedRequest();
@@ -114,7 +114,7 @@ http.get = (...args) => {
 };
 http.request = (...args) => {
   const attempt = record("request", args);
-  if (process.env.CLAWD_POST_RECORDER_SUCCEED === "1") {
+  if (process.env.DUCK_POST_RECORDER_SUCCEED === "1") {
     const callback = typeof args[1] === "function" ? args[1] : () => {};
     const responseBody = args[0] && args[0].path === "/permission" ? "{}" : "ok";
     return successfulRequest(callback, responseBody, attempt);
@@ -123,7 +123,7 @@ http.request = (...args) => {
 };
 
 process.on("exit", () => {
-  const out = process.env.CLAWD_POST_OUT;
+  const out = process.env.DUCK_POST_OUT;
   if (!out) return;
   try { fs.writeFileSync(out, JSON.stringify(attempts), "utf8"); } catch { /* best effort */ }
 });

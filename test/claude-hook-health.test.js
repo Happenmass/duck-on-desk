@@ -14,10 +14,10 @@ const {
   isExplicitRepairVerified,
 } = require("../src/claude-hook-health");
 
-const EXPECTED_HOOK_SCRIPT_PATH = "C:/app/resources/app.asar.unpacked/hooks/clawd-hook.js";
+const EXPECTED_HOOK_SCRIPT_PATH = "C:/app/resources/app.asar.unpacked/hooks/duck-hook.js";
 const EXPECTED_AUTO_START_SCRIPT_PATH = "C:/app/resources/app.asar.unpacked/hooks/auto-start.js";
-const EXPECTED_PERMISSION_URL = "http://127.0.0.1:23333/permission";
-const OLD_TEMP_SCRIPT_PATH = "C:/Users/tester/AppData/Local/Temp/clawd-on-desk/hooks/clawd-hook.js";
+const EXPECTED_PERMISSION_URL = "http://127.0.0.1:24333/permission";
+const OLD_TEMP_SCRIPT_PATH = "C:/Users/tester/AppData/Local/Temp/duck-on-desk/hooks/duck-hook.js";
 
 function makeFakeFs(existingPaths) {
   const set = new Set(existingPaths || []);
@@ -63,7 +63,7 @@ function buildHealthySettings({
 
 function buildEnvOwnedSettings({
   nodeBin = "/opt/homebrew/bin/node",
-  hookPath = "/Applications/Clawd on Desk.app/Contents/Resources/app.asar.unpacked/hooks/clawd-hook.js",
+  hookPath = "/Applications/Duck on Desk.app/Contents/Resources/app.asar.unpacked/hooks/duck-hook.js",
   includeHookPathEnv = true,
 } = {}) {
   const hooks = {};
@@ -72,14 +72,14 @@ function buildEnvOwnedSettings({
       matcher: "",
       hooks: [{
         type: "command",
-        command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" ' + event,
+        command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" ' + event,
         timeout: 5,
       }],
     }];
   }
   hooks.PermissionRequest = [permissionHook(EXPECTED_PERMISSION_URL)];
-  const env = { CLAWD_NODE_BIN: nodeBin };
-  if (includeHookPathEnv) env.CLAWD_HOOK_PATH = hookPath;
+  const env = { DUCK_NODE_BIN: nodeBin };
+  if (includeHookPathEnv) env.DUCK_HOOK_PATH = hookPath;
   return { env, hooks };
 }
 
@@ -108,7 +108,7 @@ describe("inspectClaudeHookHealth", () => {
   });
 
   it("does not misreport slash/case differences on Windows as a stale path", () => {
-    const mixedCasePath = "C:\\App\\Resources\\App.asar.unpacked\\hooks\\clawd-hook.js";
+    const mixedCasePath = "C:\\App\\Resources\\App.asar.unpacked\\hooks\\duck-hook.js";
     const raw = JSON.stringify(buildHealthySettings({ scriptPath: mixedCasePath }));
     const options = baseOptions({ fs: makeFakeFs([mixedCasePath, EXPECTED_HOOK_SCRIPT_PATH]) });
 
@@ -146,8 +146,8 @@ describe("inspectClaudeHookHealth", () => {
   it("flags a stale duplicate command even when a healthy command coexists in the same event", () => {
     const settings = buildHealthySettings();
     // Stop already has one healthy command from buildHealthySettings(); add a
-    // second, stale Clawd-owned duplicate under the same event — e.g. left
-    // behind by a botched prior sync. Every Clawd-owned command must be
+    // second, stale Duck-owned duplicate under the same event — e.g. left
+    // behind by a botched prior sync. Every Duck-owned command must be
     // checked, not just whichever one is found first.
     settings.hooks.Stop.push({
       matcher: "",
@@ -233,7 +233,7 @@ describe("inspectClaudeHookHealth", () => {
   });
 
   it("flags a Permission URL pointing at a stale port as repairable", () => {
-    const raw = JSON.stringify(buildHealthySettings({ permissionUrl: "http://127.0.0.1:23335/permission" }));
+    const raw = JSON.stringify(buildHealthySettings({ permissionUrl: "http://127.0.0.1:24335/permission" }));
     const options = baseOptions();
 
     const report = inspectClaudeHookHealth(raw, options);
@@ -270,7 +270,7 @@ describe("inspectClaudeHookHealth", () => {
     assert.ok(autoStartMissingButRequired.issues.some((issue) => issue.code === "auto-start-path-missing"));
   });
 
-  it("third-party commands that fail to parse do not affect Clawd health", () => {
+  it("third-party commands that fail to parse do not affect Duck health", () => {
     const settings = buildHealthySettings();
     settings.hooks.Stop.push({
       matcher: "",
@@ -283,10 +283,10 @@ describe("inspectClaudeHookHealth", () => {
     assert.strictEqual(report.status, "healthy");
   });
 
-  it("returns a clear command-unparseable issue instead of throwing on a broken Clawd command", () => {
+  it("returns a clear command-unparseable issue instead of throwing on a broken Duck command", () => {
     const raw = JSON.stringify({
       hooks: {
-        Stop: [{ matcher: "", hooks: [{ type: "command", command: '"clawd-hook.js"' }] }],
+        Stop: [{ matcher: "", hooks: [{ type: "command", command: '"duck-hook.js"' }] }],
         PermissionRequest: [permissionHook(EXPECTED_PERMISSION_URL)],
       },
     });
@@ -298,7 +298,7 @@ describe("inspectClaudeHookHealth", () => {
     assert.ok(report.issues.some((issue) => issue.code === "command-unparseable" && issue.event === "Stop"));
   });
 
-  it("recognizes a Clawd command hidden inside a PowerShell -EncodedCommand wrapper", () => {
+  it("recognizes a Duck command hidden inside a PowerShell -EncodedCommand wrapper", () => {
     const encoded = buildWindowsEncodedNodeHookCommand("node", EXPECTED_HOOK_SCRIPT_PATH, ["Stop"]);
     const raw = JSON.stringify({
       hooks: {
@@ -362,8 +362,8 @@ describe("inspectClaudeHookHealth", () => {
     const staleNode = "/missing/bin/node";
     const validNode = "/opt/homebrew/bin/node";
     const settings = buildEnvOwnedSettings({ nodeBin: "node" });
-    settings.hooks.SessionStart[0].hooks[0].command = `"${staleNode}" "${"${CLAWD_HOOK_PATH}"}" SessionStart`;
-    settings.hooks.SessionEnd[0].hooks[0].command = `"${validNode}" "${"${CLAWD_HOOK_PATH}"}" SessionEnd`;
+    settings.hooks.SessionStart[0].hooks[0].command = `"${staleNode}" "${"${DUCK_HOOK_PATH}"}" SessionStart`;
+    settings.hooks.SessionEnd[0].hooks[0].command = `"${validNode}" "${"${DUCK_HOOK_PATH}"}" SessionEnd`;
 
     const report = inspectClaudeHookHealth(JSON.stringify(settings), baseOptions({
       platform: "darwin",
@@ -417,12 +417,12 @@ describe("inspectClaudeHookHealth", () => {
   it("registers duplicate env/literal state hooks as automatic repair work (#852)", () => {
     const settings = buildHealthySettings({ events: ["Stop"] });
     settings.env = {
-      CLAWD_NODE_BIN: "C:/nodejs/node.exe",
-      CLAWD_HOOK_PATH: EXPECTED_HOOK_SCRIPT_PATH,
+      DUCK_NODE_BIN: "C:/nodejs/node.exe",
+      DUCK_HOOK_PATH: EXPECTED_HOOK_SCRIPT_PATH,
     };
     settings.hooks.Stop.push({ matcher: "", hooks: [{
       type: "command",
-      command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" Stop',
+      command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" Stop',
     }] });
     const report = inspectClaudeHookHealth(JSON.stringify(settings), baseOptions({
       coreEvents: ["Stop"],
@@ -514,13 +514,13 @@ describe("hasNoAutomaticRepairWork / isExplicitRepairVerified", () => {
   }
 
   // Same fixture as "returns a clear command-unparseable issue instead of
-  // throwing on a broken Clawd command" above: a Clawd-owned command that
+  // throwing on a broken Duck command" above: a Duck-owned command that
   // fails to parse is the one case where "nothing left for auto-repair to
   // attempt" and "actually healthy" must diverge.
   function unparseableOnlyReport() {
     const raw = JSON.stringify({
       hooks: {
-        Stop: [{ matcher: "", hooks: [{ type: "command", command: '"clawd-hook.js"' }] }],
+        Stop: [{ matcher: "", hooks: [{ type: "command", command: '"duck-hook.js"' }] }],
         PermissionRequest: [permissionHook(EXPECTED_PERMISSION_URL)],
       },
     });
@@ -528,7 +528,7 @@ describe("hasNoAutomaticRepairWork / isExplicitRepairVerified", () => {
   }
 
   function autoRepairableReport() {
-    const raw = JSON.stringify(buildHealthySettings({ permissionUrl: "http://127.0.0.1:23335/permission" }));
+    const raw = JSON.stringify(buildHealthySettings({ permissionUrl: "http://127.0.0.1:24335/permission" }));
     return inspectClaudeHookHealth(raw, baseOptions());
   }
 
@@ -559,7 +559,7 @@ describe("hasNoAutomaticRepairWork / isExplicitRepairVerified", () => {
     assert.strictEqual(
       isExplicitRepairVerified(report),
       false,
-      "an explicit Install/Fix must not report success while a Clawd-owned command is unparseable"
+      "an explicit Install/Fix must not report success while a Duck-owned command is unparseable"
     );
   });
 

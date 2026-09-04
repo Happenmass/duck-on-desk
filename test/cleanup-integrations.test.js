@@ -30,12 +30,12 @@ function readJson(filePath) {
 
 function listCleanupBackups(dir) {
   if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).filter((name) => name.includes(".clawd-cleanup-") && name.endsWith(".bak"));
+  return fs.readdirSync(dir).filter((name) => name.includes(".duck-on-desk-cleanup-") && name.endsWith(".bak"));
 }
 
 describe("cleanupIntegrations", () => {
   it("builds explicit cleanup path overrides for every managed agent", () => {
-    const homeDir = path.join(os.tmpdir(), "clawd-target-home");
+    const homeDir = path.join(os.tmpdir(), "duck-target-home");
     const inheritedLocalAppData = path.join(os.tmpdir(), "admin-local-appdata");
     const targetLocalAppData = path.join(homeDir, "AppData", "Local");
     const targetAppData = path.join(homeDir, "AppData", "Roaming");
@@ -61,7 +61,7 @@ describe("cleanupIntegrations", () => {
   });
 
   it("cleans hooks and stable launchers from an explicit custom CODEX_HOME", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-cleanup-custom-codex-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-cleanup-custom-codex-"));
     const homeDir = path.join(root, "home");
     const codexDir = path.join(root, "custom-codex");
     fs.mkdirSync(codexDir, { recursive: true });
@@ -94,7 +94,7 @@ describe("cleanupIntegrations", () => {
   });
 
   it("removes managed hooks/plugins safely, backs up once, and is idempotent", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-cleanup-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-cleanup-"));
     const homeDir = path.join(root, "home");
     const pluginDir = resolvePluginDir();
     const codexPath = path.join(homeDir, ".codex", "hooks.json");
@@ -103,8 +103,8 @@ describe("cleanupIntegrations", () => {
     writeJson(codexPath, {
       hooks: {
         Stop: [
-          { hooks: [{ type: "command", command: 'node "C:/clawd/hooks/codex-hook.js"' }] },
-          { hooks: [{ type: "command", command: 'node "C:/clawd/hooks/codex-debug-hook.js"' }] },
+          { hooks: [{ type: "command", command: 'node "C:/duck/hooks/codex-hook.js"' }] },
+          { hooks: [{ type: "command", command: 'node "C:/duck/hooks/codex-debug-hook.js"' }] },
           { hooks: [{ type: "command", command: 'node "C:/user/hooks/keep.js"' }] },
         ],
       },
@@ -132,9 +132,9 @@ describe("cleanupIntegrations", () => {
       // #825 behavior change: opencode now routes through the shared JSONC
       // editor, so uninstall claims exactly what install claims — an exact
       // path match OR an ABSOLUTE path whose basename is the managed plugin
-      // dir. "/somewhere/opencode-plugin" is a stale Clawd install location
+      // dir. "/somewhere/opencode-plugin" is a stale Duck install location
       // (register rewrites it in place, hooks/opencode-family-install.js:150),
-      // so leaving it behind was residue Clawd itself created. Third-party
+      // so leaving it behind was residue Duck itself created. Third-party
       // npm specifiers are never absolute paths and stay untouched.
       assert.deepStrictEqual(opencode.plugin, ["opencode-wakatime"]);
       assert.strictEqual(listCleanupBackups(path.dirname(opencodePath)).length, 1);
@@ -156,15 +156,15 @@ describe("cleanupIntegrations", () => {
   });
 
   it("records a precomputed Claude cleanup result instead of unregistering Claude a second time", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-cleanup-claude-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-cleanup-claude-"));
     const homeDir = path.join(root, "home");
     const claudeSettingsPath = path.join(homeDir, ".claude", "settings.json");
-    // A real Clawd hook that WOULD be removed if the generic claude-code
+    // A real Duck hook that WOULD be removed if the generic claude-code
     // cleaner ran — asserting it survives proves the precomputed result path
     // is taken instead of a second, queue-external unregister.
     writeJson(claudeSettingsPath, {
       hooks: {
-        Stop: [{ matcher: "", hooks: [{ type: "command", command: 'node "C:/clawd/hooks/clawd-hook.js" Stop' }] }],
+        Stop: [{ matcher: "", hooks: [{ type: "command", command: 'node "C:/duck/hooks/duck-hook.js" Stop' }] }],
       },
     });
 
@@ -184,7 +184,7 @@ describe("cleanupIntegrations", () => {
 
       const settingsAfter = readJson(claudeSettingsPath);
       assert.ok(
-        settingsAfter.hooks.Stop.some((entry) => entry.hooks.some((h) => h.command.includes("clawd-hook.js"))),
+        settingsAfter.hooks.Stop.some((entry) => entry.hooks.some((h) => h.command.includes("duck-hook.js"))),
         "the real settings.json must be untouched — the precomputed result replaces a second unregister call"
       );
     } finally {
@@ -219,7 +219,7 @@ describe("cleanupIntegrations", () => {
   });
 
   it("gives every managed agent a cleaner, path overrides and a display name", () => {
-    const homeDir = path.join(os.tmpdir(), "clawd-cleanup-completeness-home");
+    const homeDir = path.join(os.tmpdir(), "duck-cleanup-completeness-home");
     const plan = buildCleanupOptionsForHome(homeDir, { silent: true });
 
     const missingCleaner = MANAGED_AGENT_IDS.filter((id) => typeof AGENT_CLEANERS[id] !== "function");
@@ -234,7 +234,7 @@ describe("cleanupIntegrations", () => {
   });
 
   it("marks the claude-code agent failed when the precomputed cleanup result is an error", async () => {
-    const homeDir = path.join(os.tmpdir(), "clawd-cleanup-claude-error-home");
+    const homeDir = path.join(os.tmpdir(), "duck-cleanup-claude-error-home");
     const result = await cleanupIntegrations({
       homeDir,
       backup: true,

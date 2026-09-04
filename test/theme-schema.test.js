@@ -184,7 +184,7 @@ describe("theme schema validation", () => {
 
   it("validates bounded conditional idle easter eggs", () => {
     const egg = {
-      file: "clawd-outlaw-bender.svg",
+      file: "duck-outlaw-bender.svg",
       duration: 15000,
       chance: 0.05,
       cooldownMs: 1800000,

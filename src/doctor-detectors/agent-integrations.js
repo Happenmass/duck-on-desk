@@ -72,7 +72,7 @@ function readJsonc(fsImpl, filePath) {
 
 function withAgentBubbleNote(detail, prefs, agentId) {
   // State-only agents (capabilities.permissionApproval === false) never
-  // surface a Clawd bubble in the first place, so annotating them as
+  // surface a Duck bubble in the first place, so annotating them as
   // "permission bubbles disabled" would be misleading. Pi is the current
   // example.
   const agent = getAgent(agentId);
@@ -133,7 +133,7 @@ function withClaudeHookGuardNotice(detail, descriptor, options) {
       ...detail,
       status: "source-script-missing",
       level: "warning",
-      detail: "The current Clawd installation's Claude hook script is missing. Reinstall or re-extract Clawd to restore automatic hook repair.",
+      detail: "The current Duck installation's Claude hook script is missing. Reinstall or re-extract Duck to restore automatic hook repair.",
       claudeHookRuntimeStatus: {
         status: runtimeHealth.status,
         degradedReason: runtimeHealth.degradedReason,
@@ -158,8 +158,8 @@ function withClaudeHookGuardNotice(detail, descriptor, options) {
       status: detail.status === "ok" ? "needs-review" : detail.status,
       level: "warning",
       detail: unresolvedNode
-        ? "Clawd preserved an env-indirected Claude hook because settings.env does not provide a usable absolute Node path. Check CLAWD_NODE_BIN, then use Fix."
-        : "Clawd found an env-indirected Claude hook but settings.env does not prove that it belongs to Clawd. Review CLAWD_HOOK_PATH before changing it.",
+        ? "Duck preserved an env-indirected Claude hook because settings.env does not provide a usable absolute Node path. Check DUCK_NODE_BIN, then use Fix."
+        : "Duck found an env-indirected Claude hook but settings.env does not prove that it belongs to Duck. Review DUCK_HOOK_PATH before changing it.",
       claudeHookRuntimeStatus: {
         status: runtimeHealth.status,
         degradedReason: runtimeHealth.degradedReason,
@@ -174,7 +174,7 @@ function withClaudeHookGuardNotice(detail, descriptor, options) {
   if (guard && guard.type === "suspicious-shrink") {
     return {
       ...detail,
-      detail: "Clawd paused automatic Claude hook repair after settings.json shrank during an external rewrite. Use Fix or restart Clawd to reinstall Clawd hooks.",
+      detail: "Duck paused automatic Claude hook repair after settings.json shrank during an external rewrite. Use Fix or restart Duck to reinstall Duck hooks.",
       claudeHookGuard: {
         type: guard.type,
         at: guard.at || null,
@@ -187,7 +187,7 @@ function withClaudeHookGuardNotice(detail, descriptor, options) {
   if (runtimeHealth && runtimeHealth.status === "guarded") {
     return {
       ...detail,
-      detail: "Clawd paused automatic Claude hook repair because settings.json shrank suspiciously. Use Fix or restart Clawd to reinstall Clawd hooks.",
+      detail: "Duck paused automatic Claude hook repair because settings.json shrank suspiciously. Use Fix or restart Duck to reinstall Duck hooks.",
       claudeHookRuntimeStatus: {
         status: runtimeHealth.status,
         issueSignature: runtimeHealth.issueSignature || null,
@@ -199,7 +199,7 @@ function withClaudeHookGuardNotice(detail, descriptor, options) {
   if (runtimeHealth && runtimeHealth.status === "manual-fix-required") {
     return {
       ...detail,
-      detail: "Clawd's automatic Claude hook repair failed 3 times in a row and stopped retrying. Use Fix to try once more, or check the hook script manually.",
+      detail: "Duck's automatic Claude hook repair failed 3 times in a row and stopped retrying. Use Fix to try once more, or check the hook script manually.",
       claudeHookRuntimeStatus: {
         status: runtimeHealth.status,
         issueSignature: runtimeHealth.issueSignature || null,
@@ -710,7 +710,7 @@ function readJsonIfPresent(fsImpl, filePath) {
 function isPiManagedMarker(value) {
   return !!(
     value
-    && value.app === "clawd-on-desk"
+    && value.app === "duck-on-desk"
     && value.integration === "pi"
     && value.managed === true
   );
@@ -718,7 +718,7 @@ function isPiManagedMarker(value) {
 
 function checkPiExtensionMode(descriptor, options) {
   const extensionDir = descriptor.configPath;
-  const markerPath = path.join(extensionDir, descriptor.markerFile || ".clawd-managed.json");
+  const markerPath = path.join(extensionDir, descriptor.markerFile || ".duck-on-desk-managed.json");
   const extensionPath = path.join(extensionDir, descriptor.marker || "index.ts");
   const corePath = path.join(extensionDir, descriptor.coreFile || "pi-extension-core.js");
 
@@ -742,7 +742,7 @@ function checkPiExtensionMode(descriptor, options) {
       configPath: extensionDir,
       extensionDir,
       markerPath,
-      detail: `${extensionDir} exists but is not Clawd-managed`,
+      detail: `${extensionDir} exists but is not Duck-managed`,
     });
   }
 

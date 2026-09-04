@@ -126,7 +126,7 @@ describe("doctor hook activity connection test", () => {
   });
 
   it("scans only Codex fallback mtime activity without collecting file names in the summary", () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-doctor-activity-"));
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "duck-doctor-activity-"));
     const since = Date.now() - 1000;
     const codexDir = path.join(tmp, ".codex", "sessions", "2026", "04", "28");
     const otherDir = path.join(tmp, ".other-agent", "tmp", "project", "chats");

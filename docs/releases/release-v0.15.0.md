@@ -39,8 +39,8 @@ welcomes **two first-time contributors**.
   Claude quota collection is enabled, context usage is read from the Claude statusline
   rather than inferred, so a custom model no longer displays a context length that does
   not match the model actually in use. Collection stays opt-in (`Settings → General`)
-  because it installs Clawd's own statusline; an occupied third-party statusline is
-  preserved rather than taken over, and Clawd falls back to transcript-derived context
+  because it installs Duck's own statusline; an occupied third-party statusline is
+  preserved rather than taken over, and Duck falls back to transcript-derived context
   when registration does not succeed.
 
 ### Free Roam
@@ -150,7 +150,7 @@ welcomes **two first-time contributors**.
 
 - **WinGet manifest self-publishing groundwork** (#861, issue #860) — a prepare-only
   workflow generates the manifest komac would submit and gates it on an architecture
-  contract. `rullerzhou-afk.clawd-on-desk` has been live in `microsoft/winget-pkgs`
+  contract. `rullerzhou-afk.duck-on-desk` has been live in `microsoft/winget-pkgs`
   since 2026-04-20 without ever being submitted by this project: a third-party release
   tracker picked it up and, from v0.6.2 onward, produced manifests declaring two
   `Architecture: x64` entries that both pointed at the **ARM64** installer. The NSIS
@@ -178,14 +178,14 @@ authored change.
 
 ### Upgrade Notes
 
-- Launch Clawd once after upgrading so installed and enabled integrations can reconcile
+- Launch Duck once after upgrading so installed and enabled integrations can reconcile
   their managed hooks/plugins against the packaged v0.15.0 files.
 - QwenWork is a new state-only integration and is not enabled by default. It requires
   the QwenWork desktop application on Windows or macOS.
 - Quota ring display mode (Used / Remaining) defaults to the existing behavior; no
   action is required to keep the previous readout.
 - Correct custom-model context windows require explicitly enabling local Claude quota
-  collection in Settings → General. Clawd preserves an occupied third-party statusline
+  collection in Settings → General. Duck preserves an occupied third-party statusline
   and keeps transcript-derived context as the fallback when its own statusline cannot
   be registered.
 - Free roam fence and axis constraint are both opt-in. With no fence file and the axis

@@ -3,7 +3,7 @@
 // ── Preferences (pure data layer) ──
 //
 // This module is the canonical schema definition + load/save/migrate/validate
-// for `clawd-prefs.json`. It has zero dependencies on Electron, the store, the
+// for `duck-prefs.json`. It has zero dependencies on Electron, the store, the
 // controller, or anything stateful — it deals in plain snapshots.
 //
 // `load(prefsPath)`  — read file, migrate to current version, validate, return snapshot
@@ -12,7 +12,7 @@
 // `validate(snapshot)` — coerces an arbitrary object into a valid snapshot, dropping bad fields
 // `migrate(raw)` — applies version-to-version migrations, returns the upgraded raw snapshot
 //
-// Bad-file handling: readable invalid contents → backup as `clawd-prefs.json.bak` → return defaults.
+// Bad-file handling: readable invalid contents → backup as `duck-prefs.json.bak` → return defaults.
 //   Unreadable file (EACCES/EIO/...) → defaults in memory, but `locked` so save() will not
 //   overwrite a file we were never able to read.
 // Future-version handling: read succeeds but version > current → warn + refuse to overwrite
@@ -135,7 +135,7 @@ const SCHEMA = {
   manageClaudeHooksAutomatically: { type: "boolean", default: true },
   autoStartWithClaude: { type: "boolean", default: false },
   // Fresh installs require an explicit opt-in before a local Codex
-  // SessionStart hook may cold-launch Clawd. The v17 -> v18 migration pins
+  // SessionStart hook may cold-launch Duck. The v17 -> v18 migration pins
   // this on for existing users so an upgrade does not change prior behavior.
   autoStartWithCodex: { type: "boolean", default: false },
   // Codex approval awareness depends entirely on the official PermissionRequest
@@ -166,7 +166,7 @@ const SCHEMA = {
   // Claude Code exposes the reported context window and subscription limits
   // through its visible, single-slot statusline. The historical key name is
   // retained for compatibility, but it authorizes the whole local Claude
-  // statusline metadata stream. Keep it opt-in so a fresh Clawd install never
+  // statusline metadata stream. Keep it opt-in so a fresh Duck install never
   // changes the user's terminal UI without an explicit choice.
   claudeQuotaCollectionEnabled: { type: "boolean", default: false },
   sessionHudCleanupDetached: { type: "boolean", default: true },
@@ -311,8 +311,8 @@ const SCHEMA = {
     normalize: normalizeShortcuts,
   },
   // Theme
-  theme: { type: "string", default: "clawd" },
-  // Per-theme color filter choice, e.g. { clawd: "matcha", cloudling: "mono" }.
+  theme: { type: "string", default: "duck" },
+  // Per-theme color filter choice, e.g. { duck: "matcha", cloudling: "mono" }.
   // Missing entries preserve the theme's native colors. The normalizer also
   // accepts the short-lived pre-detail-view string shape and seeds supported
   // built-ins with that value so Draft PR testers do not lose their choice.
@@ -383,7 +383,7 @@ const SCHEMA = {
     defaultFactory: () => ({}),
     normalize: normalizeThemeOverrides,
   },
-  // Phase 3b-swap: per-theme variant selection (e.g. {clawd: "chill", calico: "default"}).
+  // Phase 3b-swap: per-theme variant selection (e.g. {duck: "chill", calico: "default"}).
   // Missing key for a theme = use that theme's `default` variant. Unknown variantIds
   // get lenient-fallback to default at load time (see theme-loader._resolveVariant).
   themeVariant: {
@@ -391,7 +391,7 @@ const SCHEMA = {
     defaultFactory: () => ({}),
     normalize: normalizeThemeVariant,
   },
-  // #509: per-theme default idle visual (e.g. {clawd: "clawd-idle-reading.svg"}).
+  // #509: per-theme default idle visual (e.g. {duck: "duck-idle-reading.svg"}).
   // Missing key for a theme = that theme's stock idle behavior. Values are bare
   // filenames validated against the LOADED theme at resolve time
   // (idle-visual.js), never here, so a theme update that drops the file
@@ -492,7 +492,7 @@ function validate(raw) {
 }
 
 // Hand-edited-file fallback: if a user manually inverted the pair in
-// clawd-prefs.json, clamp workingStaleMs down to sessionStaleMs at load time
+// duck-prefs.json, clamp workingStaleMs down to sessionStaleMs at load time
 // so the live mirror is consistent. Primary enforcement lives in the
 // per-key validators in settings-actions.js and the
 // commandRegistry["sessionCleanup.setTriple"] command — this function is
@@ -519,7 +519,7 @@ function normalizeStaleTriple(out) {
 // v2 → v3: raise passive notification bubble default from 3s to 6s. Users
 //   who explicitly chose 3s in v2 are indistinguishable from defaulted-3 and
 //   are migrated too; other non-default values are preserved.
-// v3 → v4: Pi returns to a state-only integration. Clawd no longer inserts a
+// v3 → v4: Pi returns to a state-only integration. Duck no longer inserts a
 //   permission prompt into Pi's default YOLO flow, so the Pi permission subgate
 //   is reset off.
 // v15 → v16: preserve the legacy meaning of literal `Control` shortcut tokens
@@ -666,7 +666,7 @@ function migrate(raw) {
   }
   // v10 -> v11: agent integrations are installed on demand. Entries that were
   // actually present in an old prefs file predate `integrationInstalled`, so
-  // keep them managed by Clawd. Missing entries fall through to v11 defaults
+  // keep them managed by Duck. Missing entries fall through to v11 defaults
   // instead of pretending that a never-seen/newer agent was installed.
   if (out.version < 11) {
     if (out.agents && typeof out.agents === "object") {
@@ -1145,7 +1145,7 @@ function normalizeThemeVariant(value, defaultsValue) {
 function normalizePetTint(value, defaultsValue) {
   if (typeof value === "string") {
     if (!PET_TINT_IDS.includes(value) || value === "none") return {};
-    return { clawd: value, cloudling: value };
+    return { duck: value, cloudling: value };
   }
   if (!value || typeof value !== "object" || Array.isArray(value)) return defaultsValue;
   const out = {};
@@ -1209,10 +1209,10 @@ function backupInvalidPrefs(prefsPath, reason) {
   try {
     const bak = prefsPath + ".bak";
     fs.copyFileSync(prefsPath, bak);
-    console.warn(`Clawd: invalid prefs file backed up to ${bak}:`, reason);
+    console.warn(`Duck: invalid prefs file backed up to ${bak}:`, reason);
     return true;
   } catch (bakErr) {
-    console.warn("Clawd: invalid prefs file backup failed:", reason, bakErr.message);
+    console.warn("Duck: invalid prefs file backup failed:", reason, bakErr.message);
     return false;
   }
 }
@@ -1261,7 +1261,7 @@ function load(prefsPath) {
     // No backup is attempted on this path: copyFileSync would read the same
     // unreadable file, so it could only fail and emit a second warning.
     console.warn(
-      "Clawd: prefs file could not be read — keeping defaults in memory and refusing to overwrite it:",
+      "Duck: prefs file could not be read — keeping defaults in memory and refusing to overwrite it:",
       err.message,
     );
     return { snapshot: getDefaults(), locked: true, recovered: true };
@@ -1321,7 +1321,7 @@ function load(prefsPath) {
   const incomingVersion = typeof raw.version === "number" ? raw.version : 0;
   if (incomingVersion > CURRENT_VERSION) {
     console.warn(
-      `Clawd: prefs file version ${incomingVersion} is newer than supported (${CURRENT_VERSION}). ` +
+      `Duck: prefs file version ${incomingVersion} is newer than supported (${CURRENT_VERSION}). ` +
       `Settings will be readable but not saved to avoid data loss.`
     );
     return { snapshot: validate(raw), locked: true, ...codexAuthorityMeta };

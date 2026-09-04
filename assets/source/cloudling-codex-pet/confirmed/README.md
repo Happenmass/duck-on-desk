@@ -63,7 +63,7 @@ sleeping 走「装扮路线 A」(纯装扮无粒子)。先磨 4 件部件再做�
 
 | 状态 | 推荐文件 | 说明 |
 |---|---|---|
-| drag (被拖动反应) | `states/drag-react-v3.svg.html` | clawd `reactions.drag.file` 槽位实现。中心自旋 wobble ±11° / 0.9s alternate ease-in-out + idle 同款呼吸 0.96-1.0 / 5s，两层 pivot 都在身体中心 (12,12)，眼睛切到 library `><` token (cx=9/15, cy=12, stroke 紫蓝渐变 1.25)，云朵外形不变，无 shadow lift（Cloudling 悬浮）。纯 CSS @keyframes 自驱无 JS rAF。接入时窗口跟手由壳子 `move-window-by` 处理，SVG 内部不重复。|
+| drag (被拖动反应) | `states/drag-react-v3.svg.html` | duck `reactions.drag.file` 槽位实现。中心自旋 wobble ±11° / 0.9s alternate ease-in-out + idle 同款呼吸 0.96-1.0 / 5s，两层 pivot 都在身体中心 (12,12)，眼睛切到 library `><` token (cx=9/15, cy=12, stroke 紫蓝渐变 1.25)，云朵外形不变，无 shadow lift（Cloudling 悬浮）。纯 CSS @keyframes 自驱无 JS rAF。接入时窗口跟手由壳子 `move-window-by` 处理，SVG 内部不重复。|
 
 ## 2026-04-29 idle → dozing 过渡确认
 
@@ -93,7 +93,7 @@ sleeping 走「装扮路线 A」(纯装扮无粒子)。先磨 4 件部件再做�
 
 | 状态 | 推荐文件 | 说明 |
 |---|---|---|
-| mini-crabwalk | `states/mini-crabwalk-soft-scoot-v1.svg.html` | 右键进入 Mini Mode 前的边缘小挪步确认版。运行时由 clawd `animateWindowX` 移动窗口到屏幕边缘，SVG 内部只做原地软弹赶路循环；云宝小幅 scoot / hop / squash + 轻滚角，眼睛使用 long-idle 同款正常胶囊眼 ↔ 稍宽眼 `widenFactor`，身后三团小云尘在浅色模式下带淡蓝描边/填色以保持可读。|
+| mini-crabwalk | `states/mini-crabwalk-soft-scoot-v1.svg.html` | 右键进入 Mini Mode 前的边缘小挪步确认版。运行时由 duck `animateWindowX` 移动窗口到屏幕边缘，SVG 内部只做原地软弹赶路循环；云宝小幅 scoot / hop / squash + 轻滚角，眼睛使用 long-idle 同款正常胶囊眼 ↔ 稍宽眼 `widenFactor`，身后三团小云尘在浅色模式下带淡蓝描边/填色以保持可读。|
 
 ## 2026-04-30 mini-idle 确认
 

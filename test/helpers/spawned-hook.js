@@ -22,15 +22,15 @@ function readJsonIfPresent(filePath) {
 
 function createSpawnedHookHarness(options = {}) {
   const ownsHome = !options.home;
-  const home = options.home || fs.mkdtempSync(path.join(os.tmpdir(), options.prefix || "clawd-hook-test-"));
+  const home = options.home || fs.mkdtempSync(path.join(os.tmpdir(), options.prefix || "duck-hook-test-"));
   const userData = path.join(home, "user-data");
   const appData = path.join(home, "app-data");
   const localAppData = path.join(home, "local-app-data");
   const xdgConfigHome = path.join(home, "xdg-config");
-  const clawdDir = path.join(home, ".clawd");
+  const duckDir = path.join(home, ".duck-on-desk");
   let sequence = 0;
 
-  for (const directory of [home, userData, appData, localAppData, xdgConfigHome, clawdDir]) {
+  for (const directory of [home, userData, appData, localAppData, xdgConfigHome, duckDir]) {
     fs.mkdirSync(directory, { recursive: true });
   }
 
@@ -47,7 +47,7 @@ function createSpawnedHookHarness(options = {}) {
     sequence += 1;
     const attemptsPath = path.join(home, `http-attempts-${sequence}.json`);
     const spawnsPath = path.join(home, `process-spawns-${sequence}.json`);
-    const runtimePath = path.join(clawdDir, "runtime.json");
+    const runtimePath = path.join(duckDir, "runtime.json");
     for (const outputPath of [attemptsPath, spawnsPath]) {
       try { fs.unlinkSync(outputPath); } catch { /* first run */ }
     }
@@ -60,7 +60,7 @@ function createSpawnedHookHarness(options = {}) {
 
     const env = { ...process.env };
     for (const key of Object.keys(env)) {
-      if (key.startsWith("CLAWD_")) delete env[key];
+      if (key.startsWith("DUCK_")) delete env[key];
     }
     for (const key of [
       "CODEX_HOME",
@@ -77,7 +77,7 @@ function createSpawnedHookHarness(options = {}) {
       APPDATA: appData,
       LOCALAPPDATA: localAppData,
       XDG_CONFIG_HOME: xdgConfigHome,
-      CLAWD_TEST_USER_DATA: userData,
+      DUCK_TEST_USER_DATA: userData,
     });
 
     const preloads = [];
@@ -85,11 +85,11 @@ function createSpawnedHookHarness(options = {}) {
       preloads.push(HTTP_BLOCKER);
     } else {
       preloads.push(HTTP_RECORDER);
-      env.CLAWD_POST_OUT = attemptsPath;
+      env.DUCK_POST_OUT = attemptsPath;
     }
     if (runOptions.probeProcessSpawns) {
       preloads.push(SPAWN_RECORDER);
-      env.CLAWD_PROBE_OUT = spawnsPath;
+      env.DUCK_PROBE_OUT = spawnsPath;
     }
     preloads.push(...(runOptions.preloads || []).map((preload) => path.resolve(preload)));
 

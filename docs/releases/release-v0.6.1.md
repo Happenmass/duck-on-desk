@@ -2,14 +2,14 @@
 
 ### New Features
 
-- **Kimi CLI support** (#138, #153) — Clawd now supports Kimi CLI through auto-synced hooks in `~/.kimi/config.toml`, shared session/state mapping, and permission-request signaling that preserves terminal fallback behavior
+- **Kimi CLI support** (#138, #153) — Duck now supports Kimi CLI through auto-synced hooks in `~/.kimi/config.toml`, shared session/state mapping, and permission-request signaling that preserves terminal fallback behavior
 - **Sound controls in Settings** (#148, #151) — per-theme sound effect overrides, a dedicated Sounds subtab alongside Animation Overrides, and a global sound-effect volume slider make theme polish much more configurable without editing files
 - **Keep size across displays** (#136) — optional size persistence now keeps the pet's pixel size stable when moving between monitors with different DPI / work-area characteristics
 - **Permission bubble elicitation improvements** — `AskUserQuestion` bubbles now support an `"Other"` custom input path and Enter-to-submit behavior for preset-radio flows, making the approval UI usable for more real agent prompts
 
 ### Bug Fixes
 
-- **Windows Claude Code hook execution** (#147) — Clawd now registers Claude Code hooks with `shell: "powershell"` on Windows, avoiding the bash/MSYS/WSL command-path failures that caused `MODULE_NOT_FOUND` hook errors for some users
+- **Windows Claude Code hook execution** (#147) — Duck now registers Claude Code hooks with `shell: "powershell"` on Windows, avoiding the bash/MSYS/WSL command-path failures that caused `MODULE_NOT_FOUND` hook errors for some users
 - **Kiro CLI on Windows** (#145) — Kiro hook execution and template sync now work on Windows instead of assuming Unix-like shell behavior
 - **Startup position recovery** — launch-time geometry recovery now checks the saved display snapshot before regularizing bounds, materializes fallback bounds earlier, and more reliably pulls an off-screen pet back into view after monitor changes or docking/undocking
 - **Codex session rescue hardening** — stale attach state, historical replay suppression, active-session windowing, and long-lived session detection were tightened so Codex polling is less likely to replay old work or miss slow sessions

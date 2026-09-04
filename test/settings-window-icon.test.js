@@ -17,7 +17,7 @@ const {
 
 describe("settings window icon path", () => {
   it("prefers the 256px project icon for unpackaged Windows runs", () => {
-    const appDir = "D:\\clawd-on-desk";
+    const appDir = "D:\\duck-on-desk";
     const expected = path.join(appDir, "assets", "icons", "256x256.png");
     const actual = getSettingsWindowIconPath({
       platform: "win32",
@@ -29,7 +29,7 @@ describe("settings window icon path", () => {
   });
 
   it("falls back to icon.ico when the 256px icon is unavailable", () => {
-    const appDir = "D:\\clawd-on-desk";
+    const appDir = "D:\\duck-on-desk";
     const expected = path.join(appDir, "assets", "icon.ico");
     const actual = getSettingsWindowIconPath({
       platform: "win32",
@@ -41,7 +41,7 @@ describe("settings window icon path", () => {
   });
 
   it("prefers unpacked packaged assets before falling back to icon.ico", () => {
-    const resourcesPath = "C:\\Program Files\\Clawd on Desk\\resources";
+    const resourcesPath = "C:\\Program Files\\Duck on Desk\\resources";
     const expected = path.join(resourcesPath, "app.asar.unpacked", "assets", "icons", "256x256.png");
     const actual = getSettingsWindowIconPath({
       platform: "win32",
@@ -78,7 +78,7 @@ describe("windows app user model id", () => {
 
 describe("windows shell icon path", () => {
   it("prefers icon.ico for unpackaged Windows shell surfaces", () => {
-    const appDir = "D:\\clawd-on-desk";
+    const appDir = "D:\\duck-on-desk";
     const expected = path.join(appDir, "assets", "icon.ico");
     const actual = getWindowsShellIconPath({
       isPackaged: false,
@@ -89,7 +89,7 @@ describe("windows shell icon path", () => {
   });
 
   it("prefers the extra resource icon for packaged Windows shell surfaces", () => {
-    const resourcesPath = "C:\\Program Files\\Clawd on Desk\\resources";
+    const resourcesPath = "C:\\Program Files\\Duck on Desk\\resources";
     const expected = path.join(resourcesPath, "icon.ico");
     const actual = getWindowsShellIconPath({
       isPackaged: true,
@@ -100,8 +100,8 @@ describe("windows shell icon path", () => {
   });
 
   it("falls back to the packaged executable when the extra resource icon is unavailable", () => {
-    const resourcesPath = "C:\\Program Files\\Clawd on Desk\\resources";
-    const execPath = "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe";
+    const resourcesPath = "C:\\Program Files\\Duck on Desk\\resources";
+    const execPath = "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe";
     const actual = getWindowsShellIconPath({
       isPackaged: true,
       resourcesPath,
@@ -114,9 +114,9 @@ describe("windows shell icon path", () => {
 
 describe("settings window taskbar details", () => {
   it("builds Windows taskbar metadata for unpackaged runs", () => {
-    const appDir = "D:\\clawd-on-desk";
-    const execPath = "D:\\clawd-on-desk\\node_modules\\electron\\dist\\electron.exe";
-    const appPath = "D:\\clawd-on-desk";
+    const appDir = "D:\\duck-on-desk";
+    const execPath = "D:\\duck-on-desk\\node_modules\\electron\\dist\\electron.exe";
+    const appPath = "D:\\duck-on-desk";
     const iconPath = path.join(appDir, "assets", "icon.ico");
     const actual = getSettingsWindowTaskbarDetails({
       platform: "win32",
@@ -136,8 +136,8 @@ describe("settings window taskbar details", () => {
   });
 
   it("builds Windows taskbar metadata for packaged runs", () => {
-    const resourcesPath = "C:\\Program Files\\Clawd on Desk\\resources";
-    const execPath = "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe";
+    const resourcesPath = "C:\\Program Files\\Duck on Desk\\resources";
+    const execPath = "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe";
     const iconPath = path.join(resourcesPath, "icon.ico");
     const actual = getSettingsWindowTaskbarDetails({
       platform: "win32",
@@ -156,8 +156,8 @@ describe("settings window taskbar details", () => {
   });
 
   it("propagates the packaged executable fallback into Windows taskbar metadata", () => {
-    const resourcesPath = "C:\\Program Files\\Clawd on Desk\\resources";
-    const execPath = "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe";
+    const resourcesPath = "C:\\Program Files\\Duck on Desk\\resources";
+    const execPath = "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe";
     const actual = getSettingsWindowTaskbarDetails({
       platform: "win32",
       isPackaged: true,

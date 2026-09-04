@@ -1,7 +1,7 @@
 {
-  "name": "clawd-opencode-plugin",
+  "name": "duck-opencode-plugin",
   "version": "0.1.0",
-  "description": "Clawd on Desk plugin for opencode — reports session/tool events to the Clawd desktop pet",
+  "description": "Duck on Desk plugin for opencode — reports session/tool events to the Duck desktop pet",
   "type": "module",
   "main": "index.mjs",
   "private": true,

@@ -7,7 +7,7 @@ const themeLoader = require("../src/theme-loader");
 const { createTranslator } = require("../src/i18n");
 
 themeLoader.init(path.join(__dirname, "..", "src"));
-const defaultTheme = themeLoader.loadTheme("clawd");
+const defaultTheme = themeLoader.loadTheme("duck");
 
 function makeCtx({ notificationHookEnabled = true } = {}) {
   const rendererEvents = [];
@@ -53,15 +53,15 @@ describe("updateSession: Notification hook gate", () => {
   beforeEach(() => {
     // These tests exercise the Notification gate, not the #406 completion
     // debounce — disable the debounce so a Claude Stop settles immediately.
-    savedDebounceEnv = process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-    process.env.CLAWD_COMPLETION_DEBOUNCE_MS = "0";
+    savedDebounceEnv = process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+    process.env.DUCK_COMPLETION_DEBOUNCE_MS = "0";
   });
 
   afterEach(() => {
     if (api) api.cleanup();
     mock.timers.reset();
-    if (savedDebounceEnv === undefined) delete process.env.CLAWD_COMPLETION_DEBOUNCE_MS;
-    else process.env.CLAWD_COMPLETION_DEBOUNCE_MS = savedDebounceEnv;
+    if (savedDebounceEnv === undefined) delete process.env.DUCK_COMPLETION_DEBOUNCE_MS;
+    else process.env.DUCK_COMPLETION_DEBOUNCE_MS = savedDebounceEnv;
   });
 
   it("mutes Notification bell + animation when the per-agent flag is off", () => {
@@ -213,9 +213,9 @@ describe("updateSession: Notification hook gate", () => {
 
   it("mutes state-only permission notifications when the per-agent flag is off", () => {
     // A state-only agent maps its PermissionRequest / PermissionDenied events
-    // to a Clawd Notification event, so they ride this per-agent mute gate like
+    // to a Duck Notification event, so they ride this per-agent mute gate like
     // any passive notification. This is the opposite of a real permission agent
-    // (next test), whose PermissionRequest keeps its bell because Clawd actually
+    // (next test), whose PermissionRequest keeps its bell because Duck actually
     // answers that decision.
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });

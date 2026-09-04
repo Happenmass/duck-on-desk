@@ -121,7 +121,7 @@ describe("macOS startup Dock icon installer", () => {
       logWarn: (...args) => warnings.push(args),
     }));
     assert.deepStrictEqual(warnings, [[
-      "Clawd: failed to install startup macOS Dock icon:",
+      "Duck: failed to install startup macOS Dock icon:",
       "icon failure",
     ]]);
 

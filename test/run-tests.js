@@ -8,12 +8,12 @@ const DEFAULT_TEST_TIMEOUT_MS = 120000;
 // on it forever, the remaining files never run, and no summary is printed -- so
 // a regression that deadlocks one test reads as "the suite is still going"
 // locally and as a stalled job in CI. A generous ceiling turns that into a
-// normal red. Raise it with CLAWD_TEST_TIMEOUT_MS if a legitimately slow test
+// normal red. Raise it with DUCK_TEST_TIMEOUT_MS if a legitimately slow test
 // ever needs more; 0 disables it.
 function resolveTimeoutArgs(env = process.env) {
   // Number("") is 0, and 0 means "no timeout" -- so an empty or whitespace
   // override would silently remove the protection instead of falling back.
-  const raw = env.CLAWD_TEST_TIMEOUT_MS;
+  const raw = env.DUCK_TEST_TIMEOUT_MS;
   const configured = raw === undefined || String(raw).trim() === "" ? NaN : Number(raw);
   const timeoutMs = Number.isFinite(configured) && configured >= 0
     ? configured
@@ -41,7 +41,7 @@ if (files.length === 0) {
 // on it forever, the remaining files never run, and no summary is printed -- so
 // a regression that deadlocks one test reads as "the suite is still going"
 // locally and as a stalled job in CI. A generous ceiling turns that into a
-// normal red. Raise it with CLAWD_TEST_TIMEOUT_MS if a legitimately slow test
+// normal red. Raise it with DUCK_TEST_TIMEOUT_MS if a legitimately slow test
 // ever needs more; 0 disables it.
 const result = spawnSync(process.execPath, ["--test", ...resolveTimeoutArgs(), ...files], {
   stdio: "inherit",

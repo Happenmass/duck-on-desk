@@ -59,7 +59,7 @@ function makeFamilyInstaller(agentId) {
 
   /**
    * Resolve the absolute path to hooks/<agent>-plugin/ as seen from a running
-   * host (Bun) process. When Clawd is packaged into app.asar, hooks/** is
+   * host (Bun) process. When Duck is packaged into app.asar, hooks/** is
    * unpacked to app.asar.unpacked/ (see package.json "asarUnpack"). The host
    * cannot require files inside asar, so we must point it at the unpacked copy.
    *
@@ -76,7 +76,7 @@ function makeFamilyInstaller(agentId) {
   }
 
   /**
-   * Register the Clawd family plugin in the host's global config.
+   * Register the Duck family plugin in the host's global config.
    *
    * @param {object} [options]
    * @param {boolean} [options.silent]   suppress console output
@@ -99,7 +99,7 @@ function makeFamilyInstaller(agentId) {
       try { exists = fs.statSync(configDir).isDirectory(); } catch {}
       if (!exists) {
         if (!options.silent) {
-          console.log(`Clawd: ${PARENT_DIR_DISPLAY} not found — skipping ${agentId} plugin registration`);
+          console.log(`Duck: ${PARENT_DIR_DISPLAY} not found — skipping ${agentId} plugin registration`);
         }
         return {
           added: false,
@@ -141,7 +141,7 @@ function makeFamilyInstaller(agentId) {
     // "@vendor/opencode-plugin"), and path.basename of a scoped package name
     // happens to return the segment after the slash — so a naive basename
     // equality would stomp any third-party scoped package ending in
-    // "/<agent>-plugin". Clawd itself only ever writes absolute paths, so
+    // "/<agent>-plugin". Duck itself only ever writes absolute paths, so
     // restricting the match to absolute entries is safe.
     let matchIndex = -1;
     for (let i = 0; i < settings.plugin.length; i++) {
@@ -179,7 +179,7 @@ function makeFamilyInstaller(agentId) {
     }
 
     if (!options.silent) {
-      console.log(`Clawd ${agentId} plugin → ${configPath}`);
+      console.log(`Duck ${agentId} plugin → ${configPath}`);
       if (created) console.log(`  Created ${cfg.configFileName}`);
       if (added) console.log(`  Registered: ${pluginDir}`);
       if (skipped) console.log(`  Already registered: ${pluginDir}`);
@@ -217,7 +217,7 @@ function makeFamilyInstaller(agentId) {
 
     let backupPath = null;
     if (changed) backupPath = writeJsonAtomicWithBackup(configPath, settings, options);
-    if (!options.silent) console.log(`Clawd ${agentId} plugin entries removed: ${removed}`);
+    if (!options.silent) console.log(`Duck ${agentId} plugin entries removed: ${removed}`);
     const result = { removed, changed, skipped: !changed, configPath, pluginDir };
     if (options.backup === true) result.backupPath = backupPath;
     return result;

@@ -11,12 +11,12 @@ const {
 
 function makeTheme(overrides = {}) {
   return {
-    _id: "clawd",
-    states: { idle: ["clawd-idle-follow.svg"] },
+    _id: "duck",
+    states: { idle: ["duck-idle-follow.svg"] },
     idleAnimations: [
-      { file: "clawd-idle-look.svg", duration: 6500 },
-      { file: "clawd-idle-bubble.svg", duration: 13500 },
-      { file: "clawd-idle-reading.svg", duration: 14000 },
+      { file: "duck-idle-look.svg", duration: 6500 },
+      { file: "duck-idle-bubble.svg", duration: 13500 },
+      { file: "duck-idle-reading.svg", duration: 14000 },
     ],
     ...overrides,
   };
@@ -26,10 +26,10 @@ describe("listIdleVisualOptions", () => {
   it("lists the theme default first, then idle pool entries", () => {
     const options = listIdleVisualOptions(makeTheme());
     assert.deepStrictEqual(options, [
-      { file: "clawd-idle-follow.svg", isThemeDefault: true },
-      { file: "clawd-idle-look.svg", isThemeDefault: false },
-      { file: "clawd-idle-bubble.svg", isThemeDefault: false },
-      { file: "clawd-idle-reading.svg", isThemeDefault: false },
+      { file: "duck-idle-follow.svg", isThemeDefault: true },
+      { file: "duck-idle-look.svg", isThemeDefault: false },
+      { file: "duck-idle-bubble.svg", isThemeDefault: false },
+      { file: "duck-idle-reading.svg", isThemeDefault: false },
     ]);
   });
 
@@ -48,20 +48,20 @@ describe("listIdleVisualOptions", () => {
     const options = listIdleVisualOptions(makeTheme({
       idleAnimations: [null, { file: "" }, { duration: 5 }, { file: "ok.svg" }],
     }));
-    assert.deepStrictEqual(options.map((o) => o.file), ["clawd-idle-follow.svg", "ok.svg"]);
+    assert.deepStrictEqual(options.map((o) => o.file), ["duck-idle-follow.svg", "ok.svg"]);
   });
 
   it("does not expose conditional easter eggs as persistent idle choices", () => {
     const options = listIdleVisualOptions(makeTheme({
       idleEasterEggs: [{
-        file: "clawd-outlaw-bender.svg",
+        file: "duck-outlaw-bender.svg",
         duration: 15000,
         chance: 0.05,
         cooldownMs: 1800000,
         requiresAccessories: { head: "cowboy-hat", mouth: "cigarette" },
       }],
     }));
-    assert.ok(!options.some((option) => option.file === "clawd-outlaw-bender.svg"));
+    assert.ok(!options.some((option) => option.file === "duck-outlaw-bender.svg"));
   });
 });
 
@@ -70,8 +70,8 @@ describe("resolveIdleVisualChoice", () => {
 
   it("returns the stored file when it is a valid non-default option", () => {
     assert.strictEqual(
-      resolveIdleVisualChoice(theme, { clawd: "clawd-idle-reading.svg" }),
-      "clawd-idle-reading.svg"
+      resolveIdleVisualChoice(theme, { duck: "duck-idle-reading.svg" }),
+      "duck-idle-reading.svg"
     );
   });
 
@@ -79,34 +79,34 @@ describe("resolveIdleVisualChoice", () => {
     assert.strictEqual(resolveIdleVisualChoice(theme, {}), null);
     assert.strictEqual(resolveIdleVisualChoice(theme, null), null);
     assert.strictEqual(resolveIdleVisualChoice(theme, { calico: "calico-idle.svg" }), null);
-    assert.strictEqual(resolveIdleVisualChoice(theme, { clawd: "gone.svg" }), null);
-    assert.strictEqual(resolveIdleVisualChoice(theme, { clawd: 42 }), null);
-    assert.strictEqual(resolveIdleVisualChoice(null, { clawd: "clawd-idle-look.svg" }), null);
+    assert.strictEqual(resolveIdleVisualChoice(theme, { duck: "gone.svg" }), null);
+    assert.strictEqual(resolveIdleVisualChoice(theme, { duck: 42 }), null);
+    assert.strictEqual(resolveIdleVisualChoice(null, { duck: "duck-idle-look.svg" }), null);
   });
 
   it("treats a stored theme default as unset", () => {
-    assert.strictEqual(resolveIdleVisualChoice(theme, { clawd: "clawd-idle-follow.svg" }), null);
+    assert.strictEqual(resolveIdleVisualChoice(theme, { duck: "duck-idle-follow.svg" }), null);
   });
 
   it("ignores prototype keys", () => {
-    const map = Object.create({ clawd: "clawd-idle-look.svg" });
+    const map = Object.create({ duck: "duck-idle-look.svg" });
     assert.strictEqual(resolveIdleVisualChoice(theme, map), null);
   });
 });
 
 describe("humanizeIdleVisualLabel", () => {
   it("strips theme prefix and extension, title-cases the rest", () => {
-    assert.strictEqual(humanizeIdleVisualLabel("clawd-idle-reading.svg", "clawd"), "Idle Reading");
+    assert.strictEqual(humanizeIdleVisualLabel("duck-idle-reading.svg", "duck"), "Idle Reading");
     assert.strictEqual(humanizeIdleVisualLabel("calico-idle-stretch.svg", "calico"), "Idle Stretch");
   });
 
   it("handles files without the theme prefix and odd separators", () => {
-    assert.strictEqual(humanizeIdleVisualLabel("look_around.svg", "clawd"), "Look Around");
+    assert.strictEqual(humanizeIdleVisualLabel("look_around.svg", "duck"), "Look Around");
     assert.strictEqual(humanizeIdleVisualLabel("assets/deep/idle-wave.svg", "other"), "Idle Wave");
   });
 
   it("returns empty string for invalid input", () => {
-    assert.strictEqual(humanizeIdleVisualLabel(null, "clawd"), "");
-    assert.strictEqual(humanizeIdleVisualLabel("", "clawd"), "");
+    assert.strictEqual(humanizeIdleVisualLabel(null, "duck"), "");
+    assert.strictEqual(humanizeIdleVisualLabel("", "duck"), "");
   });
 });

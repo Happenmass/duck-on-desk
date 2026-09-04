@@ -335,7 +335,7 @@ describe("permission automation: showPermissionBubble chokepoint", () => {
 // Unattended mode must emit each agent's own "allow" wire format, not just resolve
 // the entry. resolvePermissionEntry(entry, "allow") branches on the is* flags,
 // so this walks every agent that actually routes through showPermissionBubble
-// (the "A class" agents that hand their permission decision to Clawd) and
+// (the "A class" agents that hand their permission decision to Duck) and
 // asserts the captured HTTP/bridge reply is a real allow in that agent's shape.
 
 const http = require("node:http");

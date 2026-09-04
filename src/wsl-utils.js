@@ -1,6 +1,6 @@
 "use strict";
 
-// WSL utility functions for Clawd on Desk (Windows host only).
+// WSL utility functions for Duck on Desk (Windows host only).
 //
 // All public functions are async (child_process.spawn) — they never block
 // the Electron main process. wsl.exe serialises access per-distro internally,

@@ -3,7 +3,7 @@
 (function exposeSessionFocusUnavailable(root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  if (root) root.ClawdSessionFocusUnavailable = api;
+  if (root) root.DuckSessionFocusUnavailable = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function buildSessionFocusUnavailable() {
   function focusUnavailableReasonKey(session) {
     if (session && session.platform === "webui") return "sessionFocusUnavailableWebui";

@@ -105,7 +105,7 @@
 
     <!-- Upper Body (JS body-shift preserved for compatibility) -->
     <g id="body-js">
-      <g class="breathe-anim">
+      <g id="accessory-anchor" class="breathe-anim">
         <!-- Torso -->
         <rect x="2" y="6" width="11" height="7" fill="#DE886D"/>
 
@@ -129,9 +129,9 @@
       </g>
     </g>
 
-    <!-- Pixel Laptop (inside rotation group so it leans with Clawd) -->
+    <!-- Pixel Laptop (inside rotation group so it leans with Duck) -->
     <g id="laptop" transform="translate(3, 11)">
-      <!-- Laptop Base -->
+      <!-- Laptop Base --> 
       <rect x="-0.5" y="4" width="8" height="1" fill="#546E7A" rx="0.5"/>
       <!-- Screen Back -->
       <rect x="0" y="0" width="7" height="4.5" fill="#78909C" rx="0.5"/>

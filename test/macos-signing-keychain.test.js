@@ -83,7 +83,7 @@ test("the reviewed signing patch is idempotent and rejects changed upstream cont
 });
 
 test("only the recognized macOS build module is changed; version/platform mismatches preserve it", (t) => {
-  const builderRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-mac-signing-"));
+  const builderRoot = fs.mkdtempSync(path.join(os.tmpdir(), "duck-mac-signing-"));
   t.after(() => fs.rmSync(builderRoot, { recursive: true, force: true }));
   const filename = path.join(builderRoot, "out", "codeSign", "macCodeSign.js");
   fs.mkdirSync(path.dirname(filename), { recursive: true });

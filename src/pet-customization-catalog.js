@@ -45,7 +45,7 @@ const PET_ACCESSORY_CATALOG = Object.freeze([
   freezeAccessory({ id: "top-hat", labelKey: "accessoryTopHat", file: "top-hat.svg", viewBox: { x: 0, y: 0, width: 14, height: 10 }, widthScale: 0.88, offsetY: 0.2 }),
   freezeAccessory({ id: "santa-hat", labelKey: "accessorySantaHat", file: "santa-hat.svg", viewBox: { x: 0, y: 0, width: 16, height: 9 }, offsetY: 0.2 }),
   freezeAccessory({ id: "pumpkin-hat", labelKey: "accessoryPumpkinHat", file: "pumpkin-hat.svg", viewBox: { x: 0, y: 0, width: 13, height: 9 }, widthScale: 0.85, offsetY: 0.4 }),
-  freezeAccessory({ id: "halo", labelKey: "accessoryHalo", file: "halo.svg", viewBox: { x: 0, y: 0, width: 14, height: 5 }, widthScale: 1.15, offsetY: -1.4, themeWidthScales: { clawd: 0.9 } }),
+  freezeAccessory({ id: "halo", labelKey: "accessoryHalo", file: "halo.svg", viewBox: { x: 0, y: 0, width: 14, height: 5 }, widthScale: 1.15, offsetY: -1.4, themeWidthScales: { duck: 0.9 } }),
 ]);
 
 const PET_ACCESSORY_BY_ID = new Map(PET_ACCESSORY_CATALOG.map((entry) => [entry.id, entry]));

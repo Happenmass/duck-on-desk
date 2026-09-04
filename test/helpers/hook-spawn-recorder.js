@@ -1,7 +1,7 @@
 "use strict";
 
 // Process-spawn recorder that deliberately knows nothing about HTTP. Keeping
-// this preload independent lets adapter tests connect to the fake Clawd HTTP
+// this preload independent lets adapter tests connect to the fake Duck HTTP
 // responder while still proving that no PowerShell/cmd/other child process was
 // created on the authoritative B1a path.
 
@@ -19,12 +19,12 @@ function record(_kind, file) {
 
 cp.execFileSync = function recordingExecFileSync(file) {
   record("execFileSync", file);
-  throw Object.assign(new Error("spawn recorder blocked execFileSync"), { code: "ECLAWDSPAWNPROBE" });
+  throw Object.assign(new Error("spawn recorder blocked execFileSync"), { code: "EDUCKSPAWNPROBE" });
 };
 
 cp.execSync = function recordingExecSync(command) {
   record("execSync", command);
-  throw Object.assign(new Error("spawn recorder blocked execSync"), { code: "ECLAWDSPAWNPROBE" });
+  throw Object.assign(new Error("spawn recorder blocked execSync"), { code: "EDUCKSPAWNPROBE" });
 };
 
 cp.spawnSync = function recordingSpawnSync(file) {
@@ -34,7 +34,7 @@ cp.spawnSync = function recordingSpawnSync(file) {
 
 cp.spawn = function recordingSpawn(file) {
   record("spawn", file);
-  throw Object.assign(new Error("spawn recorder blocked spawn"), { code: "ECLAWDSPAWNPROBE" });
+  throw Object.assign(new Error("spawn recorder blocked spawn"), { code: "EDUCKSPAWNPROBE" });
 };
 
 cp.execFile = function recordingExecFile(file, ...args) {
@@ -52,7 +52,7 @@ cp.exec = function recordingExec(command, ...args) {
 };
 
 process.on("exit", () => {
-  const out = process.env.CLAWD_PROBE_OUT;
+  const out = process.env.DUCK_PROBE_OUT;
   if (!out) return;
   try { fs.writeFileSync(out, JSON.stringify(spawns), "utf8"); } catch {}
 });

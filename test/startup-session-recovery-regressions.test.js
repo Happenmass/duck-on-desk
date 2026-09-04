@@ -15,7 +15,7 @@ const {
 const { restoreSessionsFromRecoveryLeases } = require("../src/session-recovery-loader");
 
 themeLoader.init(path.join(__dirname, "..", "src"));
-const defaultTheme = themeLoader.loadTheme("clawd");
+const defaultTheme = themeLoader.loadTheme("duck");
 
 function makeState() {
   return require("../src/state")({
@@ -116,7 +116,7 @@ describe("startup session recovery regressions", () => {
   });
 
   it("rejects a valid lease when the integration is enabled but not installed", () => {
-    recoveryDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-recovery-installed-"));
+    recoveryDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-recovery-installed-"));
     updateRecoveryLeaseFromStateBody(
       leaseBody(),
       leaseOptions(recoveryDir, 1000),
@@ -143,7 +143,7 @@ describe("startup session recovery regressions", () => {
   });
 
   it("never persists a title synthesized from the prompt", () => {
-    recoveryDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-recovery-title-"));
+    recoveryDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-recovery-title-"));
     const body = leaseBody({ session_title: "Sensitive prompt used as fallback" });
     Object.defineProperty(body, "_sessionTitleFromPrompt", {
       value: true,

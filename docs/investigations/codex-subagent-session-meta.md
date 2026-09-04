@@ -51,7 +51,7 @@ The subagent sample was `rollout-2026-05-01T12-16-50-019de1c0-ed8e-73b0-992d-109
 - `payload.agent_role` is present on the same subagent sample and is a secondary signal.
 - Root samples observed on 2026-04-28 through 2026-05-01 use `payload.source: "cli"` and do not carry `agent_role`, `agent_id`, `agent_type`, or `parent_session_id`.
 - The subagent `session_meta` first line was 22187 UTF-8 bytes because `base_instructions` is embedded. An 8KB read is not enough; hook-side metadata reading must read in chunks up to a bounded cap and stop at the first newline.
-- No local hook stdin dump was available. Current OpenAI Codex hooks documentation (`https://developers.openai.com/codex/hooks`) lists common hook input fields such as `session_id`, `transcript_path`, `cwd`, `hook_event_name`, and `model`, but does not document a root/subagent role field in the hook payload, so Clawd reads `transcript_path` metadata for the hook state path.
+- No local hook stdin dump was available. Current OpenAI Codex hooks documentation (`https://developers.openai.com/codex/hooks`) lists common hook input fields such as `session_id`, `transcript_path`, `cwd`, `hook_event_name`, and `model`, but does not document a root/subagent role field in the hook payload, so Duck reads `transcript_path` metadata for the hook state path.
 
 ## Implementation Notes
 

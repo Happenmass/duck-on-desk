@@ -61,10 +61,10 @@ describe("win-process-ancestry", () => {
       array: () => ({ kind: "array" }),
       sizeof: (value) => {
         if (value === "void *") return 8;
-        return value && value.name === "ClawdPROCESSENTRY32W" ? 568 : 8;
+        return value && value.name === "DuckPROCESSENTRY32W" ? 568 : 8;
       },
       offsetof: (value, member) => {
-        if (value && value.name === "ClawdPROCESSENTRY32W") {
+        if (value && value.name === "DuckPROCESSENTRY32W") {
           return VALID_TOOLHELP_ABI.processEntryOffsets[member];
         }
         return VALID_TOOLHELP_ABI.fileTimeOffsets[member];

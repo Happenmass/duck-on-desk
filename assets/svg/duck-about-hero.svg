@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 2 20 16" width="500" height="400">
-  <!-- Clawd About hero: "Deal with it" intro → freeze at 55% (cool pose, post-second-sparkle, hands not yet returning).
-       Adapted from themes/clawd/assets/source/clawd-experiment-put-on-v4.svg:
+  <!-- Duck About hero: "Deal with it" intro → freeze at 55% (cool pose, post-second-sparkle, hands not yet returning).
+       Adapted from themes/duck/assets/source/duck-experiment-put-on-v4.svg:
          - 8s infinite → 4.4s forwards (plays once, freezes at terminal keyframe)
          - Keyframes past 55% removed; remaining remapped from 0-55% → 0-100%
          - Wrapped in <g class="breath-wrap"> for subtle breathing after intro

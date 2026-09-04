@@ -3,7 +3,7 @@
 // src/server.js calls writeRuntimeConfig inside the 'listening' handler, and
 // settle() — the thing that resolves startHttpServer's promise with the bound
 // port — is BELOW that call. writeRuntimeConfig's mkdirSync used to sit outside
-// its own try, so an EACCES on ~/.clawd escaped as an exception, the handler
+// its own try, so an EACCES on ~/.duck escaped as an exception, the handler
 // unwound before settle(), and the promise never resolved. Every caller that
 // awaits the bound port waits forever, for a failure that should have been a
 // warning.
@@ -23,11 +23,11 @@ const { checkLocalServer } = require("../src/doctor-detectors/local-server");
 
 function makeServer({
   writeRuntimeConfig = () => true,
-  readRuntimePort = () => 23333,
-  identity = { ok: true, reason: null, port: 23333, ownerPid: process.pid },
+  readRuntimePort = () => 24333,
+  identity = { ok: true, reason: null, port: 24333, ownerPid: process.pid },
   readRuntimeIdentity = () => identity,
   isProcessAlive = () => true,
-  addressPort = 23333,
+  addressPort = 24333,
   runtimeConfigPath = undefined,
   isWinHost = true,
   windowsProcessChainModes = undefined,
@@ -109,14 +109,14 @@ describe("#681 — startHttpServer always settles, however the runtime write goe
   it("settles with the bound port on a successful write", async () => {
     const h = makeServer();
     try {
-      assert.strictEqual(await h.api.startHttpServer(), 23333);
+      assert.strictEqual(await h.api.startHttpServer(), 24333);
     } finally { h.restore(); }
   });
 
   it("settles with the bound port when writeRuntimeConfig returns false", async () => {
     const h = makeServer({ writeRuntimeConfig: () => false });
     try {
-      assert.strictEqual(await h.api.startHttpServer(), 23333,
+      assert.strictEqual(await h.api.startHttpServer(), 24333,
         "a failed runtime write must not deprive callers of the port they are awaiting");
     } finally { h.restore(); }
   });
@@ -136,7 +136,7 @@ describe("#681 — startHttpServer always settles, however the runtime write goe
         h.api.startHttpServer(),
         new Promise((r) => setTimeout(() => r("TIMED-OUT"), 2000)),
       ]);
-      assert.strictEqual(port, 23333,
+      assert.strictEqual(port, 24333,
         "a throwing writeRuntimeConfig must not strand startHttpServer's promise — settle() is below it");
     } finally { h.restore(); }
   });
@@ -196,7 +196,7 @@ describe("#681 — the warning branch must not reach the runtime file to log its
   it("the async listen mock settles normally with no seam throwing", async () => {
     const h = makeServer({ asyncListen: true, writeRuntimeConfig: () => false });
     try {
-      assert.strictEqual(await h.api.startHttpServer(), 23333);
+      assert.strictEqual(await h.api.startHttpServer(), 24333);
     } finally { h.restore(); }
   });
 
@@ -208,7 +208,7 @@ describe("#681 — the warning branch must not reach the runtime file to log its
           h.api.startHttpServer(),
           new Promise((r) => setTimeout(() => r("TIMED-OUT"), 2000)),
         ]);
-        assert.strictEqual(port, 23333,
+        assert.strictEqual(port, 24333,
           `logging a failed runtime write must not depend on ${name}: it sits above settle(), `
           + "and in Electron main a throw from this handler has no uncaughtException handler to catch it");
       } finally { h.restore(); }
@@ -222,14 +222,14 @@ describe("#681 — the warning branch must not reach the runtime file to log its
     const h = makeServer({
       writeRuntimeConfig: () => false,
       asyncListen: true,
-      runtimeConfigPath: "D:/fake-home/.clawd/runtime.json",
+      runtimeConfigPath: "D:/fake-home/.duck-on-desk/runtime.json",
       readRuntimePort: () => { throw new Error("EACCES: readRuntimePort"); },
     });
     try {
       await h.api.startHttpServer();
       const hits = h.warnings.filter((w) => /runtime file was not written/i.test(w));
       assert.strictEqual(hits.length, 1);
-      assert.match(hits[0], /D:\/fake-home\/\.clawd\/runtime\.json/,
+      assert.match(hits[0], /D:\/fake-home\/\.duck-on-desk\/runtime\.json/,
         "the warning is useless without the path, so the cheap derivation must produce the same one");
     } finally { h.restore(); }
   });

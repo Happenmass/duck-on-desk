@@ -72,7 +72,7 @@ function cleanupBackupPath(filePath, options = {}) {
   const stamp = now instanceof Date && !Number.isNaN(now.getTime())
     ? now.toISOString().replace(/[-:TZ.]/g, "").slice(0, 17)
     : String(Date.now());
-  return `${filePath}.clawd-cleanup-${stamp}.bak`;
+  return `${filePath}.duck-on-desk-cleanup-${stamp}.bak`;
 }
 
 function uniqueBackupPath(filePath, options = {}) {
@@ -90,7 +90,7 @@ function uniqueBackupPath(filePath, options = {}) {
 // Cap how many timestamped backups we keep for a single file. Without a cap, a
 // config that gets rewritten repeatedly — e.g. the settings watcher
 // re-registering hooks after another tool (CC-Switch) strips them — would
-// accrue `.clawd-cleanup-*.bak` files without bound. 5 keeps a short history
+// accrue `.duck-on-desk-cleanup-*.bak` files without bound. 5 keeps a short history
 // while staying bounded; override per-call with `backupKeep`.
 const DEFAULT_BACKUP_KEEP = 5;
 
@@ -101,7 +101,7 @@ function resolveBackupKeep(options = {}) {
 }
 
 function ownBackupPrefix(filePath) {
-  return `${path.basename(filePath)}.clawd-cleanup-`;
+  return `${path.basename(filePath)}.duck-on-desk-cleanup-`;
 }
 
 function isOwnBackupName(name, prefix) {
@@ -327,11 +327,11 @@ function quoteHookCommandArg(value) {
 }
 
 // WSL detection for the hook command format, mirroring install.js's
-// resolveInstallWslDistro: CLAWD_WSL_DISTRO is injected by the Windows-side
+// resolveInstallWslDistro: DUCK_WSL_DISTRO is injected by the Windows-side
 // one-click deploy, WSL_DISTRO_NAME by WSL init itself. Gated on linux so a
 // stale variable in some other environment cannot flip the format.
 function resolveWslDistroEnv() {
-  if (process.env.CLAWD_WSL_DISTRO) return process.env.CLAWD_WSL_DISTRO;
+  if (process.env.DUCK_WSL_DISTRO) return process.env.DUCK_WSL_DISTRO;
   if (process.platform === "linux" && process.env.WSL_DISTRO_NAME) {
     return process.env.WSL_DISTRO_NAME;
   }
@@ -565,14 +565,14 @@ function commandMatchesMarker(command, marker) {
   return !!(decoded && decoded.includes(marker));
 }
 
-const CLAUDE_STATE_HOOK_MARKER = "clawd-hook.js";
+const CLAUDE_STATE_HOOK_MARKER = "duck-hook.js";
 const CLAUDE_HOOK_PATH_VAR_TOKENS = new Set([
-  "$CLAWD_HOOK_PATH",
-  "${CLAWD_HOOK_PATH}",
+  "$DUCK_HOOK_PATH",
+  "${DUCK_HOOK_PATH}",
 ]);
 const CLAUDE_NODE_BIN_VAR_TOKENS = new Set([
-  "$CLAWD_NODE_BIN",
-  "${CLAWD_NODE_BIN}",
+  "$DUCK_NODE_BIN",
+  "${DUCK_NODE_BIN}",
 ]);
 
 // Parse exactly one whitespace-delimited command whose only quoting form is
@@ -641,7 +641,7 @@ function nodeCandidateDedupeKey(value) {
     : value;
 }
 
-function isDirectClawdHookPath(value) {
+function isDirectDuckHookPath(value) {
   if (typeof value !== "string") return false;
   const text = value.trim();
   if (!text || /[\r\n\0$`]/.test(text) || /%[^%]+%/.test(text)) return false;
@@ -651,7 +651,7 @@ function isDirectClawdHookPath(value) {
 /**
  * Recognize only the externally evidenced POSIX env-indirected Claude state
  * hook command. This is syntax recognition, not ownership: callers must also
- * prove settings.env.CLAWD_HOOK_PATH resolves to the Clawd marker.
+ * prove settings.env.DUCK_HOOK_PATH resolves to the Duck marker.
  */
 function parseClaudeEnvStateHookCommand(command, event) {
   if (typeof event !== "string" || !event) return null;
@@ -688,8 +688,8 @@ function classifyManagedClaudeStateHookCommand(command, settings, event) {
   const env = settings && typeof settings.env === "object" && !Array.isArray(settings.env)
     ? settings.env
     : null;
-  if (!env || !Object.prototype.hasOwnProperty.call(env, "CLAWD_HOOK_PATH")) return null;
-  return isDirectClawdHookPath(env.CLAWD_HOOK_PATH) ? "env" : null;
+  if (!env || !Object.prototype.hasOwnProperty.call(env, "DUCK_HOOK_PATH")) return null;
+  return isDirectDuckHookPath(env.DUCK_HOOK_PATH) ? "env" : null;
 }
 
 function getClaudeEnvNodeBinCandidates(settings, parsedCommand = null) {
@@ -709,8 +709,8 @@ function getClaudeEnvNodeBinCandidates(settings, parsedCommand = null) {
   const env = settings && typeof settings.env === "object" && !Array.isArray(settings.env)
     ? settings.env
     : null;
-  if (env && Object.prototype.hasOwnProperty.call(env, "CLAWD_NODE_BIN")) {
-    append(typeof env.CLAWD_NODE_BIN === "string" ? env.CLAWD_NODE_BIN.trim() : "");
+  if (env && Object.prototype.hasOwnProperty.call(env, "DUCK_NODE_BIN")) {
+    append(typeof env.DUCK_NODE_BIN === "string" ? env.DUCK_NODE_BIN.trim() : "");
   }
   return candidates;
 }

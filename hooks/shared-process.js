@@ -1,5 +1,5 @@
 // hooks/shared-process.js — Shared process tree walk, stdin reader, platform config
-// Used by hook scripts (clawd, codex).
+// Used by hook scripts (duck, codex).
 // Zero third-party dependencies — Node built-ins plus the sibling hook helpers
 // registered in both deployment manifests (./server-config, lazily ./pid-cache).
 // server-config.js does NOT require this module, so there is no cycle.
@@ -214,7 +214,7 @@ $typeDef = @"
 using System;
 using System.Text;
 using System.Runtime.InteropServices;
-public class ClawdWin32 {
+public class DuckWin32 {
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr hWnd, uint gaFlags);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -223,17 +223,17 @@ public class ClawdWin32 {
 }
 "@
 Add-Type -TypeDefinition $typeDef
-$fg = [ClawdWin32]::GetForegroundWindow()
+$fg = [DuckWin32]::GetForegroundWindow()
 if ($fg -ne [IntPtr]::Zero) {
-  $root = [ClawdWin32]::GetAncestor($fg, 2)
+  $root = [DuckWin32]::GetAncestor($fg, 2)
   if ($root -ne [IntPtr]::Zero) { $fg = $root }
 }
 $fgPid = 0
 $fgClass = ""
 if ($fg -ne [IntPtr]::Zero) {
-  [void][ClawdWin32]::GetWindowThreadProcessId($fg, [ref]$fgPid)
+  [void][DuckWin32]::GetWindowThreadProcessId($fg, [ref]$fgPid)
   $sb = New-Object System.Text.StringBuilder 256
-  [void][ClawdWin32]::GetClassName($fg, $sb, $sb.Capacity)
+  [void][DuckWin32]::GetClassName($fg, $sb, $sb.Capacity)
   $fgClass = $sb.ToString()
 }
 $processes = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Select-Object ProcessId, ParentProcessId, Name, CommandLine, @{Name='StartIdentity';Expression={try { $_.CreationDate.ToUniversalTime().Ticks.ToString() } catch { $null }}})
@@ -308,7 +308,7 @@ function getWindowsProcessSnapshot(execFileSync) {
 // Two ways the Windows walk can produce no usable metadata, both of which used
 // to end in a WRONG-but-plausible PID:
 //
-//   1. Clawd is not running. The hook still ran the snapshot PowerShell before
+//   1. Duck is not running. The hook still ran the snapshot PowerShell before
 //      discovering that nobody would receive the POST — so a normal Quit left
 //      every CLI's leftover hook reading the whole machine's process list on
 //      every event (#681). The gate below is checked BEFORE
@@ -324,8 +324,8 @@ function getWindowsProcessSnapshot(execFileSync) {
 // never tried (gate), true = we tried and it failed. POSIX never reaches either
 // branch — no runtime read, no shape change, ps/tmux untouched.
 
-const SKIP_REASON_OFFLINE = "clawd-offline";
-const SKIP_REASON_REMOTE = "clawd-remote";
+const SKIP_REASON_OFFLINE = "duck-offline";
+const SKIP_REASON_REMOTE = "duck-remote";
 const SKIP_REASON_SNAPSHOT_FAILED = "snapshot-failed";
 // Kept distinct from snapshot-failed on purpose: these two look identical from
 // the outside (no metadata) but have opposite causes and opposite fixes. A
@@ -533,8 +533,8 @@ function createPidResolver(options) {
     ? options.agentCmdlineNames
     : new Set(["node.exe", "node"]);
 
-  // #681 seams. Injected so tests never read the real ~/.clawd/runtime.json and
-  // never depend on whether the developer's Clawd happens to be running.
+  // #681 seams. Injected so tests never read the real ~/.duck-on-desk/runtime.json and
+  // never depend on whether the developer's Duck happens to be running.
   const readRuntimeIdentityFn = options.readRuntimeIdentity || readRuntimeIdentity;
   const gateEnv = options.env || process.env;
   const getWindowsProcessSnapshotFn = typeof options.getWindowsProcessSnapshot === "function"
@@ -558,7 +558,7 @@ function createPidResolver(options) {
   //
   // ownerPid liveness is a LIVENESS hint, not an ownership proof. processAlive
   // maps EPERM to "alive" (a PID we may not signal still exists), which says
-  // nothing about whether that PID is still Clawd. PID reuse, and an Electron
+  // nothing about whether that PID is still Duck. PID reuse, and an Electron
   // owner that outlives its HTTP server, stay explicit residuals — see plan
   // §14.1. Do not describe this as authentication.
   function windowsSkipReason() {
@@ -759,7 +759,7 @@ function createPidResolver(options) {
   // Compatibility no-arg path (SessionStart prewarm + the 12 not-yet-migrated
   // adapters): byte-for-byte with 5c2b1f0 — first call snapshots, later calls
   // return the SAME cached object. It performs ZERO cache
-  // read/write/touch/drop/promotion/sweep and never produces a clawd-pidcache2-*
+  // read/write/touch/drop/promotion/sweep and never produces a duck-pidcache2-*
   // file; all disk-cache orchestration lives behind the context overload below.
   function freshResolve() {
     if (_cached) return _cached;
@@ -947,7 +947,7 @@ function createPidResolver(options) {
     // the ps-based path identical to 5c2b1f0 for mac/linux.
     //
     // MUST go through freshMetadata(), not freshResolve(): the raw walk has no
-    // `headless`, and clawd-hook.js trusts that field alone now (it no longer
+    // `headless`, and duck-hook.js trusts that field alone now (it no longer
     // re-parses agentCommandLine, because a cache hit has no command line to
     // parse). Returning the raw shape here silently reported every `claude -p`
     // on macOS/Linux as an interactive session, which then also showed up in the
@@ -1060,7 +1060,7 @@ function buildElectronLaunchConfig(projectDir, options = {}) {
   const env = { ...(options.env || process.env) };
   delete env.ELECTRON_RUN_AS_NODE;
 
-  const disableSandbox = platform === "linux" && env.CLAWD_DISABLE_SANDBOX === "1";
+  const disableSandbox = platform === "linux" && env.DUCK_DISABLE_SANDBOX === "1";
   if (disableSandbox) {
     env.ELECTRON_DISABLE_SANDBOX = "1";
     env.CHROME_DEVEL_SANDBOX = "";

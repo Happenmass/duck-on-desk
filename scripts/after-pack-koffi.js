@@ -240,7 +240,7 @@ async function afterPack(context) {
     log.info({ target: target.id, deletedBytes: report.summary.deletedBytes }, "pruned foreign Koffi native payloads");
   } else {
     process.stdout.write(
-      `Clawd: pruned Koffi for ${target.id}; removed ${report.summary.deletedFiles} files ` +
+      `Duck: pruned Koffi for ${target.id}; removed ${report.summary.deletedFiles} files ` +
       `(${report.summary.deletedBytes} bytes).\n`
     );
   }

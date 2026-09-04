@@ -2695,7 +2695,7 @@ html, body {
 }
 .doctor-modal {
   width: min(728px, 100%);
-  max-height: calc(100vh / var(--clawd-text-zoom, 1) - 32px);
+  max-height: calc(100vh / var(--duck-text-zoom, 1) - 32px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -3273,7 +3273,7 @@ html, body {
 }
 .asset-picker-modal {
   width: min(920px, 100%);
-  max-height: calc(100vh / var(--clawd-text-zoom, 1) - 48px);
+  max-height: calc(100vh / var(--duck-text-zoom, 1) - 48px);
   overflow: hidden;
   display: flex;
   flex-direction: column;

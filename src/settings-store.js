@@ -73,7 +73,7 @@ function createStore(initialSnapshot) {
       try {
         fn(broadcast);
       } catch (err) {
-        console.warn("Clawd: settings-store subscriber threw:", err && err.message);
+        console.warn("Duck: settings-store subscriber threw:", err && err.message);
       }
     }
     return { changed: true, changes };

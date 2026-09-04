@@ -86,7 +86,7 @@ function createShortcutRuntime(options = {}) {
       }
       if (!ok) {
         reportFailure(actionId, "system conflict");
-        console.warn(`Clawd: failed to register shortcut ${actionId}: ${accelerator}`);
+        console.warn(`Duck: failed to register shortcut ${actionId}: ${accelerator}`);
         continue;
       }
       clearFailure(actionId);

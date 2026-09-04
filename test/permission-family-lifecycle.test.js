@@ -79,7 +79,7 @@ function makeRuntimeHarness() {
   const logs = [];
   const permDebugLog = path.join(
     os.tmpdir(),
-    `clawd-family-lifecycle-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.log`
+    `duck-family-lifecycle-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.log`
   );
   tempLogPaths.add(permDebugLog);
   const initPermission = loadPermissionWithElectron(makeFakeElectron(shortcutCalls));
@@ -381,7 +381,7 @@ describe("opencode-family lifecycle route → real runtime", () => {
     });
 
     assert.strictEqual(lifecycleResult.res.statusCode, 200);
-    assert.strictEqual(lifecycleResult.res.headers["x-clawd-server"], "clawd-on-desk");
+    assert.strictEqual(lifecycleResult.res.headers["x-duck-server"], "duck-on-desk");
     assert.deepStrictEqual(lifecycleResult.recorder, []);
     assert.strictEqual(harness.api.pendingPermissions.length, 0);
     assert.strictEqual(entry.bubble.hidden, true);

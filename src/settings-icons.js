@@ -71,4 +71,4 @@ function getIcon(id) {
   return ICONS[id] || ICONS.placeholder;
 }
 
-globalThis.ClawdSettingsIcons = { getIcon, ICONS };
+globalThis.DuckSettingsIcons = { getIcon, ICONS };

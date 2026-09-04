@@ -75,8 +75,8 @@ const clearRuntimeConfigFn = ctx.clearRuntimeConfig || clearRuntimeConfig;
 const getPortCandidatesFn = ctx.getPortCandidates || getPortCandidates;
 const readRuntimePortFn = ctx.readRuntimePort || readRuntimePort;
 const writeRuntimeConfigFn = ctx.writeRuntimeConfig || writeRuntimeConfig;
-// #681. Injectable so tests never read the developer's real ~/.clawd/runtime.json
-// (whose contents depend on whether Clawd happens to be running right now).
+// #681. Injectable so tests never read the developer's real ~/.duck-on-desk/runtime.json
+// (whose contents depend on whether Duck happens to be running right now).
 const readRuntimeIdentityFn = ctx.readRuntimeIdentity
   || (() => readRuntimeIdentity({ runtimeConfigPath: ctx.runtimeConfigPath }));
 const isProcessAliveFn = ctx.isProcessAlive || processAlive;
@@ -87,7 +87,7 @@ const windowsProcessChainInstanceGeneration = typeof ctx.windowsProcessChainInst
   : crypto.randomUUID();
 const requestedWindowsProcessChainModes = Object.fromEntries(B1A_AGENT_IDS.map((agentId) => {
   const injectedMode = ctx.windowsProcessChainModes && ctx.windowsProcessChainModes[agentId];
-  const envName = `CLAWD_WINDOWS_PROCESS_CHAIN_${agentId.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+  const envName = `DUCK_WINDOWS_PROCESS_CHAIN_${agentId.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
   const envMode = process.env[envName];
   // Shadow performs both the legacy PowerShell snapshot and the synchronous
   // server FFI walk. It is therefore an explicit diagnostics mode, never a
@@ -233,7 +233,7 @@ function getRuntimeStatus() {
   // #681: the runtime file is now the hook resolver's offline gate, so its
   // identity — not just its port — decides whether hooks can report process
   // metadata at all. A stale ownerPid (a crashed instance's leftover file) reads
-  // as "Clawd offline" to every hook even while this server is happily
+  // as "Duck offline" to every hook even while this server is happily
   // listening, which is exactly the state Doctor must surface.
   const identity = readRuntimeIdentityFn();
   const runtimeOwnerPid = identity && identity.ok ? identity.ownerPid : null;
@@ -351,7 +351,7 @@ function registerClaudeHooksTask(meta) {
       return {
         status: "error",
         reason: "source-script-missing",
-        message: "Claude hook source script is missing; reinstall or re-extract Clawd",
+        message: "Claude hook source script is missing; reinstall or re-extract Duck",
       };
     }
 
@@ -370,22 +370,22 @@ function registerClaudeHooksTask(meta) {
         if (ctx.claudeQuotaCollectionEnabled === true) {
           const statuslineResult = registerClaudeStatusline({ silent: true });
           if (statuslineResult.changed) {
-            console.log("Clawd: registered Claude Code statusline");
+            console.log("Duck: registered Claude Code statusline");
           }
         } else {
           claudeStatuslineIngressSuppressed = true;
           // Migration/startup cleanup is ownership-safe: the installer only
-          // removes a statusLine command carrying Clawd's marker.
+          // removes a statusLine command carrying Duck's marker.
           unregisterClaudeStatusline({ backup: true, silent: true });
           clearLocalClaudeStatuslineAuthority();
         }
       } catch (statuslineErr) {
-        console.warn("Clawd: failed to sync Claude Code statusline:", statuslineErr.message);
+        console.warn("Duck: failed to sync Claude Code statusline:", statuslineErr.message);
       }
     }
     const { added, updated, removed } = result;
     if (added > 0 || updated > 0 || removed > 0) {
-      console.log(`Clawd: synced hooks (added ${added}, updated ${updated}, removed ${removed}) [${meta.source || "unspecified"}]`);
+      console.log(`Duck: synced hooks (added ${added}, updated ${updated}, removed ${removed}) [${meta.source || "unspecified"}]`);
     }
 
     // Never trust the installer's own success signal alone — re-read and
@@ -445,7 +445,7 @@ function unregisterClaudeHooksTask(meta) {
   };
 }
 
-function syncClawdHooksQueued(implOptions = {}) {
+function syncDuckHooksQueued(implOptions = {}) {
   const source = typeof implOptions.source === "string" ? implOptions.source : "unspecified";
   const automatic = implOptions.automatic !== false;
   const meta = { source, autoStart: implOptions.autoStart, port: implOptions.port };
@@ -491,7 +491,7 @@ function setClaudeQuotaCollectionEnabled(callOptions = {}) {
       return {
         status: "error",
         reason: "statusline-occupied",
-        message: "Claude Code already has a custom statusline; Clawd left it unchanged",
+        message: "Claude Code already has a custom statusline; Duck left it unchanged",
       };
     }
     if (result.installed !== true) {
@@ -527,7 +527,7 @@ function setClaudeAutoStart(callOptions = {}) {
       return {
         status: "error",
         reason: "source-script-missing",
-        message: "Claude hook source script is missing; reinstall or re-extract Clawd",
+        message: "Claude hook source script is missing; reinstall or re-extract Duck",
       };
     }
 
@@ -551,7 +551,7 @@ function setClaudeAutoStart(callOptions = {}) {
   });
 }
 
-// integration-sync.js's Claude branch delegates through the ctx.syncClawdHooksImpl
+// integration-sync.js's Claude branch delegates through the ctx.syncDuckHooksImpl
 // / ctx.uninstallIntegrationImpls seams. Only fill in the queue-backed default
 // when the caller hasn't already provided one — production (main.js) never
 // does, so it gets the real queued implementation; tests that inject their own
@@ -568,9 +568,9 @@ const integrationSyncCtx = {
   // setting instead of whatever it was when the server started (#657
   // follow-up review finding).
   get autoStartWithClaude() { return ctx.autoStartWithClaude; },
-  syncClawdHooksImpl: typeof ctx.syncClawdHooksImpl === "function"
-    ? ctx.syncClawdHooksImpl
-    : (implOptions) => syncClawdHooksQueued(implOptions),
+  syncDuckHooksImpl: typeof ctx.syncDuckHooksImpl === "function"
+    ? ctx.syncDuckHooksImpl
+    : (implOptions) => syncDuckHooksQueued(implOptions),
   uninstallIntegrationImpls: {
     "claude-code": () => uninstallClaudeHooksQueued({ source: "settings-agent-uninstall", automatic: false }),
     ...(ctx.uninstallIntegrationImpls || {}),
@@ -588,7 +588,7 @@ const integrationSync = createIntegrationSyncRuntime({
   stopClaudeSettingsWatcher,
 });
 const {
-  syncClawdHooks,
+  syncDuckHooks,
   syncCodexHooks,
   syncOpencodePlugin,
   syncPiExtension,
@@ -658,7 +658,7 @@ function repairRuntimeStatus() {
   }
   return {
     status: "error",
-    message: "Local server is not listening; restart Clawd",
+    message: "Local server is not listening; restart Duck",
   };
 }
 
@@ -673,7 +673,7 @@ const claudeSettingsWatcher = createClaudeSettingsWatcher({
   isAgentEnabled,
   shouldSyncAgentIntegration,
   getHookServerPort,
-  syncClawdHooks,
+  syncDuckHooks,
   notifySuspiciousShrink,
 });
 
@@ -800,7 +800,7 @@ function startHttpServer() {
         runtimeWritten = writeCurrentRuntimeConfig(activeServerPort) === true;
       } catch (err) {
         runtimeWritten = false;
-        console.warn("Failed to write the Clawd runtime file:", (err && err.message) || err);
+        console.warn("Failed to write the Duck runtime file:", (err && err.message) || err);
       }
       if (!runtimeWritten) {
         // Hooks fall back to probing the port range, so state/permission POSTs
@@ -813,11 +813,11 @@ function startHttpServer() {
         // fields this log line discards, and each of those is a throw-capable
         // ctx seam sitting above settle().
         console.warn(
-          `Clawd runtime file was not written (${runtimeConfigFilePath()}) — `
+          `Duck runtime file was not written (${runtimeConfigFilePath()}) — `
           + "hook process metadata will be omitted until this is repaired (see Doctor → Local server)"
         );
       }
-      console.log(`Clawd state server listening on 127.0.0.1:${activeServerPort}`);
+      console.log(`Duck state server listening on 127.0.0.1:${activeServerPort}`);
       // Defer hook/plugin registration off the startup path. Each sync call
       // reads+parses+writes a config JSON (50-150ms cumulative on slow disks),
       // and they operate on independent files for independent agents, so
@@ -863,7 +863,7 @@ return {
   getClaudeHookHealthStatus,
   getRecentHookEvents,
   clearRecentHookEvents,
-  syncClawdHooks,
+  syncDuckHooks,
   uninstallClaudeHooks: uninstallClaudeHooksQueued,
   setClaudeQuotaCollectionEnabled,
   isClaudeStatuslineMetadataAllowed,

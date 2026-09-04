@@ -238,7 +238,7 @@ function sendPointerBridge(cursor, bounds) {
   const payload = {
     x: raw.x,
     y: raw.y,
-    // Clawd polls the global cursor, so pointer-aware Cloudling idle states
+    // Duck polls the global cursor, so pointer-aware Cloudling idle states
     // should keep following even when the cursor is outside the SVG art rect.
     inside: true,
   };

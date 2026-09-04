@@ -6,10 +6,10 @@ const { EventEmitter } = require("node:events");
 const initPermission = require("../src/permission");
 
 const {
-  CLAWD_SERVER_HEADER,
-  CLAWD_SERVER_ID,
-  CLAWD_HOOK_PID_HEADER,
-  CLAWD_PROCESS_INSTANCE_HEADER,
+  DUCK_SERVER_HEADER,
+  DUCK_SERVER_ID,
+  DUCK_HOOK_PID_HEADER,
+  DUCK_PROCESS_INSTANCE_HEADER,
 } = require("../hooks/server-config");
 const {
   MAX_PERMISSION_BODY_BYTES,
@@ -331,7 +331,7 @@ describe("server-route-permission POST", () => {
   });
 
   it("keeps a bounded compact preview and a complete local detail across permission adapters", async () => {
-    const marker = "__CLAWD_PERMISSION_DETAIL_END__";
+    const marker = "__DUCK_PERMISSION_DETAIL_END__";
     const command = `${"printf x; ".repeat(260)}${marker}`;
     const cases = [
       { agentId: "claude-code", body: {} },
@@ -363,7 +363,7 @@ describe("server-route-permission POST", () => {
   });
 
   it("keeps long Ask text for the expanded view without changing the wire answer keys", async () => {
-    const marker = "__CLAWD_ASK_DETAIL_END__";
+    const marker = "__DUCK_ASK_DETAIL_END__";
     const question = [
       "Compare the tradeoffs carefully.",
       "",
@@ -613,7 +613,7 @@ describe("server-route-permission POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
     assert.deepStrictEqual(res.recorder.map((entry) => entry.outcome).filter(Boolean), ["dnd"]);
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
   });
@@ -700,7 +700,7 @@ describe("server-route-permission POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
     assert.deepStrictEqual(res.recorder.map((entry) => entry.outcome).filter(Boolean), ["accepted"]);
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
     assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, []);
@@ -909,7 +909,7 @@ describe("server-route-permission POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 200);
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
     assert.strictEqual(res.body, "ok");
     assert.deepStrictEqual(lifecycleCalls, [{
       agentId: "opencode",
@@ -946,7 +946,7 @@ describe("server-route-permission POST", () => {
         ...delta,
       }));
       assert.strictEqual(res.statusCode, 200);
-      assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+      assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
       assert.deepStrictEqual(res.recorder, []);
       assert.deepStrictEqual(
         res.ctx.calls.dismissOpencodeFamilyPermissionResolvedExternally,
@@ -1042,7 +1042,7 @@ describe("server-route-permission POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 200);
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
     assert.strictEqual(JSON.parse(res.body).hookSpecificOutput.decision.behavior, "allow");
     assert.deepStrictEqual(res.recorder.map((entry) => entry.outcome).filter(Boolean), ["dnd"]);
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
@@ -1058,7 +1058,7 @@ describe("server-route-permission POST", () => {
     }));
 
     assert.strictEqual(res.statusCode, 200);
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
     assert.strictEqual(JSON.parse(res.body).hookSpecificOutput.decision.behavior, "allow");
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
     assert.deepStrictEqual(res.ctx.calls.updateSession, []);
@@ -1080,7 +1080,7 @@ describe("server-route-permission POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 200);
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
     assert.strictEqual(JSON.parse(res.body).hookSpecificOutput.decision.behavior, "allow");
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
     assert.deepStrictEqual(res.recorder.map((item) => item.outcome).filter(Boolean), ["disabled"]);
@@ -1140,7 +1140,7 @@ describe("server-route-permission POST", () => {
   it("rejects stale custom ids without creating a Claude permission bubble", async () => {
     const res = await callPermissionPost(JSON.stringify({
       agent_id: "custom-stale-0123456789ab",
-      hook_source: "clawd-hook",
+      hook_source: "duck-hook",
       session_id: "stale:sid",
       tool_name: "Bash",
       tool_input: { command: "npm test" },
@@ -1259,8 +1259,8 @@ describe("server-route-permission POST", () => {
 describe("server-route-permission Windows B1a Codex metadata", () => {
   const generation = "permission-route-generation";
   const headers = {
-    [CLAWD_HOOK_PID_HEADER.toLowerCase()]: "7654",
-    [CLAWD_PROCESS_INSTANCE_HEADER.toLowerCase()]: generation,
+    [DUCK_HOOK_PID_HEADER.toLowerCase()]: "7654",
+    [DUCK_PROCESS_INSTANCE_HEADER.toLowerCase()]: generation,
   };
   const runtime = (mode) => ({
     version: 1,
@@ -1456,8 +1456,8 @@ describe("server-route-permission Windows B1a Codex metadata", () => {
     let mismatchCalls = 0;
     const mismatch = await callPermissionPost(body(), {
       headers: {
-        [CLAWD_HOOK_PID_HEADER.toLowerCase()]: "7654",
-        [CLAWD_PROCESS_INSTANCE_HEADER.toLowerCase()]: "old-generation",
+        [DUCK_HOOK_PID_HEADER.toLowerCase()]: "7654",
+        [DUCK_PROCESS_INSTANCE_HEADER.toLowerCase()]: "old-generation",
       },
       options: {
         isWinHost: true,

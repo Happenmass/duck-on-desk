@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Merge Clawd Codex official hooks into ~/.codex/hooks.json.
+// Merge Duck Codex official hooks into ~/.codex/hooks.json.
 //
 // PermissionRequest is registered in Phase 2. Keep its output path constrained
 // to behavior/message only; Codex currently fail-closes on several future

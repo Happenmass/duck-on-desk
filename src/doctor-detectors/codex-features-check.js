@@ -311,7 +311,7 @@ function checkCodexHookTrustText(configText, settings, hooksPath, options = {}) 
     return {
       key: "codex_hook_trust",
       value: "needs-review",
-      detail: `${missing.length}/${positions.length} Clawd Codex hook(s) need Codex /hooks review: ${missingEvents}`,
+      detail: `${missing.length}/${positions.length} Duck Codex hook(s) need Codex /hooks review: ${missingEvents}`,
       missingEvents: missing.map((position) => position.eventName),
       trustedCount: positions.length - missing.length,
       totalCount: positions.length,
@@ -321,7 +321,7 @@ function checkCodexHookTrustText(configText, settings, hooksPath, options = {}) 
   return {
     key: "codex_hook_trust",
     value: "trusted",
-    detail: `${positions.length}/${positions.length} Clawd Codex hook(s) trusted by Codex`,
+    detail: `${positions.length}/${positions.length} Duck Codex hook(s) trusted by Codex`,
     trustedCount: positions.length,
     totalCount: positions.length,
   };

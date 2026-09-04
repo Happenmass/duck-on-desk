@@ -81,7 +81,7 @@ function createThemeRuntime(options = {}) {
     return activeThemeContext;
   }
 
-  function getActiveThemeId(fallback = "clawd") {
+  function getActiveThemeId(fallback = "duck") {
     return activeTheme ? activeTheme._id : fallback;
   }
 

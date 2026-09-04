@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
-  <!-- clawd 蚊香眼晕头转向 v8 (2026-05-17)
+  <!-- duck 蚊香眼晕头转向 v8 (2026-05-17)
        v7 (codex) 三处错改, v8 全部修正:
        1) 眼睛: 不再 core+tail 拆分搅动. 用 stroke-dashoffset 沿 path 流动,
                 端点不动, 视觉上纹路向内吸. 整螺旋叠加 6s 慢转作"微动".

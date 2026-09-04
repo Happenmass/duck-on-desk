@@ -40,7 +40,7 @@ function validThemeJson(overrides = {}) {
 }
 
 function makeFixture({ builtinThemes = [], userThemes = [], centralAssets = REQUIRED_FILES } = {}) {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-theme-shape-"));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "duck-theme-shape-"));
   tempDirs.push(tmp);
   const appDir = path.join(tmp, "src");
   const userData = path.join(tmp, "userData");
@@ -83,25 +83,25 @@ afterEach(() => {
 });
 
 describe("validateThemeShape", () => {
-  it("validates a built-in theme using central clawd assets without activating a theme", () => {
+  it("validates a built-in theme using central duck assets without activating a theme", () => {
     makeFixture({
       builtinThemes: [
-        { id: "clawd", json: validThemeJson({ name: "Clawd" }) },
+        { id: "duck", json: validThemeJson({ name: "Duck" }) },
         { id: "other", json: validThemeJson({ name: "Other" }) },
       ],
     });
-    const loaded = themeLoader.loadTheme("clawd", { strict: true });
+    const loaded = themeLoader.loadTheme("duck", { strict: true });
 
     const result = themeLoader.validateThemeShape("other");
 
     assert.strictEqual(result.ok, true);
-    assert.strictEqual(loaded._id, "clawd");
+    assert.strictEqual(loaded._id, "duck");
     assert.strictEqual(themeLoader.getActiveTheme(), null);
   });
 
   it("validates external theme assets from source without creating theme cache", () => {
     const fixture = makeFixture({
-      builtinThemes: [{ id: "clawd", json: validThemeJson({ name: "Clawd" }) }],
+      builtinThemes: [{ id: "duck", json: validThemeJson({ name: "Duck" }) }],
       userThemes: [{
         id: "user-theme",
         json: validThemeJson({ name: "User Theme" }),
@@ -119,9 +119,9 @@ describe("validateThemeShape", () => {
   it("reports missing assets introduced by a variant", () => {
     makeFixture({
       builtinThemes: [{
-        id: "clawd",
+        id: "duck",
         json: validThemeJson({
-          name: "Clawd",
+          name: "Duck",
           variants: {
             broken: {
               workingTiers: [{ minSessions: 2, file: "missing.svg" }],
@@ -131,7 +131,7 @@ describe("validateThemeShape", () => {
       }],
     });
 
-    const result = themeLoader.validateThemeShape("clawd", { variant: "broken" });
+    const result = themeLoader.validateThemeShape("duck", { variant: "broken" });
 
     assert.strictEqual(result.ok, false);
     assert.ok(result.errors.some((error) => error.includes("missing.svg")));
@@ -139,10 +139,10 @@ describe("validateThemeShape", () => {
 
   it("reports override-introduced missing assets", () => {
     makeFixture({
-      builtinThemes: [{ id: "clawd", json: validThemeJson({ name: "Clawd" }) }],
+      builtinThemes: [{ id: "duck", json: validThemeJson({ name: "Duck" }) }],
     });
 
-    const result = themeLoader.validateThemeShape("clawd", {
+    const result = themeLoader.validateThemeShape("duck", {
       overrides: { states: { idle: { file: "missing-override.svg" } } },
     });
 
@@ -154,7 +154,7 @@ describe("validateThemeShape", () => {
 describe("checkThemeHealth", () => {
   it("wraps validateThemeShape into a doctor check", () => {
     const result = checkThemeHealth({
-      prefs: { theme: "clawd" },
+      prefs: { theme: "duck" },
       validateThemeShape: () => ({ ok: true, errors: [], resolvedVariant: "default" }),
     });
 

@@ -398,10 +398,10 @@ describe("settings-effect-router", () => {
       },
     });
 
-    emit({ idleVisual: { clawd: "clawd-idle-reading.svg" } });
+    emit({ idleVisual: { duck: "duck-idle-reading.svg" } });
 
     assert.deepStrictEqual(calls, [
-      ["updateMirrors", { idleVisual: { clawd: "clawd-idle-reading.svg" } }],
+      ["updateMirrors", { idleVisual: { duck: "duck-idle-reading.svg" } }],
       ["refreshIdleVisual"],
     ]);
   });
@@ -421,14 +421,14 @@ describe("settings-effect-router", () => {
   });
 
   it("resolves the active theme's tint without rebuilding quick menus", () => {
-    const clawd = { _id: "clawd", _builtin: true, _capabilities: { petTint: true } };
+    const duck = { _id: "duck", _builtin: true, _capabilities: { petTint: true } };
     const { calls, emit } = createHarness({
-      routerOptions: { getActiveTheme: () => clawd },
+      routerOptions: { getActiveTheme: () => duck },
     });
 
-    emit({ petTint: { clawd: "gold", cloudling: "matcha" } });
+    emit({ petTint: { duck: "gold", cloudling: "matcha" } });
     assert.deepStrictEqual(calls, [
-      ["updateMirrors", { petTint: { clawd: "gold", cloudling: "matcha" } }],
+      ["updateMirrors", { petTint: { duck: "gold", cloudling: "matcha" } }],
       ["sendToRenderer", "pet-tint-change", {
         id: "gold",
         filter: "sepia(0.8) saturate(2.2) hue-rotate(-18deg) brightness(1.05)",
@@ -479,7 +479,7 @@ describe("settings-effect-router", () => {
 
   it("resolves the active theme's accessory without rebuilding quick menus", () => {
     let activeTheme = {
-      _id: "clawd",
+      _id: "duck",
       _builtin: true,
       _capabilities: { accessories: true },
     };
@@ -487,11 +487,11 @@ describe("settings-effect-router", () => {
       routerOptions: { getActiveTheme: () => activeTheme },
     });
 
-    emit({ petAccessory: { clawd: "wizard-hat", cloudling: "halo" } });
+    emit({ petAccessory: { duck: "wizard-hat", cloudling: "halo" } });
     assert.deepStrictEqual(calls, [
-      ["updateMirrors", { petAccessory: { clawd: "wizard-hat", cloudling: "halo" } }],
+      ["updateMirrors", { petAccessory: { duck: "wizard-hat", cloudling: "halo" } }],
       ["sendToRenderer", "pet-accessory-slots-change", {
-        themeId: "clawd",
+        themeId: "duck",
         payloads: {
           head: {
             id: "wizard-hat",
@@ -530,28 +530,28 @@ describe("settings-effect-router", () => {
   });
 
   it("temporarily resolves the holiday accessory from an independent opt-in", () => {
-    const clawd = {
-      _id: "clawd",
+    const duck = {
+      _id: "duck",
       _builtin: true,
       _capabilities: { accessories: true },
     };
     const { calls, emit } = createHarness({
       initialSnapshot: {
-        petAccessory: { clawd: "wizard-hat" },
+        petAccessory: { duck: "wizard-hat" },
         holidayAccessoryEnabled: {},
       },
       routerOptions: {
-        getActiveTheme: () => clawd,
+        getActiveTheme: () => duck,
         now: () => new Date(2026, 11, 24, 12, 0, 0, 0),
       },
     });
 
-    emit({ holidayAccessoryEnabled: { clawd: true } });
+    emit({ holidayAccessoryEnabled: { duck: true } });
     assert.deepStrictEqual(calls[1], [
       "sendToRenderer",
       "pet-accessory-slots-change",
       {
-        themeId: "clawd",
+        themeId: "duck",
         payloads: {
           head: {
             id: "santa-hat",
@@ -567,7 +567,7 @@ describe("settings-effect-router", () => {
     ]);
 
     calls.length = 0;
-    emit({ petAccessory: { clawd: "halo" } });
+    emit({ petAccessory: { duck: "halo" } });
     assert.strictEqual(calls[1][2].payloads.head.id, "santa-hat");
 
     calls.length = 0;
@@ -577,34 +577,34 @@ describe("settings-effect-router", () => {
   });
 
   it("delivers a complete atomic snapshot when only the mouth selection changes", () => {
-    const clawd = {
-      _id: "clawd",
+    const duck = {
+      _id: "duck",
       _builtin: true,
       _capabilities: { accessories: true, mouthAccessories: true },
     };
     const { calls, emit } = createHarness({
-      initialSnapshot: { petAccessory: { clawd: "top-hat" } },
-      routerOptions: { getActiveTheme: () => clawd },
+      initialSnapshot: { petAccessory: { duck: "top-hat" } },
+      routerOptions: { getActiveTheme: () => duck },
     });
 
-    emit({ petMouthAccessory: { clawd: "cigarette" } });
+    emit({ petMouthAccessory: { duck: "cigarette" } });
     assert.strictEqual(calls[1][0], "sendToRenderer");
     assert.strictEqual(calls[1][1], "pet-accessory-slots-change");
     assert.strictEqual(calls[1][2].payloads.head.id, "top-hat");
     assert.strictEqual(calls[1][2].payloads.mouth.id, "cigarette");
     assert.strictEqual(calls[1][2].accessoryGeneration, 1);
-    assert.strictEqual(getPetAccessorySlotsSnapshot(clawd), calls[1][2]);
+    assert.strictEqual(getPetAccessorySlotsSnapshot(duck), calls[1][2]);
   });
 
   it("does not commit or resize when renderer delivery rejects a slots candidate", () => {
-    const clawd = {
-      _id: "clawd",
+    const duck = {
+      _id: "duck",
       _builtin: true,
       _capabilities: { accessories: true, mouthAccessories: true },
     };
     const { calls, logs, emit } = createHarness({
       routerOptions: {
-        getActiveTheme: () => clawd,
+        getActiveTheme: () => duck,
         sendToRenderer: (...args) => {
           calls.push(["sendToRenderer", ...args]);
           return false;
@@ -613,27 +613,27 @@ describe("settings-effect-router", () => {
       },
     });
 
-    emit({ petMouthAccessory: { clawd: "cigarette" } });
-    assert.strictEqual(getPetAccessorySlotsSnapshot(clawd), null);
+    emit({ petMouthAccessory: { duck: "cigarette" } });
+    assert.strictEqual(getPetAccessorySlotsSnapshot(duck), null);
     assert.strictEqual(calls.some((call) => call[0] === "syncHitWin"), false);
     assert.strictEqual(logs.length, 1);
     assert.match(String(logs[0][0]), /renderer delivery failed/);
   });
 
   it("resizes the input window after the effective accessory changes", () => {
-    const clawd = {
-      _id: "clawd",
+    const duck = {
+      _id: "duck",
       _builtin: true,
       _capabilities: { accessories: true },
     };
     const { calls, emit } = createHarness({
       routerOptions: {
-        getActiveTheme: () => clawd,
+        getActiveTheme: () => duck,
         syncHitWin: () => calls.push(["syncHitWin"]),
       },
     });
 
-    emit({ petAccessory: { clawd: "top-hat" } });
+    emit({ petAccessory: { duck: "top-hat" } });
     assert.deepStrictEqual(calls.map((call) => call[0]), [
       "updateMirrors",
       "sendToRenderer",
@@ -643,10 +643,10 @@ describe("settings-effect-router", () => {
   });
 
   it("stays quiet when the hit window defers, e.g. changing hats mid-drag", () => {
-    const clawd = { _id: "clawd", _builtin: true, _capabilities: { accessories: true } };
+    const duck = { _id: "duck", _builtin: true, _capabilities: { accessories: true } };
     const { calls, logs, emit } = createHarness({
       routerOptions: {
-        getActiveTheme: () => clawd,
+        getActiveTheme: () => duck,
         syncHitWin: () => {
           calls.push(["syncHitWin"]);
           return { applied: false, deferred: true };
@@ -654,7 +654,7 @@ describe("settings-effect-router", () => {
       },
     });
 
-    emit({ petAccessory: { clawd: "top-hat" } });
+    emit({ petAccessory: { duck: "top-hat" } });
 
     // The renderer still gets the new hat and the canonical payload is already
     // committed, so the next sync applies the envelope. Nothing failed.
@@ -667,15 +667,15 @@ describe("settings-effect-router", () => {
   });
 
   it("warns only when the hit window genuinely could not be resolved", () => {
-    const clawd = { _id: "clawd", _builtin: true, _capabilities: { accessories: true } };
+    const duck = { _id: "duck", _builtin: true, _capabilities: { accessories: true } };
     const { logs, emit } = createHarness({
       routerOptions: {
-        getActiveTheme: () => clawd,
+        getActiveTheme: () => duck,
         syncHitWin: () => ({ applied: false, deferred: false }),
       },
     });
 
-    emit({ petAccessory: { clawd: "top-hat" } });
+    emit({ petAccessory: { duck: "top-hat" } });
 
     assert.strictEqual(logs.length, 1);
     assert.match(String(logs[0][0]), /accessory geometry apply failed/);
@@ -739,7 +739,7 @@ describe("settings-effect-router", () => {
 
     emit({ showTray: true });
 
-    assert.deepStrictEqual(logs, [["Clawd: tray toggle failed:", "tray broke"]]);
+    assert.deepStrictEqual(logs, [["Duck: tray toggle failed:", "tray broke"]]);
     assert.deepStrictEqual(calls, [
       ["updateMirrors", { showTray: true }],
       ["rebuildAllMenus"],

@@ -9,7 +9,7 @@
 // subprocess, with:
 //
 //   - USERPROFILE/HOME pointed at an empty dir  → no runtime.json → gate fires
-//   - CLAWD_REMOTE unset                        → the local Windows path, not remote
+//   - DUCK_REMOTE unset                        → the local Windows path, not remote
 //   - execFileSync recorded + refused           → proves zero spawn
 //   - HTTP blocked                              → the POST fails, like a real offline box
 //
@@ -31,19 +31,19 @@ const HOOKS_DIR = path.resolve(__dirname, "..", "hooks");
 // `grep -l createPidResolver hooks/*.js` — if a new adapter appears without a
 // row here, the count assertion at the bottom fails.
 //
-// `stdout` is the EXACT bytes the agent must still receive while Clawd is
+// `stdout` is the EXACT bytes the agent must still receive while Duck is
 // offline — including the trailing newline both gating adapters append via
 // writeStdoutOnce(outLine + "\n"), because that newline is part of what the
 // agent parses. Empty string = this adapter gates on exit code and must stay
 // silent. null = not asserted here (its own suite owns the stdout contract).
 //
-// `argv` matters more than it looks. clawd-hook.js takes the event name from
+// `argv` matters more than it looks. duck-hook.js takes the event name from
 // process.argv[2], NOT from the stdin payload — omit it and it exits before
 // resolving anything, so a "zero spawn" assertion passes for the wrong reason.
 // A real-machine audit caught exactly that on a since-removed adapter. The
 // vacuity guard at the bottom of this file exists to stop that recurring.
 const ADAPTERS = [
-  { name: "clawd-hook.js", argv: ["PreToolUse"], payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: "" },
+  { name: "duck-hook.js", argv: ["PreToolUse"], payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: "" },
   { name: "codex-hook.js", payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: "" },
 ];
 
@@ -51,16 +51,16 @@ let hookHarness;
 
 before(() => {
   // An empty home: server-config's RUNTIME_CONFIG_PATH resolves under it, finds
-  // nothing, and the resolver gate reads "Clawd is offline". Verified upfront
+  // nothing, and the resolver gate reads "Duck is offline". Verified upfront
   // that Node's os.homedir() honors USERPROFILE on Windows.
-  hookHarness = createSpawnedHookHarness({ prefix: "clawd-681-offline-home-" });
+  hookHarness = createSpawnedHookHarness({ prefix: "duck-681-offline-home-" });
 });
 
 after(() => hookHarness.cleanup());
 
 // A live runtime naming THIS process, which is trivially alive. Used only by the
-// vacuity guard below — every other case here wants Clawd to look gone.
-const LIVE_RUNTIME = () => ({ app: "clawd-on-desk", port: 23333, ownerPid: process.pid });
+// vacuity guard below — every other case here wants Duck to look gone.
+const LIVE_RUNTIME = () => ({ app: "duck-on-desk", port: 24333, ownerPid: process.pid });
 
 function runHookOffline(adapter, { runtimeJson, env } = {}) {
   return hookHarness.run({
@@ -82,7 +82,7 @@ describe("#681 — every adapter survives a clean offline with zero spawn", { sk
       assert.ok(Array.isArray(r.spawns),
         `${adapter.name} did not exit cleanly enough to report — status=${r.status}, stderr=${r.stderr}`);
       assert.deepStrictEqual(r.spawns, [],
-        `${adapter.name} spawned ${JSON.stringify(r.spawns)} while Clawd was offline — this is #681`);
+        `${adapter.name} spawned ${JSON.stringify(r.spawns)} while Duck was offline — this is #681`);
       assert.strictEqual(r.status, 0, `${adapter.name} must exit 0; stderr=${r.stderr}`);
       assert.strictEqual(r.stderr, "", `${adapter.name} must not surface an error to the agent`);
 
@@ -96,7 +96,7 @@ describe("#681 — every adapter survives a clean offline with zero spawn", { sk
 
   // VACUITY GUARD. "Zero spawn" only means something if the adapter would
   // otherwise have spawned. Every row above must therefore attempt exactly one
-  // spawn when Clawd looks ALIVE — if it attempts zero either way, the row is
+  // spawn when Duck looks ALIVE — if it attempts zero either way, the row is
   // decoration and the offline assertion proves nothing about it.
   //
   // This is not hypothetical: a real-machine audit found a since-removed
@@ -105,11 +105,11 @@ describe("#681 — every adapter survives a clean offline with zero spawn", { sk
   // this suite without ever running.
   describe("the offline assertions are not vacuous", () => {
     for (const adapter of ADAPTERS) {
-      it(`${adapter.name}: attempts exactly one spawn when Clawd is alive`, () => {
+      it(`${adapter.name}: attempts exactly one spawn when Duck is alive`, () => {
         const r = runHookOffline(adapter, { runtimeJson: LIVE_RUNTIME() });
         assert.ok(Array.isArray(r.spawns), `${adapter.name} did not report — stderr=${r.stderr}`);
         assert.strictEqual(r.spawns.length, 1,
-          `${adapter.name} must attempt exactly one snapshot with a live Clawd — got `
+          `${adapter.name} must attempt exactly one snapshot with a live Duck — got `
           + `${JSON.stringify(r.spawns)}. Zero here means this adapter never runs, so its `
           + `offline case above proves nothing.`);
         assert.match(r.spawns[0], /powershell/i, "and it is the snapshot PowerShell");
@@ -124,22 +124,22 @@ describe("#681 — every adapter survives a clean offline with zero spawn", { sk
       .sort();
     assert.deepStrictEqual(consumers, ADAPTERS.map((a) => a.name).sort(),
       "a new createPidResolver adapter must be added to ADAPTERS above and proven offline-safe");
-    assert.strictEqual(consumers.length, 2, "clawd-hook.js and codex-hook.js are the createPidResolver consumers");
+    assert.strictEqual(consumers.length, 2, "duck-hook.js and codex-hook.js are the createPidResolver consumers");
   });
 });
 
-describe("#681 — a stale runtime.json is not a live Clawd", { skip: process.platform !== "win32" }, () => {
+describe("#681 — a stale runtime.json is not a live Duck", { skip: process.platform !== "win32" }, () => {
   // Full coverage of the identity matrix itself lives in
   // test/server-config.test.js; this is the end-to-end proof that the identity
   // actually reaches the spawn decision inside a real hook.
   const SAMPLE = ADAPTERS;
   const STALE = [
     ["a crashed instance's leftover file (dead ownerPid)",
-      { app: "clawd-on-desk", port: 23333, ownerPid: 2147483646 }],
-    ["a pre-#681 Clawd's file (no ownerPid at all)",
-      { app: "clawd-on-desk", port: 23333 }],
+      { app: "duck-on-desk", port: 24333, ownerPid: 2147483646 }],
+    ["a pre-#681 Duck's file (no ownerPid at all)",
+      { app: "duck-on-desk", port: 24333 }],
     ["some other tool's runtime.json at that path",
-      { app: "not-clawd", port: 23333, ownerPid: 1 }],
+      { app: "not-duck", port: 24333, ownerPid: 1 }],
   ];
 
   for (const [label, runtimeJson] of STALE) {
@@ -153,11 +153,11 @@ describe("#681 — a stale runtime.json is not a live Clawd", { skip: process.pl
     }
   }
 
-  it("CLAWD_REMOTE suppresses the local walk even with a perfectly live runtime.json", () => {
+  it("DUCK_REMOTE suppresses the local walk even with a perfectly live runtime.json", () => {
     const adapter = ADAPTERS.find((a) => a.name === "codex-hook.js");
     const r = runHookOffline(adapter, {
-      runtimeJson: { app: "clawd-on-desk", port: 23333, ownerPid: process.pid },
-      env: { CLAWD_REMOTE: "1" },
+      runtimeJson: { app: "duck-on-desk", port: 24333, ownerPid: process.pid },
+      env: { DUCK_REMOTE: "1" },
     });
 
     assert.deepStrictEqual(r.spawns, [], "a remote hook must never walk THIS machine's process tree");

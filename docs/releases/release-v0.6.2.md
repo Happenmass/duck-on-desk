@@ -2,7 +2,7 @@
 
 ### New Features
 
-- **Session Dashboard & Session HUD** — Clawd now tracks every AI coding session it sees and surfaces them through two complementary surfaces: a multi-row clickable HUD docked next to the pet (so you can glance at all live sessions while continuing to work) and a full Session Dashboard (opened from the pet shortcut, tray, or Settings) with second-level elapsed timers, session aliases for naming runs, and an always-on session-id card badge replacing the older `showSessionId` toggle. The legacy "Sessions" submenu has been retired in favor of the dashboard.
+- **Session Dashboard & Session HUD** — Duck now tracks every AI coding session it sees and surfaces them through two complementary surfaces: a multi-row clickable HUD docked next to the pet (so you can glance at all live sessions while continuing to work) and a full Session Dashboard (opened from the pet shortcut, tray, or Settings) with second-level elapsed timers, session aliases for naming runs, and an always-on session-id card badge replacing the older `showSessionId` toggle. The legacy "Sessions" submenu has been retired in favor of the dashboard.
 - **Codex CLI official hook integration** — Codex CLI now uses proper state hooks and permission approvals as the **primary** path on every supported platform — including Windows, which previously had to rely on JSONL polling. State hooks drive the pet's `working`/`notification` state directly, permission approvals route through the same bubble UI as Claude Code / CodeBuddy (with safe fallback guards for stale prompts), and the existing JSONL polling is kept as a **fallback** for older Codex builds that don't expose hooks yet.
 - **Windows ARM64 native installer** (#179) — first-class native `.exe` installer for Windows on ARM, alongside the existing x64 installer.
 - **Windows-on-ARM x64 → ARM64 migration prompt** (#183) — packaged x64 builds running under ARM64 translation now detect the situation and prompt the user to download the native ARM64 installer directly from the latest GitHub Release, never silently cross-grading through `electron-updater`.
@@ -25,7 +25,7 @@
 
 ### Refactoring, Docs & License
 
-- **Source license switched to AGPL** — please review if you build on top of Clawd's source.
+- **Source license switched to AGPL** — please review if you build on top of Duck's source.
 - **Maintainers section in README/AGENTS** recognizing **@YOIMIYA66** as the first project maintainer alongside @rullerzhou-afk.
 - **Animated hero GIF added to all three README languages** (#187 + follow-ups) — the top-of-README demo now shows the pet reacting through a five-beat product narrative (sleeping → thinking → typing → juggling → notification → happy) using real sprites and TUI shape.
 - Docs refresh across Codex/WSL clarification, supported-agent guidance, ARM64 installer instructions, agent runtime architecture, and session dashboard readmes.

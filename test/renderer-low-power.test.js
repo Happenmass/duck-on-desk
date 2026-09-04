@@ -170,7 +170,7 @@ class FakeElement {
     this.listeners.set(event, callback);
   }
 
-  querySelectorAll(selector = "object, img.clawd-img") {
+  querySelectorAll(selector = "object, img.duck-img") {
     const descendants = [];
     const visit = (node) => {
       for (const child of node.children) {
@@ -180,14 +180,14 @@ class FakeElement {
     };
     visit(this);
     return descendants.filter((child) => {
-      if (selector.includes("object.clawd-object")
+      if (selector.includes("object.duck-object")
           && child.tagName === "OBJECT"
-          && child.classList.contains("clawd-object")) return true;
-      if (selector.includes("object") && !selector.includes("object.clawd-object")
+          && child.classList.contains("duck-object")) return true;
+      if (selector.includes("object") && !selector.includes("object.duck-object")
           && child.tagName === "OBJECT") return true;
-      if (selector.includes("img.clawd-img")
+      if (selector.includes("img.duck-img")
           && child.tagName === "IMG"
-          && child.classList.contains("clawd-img")) return true;
+          && child.classList.contains("duck-img")) return true;
       return false;
     });
   }
@@ -213,39 +213,39 @@ function createRendererHarness(options = {}) {
   const accessoryLayer = new FakeElement("div");
   accessoryLayer.id = "pet-accessory-layer";
   const accessory = new FakeElement("img");
-  accessory.id = "clawd-accessory";
-  accessory.className = "clawd-accessory";
+  accessory.id = "duck-accessory";
+  accessory.className = "duck-accessory";
   const mouthAccessoryLayer = new FakeElement("div");
   mouthAccessoryLayer.id = "pet-mouth-accessory-layer";
   const mouthAccessory = new FakeElement("object");
-  mouthAccessory.id = "clawd-mouth-accessory";
-  mouthAccessory.className = "clawd-accessory";
+  mouthAccessory.id = "duck-mouth-accessory";
+  mouthAccessory.className = "duck-accessory";
   const effectStage = new FakeElement("div");
   effectStage.id = "pet-effect-stage";
   const particleLayer = new FakeElement("div");
   particleLayer.id = "pet-particle-layer";
-  const clawd = new FakeElement("object");
-  clawd.id = "clawd";
-  clawd.className = "clawd-object";
-  clawd.offsetLeft = -99;
-  clawd.offsetTop = -55;
-  clawd.clientWidth = 418;
-  clawd.clientHeight = 286;
-  clawd.offsetWidth = 418;
-  clawd.offsetHeight = 286;
+  const duck = new FakeElement("object");
+  duck.id = "duck";
+  duck.className = "duck-object";
+  duck.offsetLeft = -99;
+  duck.offsetTop = -55;
+  duck.clientWidth = 418;
+  duck.clientHeight = 286;
+  duck.offsetWidth = 418;
+  duck.offsetHeight = 286;
   // index.html ships the object tag without data; tests that don't care get a
   // pre-displayed file so the initial-frame swap stays out of their way.
-  clawd.data = Object.prototype.hasOwnProperty.call(options, "initialObjectData")
+  duck.data = Object.prototype.hasOwnProperty.call(options, "initialObjectData")
     ? options.initialObjectData
     : "../assets/svg/current.svg";
-  clawd.style.opacity = "0";
+  duck.style.opacity = "0";
   container.appendChild(facingStage);
   facingStage.appendChild(motionStage);
   motionStage.appendChild(assetDirectionStage);
   assetDirectionStage.appendChild(mediaLayer);
   assetDirectionStage.appendChild(accessoryLayer);
   assetDirectionStage.appendChild(mouthAccessoryLayer);
-  mediaLayer.appendChild(clawd);
+  mediaLayer.appendChild(duck);
   accessoryLayer.appendChild(accessory);
   mouthAccessoryLayer.appendChild(mouthAccessory);
   container.appendChild(effectStage);
@@ -261,9 +261,9 @@ function createRendererHarness(options = {}) {
     ["pet-mouth-accessory-layer", mouthAccessoryLayer],
     ["pet-effect-stage", effectStage],
     ["pet-particle-layer", particleLayer],
-    ["clawd", clawd],
-    ["clawd-accessory", accessory],
-    ["clawd-mouth-accessory", mouthAccessory],
+    ["duck", duck],
+    ["duck-accessory", accessory],
+    ["duck-mouth-accessory", mouthAccessory],
   ]);
   const documentListeners = new Map();
 
@@ -359,7 +359,7 @@ globalThis.__rendererTest = {
   setCurrentState(value) { currentState = value; },
   setLayeredTrackingForTest(document) {
     _trackingLayers = { test: { wrappers: [], maxOffset: 1, ease: 1, x: 0, y: 0 } };
-    _layeredTrackingObj = clawdEl;
+    _layeredTrackingObj = duckEl;
     _layeredTrackingDocument = document;
   },
   getPetMediaElements,
@@ -370,7 +370,7 @@ globalThis.__rendererTest = {
   get pendingNext() { return pendingNext; },
   get pendingSvgFile() { return pendingSvgFile; },
   get activeSwapToken() { return activeSwapToken; },
-  get clawdEl() { return clawdEl; },
+  get duckEl() { return duckEl; },
   get currentDisplayedState() { return currentDisplayedState; },
   get currentDisplayedSvg() { return currentDisplayedSvg; },
   get currentDisplayedAssetUrl() { return currentDisplayedAssetUrl; },
@@ -396,7 +396,7 @@ globalThis.__rendererTest = {
     accessory,
     mouthAccessory,
     particleLayer,
-    clawd,
+    duck,
     timers,
     audioInstances,
     electronCalls,
@@ -454,8 +454,8 @@ function attachFakeSvgDocument(objectEl, { withEyes = false } = {}) {
 
 function attachDirectionalSvgDocument(objectEl, direction = "right") {
   const attached = attachFakeSvgDocument(objectEl);
-  attached.root.setAttribute("data-clawd-drag-directional", "v1");
-  attached.root.setAttribute("data-clawd-drag-direction", direction);
+  attached.root.setAttribute("data-duck-drag-directional", "v1");
+  attached.root.setAttribute("data-duck-drag-direction", direction);
   attached.root.attributeSetCalls.length = 0;
   return attached;
 }
@@ -467,8 +467,8 @@ function attachUniversalCodexPetDocument(objectEl, visual = "idle-loop") {
     playCalls: 0,
     play() { this.playCalls += 1; },
   };
-  attached.root.setAttribute("data-clawd-codex-pet-visuals", "v1");
-  attached.root.setAttribute("data-clawd-codex-pet-visual", visual);
+  attached.root.setAttribute("data-duck-codex-pet-visuals", "v1");
+  attached.root.setAttribute("data-duck-codex-pet-visual", visual);
   attached.root.getAnimations = () => [animation];
   attached.root.attributeSetCalls.length = 0;
   return { ...attached, animation };
@@ -522,32 +522,32 @@ describe("renderer directional drag reactions (#620)", () => {
     const token = harness.api.activeSwapToken;
 
     harness.electronHandlers.onStartDragReaction("left");
-    assert.strictEqual(harness.api.clawdEl, objectEl);
+    assert.strictEqual(harness.api.duckEl, objectEl);
     assert.strictEqual(harness.api.pendingNext, null);
     assert.strictEqual(harness.api.activeSwapToken, token);
-    assert.strictEqual(attached.root.getAttribute("data-clawd-codex-pet-visual"), "drag-directional");
-    assert.strictEqual(attached.root.getAttribute("data-clawd-drag-direction"), "left");
+    assert.strictEqual(attached.root.getAttribute("data-duck-codex-pet-visual"), "drag-directional");
+    assert.strictEqual(attached.root.getAttribute("data-duck-drag-direction"), "left");
 
     harness.electronHandlers.onStateChange("working", "codex-pet-running-loop.svg");
-    assert.strictEqual(harness.api.clawdEl, objectEl);
+    assert.strictEqual(harness.api.duckEl, objectEl);
     assert.strictEqual(harness.api.activeSwapToken, token);
     assert.strictEqual(harness.api.isDragReacting, false);
-    assert.strictEqual(attached.root.getAttribute("data-clawd-codex-pet-visual"), "running-loop");
+    assert.strictEqual(attached.root.getAttribute("data-duck-codex-pet-visual"), "running-loop");
 
     harness.electronHandlers.onStartDragReaction("right");
-    assert.strictEqual(harness.api.clawdEl, objectEl);
+    assert.strictEqual(harness.api.duckEl, objectEl);
     assert.strictEqual(harness.api.activeSwapToken, token);
-    assert.strictEqual(attached.root.getAttribute("data-clawd-codex-pet-visual"), "drag-directional");
-    assert.strictEqual(attached.root.getAttribute("data-clawd-drag-direction"), "right");
+    assert.strictEqual(attached.root.getAttribute("data-duck-codex-pet-visual"), "drag-directional");
+    assert.strictEqual(attached.root.getAttribute("data-duck-drag-direction"), "right");
 
     harness.electronHandlers.onEndDragReaction();
     harness.electronHandlers.onStateChange("idle", "codex-pet-idle-loop.svg");
-    assert.strictEqual(harness.api.clawdEl, objectEl);
+    assert.strictEqual(harness.api.duckEl, objectEl);
     assert.strictEqual(harness.api.pendingNext, null);
     assert.strictEqual(harness.api.activeSwapToken, token);
     assert.strictEqual(harness.api.currentDisplayedSvg, "codex-pet-idle-loop.svg");
-    assert.strictEqual(attached.root.getAttribute("data-clawd-codex-pet-visual"), "idle-loop");
-    assert.strictEqual(harness.mediaLayer.querySelectorAll("object.clawd-object, img.clawd-img").length, 1);
+    assert.strictEqual(attached.root.getAttribute("data-duck-codex-pet-visual"), "idle-loop");
+    assert.strictEqual(harness.mediaLayer.querySelectorAll("object.duck-object, img.duck-img").length, 1);
   });
 
   it("restarts an already selected universal one-shot without replacing its object", () => {
@@ -560,12 +560,12 @@ describe("renderer directional drag reactions (#620)", () => {
     const token = harness.api.activeSwapToken;
 
     harness.api.swapToFile("codex-pet-waving-once.svg", null, true);
-    assert.strictEqual(attached.root.getAttribute("data-clawd-codex-pet-visual"), "waving-once");
+    assert.strictEqual(attached.root.getAttribute("data-duck-codex-pet-visual"), "waving-once");
     assert.strictEqual(attached.animation.playCalls, 0);
     attached.animation.currentTime = 640;
 
     harness.api.swapToFile("codex-pet-waving-once.svg", null, true);
-    assert.strictEqual(harness.api.clawdEl, attached.objectEl);
+    assert.strictEqual(harness.api.duckEl, attached.objectEl);
     assert.strictEqual(harness.api.activeSwapToken, token);
     assert.strictEqual(attached.animation.currentTime, 0);
     assert.strictEqual(attached.animation.playCalls, 0);
@@ -592,7 +592,7 @@ describe("renderer directional drag reactions (#620)", () => {
     });
     harness.api.swapToFile("codex-pet-running-loop.svg", "working", true);
 
-    assert.strictEqual(attached.root.getAttribute("data-clawd-codex-pet-visual"), "idle-loop");
+    assert.strictEqual(attached.root.getAttribute("data-duck-codex-pet-visual"), "idle-loop");
     assert.notStrictEqual(harness.api.pendingNext, attached.objectEl);
     assert.strictEqual(harness.api.activeSwapToken, token + 1);
   });
@@ -610,7 +610,7 @@ describe("renderer directional drag reactions (#620)", () => {
       forceDocumentReload: true,
     });
 
-    assert.strictEqual(attached.root.getAttribute("data-clawd-codex-pet-visual"), "idle-loop");
+    assert.strictEqual(attached.root.getAttribute("data-duck-codex-pet-visual"), "idle-loop");
     assert.notStrictEqual(harness.api.pendingNext, attached.objectEl);
     assert.strictEqual(harness.api.activeSwapToken, token + 1);
   });
@@ -627,7 +627,7 @@ describe("renderer directional drag reactions (#620)", () => {
     harness.api.swapToFile("codex-pet-review-loop.svg", "thinking", true);
 
     assert.deepStrictEqual(harness.warnings, [
-      "Clawd: Codex Pet visual bridge unavailable (v1 marker missing); using a normal media swap.",
+      "Duck: Codex Pet visual bridge unavailable (v1 marker missing); using a normal media swap.",
     ]);
     assert.strictEqual(harness.api.pendingSvgFile, "codex-pet-review-loop.svg");
   });
@@ -642,21 +642,21 @@ describe("renderer directional drag reactions (#620)", () => {
     harness.electronHandlers.onStartDragReaction("right");
     assert.strictEqual(harness.api.pendingNext, pending);
     assert.strictEqual(harness.api.activeSwapToken, token);
-    assert.strictEqual(root.getAttribute("data-clawd-drag-direction"), "right");
+    assert.strictEqual(root.getAttribute("data-duck-drag-direction"), "right");
 
     pending.listeners.get("load")();
-    assert.strictEqual(harness.api.clawdEl, pending);
+    assert.strictEqual(harness.api.duckEl, pending);
     assert.strictEqual(harness.api.currentDragSvg, "drag-directional.svg");
     assert.strictEqual(harness.api.currentDragDirection, "right");
     const displayedUrl = harness.api.currentDisplayedAssetUrl;
 
     harness.electronHandlers.onStartDragReaction("left");
-    assert.strictEqual(harness.api.clawdEl, pending);
+    assert.strictEqual(harness.api.duckEl, pending);
     assert.strictEqual(harness.api.pendingNext, null);
     assert.strictEqual(harness.api.activeSwapToken, token);
     assert.strictEqual(harness.api.currentDisplayedAssetUrl, displayedUrl);
-    assert.strictEqual(root.getAttribute("data-clawd-drag-direction"), "left");
-    assert.strictEqual(harness.mediaLayer.querySelectorAll("object.clawd-object, img.clawd-img").length, 1);
+    assert.strictEqual(root.getAttribute("data-duck-drag-direction"), "left");
+    assert.strictEqual(harness.mediaLayer.querySelectorAll("object.duck-object, img.duck-img").length, 1);
 
     const directionWrites = root.attributeSetCalls.length;
     harness.electronHandlers.onStartDragReaction("left");
@@ -687,11 +687,11 @@ describe("renderer directional drag reactions (#620)", () => {
     const token = harness.api.activeSwapToken;
 
     assert.doesNotThrow(() => harness.electronHandlers.onStartDragReaction("left"));
-    assert.strictEqual(root.getAttribute("data-clawd-drag-direction"), "");
-    assert.strictEqual(harness.api.clawdEl, pending);
+    assert.strictEqual(root.getAttribute("data-duck-drag-direction"), "");
+    assert.strictEqual(harness.api.duckEl, pending);
     assert.strictEqual(harness.api.activeSwapToken, token);
     assert.deepStrictEqual(harness.warnings, [
-      "Clawd: directional drag bridge unavailable (v1 marker missing); keeping the fallback direction.",
+      "Duck: directional drag bridge unavailable (v1 marker missing); keeping the fallback direction.",
     ]);
 
     // The same failure category is logged once per renderer lifecycle.
@@ -704,7 +704,7 @@ describe("renderer directional drag reactions (#620)", () => {
       get() { throw new Error("cross-origin"); },
     });
     assert.doesNotThrow(() => harness.electronHandlers.onStartDragReaction("right"));
-    assert.strictEqual(harness.api.clawdEl, pending);
+    assert.strictEqual(harness.api.duckEl, pending);
     assert.strictEqual(harness.api.activeSwapToken, token);
     assert.strictEqual(harness.warnings.length, 2);
     assert.match(harness.warnings[1], /contentDocument access denied/);
@@ -721,7 +721,7 @@ describe("renderer directional drag reactions (#620)", () => {
     harness.electronHandlers.onStartDragReaction("right");
 
     assert.deepStrictEqual(harness.warnings, [
-      "Clawd: directional drag bridge unavailable (non-object media channel); keeping the fallback direction.",
+      "Duck: directional drag bridge unavailable (non-object media channel); keeping the fallback direction.",
     ]);
   });
 
@@ -794,7 +794,7 @@ describe("renderer directional drag reactions (#620)", () => {
     pending.listeners.get("load")();
 
     assert.deepStrictEqual(root.attributeSetCalls, []);
-    assert.strictEqual(root.getAttribute("data-clawd-drag-direction"), "right");
+    assert.strictEqual(root.getAttribute("data-duck-drag-direction"), "right");
   });
 
   it("pauses cursor polling once across repeated same-document reversals and resumes once at drag end", () => {
@@ -831,7 +831,7 @@ describe("renderer directional drag reactions (#620)", () => {
     harness.electronHandlers.onStartDragReaction(null, "right");
 
     assert.strictEqual(harness.api.currentDragDirection, "right");
-    assert.strictEqual(root.getAttribute("data-clawd-drag-direction"), "right");
+    assert.strictEqual(root.getAttribute("data-duck-drag-direction"), "right");
   });
 
   it("retargets a pending same-file drag request to the newest generation", () => {
@@ -861,7 +861,7 @@ describe("renderer directional drag reactions (#620)", () => {
 describe("renderer displayed-visual settlement", () => {
   function visualRequest(generation, file, displayState = "working") {
     return {
-      themeId: "clawd",
+      themeId: "duck",
       logicalState: displayState,
       displayState,
       file,
@@ -962,16 +962,16 @@ describe("renderer displayed-visual settlement", () => {
 
   it("ignores a malformed object request instead of constructing an undefined asset URL", () => {
     const harness = createRendererHarness();
-    const displayed = harness.api.clawdEl;
+    const displayed = harness.api.duckEl;
 
     harness.electronHandlers.onStateChange({
-      themeId: "clawd",
+      themeId: "duck",
       logicalState: "working",
       displayState: "working",
       source: "state",
     });
 
-    assert.strictEqual(harness.api.clawdEl, displayed);
+    assert.strictEqual(harness.api.duckEl, displayed);
     assert.strictEqual(harness.api.pendingNext, null);
     assert.ok(harness.warnings.some((warning) => warning.includes("malformed visual request")));
   });
@@ -980,7 +980,7 @@ describe("renderer displayed-visual settlement", () => {
     const loader = loadPreloadWithElectron();
     try {
       loader.electronAPI.notifyPetVisualSettled({
-        themeId: "clawd",
+        themeId: "duck",
         displayState: "idle",
         requestedFile: "idle.svg",
         actualFile: "idle.svg",
@@ -994,7 +994,7 @@ describe("renderer displayed-visual settlement", () => {
       assert.ok(sent);
       assert.strictEqual(sent.args[0].injected, undefined);
       assert.deepStrictEqual(sent.args[0], {
-        themeId: "clawd",
+        themeId: "duck",
         displayState: "idle",
         requestedFile: "idle.svg",
         actualFile: "idle.svg",
@@ -1015,7 +1015,7 @@ describe("renderer test-result reactions", () => {
 
     harness.electronHandlers.onPlayTestReaction("pass");
     assert.strictEqual(harness.particleLayer.children.length, 18);
-    assert.ok(harness.particleLayer.children.every((node) => node.className === "clawd-test-confetti"));
+    assert.ok(harness.particleLayer.children.every((node) => node.className === "duck-test-confetti"));
     const firstBurst = [...harness.particleLayer.children];
 
     harness.electronHandlers.onPlayTestReaction("pass");
@@ -1033,14 +1033,14 @@ describe("renderer test-result reactions", () => {
 
     harness.electronHandlers.onPlayTestReaction("fail");
     assert.strictEqual(harness.particleLayer.children.length, 0);
-    assert.strictEqual(harness.facingStage.classList.contains("clawd-test-shake"), true);
-    assert.strictEqual(harness.container.classList.contains("clawd-test-shake"), false);
+    assert.strictEqual(harness.facingStage.classList.contains("duck-test-shake"), true);
+    assert.strictEqual(harness.container.classList.contains("duck-test-shake"), false);
 
     const shakeTimer = harness.activeTimers().find((timer) => timer.ms === 650);
     assert.ok(shakeTimer);
     shakeTimer.cleared = true;
     shakeTimer.callback();
-    assert.strictEqual(harness.facingStage.classList.contains("clawd-test-shake"), false);
+    assert.strictEqual(harness.facingStage.classList.contains("duck-test-shake"), false);
   });
 
   it("suppresses new reactions and clears an active one when DND turns on", () => {
@@ -1051,14 +1051,14 @@ describe("renderer test-result reactions", () => {
     harness.electronHandlers.onDndChange(true);
     assert.strictEqual(harness.particleLayer.children.length, 0);
     harness.electronHandlers.onPlayTestReaction("fail");
-    assert.strictEqual(harness.facingStage.classList.contains("clawd-test-shake"), false);
+    assert.strictEqual(harness.facingStage.classList.contains("duck-test-shake"), false);
   });
 
   it("keeps mini mirroring and viewport translation independent from failure shake", () => {
     const css = readNormalized(path.join(__dirname, "..", "src", "styles.css"));
-    assert.match(css, /#pet-facing-stage\.clawd-test-shake\s*\{[^}]*animation:/);
-    assert.match(css, /@keyframes clawd-test-shake\s*\{[\s\S]*translate:[\s\S]*rotate:/);
-    assert.ok(!/#pet-container\.clawd-test-shake/.test(css));
+    assert.match(css, /#pet-facing-stage\.duck-test-shake\s*\{[^}]*animation:/);
+    assert.match(css, /@keyframes duck-test-shake\s*\{[\s\S]*translate:[\s\S]*rotate:/);
+    assert.ok(!/#pet-container\.duck-test-shake/.test(css));
     assert.match(css, /#pet-container\.mini-left #pet-facing-stage\s*\{[^}]*scale:\s*-1 1;/);
   });
 
@@ -1095,10 +1095,10 @@ describe("renderer low-power idle mode", () => {
 
   it("resumes a low-power-paused eye target when the mouse moves", () => {
     const harness = createRendererHarness();
-    attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    attachFakeSvgDocument(harness.duck, { withEyes: true });
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
-    harness.api.attachEyeTracking(harness.clawd);
+    harness.api.attachEyeTracking(harness.duck);
     harness.api.pauseCurrentSvgForLowPower();
     assert.equal(harness.api.lowPowerSvgPaused, true);
 
@@ -1142,7 +1142,7 @@ describe("renderer low-power idle mode", () => {
     const source = readNormalized(RENDERER);
 
     assert.ok(source.includes("function setCurrentScriptedSvgLowPowerPaused(paused)"));
-    assert.ok(source.includes("target.contentWindow.__clawdSetLowPowerPaused"));
+    assert.ok(source.includes("target.contentWindow.__duckSetLowPowerPaused"));
     assert.ok(source.includes("setCurrentScriptedSvgLowPowerPaused(true);"));
     assert.ok(source.includes("setCurrentScriptedSvgLowPowerPaused(false);"));
   });
@@ -1159,15 +1159,15 @@ describe("renderer low-power idle mode", () => {
 
   it("unpauses the current SVG and reattaches eye tracking after system wake", () => {
     const harness = createRendererHarness();
-    const svg = attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    const svg = attachFakeSvgDocument(harness.duck, { withEyes: true });
     const scriptedPauseCalls = [];
-    harness.clawd.contentWindow.__clawdSetLowPowerPaused = (paused) => scriptedPauseCalls.push(paused);
+    harness.duck.contentWindow.__duckSetLowPowerPaused = (paused) => scriptedPauseCalls.push(paused);
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
     harness.api.pauseCurrentSvgForLowPower();
 
     assert.equal(harness.api.lowPowerSvgPaused, true);
-    assert.ok(svg.svgDoc.getElementById("clawd-low-power-pause-svg"));
+    assert.ok(svg.svgDoc.getElementById("duck-low-power-pause-svg"));
 
     harness.electronHandlers.onSystemWake({ id: "wake-test-1", trigger: "resume", attempt: 0 });
     const replacementObject = harness.api.pendingNext;
@@ -1176,7 +1176,7 @@ describe("renderer low-power idle mode", () => {
     replacementObject.listeners.get("load")();
 
     assert.equal(harness.api.lowPowerSvgPaused, false);
-    assert.equal(svg.svgDoc.getElementById("clawd-low-power-pause-svg"), null);
+    assert.equal(svg.svgDoc.getElementById("duck-low-power-pause-svg"), null);
     assert.equal(svg.root.unpauseCalls, 1);
     assert.deepEqual(scriptedPauseCalls, [true, false]);
     assert.ok(harness.api.eyeTarget);
@@ -1195,7 +1195,7 @@ describe("renderer low-power idle mode", () => {
 
   it("waits for async eye attach before reporting wake recovery", () => {
     const harness = createRendererHarness();
-    attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    attachFakeSvgDocument(harness.duck, { withEyes: true });
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
 
@@ -1228,15 +1228,15 @@ describe("renderer low-power idle mode", () => {
 
   it("removes a residual pause style even when the renderer mirror is already false", () => {
     const harness = createRendererHarness();
-    const svg = attachFakeSvgDocument(harness.clawd);
+    const svg = attachFakeSvgDocument(harness.duck);
     const style = svg.svgDoc.createElementNS("http://www.w3.org/2000/svg", "style");
-    style.id = "clawd-low-power-pause-svg";
+    style.id = "duck-low-power-pause-svg";
     svg.root.appendChild(style);
 
     assert.equal(harness.api.lowPowerSvgPaused, false);
     harness.electronHandlers.onSystemWake({ id: "wake-test-2", trigger: "resume", attempt: 0 });
 
-    assert.equal(svg.svgDoc.getElementById("clawd-low-power-pause-svg"), null);
+    assert.equal(svg.svgDoc.getElementById("duck-low-power-pause-svg"), null);
     assert.equal(svg.root.unpauseCalls, 1);
     const report = harness.electronCalls.find((call) => call.name === "reportSystemWakeStatus");
     assert.equal(report.args[0].lowPowerWasPaused, true);
@@ -1245,7 +1245,7 @@ describe("renderer low-power idle mode", () => {
 
   it("replies to duplicate wake ids without running recovery twice", () => {
     const harness = createRendererHarness();
-    const svg = attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    const svg = attachFakeSvgDocument(harness.duck, { withEyes: true });
     const payload = { id: "wake-test-3", trigger: "resume", attempt: 0 };
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
@@ -1274,7 +1274,7 @@ describe("renderer low-power idle mode", () => {
 
   it("replays only the latest wake id after an object reload finishes", () => {
     const harness = createRendererHarness();
-    attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    attachFakeSvgDocument(harness.duck, { withEyes: true });
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
 
@@ -1307,7 +1307,7 @@ describe("renderer low-power idle mode", () => {
 
   it("settles an in-flight wake when a state change supersedes its object reload", () => {
     const harness = createRendererHarness();
-    attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    attachFakeSvgDocument(harness.duck, { withEyes: true });
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
 
@@ -1330,13 +1330,13 @@ describe("renderer low-power idle mode", () => {
 
   it("rebuilds a stale eye-tracking object whose old document still looks alive", () => {
     const harness = createRendererHarness();
-    const originalSvg = attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    const originalSvg = attachFakeSvgDocument(harness.duck, { withEyes: true });
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
-    harness.api.attachEyeTracking(harness.clawd);
+    harness.api.attachEyeTracking(harness.duck);
     assert.strictEqual(harness.api.eyeTarget.ownerDocument, originalSvg.svgDoc);
 
-    const replacementDocument = attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    const replacementDocument = attachFakeSvgDocument(harness.duck, { withEyes: true });
     assert.notStrictEqual(harness.api.eyeTarget.ownerDocument, replacementDocument.svgDoc);
     assert.ok(harness.api.eyeTarget.ownerDocument.defaultView, "old document still passes the legacy ready check");
 
@@ -1349,7 +1349,7 @@ describe("renderer low-power idle mode", () => {
     const freshSvg = attachFakeSvgDocument(replacementObject, { withEyes: true });
     replacementObject.listeners.get("load")();
 
-    assert.strictEqual(harness.api.clawdEl, replacementObject);
+    assert.strictEqual(harness.api.duckEl, replacementObject);
     assert.strictEqual(harness.api.eyeTarget.ownerDocument, freshSvg.svgDoc);
     const report = harness.electronCalls.find((call) => call.name === "reportSystemWakeStatus");
     assert.equal(report.args[0].eyeTargetWasCurrentDocument, false);
@@ -1359,7 +1359,7 @@ describe("renderer low-power idle mode", () => {
 
   it("retries a wake object reload once before reporting success", () => {
     const harness = createRendererHarness();
-    attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    attachFakeSvgDocument(harness.duck, { withEyes: true });
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
 
@@ -1390,7 +1390,7 @@ describe("renderer low-power idle mode", () => {
 
   it("keeps the old object and reports an error after the wake reload retry cannot load", () => {
     const harness = createRendererHarness();
-    attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    attachFakeSvgDocument(harness.duck, { withEyes: true });
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
 
@@ -1402,23 +1402,23 @@ describe("renderer low-power idle mode", () => {
     assert.notStrictEqual(retryObject, failedObject);
     drainActiveTimers(harness, (timer) => timer.ms === 3000 && !timer.cleared, 1);
 
-    assert.strictEqual(harness.api.clawdEl, harness.clawd);
+    assert.strictEqual(harness.api.duckEl, harness.duck);
     assert.equal(harness.api.pendingNext, null);
     assert.equal(harness.mediaLayer.children.some((element) => element.tagName === "IMG"), false);
     const report = harness.electronCalls.find((call) => call.name === "reportSystemWakeStatus");
     assert.equal(report.args[0].result, "error");
     assert.equal(report.args[0].objectReloaded, false);
     assert.equal(report.args[0].eyeTrackingReady, true);
-    assert.strictEqual(harness.api.eyeTarget.ownerDocument, harness.clawd.contentDocument);
+    assert.strictEqual(harness.api.eyeTarget.ownerDocument, harness.duck.contentDocument);
     assert.equal(failedObject.isConnected, false);
     assert.equal(retryObject.isConnected, false);
   });
 
   it("does not rebuild an eye object when low-power mode is disabled", () => {
     const harness = createRendererHarness();
-    attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    attachFakeSvgDocument(harness.duck, { withEyes: true });
     harness.api.setCurrentState("idle");
-    harness.api.attachEyeTracking(harness.clawd);
+    harness.api.attachEyeTracking(harness.duck);
 
     harness.electronHandlers.onSystemWake({ id: "wake-disabled-1", trigger: "resume", attempt: 0 });
 
@@ -1430,7 +1430,7 @@ describe("renderer low-power idle mode", () => {
 
   it("does not rebuild the object for a non-eye state", () => {
     const harness = createRendererHarness();
-    attachFakeSvgDocument(harness.clawd);
+    attachFakeSvgDocument(harness.duck);
     harness.api.setCurrentState("sleeping");
     harness.api.setLowPowerIdleMode(true);
 
@@ -1444,21 +1444,21 @@ describe("renderer low-power idle mode", () => {
 
   it("invalidates layered tracking when the object document changes", () => {
     const harness = createRendererHarness();
-    const originalSvg = attachFakeSvgDocument(harness.clawd);
+    const originalSvg = attachFakeSvgDocument(harness.duck);
     harness.api.setLayeredTrackingForTest(originalSvg.svgDoc);
     assert.equal(harness.api.isEyeTrackingReady(), true);
 
-    attachFakeSvgDocument(harness.clawd);
+    attachFakeSvgDocument(harness.duck);
 
     assert.equal(harness.api.isEyeTrackingReady(), false);
   });
 
   it("reattaches a stale single eye target before applying the next eye move", () => {
     const harness = createRendererHarness();
-    attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    attachFakeSvgDocument(harness.duck, { withEyes: true });
     harness.api.setCurrentState("idle");
-    harness.api.attachEyeTracking(harness.clawd);
-    const replacementSvg = attachFakeSvgDocument(harness.clawd, { withEyes: true });
+    harness.api.attachEyeTracking(harness.duck);
+    const replacementSvg = attachFakeSvgDocument(harness.duck, { withEyes: true });
 
     harness.electronHandlers.onEyeMove(2, -1);
 
@@ -1509,7 +1509,7 @@ describe("renderer object-channel selection", () => {
     harness.electronHandlers.onPetTintChange({ id: "mono", filter });
 
     const request = (generation) => ({
-      themeId: "clawd",
+      themeId: "duck",
       logicalState: "sleeping",
       displayState: "sleeping",
       file: "sleep.svg",
@@ -1588,7 +1588,7 @@ describe("renderer object-channel selection", () => {
     assert.strictEqual(harness.api.pendingNext.tagName, "IMG");
     assert.strictEqual(harness.api.pendingSvgFile, "next.svg");
     assert.strictEqual(
-      harness.mediaLayer.querySelectorAll().some((el) => el.tagName === "OBJECT" && el !== harness.clawd),
+      harness.mediaLayer.querySelectorAll().some((el) => el.tagName === "OBJECT" && el !== harness.duck),
       false
     );
   });
@@ -1607,7 +1607,7 @@ describe("renderer object-channel selection", () => {
 
   it("does not rescue over an already visible pet element", () => {
     const harness = createRendererHarness();
-    harness.clawd.style.opacity = "1";
+    harness.duck.style.opacity = "1";
 
     harness.api.swapToFile("next.svg", "idle", true);
     const rescue = harness.activeTimers().find((timer) => timer.ms === 3750);
@@ -1663,7 +1663,7 @@ describe("renderer pet tint", () => {
 
     assert.strictEqual(typeof setTint, "function");
     setTint(gold);
-    assert.strictEqual(harness.clawd.style.filter, gold.filter);
+    assert.strictEqual(harness.duck.style.filter, gold.filter);
 
     harness.api.swapToFile("next.png", "working", false);
     const pending = harness.api.pendingNext;
@@ -1671,8 +1671,8 @@ describe("renderer pet tint", () => {
     assert.strictEqual(pending.style.filter, gold.filter);
 
     pending.listeners.get("load")();
-    assert.strictEqual(harness.api.clawdEl, pending);
-    assert.strictEqual(harness.clawd.isConnected, true, "old media should still be fading");
+    assert.strictEqual(harness.api.duckEl, pending);
+    assert.strictEqual(harness.duck.isConnected, true, "old media should still be fading");
 
     const mono = { id: "mono", filter: "grayscale(1) brightness(1.05)" };
     setTint(mono);
@@ -1685,18 +1685,18 @@ describe("renderer pet tint", () => {
     const setTint = harness.electronHandlers.onPetTintChange;
 
     setTint({ id: "mono", filter: "grayscale(1) brightness(1.05)" });
-    assert.strictEqual(harness.clawd.style.filter, "grayscale(1) brightness(1.05)");
+    assert.strictEqual(harness.duck.style.filter, "grayscale(1) brightness(1.05)");
     setTint({ id: "none", filter: "" });
-    assert.strictEqual(harness.clawd.style.filter, "");
+    assert.strictEqual(harness.duck.style.filter, "");
 
     setTint({ id: "custom", filter: "url(file:///secret)" });
-    assert.strictEqual(harness.clawd.style.filter, "");
+    assert.strictEqual(harness.duck.style.filter, "");
 
     setTint({ id: "none", filter: "grayscale(1)" });
-    assert.strictEqual(harness.clawd.style.filter, "");
+    assert.strictEqual(harness.duck.style.filter, "");
 
     setTint("grayscale(1)");
-    assert.strictEqual(harness.clawd.style.filter, "");
+    assert.strictEqual(harness.duck.style.filter, "");
   });
 
   it("keeps tint through same-file dedup and theme config reload", () => {
@@ -1706,12 +1706,12 @@ describe("renderer pet tint", () => {
 
     harness.api.swapToFile("rest.svg", "working", false);
     harness.api.pendingNext.listeners.get("load")();
-    const displayed = harness.api.clawdEl;
+    const displayed = harness.api.duckEl;
     assert.strictEqual(displayed.style.filter, filter);
 
     harness.electronHandlers.onStateChange("working", "rest.svg");
     assert.strictEqual(harness.api.pendingNext, null);
-    assert.strictEqual(harness.api.clawdEl, displayed);
+    assert.strictEqual(harness.api.duckEl, displayed);
     assert.strictEqual(displayed.style.filter, filter);
 
     harness.electronHandlers.onThemeConfig({
@@ -1720,7 +1720,7 @@ describe("renderer pet tint", () => {
       idleFollowSvg: "idle.svg",
       petTintSupported: true,
     });
-    assert.strictEqual(harness.api.clawdEl, displayed);
+    assert.strictEqual(harness.api.duckEl, displayed);
     assert.strictEqual(displayed.style.filter, filter);
   });
 
@@ -1728,7 +1728,7 @@ describe("renderer pet tint", () => {
     const harness = createRendererHarness();
     const filter = "hue-rotate(265deg) saturate(1.6) contrast(1.05)";
     harness.electronHandlers.onPetTintChange({ id: "vaporwave", filter });
-    assert.strictEqual(harness.clawd.style.filter, filter);
+    assert.strictEqual(harness.duck.style.filter, filter);
 
     harness.electronHandlers.onThemeConfig({
       assetsPath: "../themes/calico",
@@ -1736,15 +1736,15 @@ describe("renderer pet tint", () => {
       idleFollowSvg: "idle.png",
       petTintSupported: false,
     });
-    assert.strictEqual(harness.clawd.style.filter, "");
+    assert.strictEqual(harness.duck.style.filter, "");
 
     harness.electronHandlers.onThemeConfig({
-      assetsPath: "../themes/clawd",
+      assetsPath: "../themes/duck",
       eyeTracking: { states: ["idle"] },
       idleFollowSvg: "idle.svg",
       petTintSupported: true,
     });
-    assert.strictEqual(harness.clawd.style.filter, filter);
+    assert.strictEqual(harness.duck.style.filter, filter);
   });
 
   it("wires an initial resolved payload and a narrow preload event channel", () => {
@@ -1806,7 +1806,7 @@ describe("renderer pet accessory wardrobe", () => {
       eyeTracking: { states: [] },
       idleFollowSvg: "first.svg",
       accessorySlots: {
-        themeId: "clawd",
+        themeId: "duck",
         accessoryGeneration: 5,
         head: {
           supported: true,
@@ -1878,7 +1878,7 @@ describe("renderer pet accessory wardrobe", () => {
     harness.accessory.onload();
 
     harness.electronHandlers.onPetAccessorySlotsChange({
-      themeId: "clawd",
+      themeId: "duck",
       accessoryGeneration: 6,
       payloads: {
         head: dualSlotConfig().accessorySlots.head.payload,
@@ -1916,7 +1916,7 @@ describe("renderer pet accessory wardrobe", () => {
     harness.mouthAccessory.onload();
 
     harness.electronHandlers.onPetAccessorySlotsChange({
-      themeId: "clawd",
+      themeId: "duck",
       accessoryGeneration: 7,
       payloads: {
         head: {
@@ -1934,7 +1934,7 @@ describe("renderer pet accessory wardrobe", () => {
     assert.strictEqual(harness.api.accessorySlots.mouth.payload.id, "none");
 
     harness.electronHandlers.onPetAccessorySlotsChange({
-      themeId: "clawd",
+      themeId: "duck",
       accessoryGeneration: 6,
       payloads: {
         head: { id: "none", assetFile: null, aspect: 1, widthScale: 1, offsetY: 0 },
@@ -1973,7 +1973,7 @@ describe("renderer pet accessory wardrobe", () => {
     assert.strictEqual(harness.api.accessorySlots.mouth.payload.id, "none");
 
     harness.electronHandlers.onPetAccessorySlotsChange({
-      themeId: "clawd",
+      themeId: "duck",
       accessoryGeneration: 101,
       payloads: {
         head: dualSlotConfig().accessorySlots.head.payload,
@@ -2114,7 +2114,7 @@ describe("renderer pet accessory wardrobe", () => {
     const initialImage = harness.api.pendingNext;
     assert.strictEqual(initialImage.tagName, "IMG");
     initialImage.listeners.get("load")();
-    assert.strictEqual(harness.api.clawdEl.tagName, "IMG");
+    assert.strictEqual(harness.api.duckEl.tagName, "IMG");
 
     harness.electronHandlers.onPetAccessoryChange({
       id: "cowboy-hat",
@@ -2142,7 +2142,7 @@ describe("renderer pet accessory wardrobe", () => {
     harness.accessory.onload();
 
     assert.strictEqual(harness.api.pendingNext, null);
-    assert.strictEqual(harness.api.clawdEl.tagName, "OBJECT");
+    assert.strictEqual(harness.api.duckEl.tagName, "OBJECT");
     assert.strictEqual(harness.accessory.style.display, "block");
 
     harness.electronHandlers.onPetAccessoryChange({
@@ -2156,7 +2156,7 @@ describe("renderer pet accessory wardrobe", () => {
     const restoredImage = harness.api.pendingNext;
     assert.strictEqual(restoredImage.tagName, "IMG");
     restoredImage.listeners.get("load")();
-    assert.strictEqual(harness.api.clawdEl.tagName, "IMG");
+    assert.strictEqual(harness.api.duckEl.tagName, "IMG");
     assert.strictEqual(harness.accessory.style.display, "none");
   });
 
@@ -2187,7 +2187,7 @@ describe("renderer pet accessory wardrobe", () => {
     harness.api.pendingNext.listeners.get("load")();
 
     harness.electronHandlers.onStateChange({
-      themeId: "clawd",
+      themeId: "duck",
       logicalState: "working",
       displayState: "working",
       file: "working.svg",
@@ -2261,7 +2261,7 @@ describe("renderer pet accessory wardrobe", () => {
     });
 
     harness.api.pendingNext.listeners.get("load")();
-    assert.strictEqual(harness.api.clawdEl.tagName, "IMG");
+    assert.strictEqual(harness.api.duckEl.tagName, "IMG");
 
     const payload = {
       id: "cowboy-hat",
@@ -2346,11 +2346,11 @@ describe("renderer pet accessory wardrobe", () => {
     });
     const pendingPet = harness.api.pendingNext;
     assert.strictEqual(pendingPet.tagName, "IMG");
-    const imageDeadline = pendingPet.__clawdImageLoadTimer;
+    const imageDeadline = pendingPet.__duckImageLoadTimer;
     assert.ok(imageDeadline, "initial img swap should own a load deadline");
 
     pendingPet.listeners.get("load")();
-    assert.strictEqual(pendingPet.__clawdWaitingForAccessory, true);
+    assert.strictEqual(pendingPet.__duckWaitingForAccessory, true);
     imageDeadline.cleared = true;
     imageDeadline.callback();
     const visibilityRescue = harness.activeTimers().find((timer) => timer.ms === 3750);
@@ -2509,7 +2509,7 @@ describe("renderer pet accessory wardrobe", () => {
     const initialHeadTransform = harness.accessory.style.transform;
     const initialMouthTransform = harness.mouthAccessory.style.transform;
 
-    harness.api.clawdEl.offsetLeft += 17;
+    harness.api.duckEl.offsetLeft += 17;
     harness.windowListeners.get("resize")({ type: "resize" });
 
     assert.notStrictEqual(harness.accessory.style.transform, initialHeadTransform);
@@ -2518,7 +2518,7 @@ describe("renderer pet accessory wardrobe", () => {
 
   it("pauses and clears an object-backed mouth SVG with the pet low-power timeline", () => {
     const harness = createRendererHarness({ themeConfig: dualSlotConfig() });
-    const petSvg = attachFakeSvgDocument(harness.clawd);
+    const petSvg = attachFakeSvgDocument(harness.duck);
     const mouthSvg = attachFakeSvgDocument(harness.mouthAccessory);
     harness.accessory.onload();
     harness.mouthAccessory.onload();
@@ -2529,10 +2529,10 @@ describe("renderer pet accessory wardrobe", () => {
 
     assert.strictEqual(petSvg.root.pauseCalls, 1);
     assert.strictEqual(mouthSvg.root.pauseCalls, 1);
-    assert.ok(mouthSvg.svgDoc.getElementById("clawd-low-power-pause-svg"));
+    assert.ok(mouthSvg.svgDoc.getElementById("duck-low-power-pause-svg"));
 
     harness.electronHandlers.onPetAccessorySlotsChange({
-      themeId: "clawd",
+      themeId: "duck",
       accessoryGeneration: 6,
       payloads: {
         head: dualSlotConfig().accessorySlots.head.payload,
@@ -2541,7 +2541,7 @@ describe("renderer pet accessory wardrobe", () => {
     });
 
     assert.strictEqual(mouthSvg.root.unpauseCalls, 1);
-    assert.strictEqual(mouthSvg.svgDoc.getElementById("clawd-low-power-pause-svg"), null);
+    assert.strictEqual(mouthSvg.svgDoc.getElementById("duck-low-power-pause-svg"), null);
     assert.strictEqual(harness.mouthAccessory.data, "");
   });
 
@@ -2551,7 +2551,7 @@ describe("renderer pet accessory wardrobe", () => {
       staticFrame: { cx: 50, baseY: 40, width: 20 },
     };
     const harness = createRendererHarness({ themeConfig: config });
-    attachFakeSvgDocument(harness.clawd);
+    attachFakeSvgDocument(harness.duck);
     harness.api.setCurrentState("idle");
     harness.api.setLowPowerIdleMode(true);
     harness.api.pauseCurrentSvgForLowPower();
@@ -2560,11 +2560,11 @@ describe("renderer pet accessory wardrobe", () => {
     harness.mouthAccessory.onload();
 
     assert.strictEqual(mouthSvg.root.pauseCalls, 1);
-    assert.ok(mouthSvg.svgDoc.getElementById("clawd-low-power-pause-svg"));
+    assert.ok(mouthSvg.svgDoc.getElementById("duck-low-power-pause-svg"));
 
     harness.api.setLowPowerIdleMode(false);
     assert.strictEqual(mouthSvg.root.unpauseCalls, 1);
-    assert.strictEqual(mouthSvg.svgDoc.getElementById("clawd-low-power-pause-svg"), null);
+    assert.strictEqual(mouthSvg.svgDoc.getElementById("duck-low-power-pause-svg"), null);
   });
 
   it("pauses a hidden mouth document and resumes it when a later sprite shows the slot", () => {
@@ -2664,7 +2664,7 @@ describe("renderer pet accessory wardrobe", () => {
     assert.ok(css.includes("scale: -1 1;"));
     assert.ok(css.includes("#pet-container.roam-walk #pet-motion-stage"));
     assert.ok(css.includes("translate: 3px 0;"));
-    assert.ok(renderer.includes('mediaLayer.querySelectorAll("object.clawd-object, img.clawd-img")'));
+    assert.ok(renderer.includes('mediaLayer.querySelectorAll("object.duck-object, img.duck-img")'));
     assert.ok(renderer.includes("const activeFlip = shouldApplyMiniAssetFlip(state);"));
     assert.ok(renderer.includes('assetDirectionStage.style.scale = activeFlip ? "-1 1" : "none";'));
     assert.ok(preload.includes(
@@ -2724,22 +2724,22 @@ describe("renderer initial frame idle visual", () => {
     const harness = createRendererHarness({
       initialObjectData: "",
       themeConfig: {
-        idleFollowSvg: "clawd-idle-follow.svg",
-        idleDefaultVisual: "clawd-idle-reading.svg",
+        idleFollowSvg: "duck-idle-follow.svg",
+        idleDefaultVisual: "duck-idle-reading.svg",
       },
     });
-    assert.strictEqual(harness.api.pendingSvgFile, "clawd-idle-reading.svg");
+    assert.strictEqual(harness.api.pendingSvgFile, "duck-idle-reading.svg");
   });
 
   it("falls back to the follow sprite when no visual is selected", () => {
     const harness = createRendererHarness({
       initialObjectData: "",
       themeConfig: {
-        idleFollowSvg: "clawd-idle-follow.svg",
+        idleFollowSvg: "duck-idle-follow.svg",
         idleDefaultVisual: null,
       },
     });
-    assert.strictEqual(harness.api.pendingSvgFile, "clawd-idle-follow.svg");
+    assert.strictEqual(harness.api.pendingSvgFile, "duck-idle-follow.svg");
   });
 });
 
@@ -2755,18 +2755,18 @@ describe("renderer file-aware idle eye tracking", () => {
 
   it("attaches eye tracking when idle rests on the follow sprite", () => {
     const harness = createRendererHarness({
-      themeConfig: { idleFollowSvg: "clawd-idle-follow.svg" },
+      themeConfig: { idleFollowSvg: "duck-idle-follow.svg" },
     });
-    restOnIdleVisual(harness, "clawd-idle-follow.svg", { withEyes: true });
+    restOnIdleVisual(harness, "duck-idle-follow.svg", { withEyes: true });
 
     assert.ok(harness.api.eyeTarget, "follow sprite must keep eye tracking");
   });
 
   it("never attaches eye tracking to a non-follow idle visual, even one with eye targets", () => {
     const harness = createRendererHarness({
-      themeConfig: { idleFollowSvg: "clawd-idle-follow.svg" },
+      themeConfig: { idleFollowSvg: "duck-idle-follow.svg" },
     });
-    restOnIdleVisual(harness, "clawd-idle-reading.svg", { withEyes: true });
+    restOnIdleVisual(harness, "duck-idle-reading.svg", { withEyes: true });
     drainActiveTimers(harness, (timer) => timer.ms === 16 && !timer.cleared);
 
     assert.strictEqual(harness.api.eyeTarget, null);
@@ -2774,11 +2774,11 @@ describe("renderer file-aware idle eye tracking", () => {
 
   it("does not reattach stale eye tracking on eye move for a non-follow idle visual", () => {
     const harness = createRendererHarness({
-      themeConfig: { idleFollowSvg: "clawd-idle-follow.svg" },
+      themeConfig: { idleFollowSvg: "duck-idle-follow.svg" },
     });
     const nonFollowObject = restOnIdleVisual(
       harness,
-      "clawd-idle-reading.svg",
+      "duck-idle-reading.svg",
       { withEyes: true }
     );
 
@@ -2801,28 +2801,28 @@ describe("renderer file-aware idle eye tracking", () => {
 
   it("detaches stale eye tracking when the same non-follow idle visual is re-entered", () => {
     const harness = createRendererHarness({
-      themeConfig: { idleFollowSvg: "clawd-idle-follow.svg" },
+      themeConfig: { idleFollowSvg: "duck-idle-follow.svg" },
     });
     const nonFollowObject = restOnIdleVisual(
       harness,
-      "clawd-idle-reading.svg",
+      "duck-idle-reading.svg",
       { withEyes: true }
     );
     harness.api.attachEyeTracking(nonFollowObject);
     assert.ok(harness.api.eyeTarget);
 
-    harness.electronHandlers.onStateChange("idle", "clawd-idle-reading.svg");
+    harness.electronHandlers.onStateChange("idle", "duck-idle-reading.svg");
 
-    assert.strictEqual(harness.api.clawdEl, nonFollowObject);
+    assert.strictEqual(harness.api.duckEl, nonFollowObject);
     assert.strictEqual(harness.api.pendingNext, null, "same-file re-entry must not swap media");
     assert.strictEqual(harness.api.eyeTarget, null);
   });
 
   it("still attaches eye tracking for mini-idle regardless of the idle choice", () => {
     const harness = createRendererHarness({
-      themeConfig: { idleFollowSvg: "clawd-idle-follow.svg" },
+      themeConfig: { idleFollowSvg: "duck-idle-follow.svg" },
     });
-    harness.electronHandlers.onStateChange("mini-idle", "clawd-mini.svg");
+    harness.electronHandlers.onStateChange("mini-idle", "duck-mini.svg");
     const next = harness.api.pendingNext;
     assert.ok(next);
     attachFakeSvgDocument(next, { withEyes: true });
@@ -2833,9 +2833,9 @@ describe("renderer file-aware idle eye tracking", () => {
 
   it("skips the wake eye-object reload and reports resumed on a non-follow resting visual", () => {
     const harness = createRendererHarness({
-      themeConfig: { idleFollowSvg: "clawd-idle-follow.svg" },
+      themeConfig: { idleFollowSvg: "duck-idle-follow.svg" },
     });
-    restOnIdleVisual(harness, "clawd-idle-reading.svg");
+    restOnIdleVisual(harness, "duck-idle-reading.svg");
     harness.api.setLowPowerIdleMode(true);
 
     harness.electronHandlers.onSystemWake({ id: "wake-nonfollow-1", trigger: "resume", attempt: 0 });
@@ -2871,10 +2871,10 @@ describe("renderer glyph flip compensation", () => {
     harness.electronHandlers.onStateChange("idle", "shared.svg");
 
     assert.strictEqual(harness.api.pendingNext, null);
-    assert.strictEqual(harness.api.clawdEl, displayedObject);
+    assert.strictEqual(harness.api.duckEl, displayedObject);
     assert.strictEqual(harness.api.currentDisplayedState, "idle");
     staleImage.listeners.get("load")();
-    assert.strictEqual(harness.api.clawdEl, displayedObject);
+    assert.strictEqual(harness.api.duckEl, displayedObject);
     assert.strictEqual(harness.api.currentDisplayedState, "idle");
   });
 
@@ -3053,9 +3053,9 @@ describe("renderer glyph flip compensation", () => {
   it("notifies object-channel SVGs when mini-left glyph compensation changes", () => {
     const source = fs.readFileSync(RENDERER, "utf8");
 
-    assert.ok(source.includes("typeof svgWindow.__clawdSetGlyphFlipCompensation === \"function\""));
-    assert.ok(source.includes("svgWindow.__clawdSetGlyphFlipCompensation(true);"));
-    assert.ok(source.includes("svgWindow.__clawdSetGlyphFlipCompensation(false);"));
+    assert.ok(source.includes("typeof svgWindow.__duckSetGlyphFlipCompensation === \"function\""));
+    assert.ok(source.includes("svgWindow.__duckSetGlyphFlipCompensation(true);"));
+    assert.ok(source.includes("svgWindow.__duckSetGlyphFlipCompensation(false);"));
   });
 });
 
@@ -3079,15 +3079,15 @@ describe("renderer viewport offset X (#690)", () => {
 
   it("does not touch per-asset bottom, applyObjectScaleStyle(), or refreshAccessoryLayout() (composite-only)", () => {
     const harness = createRendererHarness();
-    harness.clawd.style.bottom = "calc(5% + 3px)";
+    harness.duck.style.bottom = "calc(5% + 3px)";
     harness.accessory.style.transform = "matrix(1,0,0,1,4,5)";
-    const bottomBefore = harness.clawd.style.bottom;
+    const bottomBefore = harness.duck.style.bottom;
     const accessoryTransformBefore = harness.accessory.style.transform;
 
     harness.electronHandlers.onViewportOffsetX(40);
 
     assert.strictEqual(
-      harness.clawd.style.bottom,
+      harness.duck.style.bottom,
       bottomBefore,
       "X offset must never touch per-asset bottom — that is the Y-offset layout path (plan §4.4 point 4)"
     );
@@ -3135,7 +3135,7 @@ describe("renderer viewport offset X (#690)", () => {
 
   it("leaves non-composite properties of media, accessory, and effect layers alone across repeated offset changes", () => {
     const harness = createRendererHarness();
-    const clawdBottomBefore = harness.clawd.style.bottom;
+    const duckBottomBefore = harness.duck.style.bottom;
     const accessoryDisplayBefore = harness.accessory.style.display;
 
     harness.electronHandlers.onViewportOffsetX(12);
@@ -3143,7 +3143,7 @@ describe("renderer viewport offset X (#690)", () => {
     harness.electronHandlers.onViewportOffsetX(0);
 
     assert.strictEqual(harness.container.style.translate, "0px 0");
-    assert.strictEqual(harness.clawd.style.bottom, clawdBottomBefore);
+    assert.strictEqual(harness.duck.style.bottom, duckBottomBefore);
     assert.strictEqual(harness.accessory.style.display, accessoryDisplayBefore);
   });
 

@@ -65,11 +65,11 @@ function makeCtx(overrides = {}) {
   const ctx = {
     createHttpServer: null,
     setImmediate: () => {},
-    getPortCandidates: () => [23333],
+    getPortCandidates: () => [24333],
     writeRuntimeConfig: () => true,
     clearRuntimeConfig: () => true,
     readRuntimePort: () => null,
-    syncClawdHooksImpl: () => {},
+    syncDuckHooksImpl: () => {},
     syncOpencodePluginImpl: () => {},
     STATE_SVGS: {
       working: "x.svg",
@@ -339,7 +339,7 @@ describe("/state permission cleanup", () => {
       event: "PostToolUseFailure",
       tool_name: "Bash",
       tool_use_id: "toolu_other",
-      tool_input_fingerprint: buildToolInputFingerprint({ command: "find /tmp -name '*clawd*'" }),
+      tool_input_fingerprint: buildToolInputFingerprint({ command: "find /tmp -name '*duck*'" }),
     })));
 
     assert.strictEqual(res.statusCode, 200);

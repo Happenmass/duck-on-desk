@@ -10,7 +10,7 @@ const { resolveTagName, verifyReleaseVersion } = require("../scripts/verify-rele
 
 function makeFixture(t, { packageVersion = "1.2.3", lockVersion = packageVersion,
   rootVersion = packageVersion, releaseVersion = packageVersion } = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-release-contract-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-release-contract-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(path.join(root, "docs", "releases"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ version: packageVersion }));

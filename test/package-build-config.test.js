@@ -257,8 +257,8 @@ describe("package build config", () => {
         "      - name: Verify macOS ZIP payloads",
       );
       assert.match(adHocVerification, /^\s+if: steps\.mac-signing\.outputs\.mode == 'adhoc'$/m);
-      assert.match(adHocVerification, /dist\/mac\/Clawd on Desk\.app/);
-      assert.match(adHocVerification, /dist\/mac-arm64\/Clawd on Desk\.app/);
+      assert.match(adHocVerification, /dist\/mac\/Duck on Desk\.app/);
+      assert.match(adHocVerification, /dist\/mac-arm64\/Duck on Desk\.app/);
       assert.match(adHocVerification, /Signature=adhoc/);
       assert.match(adHocVerification, /adhoc,runtime/);
       assert.match(adHocVerification, /codesign --verify --deep --strict/);
@@ -356,19 +356,19 @@ describe("package build config", () => {
       assert.match(developerVerification, /spctl --assess --type execute/);
       assert.match(developerVerification, /xcrun stapler validate "\$app"/);
       assert.strictEqual(
-        (developerVerification.match(/^\s+verify_signed_app "dist\/mac\/Clawd on Desk\.app"$/gm) || []).length,
+        (developerVerification.match(/^\s+verify_signed_app "dist\/mac\/Duck on Desk\.app"$/gm) || []).length,
         1,
         "Developer ID verification must inspect the unpacked x64 app exactly once",
       );
       assert.strictEqual(
-        (developerVerification.match(/^\s+verify_signed_app "dist\/mac-arm64\/Clawd on Desk\.app"$/gm) || []).length,
+        (developerVerification.match(/^\s+verify_signed_app "dist\/mac-arm64\/Duck on Desk\.app"$/gm) || []).length,
         1,
         "Developer ID verification must inspect the unpacked arm64 app exactly once",
       );
       assert.match(developerVerification, /for arch in x64 arm64/);
       assert.match(developerVerification, /hdiutil verify "\$dmg"/);
       assert.match(developerVerification, /hdiutil attach -readonly -nobrowse -mountpoint/);
-      assert.match(developerVerification, /verify_signed_app "\$active_mount\/Clawd on Desk\.app"/);
+      assert.match(developerVerification, /verify_signed_app "\$active_mount\/Duck on Desk\.app"/);
       assert.doesNotMatch(workflow, /notarytool submit[^\n]*\.dmg/);
       assert.doesNotMatch(workflow, /stapler staple[^\n]*\.dmg/);
     });
@@ -381,7 +381,7 @@ describe("package build config", () => {
         "      - name: Audit packaged native payloads",
       );
       assert.match(zipVerification, /ditto -x -k/);
-      assert.match(zipVerification, /ZIP must contain exactly Clawd on Desk\.app at its root/);
+      assert.match(zipVerification, /ZIP must contain exactly Duck on Desk\.app at its root/);
       assert.match(zipVerification, /codesign --verify --deep --strict/);
       assert.match(zipVerification, /spctl --assess --type execute/);
       assert.match(zipVerification, /xcrun stapler validate/);
@@ -398,12 +398,12 @@ describe("package build config", () => {
         "      - uses: softprops/action-gh-release@v2",
       );
       for (const filename of [
-        "Clawd-on-Desk-$version-x64.dmg",
-        "Clawd-on-Desk-$version-arm64.dmg",
-        "Clawd-on-Desk-$version-x64.zip",
-        "Clawd-on-Desk-$version-arm64.zip",
-        "Clawd-on-Desk-$version-x64.zip.blockmap",
-        "Clawd-on-Desk-$version-arm64.zip.blockmap",
+        "Duck-on-Desk-$version-x64.dmg",
+        "Duck-on-Desk-$version-arm64.dmg",
+        "Duck-on-Desk-$version-x64.zip",
+        "Duck-on-Desk-$version-arm64.zip",
+        "Duck-on-Desk-$version-x64.zip.blockmap",
+        "Duck-on-Desk-$version-arm64.zip.blockmap",
         "latest-mac.yml",
       ]) {
         assert.ok(buildGate.includes(`\"${filename}\"`), `build gate must require ${filename}`);

@@ -10,7 +10,7 @@
 //
 // Lease semantics (v2, #627-residual plan §4.4): a cache READ no longer
 // consults any clock. Validity = shape (positive-int stablePid/agentPid) + cwd
-// match — full stop. The caller (clawd-hook.js) still does the real liveness
+// match — full stop. The caller (duck-hook.js) still does the real liveness
 // check via processAlive(stablePid) && processAlive(agentPid) (kill(pid,0),
 // zero spawn) before treating a read as a HIT; that double-PID check is the
 // ONLY defense against a dead session's cache lingering, and it needs no clock
@@ -29,7 +29,7 @@
 // while both the terminal/editor process AND the agent process are still
 // alive, for as long as that's true, however long the file has sat there.
 //
-// Sweep still runs (from clawd-hook.js on SessionStart, low frequency) to
+// Sweep still runs (from duck-hook.js on SessionStart, low frequency) to
 // collect orphan files from sessions that crashed without a SessionEnd. It
 // requires BOTH an age floor (SWEEP_AGE_MS, keyed off mtime so an
 // actively-touched file is never even a candidate) AND a death proof (corrupt
@@ -40,7 +40,7 @@
 // Liveness for the sweep is dependency-injected (isProcessAlive) rather than
 // required from shared-process.js: PR2 (#634) has shared-process.js require this
 // module for its shared resolver cache, and a reverse require here would create a
-// cycle. The shared resolver (PR2) / clawd-hook.js (PR1) injects processAlive
+// cycle. The shared resolver (PR2) / duck-hook.js (PR1) injects processAlive
 // from shared-process.js; tests inject a fake.
 //
 // Cache v2 (#634): PR2 sinks the per-session cache into the shared resolver and
@@ -48,11 +48,11 @@
 // release cycle so a session already running across the upgrade keeps hitting
 // its v1 file until it is promoted (hooks/shared-process.js). The two schemes
 // differ only in prefix, key input, and shape:
-//   - v1: prefix `clawd-pidcache-`, key sha1(sessionId\0cwd), no version/namespace.
-//   - v2: prefix `clawd-pidcache2-`, key sha1("2\0namespace\0sessionId\0cwd"),
+//   - v1: prefix `duck-pidcache-`, key sha1(sessionId\0cwd), no version/namespace.
+//   - v2: prefix `duck-pidcache2-`, key sha1("2\0namespace\0sessionId\0cwd"),
 //     shape adds `version` + `namespace`. The two prefixes are deliberately
-//     non-overlapping under startsWith() ("clawd-pidcache2-" does NOT start with
-//     "clawd-pidcache-": index 14 is "2" vs "-"), so the sweep classifies every
+//     non-overlapping under startsWith() ("duck-pidcache2-" does NOT start with
+//     "duck-pidcache-": index 14 is "2" vs "-"), so the sweep classifies every
 //     file with a single startsWith() and never double-counts (plan §5.2/§5.4).
 // The lease read semantics (no clock, double-PID liveness by the caller) are
 // identical for both.
@@ -90,11 +90,11 @@ const path = require("path");
 const crypto = require("crypto");
 const { writeJsonAtomic } = require("./json-utils");
 
-const CACHE_PREFIX = "clawd-pidcache-";
+const CACHE_PREFIX = "duck-pidcache-";
 // v2 (#634): a DISTINCT, non-overlapping prefix (see module doc). CACHE_PREFIX_V2
 // deliberately does not startsWith CACHE_PREFIX and vice versa, so sweep
 // classification is unambiguous.
-const CACHE_PREFIX_V2 = "clawd-pidcache2-";
+const CACHE_PREFIX_V2 = "duck-pidcache2-";
 const CACHE_VERSION_V2 = 2;
 // Sweep-only age floor: a file must be idle (mtime) at least this long before
 // it is even considered for cleanup. This is NOT a read-validity clock (see
@@ -119,7 +119,7 @@ function __setCacheDirForTests(dir) {
   _cacheDirOverride = dir || null;
 }
 
-// A session_id of "default" is the placeholder clawd-hook.js falls back to when
+// A session_id of "default" is the placeholder duck-hook.js falls back to when
 // the agent's stdin JSON lacked one (#583): caching under it would let unrelated
 // sessions read each other's PIDs. Empty cwd removes the second identity guard.
 function canCache(sessionId, cwd) {

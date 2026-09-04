@@ -127,7 +127,7 @@ if (isWin) {
     const user32 = koffi.load("user32.dll");
     _allowSetForeground = user32.func("bool __stdcall AllowSetForegroundWindow(int dwProcessId)");
   } catch (err) {
-    console.warn("Clawd: koffi/AllowSetForegroundWindow not available:", err.message);
+    console.warn("Duck: koffi/AllowSetForegroundWindow not available:", err.message);
   }
 }
 
@@ -137,12 +137,12 @@ if (isWin) {
 const { createForegroundFullscreenProbe } = require("./win-fullscreen-detect");
 const _isForegroundFullscreen = createForegroundFullscreenProbe({
   isWin,
-  onError: (err) => console.warn("Clawd: win-fullscreen-detect not available:", err && err.message),
+  onError: (err) => console.warn("Duck: win-fullscreen-detect not available:", err && err.message),
 });
 const _hitWindowActivationRuntime = createHitWindowActivationRuntime({
   isWin,
   getHitWindow: () => hitWin,
-  onError: (err) => console.warn("Clawd: win-hit-window-activation failed:", err && err.message),
+  onError: (err) => console.warn("Duck: win-hit-window-activation failed:", err && err.message),
 });
 
 // ── Windows: DWM cloak inspection + un-cloak (#525 self-heal) ──
@@ -151,7 +151,7 @@ const _hitWindowActivationRuntime = createHitWindowActivationRuntime({
 const { createCloakInspector } = require("./win-cloak-recovery");
 const _cloakInspector = createCloakInspector({
   isWin,
-  log: (line) => console.warn(`Clawd: ${line}`),
+  log: (line) => console.warn(`Duck: ${line}`),
 });
 
 // ── Windows: foreground Windows Terminal probe (server-side wt_hwnd sample,
@@ -163,19 +163,19 @@ const _cloakInspector = createCloakInspector({
 const { createForegroundWindowsTerminalProbe } = require("./win-foreground-terminal");
 const _captureForegroundWindowsTerminal = createForegroundWindowsTerminalProbe({
   isWin,
-  onError: (err) => console.warn("Clawd: win-foreground-terminal not available:", err && err.message),
+  onError: (err) => console.warn("Duck: win-foreground-terminal not available:", err && err.message),
 });
 
 // ── Windows: switch the dev console to UTF-8 ──
 //
-// `npm start` attaches Clawd to a parent PowerShell/cmd console. That
+// `npm start` attaches Duck to a parent PowerShell/cmd console. That
 // console defaults to the system codepage (CP936 on zh-CN), so any
 // Chinese string we console.log lands as mojibake — the strings are
 // already UTF-8 in memory (after the GBK stderr decode fix), but the
 // console interprets the bytes as GBK on the way out.
 //
 // SetConsoleOutputCP(65001) tells the attached console to interpret
-// stdout/stderr as UTF-8 while Clawd is running. Packaged builds run under
+// stdout/stderr as UTF-8 while Duck is running. Packaged builds run under
 // the Windows GUI subsystem with no console attached, so this call is a
 // no-op there.
 let _restoreConsoleOutputCP = null;
@@ -198,7 +198,7 @@ if (isWin) {
     }
   } catch (err) {
     // Best-effort — mojibake in dev console is annoying but not fatal.
-    console.warn("Clawd: SetConsoleOutputCP(65001) failed:", err && err.message);
+    console.warn("Duck: SetConsoleOutputCP(65001) failed:", err && err.message);
   }
 }
 
@@ -227,7 +227,7 @@ const {
 const loginItemHelpers = require("./login-item");
 const { writeCodexAutoStartGate } = require("../hooks/server-config");
 const { createCodexAutoStartGateEvaluator } = require("./agent-gate");
-const PREFS_PATH = path.join(app.getPath("userData"), "clawd-prefs.json");
+const PREFS_PATH = path.join(app.getPath("userData"), "duck-prefs.json");
 const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
 // Recovery from readable invalid contents is writable only after the original
 // bytes are safely kept in .bak. That fallback is not user intent for this
@@ -251,7 +251,7 @@ function _persistCodexAutoStartGate(enabled) {
 
 function _syncCodexAutoStartGate(snapshot, source) {
   if (_persistCodexAutoStartGate(_evaluateCodexAutoStartGate(snapshot))) return true;
-  console.warn(`Clawd: failed to sync Codex auto-start gate (${source})`);
+  console.warn(`Duck: failed to sync Codex auto-start gate (${source})`);
   return false;
 }
 
@@ -322,10 +322,10 @@ function _deferredResizePet(sizeKey) {
 }
 
 let _restartScheduled = false;
-function _restartClawdNow() {
+function _restartDuckNow() {
   if (_restartScheduled) return;
   _restartScheduled = true;
-  // Triggered by Doctor's restart-clawd repair. relaunch() queues a fresh
+  // Triggered by Doctor's restart-duck repair. relaunch() queues a fresh
   // process; quit() then follows the normal shutdown path so before-quit
   // still flushes prefs and cleans up server/monitor resources.
   // setImmediate so the IPC reply for repairDoctorIssue lands in the
@@ -358,7 +358,7 @@ const _settingsController = createSettingsController({
     installAutoStart: _installAutoStartHook,
     uninstallAutoStart: _uninstallAutoStartHook,
     resolveTextScaleDisplayKey: () => getSettingsDisplayKey(),
-    syncClaudeHooksNow: () => _server.syncClawdHooks({ source: "settings", automatic: false }),
+    syncClaudeHooksNow: () => _server.syncDuckHooks({ source: "settings", automatic: false }),
     setClaudeQuotaCollectionEnabled: (enabled) => _server.setClaudeQuotaCollectionEnabled({
       enabled,
       source: "settings-quota-collection",
@@ -396,7 +396,7 @@ const _settingsController = createSettingsController({
     repairLocalServer: () => _server && typeof _server.repairRuntimeStatus === "function"
       ? _server.repairRuntimeStatus()
       : false,
-    restartClawd: _restartClawdNow,
+    restartDuck: _restartDuckNow,
     clearSessionsByAgent: (id) => agentRuntime ? agentRuntime.clearSessionsByAgent(id) : 0,
     clearSessionAutomationByAgent: (id) =>
       sessionAutomationCoordinator ? sessionAutomationCoordinator.clearAgent(id) : [],
@@ -430,7 +430,7 @@ _settingsController.subscribeKey("agents", (_agents, snapshot) => {
   // A readable future-version prefs file may still change in memory for the
   // current process. An unreadable prefs file rejects mutations earlier in the
   // controller. In both locked cases, publishing ephemeral values would let a
-  // retained hook cold-launch Clawd against a different durable prefs truth.
+  // retained hook cold-launch Duck against a different durable prefs truth.
   if (_settingsController.isLocked()) return;
   _syncCodexAutoStartGate(snapshot, "settings");
 });
@@ -467,14 +467,14 @@ function hydrateSystemBackedSettings() {
   try {
     systemValue = !!_readSystemOpenAtLogin();
   } catch (err) {
-    console.warn("Clawd: failed to read system openAtLogin during hydration:", err && err.message);
+    console.warn("Duck: failed to read system openAtLogin during hydration:", err && err.message);
   }
   const result = _settingsController.hydrate({
     openAtLogin: systemValue,
     openAtLoginHydrated: true,
   });
   if (result && result.status === "error") {
-    console.warn("Clawd: openAtLogin hydration failed:", result.message);
+    console.warn("Duck: openAtLogin hydration failed:", result.message);
   }
 }
 
@@ -490,7 +490,7 @@ function hydrateFreshInstallLanguage() {
   try {
     detected = prefsModule.mapLocaleToLang(app.getLocale());
   } catch (err) {
-    console.warn("Clawd: failed to detect device locale for language:", err && err.message);
+    console.warn("Duck: failed to detect device locale for language:", err && err.message);
     return;
   }
   if (detected && detected !== _settingsController.get("lang")) {
@@ -560,7 +560,7 @@ function safeConsoleError(...args) {
   } catch (err) {
     try {
       const line = `${new Date().toISOString()} ${args.map((x) => String(x)).join(" ")}\n`;
-      fs.appendFileSync(path.join(app.getPath("userData"), "clawd-main.log"), line);
+      fs.appendFileSync(path.join(app.getPath("userData"), "duck-main.log"), line);
     } catch {}
   }
 }
@@ -701,14 +701,14 @@ codexPetMain = createCodexPetMain({
 });
 const REGISTER_PROTOCOL_DEV_ARG = codexPetMain.REGISTER_PROTOCOL_DEV_ARG;
 // Lenient load so a missing/corrupt user-selected theme can't brick boot.
-// If lenient fell back to "clawd" OR the variant fell back to "default",
+// If lenient fell back to "duck" OR the variant fell back to "default",
 // hydrate prefs to match so the store stays truth.
 //
 // Startup runs BEFORE the window is ready, so we call the runtime's initial
 // load path, not activateTheme (which requires ready windows) and not the
 // setThemeSelection command (which goes through activateTheme). The runtime
 // switch path via UI goes through setThemeSelection post-window-ready.
-let _requestedThemeId = _settingsController.get("theme") || "clawd";
+let _requestedThemeId = _settingsController.get("theme") || "duck";
 const _initialVariantMap = _settingsController.get("themeVariant") || {};
 let _requestedVariantId = _initialVariantMap[_requestedThemeId] || "default";
 const _initialThemeOverrides = _settingsController.get("themeOverrides") || {};
@@ -721,7 +721,7 @@ if (codexPetMain.summaryHasActiveOrphan(_startupCodexPetSyncSummary, _requestedT
   delete nextVariantMap[orphanThemeId];
   delete nextOverrides[orphanThemeId];
 
-  _requestedThemeId = "clawd";
+  _requestedThemeId = "duck";
   _requestedVariantId = nextVariantMap[_requestedThemeId] || "default";
   _requestedThemeOverrides = nextOverrides[_requestedThemeId] || null;
   const result = _settingsController.hydrate({
@@ -730,7 +730,7 @@ if (codexPetMain.summaryHasActiveOrphan(_startupCodexPetSyncSummary, _requestedT
     themeOverrides: nextOverrides,
   });
   if (result && result.status === "error") {
-    console.warn("Clawd: Codex Pet active theme fallback hydrate failed:", result.message);
+    console.warn("Duck: Codex Pet active theme fallback hydrate failed:", result.message);
   }
   _startupCodexPetSyncSummary = codexPetMain.mergeSyncSummaries(
     _startupCodexPetSyncSummary,
@@ -754,7 +754,7 @@ if (_loadedStartupTheme._id !== _requestedThemeId || _loadedStartupTheme._varian
     themeVariant: nextVariantMap,
   });
   if (result && result.status === "error") {
-    console.warn("Clawd: theme hydrate after fallback failed:", result.message);
+    console.warn("Duck: theme hydrate after fallback failed:", result.message);
   }
 }
 
@@ -1101,14 +1101,14 @@ function applyTextScaleNow() {
       settingsWindowRuntime.applyTextScaleToWindow();
     }
   } catch (err) {
-    console.warn("Clawd: settings window text scale failed:", err && err.message);
+    console.warn("Duck: settings window text scale failed:", err && err.message);
   }
   try {
     if (_dashboard && typeof _dashboard.applyTextScaleToWindow === "function") {
       _dashboard.applyTextScaleToWindow();
     }
   } catch (err) {
-    console.warn("Clawd: dashboard text scale failed:", err && err.message);
+    console.warn("Duck: dashboard text scale failed:", err && err.message);
   }
   repositionAnchoredFloatingSurfaces();
 }
@@ -1595,7 +1595,7 @@ function moveWindowForDrag() { return petWindowRuntime.moveWindowForDrag(); }
 // Focus(false) side effect deactivates the user's fullscreen foreground app.
 // Leaving fullscreen removes the native style. When the native controller is
 // available, Electron itself remains non-focusable for the hit window's
-// lifetime so Chromium cannot explicitly activate Clawd on pointerdown. If
+// lifetime so Chromium cannot explicitly activate Duck on pointerdown. If
 // Koffi/user32 initialization failed, construction deliberately falls back to
 // the legacy focusable window so desktop click/drag remains available.
 const setHitWinFocusable = _hitWindowActivationRuntime.setHitWinFocusable;
@@ -2082,7 +2082,7 @@ function reconcilePowerSaveBlocker() {
       powerSaveBlockerId = null;
     }
   } catch (err) {
-    console.warn("Clawd: reconcilePowerSaveBlocker failed:", err);
+    console.warn("Duck: reconcilePowerSaveBlocker failed:", err);
   }
 }
 function releasePowerSaveBlocker() {
@@ -2523,7 +2523,7 @@ const _menuCtx = {
   set bubbleFollowPet(v) { _settingsController.applyUpdate("bubbleFollowPet", v); },
   get hideBubbles() { return getAllBubblesHidden(); },
   set hideBubbles(v) { _settingsController.applyCommand("setAllBubblesHidden", { hidden: !!v }).catch((err) => {
-    console.warn("Clawd: setAllBubblesHidden failed:", err && err.message);
+    console.warn("Duck: setAllBubblesHidden failed:", err && err.message);
   }); },
   get permissionAutomationMode() {
     return _settingsController.get("permissionAutomationMode") || "off";
@@ -2542,7 +2542,7 @@ const _menuCtx = {
       confirmed: options.confirmed === true,
       suppressFutureConfirmation: options.suppressFutureConfirmation === true,
     }).catch((err) => {
-      console.warn("Clawd: setPermissionAutomationMode failed:", err && err.message);
+      console.warn("Duck: setPermissionAutomationMode failed:", err && err.message);
       return { status: "error", message: err && err.message };
     });
   },
@@ -2673,7 +2673,7 @@ const _menuCtx = {
   getSettingsWindow,
   getSystemVersion: () => process.getSystemVersion(),
   discoverThemes: () => themeLoader.discoverThemes(),
-  getActiveThemeId: () => themeRuntime.getActiveThemeId("clawd"),
+  getActiveThemeId: () => themeRuntime.getActiveThemeId("duck"),
   getActiveThemeCapabilities: () => themeRuntime.getActiveThemeCapabilities(),
   ensureUserThemesDir: () => themeLoader.ensureUserThemesDir(),
   openSettingsWindow: (options) => settingsWindowRuntime.open(options),
@@ -2850,7 +2850,7 @@ const {
 notifyUpdaterSilentExit = () => { try { updaterOnSilentModeExit(); } catch {} };
 
 // #329: react to the autoUpdateCheck toggle in real time so users see
-// the scheduler start/stop without restarting Clawd.
+// the scheduler start/stop without restarting Duck.
 try {
   _settingsController.subscribeKey("autoUpdateCheck", (value) => {
     try {
@@ -2962,7 +2962,7 @@ const settingsIpcRuntime = registerSettingsIpc({
     clipboard.writeText(copyText);
     return { status: "ok" };
   },
-  aboutHeroSvgPath: path.join(__dirname, "..", "assets", "svg", "clawd-about-hero.svg"),
+  aboutHeroSvgPath: path.join(__dirname, "..", "assets", "svg", "duck-about-hero.svg"),
 });
 
 registerSessionIpc({
@@ -2990,11 +2990,11 @@ registerSessionIpc({
     if (result && typeof result.then === "function") {
       result
         .then((r) => {
-          if (r && r.status === "error") console.warn("Clawd: failed to pin Session HUD:", r.message);
+          if (r && r.status === "error") console.warn("Duck: failed to pin Session HUD:", r.message);
         })
-        .catch((err) => console.warn("Clawd: failed to pin Session HUD:", err && err.message));
+        .catch((err) => console.warn("Duck: failed to pin Session HUD:", err && err.message));
     } else if (result && result.status === "error") {
-      console.warn("Clawd: failed to pin Session HUD:", result.message);
+      console.warn("Duck: failed to pin Session HUD:", result.message);
     }
   },
 });
@@ -3167,7 +3167,7 @@ function createWindow() {
     },
     statPath: (p) => fs.promises.stat(p),
     openTerminalAt: (dir) => openTerminalAt(dir),
-    dropLog: (message) => console.log(`Clawd: ${message}`),
+    dropLog: (message) => console.log(`Duck: ${message}`),
   });
 
   registerPermissionIpc({
@@ -3433,11 +3433,11 @@ const _roamCtx = {
       && p.bubble
       && !p.bubble.isDestroyed()
       && p.bubble.isVisible()
-      && p.bubble.__clawdMacImeEditing
+      && p.bubble.__duckMacImeEditing
   ),
   hasVisiblePermissionBubbles: () => _perm.hasVisiblePermissionBubbles(),
   // #810: optional roam fence — validated async loader for
-  // ~/.clawd/roam-area.json; roam reads its in-memory cache at target pick
+  // ~/.duck-on-desk/roam-area.json; roam reads its in-memory cache at target pick
   // time and kicks refresh() when scheduling walks (see src/roam-fence.js).
   roamFence: roamFenceLoader,
 };
@@ -3458,7 +3458,7 @@ try {
     _roam.setConstrainAxis(value === true);
   });
 } catch (err) {
-  console.warn("Clawd: freeRoam subscribeKey failed:", err && err.message);
+  console.warn("Duck: freeRoam subscribeKey failed:", err && err.message);
 }
 
 // Convenience getters for mini state (used throughout main.js)
@@ -3472,7 +3472,7 @@ Object.defineProperties(this || {}, {}); // no-op placeholder
 // active theme source and the cleanup/refresh/reload protocol.
 
 // ── Auto-install VS Code / Cursor terminal-focus extension ──
-const EXT_ID = "clawd.clawd-terminal-focus";
+const EXT_ID = "duck.duck-terminal-focus";
 const EXT_VERSION = "0.1.1";
 const EXT_DIR_NAME = `${EXT_ID}-${EXT_VERSION}`;
 
@@ -3485,7 +3485,7 @@ function installTerminalFocusExtension() {
   extSrc = extSrc.replace("app.asar" + path.sep, "app.asar.unpacked" + path.sep);
 
   if (!fs.existsSync(extSrc)) {
-    console.log("Clawd: terminal-focus extension source not found, skipping auto-install");
+    console.log("Duck: terminal-focus extension source not found, skipping auto-install");
     return;
   }
 
@@ -3508,13 +3508,13 @@ function installTerminalFocusExtension() {
         fs.copyFileSync(path.join(extSrc, file), path.join(dest, file));
       }
       installed++;
-      console.log(`Clawd: installed terminal-focus extension to ${dest}`);
+      console.log(`Duck: installed terminal-focus extension to ${dest}`);
     } catch (err) {
-      console.warn(`Clawd: failed to install extension to ${dest}:`, err.message);
+      console.warn(`Duck: failed to install extension to ${dest}:`, err.message);
     }
   }
   if (installed > 0) {
-    console.log(`Clawd: terminal-focus extension installed to ${installed} editor(s). Restart VS Code/Cursor to activate.`);
+    console.log(`Duck: terminal-focus extension installed to ${installed} editor(s). Restart VS Code/Cursor to activate.`);
   }
 }
 
@@ -3528,7 +3528,7 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   if (process.argv.includes(REGISTER_PROTOCOL_DEV_ARG)) {
     const protocolRegistered = codexPetMain.registerProtocolClient();
-    console.log(`Clawd: clawd:// dev protocol registration ${protocolRegistered ? "succeeded" : "failed"}`);
+    console.log(`Duck: duck:// dev protocol registration ${protocolRegistered ? "succeeded" : "failed"}`);
   }
   // Another instance is already running — quit silently
   app.quit();
@@ -3599,9 +3599,9 @@ if (!gotTheLock) {
         });
       }
     } catch (err) {
-      console.warn("Clawd: Codex hook balloon failed:", err && err.message);
+      console.warn("Duck: Codex hook balloon failed:", err && err.message);
     }
-    console.warn(`Clawd: Codex official hook needs attention (${verdict.signature}): ${verdict.detailText || ""}`);
+    console.warn(`Duck: Codex official hook needs attention (${verdict.signature}): ${verdict.detailText || ""}`);
   }
 
   function maybeNudgeCodexHookHealth() {
@@ -3619,7 +3619,7 @@ if (!gotTheLock) {
       }
       if (decision.shouldNotify) fireCodexHookNudge(verdict);
     } catch (err) {
-      console.warn("Clawd: Codex hook health nudge failed:", err && err.message);
+      console.warn("Duck: Codex hook health nudge failed:", err && err.message);
     }
   }
 
@@ -3650,9 +3650,9 @@ if (!gotTheLock) {
         return true;
       }
     } catch (err) {
-      console.warn("Clawd: preferences authority nudge failed:", err && err.message);
+      console.warn("Duck: preferences authority nudge failed:", err && err.message);
     }
-    console.warn(`Clawd: ${body}`);
+    console.warn(`Duck: ${body}`);
     return false;
   }
 
@@ -3674,7 +3674,7 @@ if (!gotTheLock) {
 
     const protocolRegistered = codexPetMain.registerProtocolClient();
     if (process.argv.includes(REGISTER_PROTOCOL_DEV_ARG)) {
-      console.log(`Clawd: clawd:// dev protocol registration ${protocolRegistered ? "succeeded" : "failed"}`);
+      console.log(`Duck: duck:// dev protocol registration ${protocolRegistered ? "succeeded" : "failed"}`);
       app.quit();
       return;
     }
@@ -3713,7 +3713,7 @@ if (!gotTheLock) {
       },
       log: sessionLog,
       onError: (err) => safeConsoleError(
-        "Clawd: system wake recovery failed:",
+        "Duck: system wake recovery failed:",
         err && err.message ? err.message : err
       ),
     });
@@ -3748,7 +3748,7 @@ if (!gotTheLock) {
     }
     codexPetMain.enqueueImportUrlsFromArgv(process.argv);
     codexPetMain.flushPendingImportUrls().catch((err) => {
-      console.warn("Clawd: Codex Pet import queue failed:", err && err.message);
+      console.warn("Duck: Codex Pet import queue failed:", err && err.message);
     });
 
     // Register persistent global shortcuts from the validated prefs snapshot.
@@ -3763,7 +3763,7 @@ if (!gotTheLock) {
 
     // Auto-install VS Code/Cursor terminal-focus extension
     try { installTerminalFocusExtension(); } catch (err) {
-      console.warn("Clawd: failed to auto-install terminal-focus extension:", err.message);
+      console.warn("Duck: failed to auto-install terminal-focus extension:", err.message);
     }
 
     // Auto-updater: setup event handlers (user triggers check via tray menu)

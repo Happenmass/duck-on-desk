@@ -1,6 +1,6 @@
 ## v1.0.0
 
-Clawd v1.0.0 adds local activity Footprints, expandable permission cards and an
+Duck v1.0.0 adds local activity Footprints, expandable permission cards and an
 overflow queue, signed macOS in-app updates, and Windows fullscreen auto-hide.
 It also improves Codex session recovery, Claude background completion, agent
 installation detection, and Settings navigation.
@@ -9,7 +9,7 @@ installation detection, and Settings navigation.
 
 - **Private activity history** (#963) — Settings → Footprints shows Today,
   This week, This month, and This year. It counts accepted agent signals and
-  distinguishes recorded quiet periods from periods Clawd could not observe.
+  distinguishes recorded quiet periods from periods Duck could not observe.
   Unsupported metrics remain a dash, never an invented zero.
 - **Local storage only** — recording is on by default, with 14 local days of
   minimized event tickets and 400 local days of daily totals and coverage.
@@ -32,9 +32,9 @@ installation detection, and Settings navigation.
   overflow target that is clipped or obscured by the session HUD, including
   queue loading and failure fallback.
 - **Independent bubble placement** (#918, #934) — permission and update bubbles
-  can follow Clawd automatically or on a preferred side, or stay at one of four
+  can follow Duck automatically or on a preferred side, or stay at one of four
   primary-display corners, while avoiding other floating surfaces.
-- **Windows fullscreen auto-hide** (#973) — optionally hides Clawd and floating
+- **Windows fullscreen auto-hide** (#973) — optionally hides Duck and floating
   surfaces during fullscreen use, including newly arriving local permission
   cards. Leaving fullscreen restores only requests still pending. Remote
   approval and configured auto-close keep their existing behavior.
@@ -67,7 +67,7 @@ installation detection, and Settings navigation.
 ### Upgrade Notes
 
 - **macOS: install v1.0.0 manually once.** v0.16.0 and older packaged apps
-  cannot install this update themselves. Download the signed DMG, quit Clawd,
+  cannot install this update themselves. Download the signed DMG, quit Duck,
   and replace the application while keeping its data. Starting with this bridge
   version, later signed releases can use in-app download and Restart Now, or
   Later followed by quit/reopen (#922). Linux packages still update manually.
@@ -75,7 +75,7 @@ installation detection, and Settings navigation.
   to turn it off or clear its history. See the [Footprints guide](../guides/recap.md)
   for retention, metric coverage, and recovery behavior.
 - If bubble following was previously disabled, fixed placement now uses the
-  selected corner of the primary display rather than the display containing Clawd.
+  selected corner of the primary display rather than the display containing Duck.
 - Launch once after upgrading so installed and enabled integrations reconcile
   their packaged hooks/plugins. Disabled integrations are not reinstalled.
 

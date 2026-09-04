@@ -20,7 +20,7 @@ function fakeFs(existingPaths) {
 describe("doctor hook command parser", () => {
   it("validates POSIX absolute node and script paths", () => {
     const nodeBin = "/usr/local/bin/node";
-    const scriptPath = "/opt/clawd/hooks/cursor-hook.js";
+    const scriptPath = "/opt/duck/hooks/cursor-hook.js";
     const command = formatNodeHookCommand(nodeBin, scriptPath, { platform: "linux" });
 
     assert.deepStrictEqual(
@@ -64,7 +64,7 @@ describe("doctor hook command parser", () => {
 
   it("validates direct process executor node/script targets without shell parsing", () => {
     const nodeBin = "C:\\Program Files\\nodejs\\node.exe";
-    const scriptPath = "D:/Program Files/Clawd/hooks/agent-f-hook.js";
+    const scriptPath = "D:/Program Files/Duck/hooks/agent-f-hook.js";
 
     assert.deepStrictEqual(
       validateHookTarget({ nodeBin, scriptPath }, {
@@ -77,7 +77,7 @@ describe("doctor hook command parser", () => {
 
   it("rejects non-Node and bare executables for strict process targets", () => {
     const cmdBin = "C:\\Windows\\System32\\cmd.exe";
-    const scriptPath = "D:/Program Files/Clawd/hooks/agent-f-hook.js";
+    const scriptPath = "D:/Program Files/Duck/hooks/agent-f-hook.js";
 
     assert.deepStrictEqual(
       validateHookTarget({ nodeBin: cmdBin, scriptPath }, {
@@ -111,7 +111,7 @@ describe("doctor hook command parser", () => {
 
   it("does not mistake preload scripts for the hook script", () => {
     const nodeBin = "/usr/local/bin/node";
-    const scriptPath = "/opt/clawd/hooks/agent-g-hook.js";
+    const scriptPath = "/opt/duck/hooks/agent-g-hook.js";
     const command = `"${nodeBin}" "--require" "./pre.js" "${scriptPath}"`;
 
     assert.deepStrictEqual(
@@ -142,9 +142,9 @@ describe("doctor hook command parser", () => {
 
   it("strips POSIX env prefixes", () => {
     const nodeBin = "/usr/local/bin/node";
-    const scriptPath = "/opt/clawd/hooks/codex-hook.js";
+    const scriptPath = "/opt/duck/hooks/codex-hook.js";
     const base = formatNodeHookCommand(nodeBin, scriptPath, { platform: "linux" });
-    const command = withCommandEnv(base, { CLAWD_HOOK_DEBUG: "1" }, "linux");
+    const command = withCommandEnv(base, { DUCK_HOOK_DEBUG: "1" }, "linux");
 
     assert.deepStrictEqual(
       validateHookCommand(command, {
@@ -161,7 +161,7 @@ describe("doctor hook command parser", () => {
       platform: "win32",
       windowsWrapper: "powershell",
     });
-    const command = withCommandEnv(base, { CLAWD_REMOTE: "1" }, "win32");
+    const command = withCommandEnv(base, { DUCK_REMOTE: "1" }, "win32");
 
     assert.deepStrictEqual(
       validateHookCommand(command, { platform: "win32", fs: fakeFs([scriptPath]) }),
@@ -185,7 +185,7 @@ describe("doctor hook command parser", () => {
 
   it("reports missing script paths", () => {
     const nodeBin = "/usr/local/bin/node";
-    const scriptPath = "/opt/clawd/hooks/missing-hook.js";
+    const scriptPath = "/opt/duck/hooks/missing-hook.js";
     const command = formatNodeHookCommand(nodeBin, scriptPath, { platform: "linux" });
 
     assert.deepStrictEqual(
@@ -198,7 +198,7 @@ describe("doctor hook command parser", () => {
   });
 
   it("reports bare node as invalid on POSIX", () => {
-    const scriptPath = "/opt/clawd/hooks/cursor-hook.js";
+    const scriptPath = "/opt/duck/hooks/cursor-hook.js";
     const command = formatNodeHookCommand("node", scriptPath, { platform: "linux" });
 
     assert.deepStrictEqual(

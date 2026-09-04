@@ -128,7 +128,7 @@ function mapAgentMetadata(agent) {
     eventSource: agent.eventSource,
     capabilities: agent.capabilities || {},
     // #895: default integrations never earn a "remove this stale hook" prompt —
-    // their parent dirs are not trustworthy evidence (Clawd's own Claude sync
+    // their parent dirs are not trustworthy evidence (Duck's own Claude sync
     // creates ~/.claude). Shipped as an explicit boolean rather than a list the
     // renderer has to hold, so a missing field reads as "unknown" and the
     // renderer fails closed instead of proposing a deletion.
@@ -211,7 +211,7 @@ function registerSettingsIpc(options = {}) {
   const copyUpdateError = options.copyUpdateError || (() => ({ status: "error", message: "clipboard unavailable" }));
   const now = options.now || (() => Date.now());
   const aboutHeroSvgPath = options.aboutHeroSvgPath
-    || path.join(__dirname, "..", "assets", "svg", "clawd-about-hero.svg");
+    || path.join(__dirname, "..", "assets", "svg", "duck-about-hero.svg");
   const disposers = [];
 
   function handle(channel, listener) {
@@ -425,7 +425,7 @@ function registerSettingsIpc(options = {}) {
   handle("settings:list-themes", () => {
     try {
       const activeTheme = getActiveTheme();
-      const activeId = activeTheme ? activeTheme._id : "clawd";
+      const activeId = activeTheme ? activeTheme._id : "duck";
       return themeLoader.listThemesWithMetadata().map((theme) => {
         const active = theme.id === activeId;
         const runtimeCapabilities = active
@@ -442,7 +442,7 @@ function registerSettingsIpc(options = {}) {
         });
       });
     } catch (err) {
-      console.warn("Clawd: settings:list-themes failed:", err && err.message);
+      console.warn("Duck: settings:list-themes failed:", err && err.message);
       return [];
     }
   });
@@ -462,7 +462,7 @@ function registerSettingsIpc(options = {}) {
     try {
       result = await dialog.showOpenDialog(getDialogParent(event), {
         properties: ["openFile"],
-        filters: [{ name: "Clawd theme zip", extensions: ["zip"] }],
+        filters: [{ name: "Duck theme zip", extensions: ["zip"] }],
       });
     } catch (err) {
       return { status: "error", message: `theme zip picker failed: ${err && err.message}` };
@@ -508,7 +508,7 @@ function registerSettingsIpc(options = {}) {
       });
       return { confirmed: response === 0 };
     } catch (err) {
-      console.warn("Clawd: confirm-remove-theme dialog failed:", err && err.message);
+      console.warn("Duck: confirm-remove-theme dialog failed:", err && err.message);
       return { confirmed: false };
     }
   });
@@ -532,7 +532,7 @@ function registerSettingsIpc(options = {}) {
         : [];
       return [...getAllAgents().map(mapAgentMetadata), ...custom];
     } catch (err) {
-      console.warn("Clawd: settings:list-agents failed:", err && err.message);
+      console.warn("Duck: settings:list-agents failed:", err && err.message);
       return [];
     }
   });
@@ -569,7 +569,7 @@ function registerSettingsIpc(options = {}) {
       }
       return detectAgentInstallations(detectorOptions);
     } catch (err) {
-      console.warn("Clawd: settings:detect-agent-installations failed:", err && err.message);
+      console.warn("Duck: settings:detect-agent-installations failed:", err && err.message);
       return {
         checkedAt: now(),
         agents: [],
@@ -590,7 +590,7 @@ function registerSettingsIpc(options = {}) {
     try {
       heroSvgContent = fs.readFileSync(aboutHeroSvgPath, "utf8");
     } catch (err) {
-      console.warn("Clawd: failed to read about hero SVG:", err && err.message);
+      console.warn("Duck: failed to read about hero SVG:", err && err.message);
     }
     let pendingUpdateVersion = "";
     let autoUpdateCheck = true;
@@ -600,7 +600,7 @@ function registerSettingsIpc(options = {}) {
     } catch {}
     return {
       version: app.getVersion(),
-      repoUrl: "https://github.com/rullerzhou-afk/clawd-on-desk",
+      repoUrl: "https://github.com/rullerzhou-afk/duck-on-desk",
       license: "AGPL-3.0",
       copyright: "\u00a9 2026 Ruller_Lulu",
       authorName: "Ruller_Lulu / \u9e7f\u9e7f",

@@ -16,9 +16,9 @@ const { commandRegistry, updateRegistry } = require("../src/settings-actions");
 
 const tempDirs = [];
 function makeTempPath() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-controller-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-controller-"));
   tempDirs.push(dir);
-  return path.join(dir, "clawd-prefs.json");
+  return path.join(dir, "duck-prefs.json");
 }
 
 function createDeferred() {

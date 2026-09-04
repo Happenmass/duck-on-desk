@@ -18,7 +18,7 @@ async function loadPluginModule() {
 }
 
 describe("opencode plugin session ids", () => {
-  it("namespaces raw opencode session ids before sending them to Clawd", async () => {
+  it("namespaces raw opencode session ids before sending them to Duck", async () => {
     const mod = await loadSessionIdModule();
 
     assert.strictEqual(mod.normalizeSessionId("ses_123"), "opencode:ses_123");
@@ -173,7 +173,7 @@ describe("opencode plugin session ids", () => {
     );
   });
 
-  it("wires session start and end events to the same namespaced Clawd session id", async () => {
+  it("wires session start and end events to the same namespaced Duck session id", async () => {
     const mod = await loadPluginModule();
     const start = { type: "session.created", properties: { sessionID: "ses_same" } };
     const end = { type: "session.deleted", properties: { sessionID: "ses_same" } };

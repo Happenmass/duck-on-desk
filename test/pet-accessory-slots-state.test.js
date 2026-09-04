@@ -19,19 +19,19 @@ const CIGARETTE = { id: "cigarette", assetFile: "cigarette.svg", aspect: 0.5, wi
 test.afterEach(resetPetAccessoryStateForTests);
 
 test("mints one immutable generation for the complete head+mouth candidate and commits that object", () => {
-  const theme = { _id: "clawd" };
+  const theme = { _id: "duck" };
   const candidate = createPetAccessorySlotsCandidate({ head: HAT, mouth: CIGARETTE }, theme);
 
   assert.ok(Object.isFrozen(candidate));
   assert.ok(Object.isFrozen(candidate.payloads));
-  assert.strictEqual(candidate.themeId, "clawd");
+  assert.strictEqual(candidate.themeId, "duck");
   assert.strictEqual(candidate.accessoryGeneration, 1);
   assert.strictEqual(commitPetAccessorySlotsCandidate(candidate), candidate);
   assert.strictEqual(getPetAccessorySlotsSnapshot(theme), candidate);
 });
 
 test("a delivery failure may leave a monotonic generation hole without changing canonical state", () => {
-  const theme = { _id: "clawd" };
+  const theme = { _id: "duck" };
   const undelivered = createPetAccessorySlotsCandidate({ head: HAT, mouth: NONE }, theme);
   const delivered = createPetAccessorySlotsCandidate({ head: NONE, mouth: CIGARETTE }, theme);
 
@@ -45,7 +45,7 @@ test("a delivery failure may leave a monotonic generation hole without changing 
 test("rejects commits that were not minted by the canonical candidate builder", () => {
   assert.throws(
     () => commitPetAccessorySlotsCandidate({
-      themeId: "clawd",
+      themeId: "duck",
       payloads: { head: NONE, mouth: NONE },
       accessoryGeneration: 99,
     }),
@@ -54,7 +54,7 @@ test("rejects commits that were not minted by the canonical candidate builder", 
 });
 
 test("first delivery commits exactly the snapshot renderer received and reload reuses it", () => {
-  const theme = { _id: "clawd" };
+  const theme = { _id: "duck" };
   const first = preparePetAccessorySlotsDelivery({ head: HAT, mouth: CIGARETTE }, theme);
 
   assert.strictEqual(first.needsCommit, true);
@@ -71,21 +71,21 @@ test("first delivery commits exactly the snapshot renderer received and reload r
 });
 
 test("failed config delivery does not commit startup or hot-switch candidates", () => {
-  const clawd = { _id: "clawd" };
+  const duck = { _id: "duck" };
   const cloudling = { _id: "cloudling" };
-  const startup = preparePetAccessorySlotsDelivery({ head: HAT, mouth: CIGARETTE }, clawd);
+  const startup = preparePetAccessorySlotsDelivery({ head: HAT, mouth: CIGARETTE }, duck);
 
   assert.strictEqual(finalizePetAccessorySlotsDelivery(startup, false), false);
-  assert.strictEqual(getPetAccessorySlotsSnapshot(clawd), null);
+  assert.strictEqual(getPetAccessorySlotsSnapshot(duck), null);
 
-  const retry = preparePetAccessorySlotsDelivery({ head: HAT, mouth: CIGARETTE }, clawd);
+  const retry = preparePetAccessorySlotsDelivery({ head: HAT, mouth: CIGARETTE }, duck);
   finalizePetAccessorySlotsDelivery(retry, true);
-  const committedClawd = getPetAccessorySlotsSnapshot(clawd);
+  const committedDuck = getPetAccessorySlotsSnapshot(duck);
 
   const hotSwitch = preparePetAccessorySlotsDelivery({ head: NONE, mouth: NONE }, cloudling);
-  assert.ok(hotSwitch.snapshot.accessoryGeneration > committedClawd.accessoryGeneration);
+  assert.ok(hotSwitch.snapshot.accessoryGeneration > committedDuck.accessoryGeneration);
   assert.strictEqual(finalizePetAccessorySlotsDelivery(hotSwitch, false), false);
-  assert.strictEqual(getPetAccessorySlotsSnapshot(clawd), committedClawd);
+  assert.strictEqual(getPetAccessorySlotsSnapshot(duck), committedDuck);
   assert.strictEqual(getPetAccessorySlotsSnapshot(cloudling), null);
 
   assert.strictEqual(finalizePetAccessorySlotsDelivery(hotSwitch, true), hotSwitch.snapshot);

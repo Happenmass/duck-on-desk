@@ -10,7 +10,7 @@ describe("Claude Stop disposition typed background-subagent gate (#952)", () => 
       assert.deepStrictEqual(getClaudeStopDisposition({
         backgroundSubagentsCount: 1,
         hasFinalAssistantText,
-        env: { CLAWD_COMPLETION_DEBOUNCE_MS: "0" },
+        env: { DUCK_COMPLETION_DEBOUNCE_MS: "0" },
       }), { kind: "hold", debounceMs: 0 });
     }
   });
@@ -28,7 +28,7 @@ describe("Claude Stop disposition typed background-subagent gate (#952)", () => 
     for (const value of [undefined, null, 0, -1, -0.5, 0.5, "invalid", {}, []]) {
       assert.deepStrictEqual(getClaudeStopDisposition({
         backgroundSubagentsCount: value,
-        env: { CLAWD_COMPLETION_DEBOUNCE_MS: "0" },
+        env: { DUCK_COMPLETION_DEBOUNCE_MS: "0" },
       }), { kind: "complete", debounceMs: 0 });
     }
   });

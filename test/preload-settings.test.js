@@ -47,13 +47,13 @@ test("settings preload routes commands through the generic command IPC", async (
   const { exposed, invokes } = loadPreload();
   const settingsAPI = exposed.get("settingsAPI");
   for (const [action, payload] of [
-    ["setThemeSelection", { themeId: "clawd" }],
+    ["setThemeSelection", { themeId: "duck" }],
     ["setIdleVisual", undefined],
   ]) {
     assert.deepEqual(await settingsAPI.command(action, payload), { status: "ok" });
   }
   assert.deepEqual(JSON.parse(JSON.stringify(invokes)), [
-    ["settings:command", { action: "setThemeSelection", payload: { themeId: "clawd" } }],
+    ["settings:command", { action: "setThemeSelection", payload: { themeId: "duck" } }],
     ["settings:command", { action: "setIdleVisual" }],
   ]);
   assert.equal(typeof settingsAPI.setThemeSelection, "undefined");

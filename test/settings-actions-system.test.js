@@ -15,7 +15,7 @@ test("settings system actions expose the command surface", () => {
     "manageClaudeHooksAutomatically",
     "openAtLogin",
     "repairLocalServer",
-    "restartClawd",
+    "restartDuck",
     "uninstallHooks",
   ]);
   assert.strictEqual(systemActions.autoStartWithClaude.lockKey, systemActions.manageClaudeHooksAutomatically.lockKey);
@@ -199,8 +199,8 @@ test("settings system actions normalize local server repair failures", async () 
 
 test("settings system actions require restart confirmation", () => {
   const calls = [];
-  const result = systemActions.restartClawd({}, {
-    restartClawd: () => calls.push("restart"),
+  const result = systemActions.restartDuck({}, {
+    restartDuck: () => calls.push("restart"),
   });
 
   assert.strictEqual(result.status, "error");

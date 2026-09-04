@@ -8,7 +8,7 @@ const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 
 test("requiring the Claude uninstall entrypoint has no filesystem side effects", (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-uninstall-import-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-uninstall-import-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const claudeHome = path.join(root, ".claude");
   const settingsPath = path.join(claudeHome, "settings.json");
@@ -17,7 +17,7 @@ test("requiring the Claude uninstall entrypoint has no filesystem side effects",
     hooks: {
       Stop: [{
         matcher: "",
-        hooks: [{ type: "command", command: "node /tmp/clawd-hook.js" }],
+        hooks: [{ type: "command", command: "node /tmp/duck-hook.js" }],
       }],
     },
   };

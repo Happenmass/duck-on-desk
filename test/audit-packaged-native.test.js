@@ -16,7 +16,7 @@ const {
 const policy = require("../scripts/native-package-policy.json");
 
 function tempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "clawd-native-audit-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "duck-native-audit-"));
 }
 
 function fakePe(machine) {
@@ -60,7 +60,7 @@ async function makeAppRoot(root, targetId, {
 } = {}) {
   const target = require("../src/native-package-target").getReleaseTarget(targetId);
   const appRoot = target.runtimePlatform === "darwin"
-    ? path.join(root, "Clawd on Desk.app")
+    ? path.join(root, "Duck on Desk.app")
     : path.join(root, "app");
   const resources = target.runtimePlatform === "darwin"
     ? path.join(appRoot, "Contents", "Resources")
@@ -83,8 +83,8 @@ async function makeAppRoot(root, targetId, {
   else targetBinary = fakeMachThin(target.architecture === "x86_64" ? 0x01000007 : 0x0100000c);
   fs.writeFileSync(koffiNode, targetBinary);
   const executable = target.runtimePlatform === "darwin"
-    ? path.join(appRoot, "Contents", "MacOS", "Clawd on Desk")
-    : path.join(appRoot, target.runtimePlatform === "win32" ? "Clawd.exe" : "clawd");
+    ? path.join(appRoot, "Contents", "MacOS", "Duck on Desk")
+    : path.join(appRoot, target.runtimePlatform === "win32" ? "Duck.exe" : "duck");
   fs.mkdirSync(path.dirname(executable), { recursive: true });
   fs.writeFileSync(executable, targetBinary);
   if (target.runtimePlatform === "win32") fs.writeFileSync(path.join(resources, "elevate.exe"), fakePe(0x014c));

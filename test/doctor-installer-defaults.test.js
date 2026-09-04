@@ -22,6 +22,6 @@ describe("installer default path exports", () => {
     assert.strictEqual(opencode.DEFAULT_CONFIG_PATH, path.join(home, ".config", "opencode", "opencode.json"));
 
     assert.strictEqual(pi.DEFAULT_PARENT_DIR, path.join(home, ".pi", "agent"));
-    assert.strictEqual(pi.DEFAULT_EXTENSION_DIR, path.join(home, ".pi", "agent", "extensions", "clawd-on-desk"));
+    assert.strictEqual(pi.DEFAULT_EXTENSION_DIR, path.join(home, ".pi", "agent", "extensions", "duck-on-desk"));
   });
 });

@@ -24,7 +24,7 @@ function createQueueRuntime(overrides = {}) {
     },
     shell: {},
     settingsController: {
-      get: () => "clawd",
+      get: () => "duck",
       async applyCommand() {
         return { status: "ok" };
       },
@@ -37,7 +37,7 @@ function createQueueRuntime(overrides = {}) {
       ...(overrides.codexPetAdapter || {}),
     },
     codexPetImporter: {
-      parseClawdImportUrl(rawUrl) {
+      parseDuckImportUrl(rawUrl) {
         parseCalls.push(rawUrl);
         return {
           asciiHostname: "example.test",
@@ -84,18 +84,18 @@ test("Codex Pet main helpers merge sync summaries without dropping diagnostics",
   assert.strictEqual(summary.diagnostics.length, 2);
 });
 
-test("Codex Pet main helpers detect clawd protocol args case-insensitively", () => {
-  const { extractClawdProtocolUrls } = createCodexPetMain.__test;
+test("Codex Pet main helpers detect duck protocol args case-insensitively", () => {
+  const { extractDuckProtocolUrls } = createCodexPetMain.__test;
   assert.deepStrictEqual(
-    extractClawdProtocolUrls([
-      "Clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json",
+    extractDuckProtocolUrls([
+      "Duck://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json",
       "--flag",
       "https://example.test",
-      "clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fother.json",
+      "duck://import-pet?url=https%3A%2F%2Fexample.test%2Fother.json",
     ]),
     [
-      "Clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json",
-      "clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fother.json",
+      "Duck://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json",
+      "duck://import-pet?url=https%3A%2F%2Fexample.test%2Fother.json",
     ]
   );
 });
@@ -112,7 +112,7 @@ test("Codex Pet main runtime records sync summaries and normalizes adapter failu
     dialog: {},
     shell: {},
     settingsController: {
-      get: () => "clawd",
+      get: () => "duck",
     },
     themeLoader: {},
     codexPetAdapter: {
@@ -139,7 +139,7 @@ test("Codex Pet main runtime records sync summaries and normalizes adapter failu
     dialog: {},
     shell: {},
     settingsController: {
-      get: () => "clawd",
+      get: () => "duck",
     },
     themeLoader: {},
     codexPetAdapter: {
@@ -150,14 +150,14 @@ test("Codex Pet main runtime records sync summaries and normalizes adapter failu
     codexPetImporter: {},
   });
 
-  const failed = failingRuntime.syncThemes("clawd");
+  const failed = failingRuntime.syncThemes("duck");
   assert.strictEqual(failed.error, "boom");
   assert.match(failed.diagnostics[0].errors[0], /failed to sync Codex Pet themes: boom/);
   assert.strictEqual(failingRuntime.getLastSyncSummary(), failed);
 });
 
 test("Codex Pet theme metadata carries the versioned atlas grid into Settings previews", (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-pet-main-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-pet-main-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const themesRoot = path.join(root, "themes");
   const themeId = "codex-pet-v2";
@@ -173,7 +173,7 @@ test("Codex Pet theme metadata carries the versioned atlas grid into Settings pr
     dialog: {},
     shell: {},
     settingsController: {
-      get: () => "clawd",
+      get: () => "duck",
     },
     themeLoader: {
       ensureUserThemesDir: () => themesRoot,
@@ -280,14 +280,14 @@ test("Codex Pet import URLs queued before app ready do not flush until explicitl
   };
   try {
     const { runtime, parseCalls, showMessageBoxCalls } = createQueueRuntime();
-    runtime.enqueueImportUrl("clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json");
+    runtime.enqueueImportUrl("duck://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json");
 
     assert.strictEqual(immediateCalls, 0);
     assert.deepStrictEqual(parseCalls, []);
     assert.deepStrictEqual(showMessageBoxCalls, []);
 
     await runtime.flushPendingImportUrls();
-    assert.deepStrictEqual(parseCalls, ["clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json"]);
+    assert.deepStrictEqual(parseCalls, ["duck://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json"]);
     assert.strictEqual(showMessageBoxCalls.length, 1);
     assert.strictEqual(showMessageBoxCalls[0].options.type, "question");
   } finally {
@@ -302,7 +302,7 @@ test("Codex Pet import dialog uses zh-TW strings", async () => {
     },
   });
 
-  runtime.enqueueImportUrl("clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json");
+  runtime.enqueueImportUrl("duck://import-pet?url=https%3A%2F%2Fexample.test%2Fpet.json");
   await runtime.flushPendingImportUrls();
 
   assert.strictEqual(showMessageBoxCalls.length, 1);
@@ -312,7 +312,7 @@ test("Codex Pet import dialog uses zh-TW strings", async () => {
 });
 
 test("Codex Pet removal confirmation uses zh-TW strings", async (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-pet-main-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-pet-main-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   const petsRoot = path.join(root, "pets");
@@ -336,7 +336,7 @@ test("Codex Pet removal confirmation uses zh-TW strings", async (t) => {
     },
     shell: {},
     settingsController: {
-      get: () => "clawd",
+      get: () => "duck",
     },
     themeLoader: {
       ensureUserThemesDir: () => themesRoot,
@@ -364,7 +364,7 @@ test("Codex Pet removal confirmation uses zh-TW strings", async (t) => {
 });
 
 test("Codex Pet removal clears every preference scoped to the removed theme", async (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-pet-main-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-pet-main-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   const petsRoot = path.join(root, "pets");
@@ -376,14 +376,14 @@ test("Codex Pet removal clears every preference scoped to the removed theme", as
 
   const themeId = "codex-pet-one";
   const snapshot = {
-    theme: "clawd",
-    themeOverrides: { [themeId]: { states: {} }, clawd: { states: {} } },
-    themeVariant: { [themeId]: "night", clawd: "default" },
-    idleVisual: { [themeId]: "idle.png", clawd: "clawd-idle-follow.svg" },
-    petTint: { [themeId]: "matcha", clawd: "gold" },
-    petAccessory: { [themeId]: "halo", clawd: "wizard-hat" },
-    petMouthAccessory: { [themeId]: "cigarette", clawd: "cigarette" },
-    holidayAccessoryEnabled: { [themeId]: true, clawd: true },
+    theme: "duck",
+    themeOverrides: { [themeId]: { states: {} }, duck: { states: {} } },
+    themeVariant: { [themeId]: "night", duck: "default" },
+    idleVisual: { [themeId]: "idle.png", duck: "duck-idle-follow.svg" },
+    petTint: { [themeId]: "matcha", duck: "gold" },
+    petAccessory: { [themeId]: "halo", duck: "wizard-hat" },
+    petMouthAccessory: { [themeId]: "cigarette", duck: "cigarette" },
+    holidayAccessoryEnabled: { [themeId]: true, duck: true },
   };
   const bulkPatches = [];
   const runtime = createCodexPetMain({
@@ -441,7 +441,7 @@ test("Codex Pet removal clears every preference scoped to the removed theme", as
       `${key} must not retain the removed Codex Pet id`
     );
     assert.ok(
-      Object.prototype.hasOwnProperty.call(bulkPatches[0][key], "clawd"),
+      Object.prototype.hasOwnProperty.call(bulkPatches[0][key], "duck"),
       `${key} must preserve unrelated themes`
     );
   }
@@ -483,23 +483,23 @@ test("Codex Pet import queue ignores overlapping flush calls while the first dra
     },
   });
 
-  runtime.enqueueImportUrl("clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fone.json");
-  runtime.enqueueImportUrl("clawd://import-pet?url=https%3A%2F%2Fexample.test%2Ftwo.json");
+  runtime.enqueueImportUrl("duck://import-pet?url=https%3A%2F%2Fexample.test%2Fone.json");
+  runtime.enqueueImportUrl("duck://import-pet?url=https%3A%2F%2Fexample.test%2Ftwo.json");
 
   const firstFlush = runtime.flushPendingImportUrls();
   await firstImportStartedPromise;
   const secondFlush = runtime.flushPendingImportUrls();
   await secondFlush;
 
-  assert.deepStrictEqual(parseCalls, ["clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fone.json"]);
+  assert.deepStrictEqual(parseCalls, ["duck://import-pet?url=https%3A%2F%2Fexample.test%2Fone.json"]);
   assert.strictEqual(importCalls.length, 1);
 
   releaseFirstImport();
   await firstFlush;
 
   assert.deepStrictEqual(parseCalls, [
-    "clawd://import-pet?url=https%3A%2F%2Fexample.test%2Fone.json",
-    "clawd://import-pet?url=https%3A%2F%2Fexample.test%2Ftwo.json",
+    "duck://import-pet?url=https%3A%2F%2Fexample.test%2Fone.json",
+    "duck://import-pet?url=https%3A%2F%2Fexample.test%2Ftwo.json",
   ]);
   assert.strictEqual(importCalls.length, 2);
 });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Clawd Desktop Pet — Claude Code Hook Script
-// Usage: node clawd-hook.js <event_name>
+// Duck Desktop Pet — Claude Code Hook Script
+// Usage: node duck-hook.js <event_name>
 // Reads stdin JSON from Claude Code for session_id
 
 const crypto = require("crypto");
@@ -502,7 +502,7 @@ function isClaudeHeadlessCommandLine(cmdline) {
 function applyAgentPidFields(body, agentPid, headless) {
   if (!agentPid) return;
   body.agent_pid = agentPid;
-  body.claude_pid = agentPid; // backward compat with older Clawd versions
+  body.claude_pid = agentPid; // backward compat with older Duck versions
   if (headless === true) body.headless = true;
 }
 
@@ -578,7 +578,7 @@ function buildStateBody(event, payload, resolve) {
   // terminal or editor the CLI was launched from.
   body.agent_id = "claude-code";
   // Claude-compatible command-hook payloads use agent_id/agent_type for
-  // subagent provenance. Keep the public Clawd agent_id canonical, but preserve
+  // subagent provenance. Keep the public Duck agent_id canonical, but preserve
   // that identity separately so a SubagentStop/PostToolUse event can settle
   // only the matching subagent's pending permission.
   const reportedSubagentId = typeof payload.agent_id === "string"
@@ -670,7 +670,7 @@ function buildStateBody(event, payload, resolve) {
   // shells, cron wakeups or an exact typed one-shot subagent is not a real turn
   // completion. Forward only counts + the boolean — never task ids, status,
   // command or description text — so state.js can suppress the celebration
-  // without leaking background-task details into Clawd state.
+  // without leaking background-task details into Duck state.
   //
   // Presence of background_subagents_count is meaningful: an omitted field
   // means this Claude payload had no usable background_tasks snapshot, while 0
@@ -707,7 +707,7 @@ function buildStateBody(event, payload, resolve) {
     body.stop_hook_active = true;
   }
   const wslDistro = resolveWslDistro();
-  if (process.env.CLAWD_REMOTE) {
+  if (process.env.DUCK_REMOTE) {
     // Remote session: preserve existing host prefix, add WSL distro as
     // separate metadata. Do NOT override the SSH host.
     body.host = readHostPrefix();
@@ -791,7 +791,7 @@ function main() {
 
   // Pre-resolve on SessionStart (runs during stdin buffering, not after)
   // Remote mode: skip PID collection — remote PIDs are meaningless on the local machine
-  if (event === "SessionStart" && !process.env.CLAWD_REMOTE) resolve();
+  if (event === "SessionStart" && !process.env.DUCK_REMOTE) resolve();
 
   readStdinJsonDetailed({ timeoutMs: STDIN_READ_TIMEOUT_MS })
     .then((stdinRead) => {
@@ -801,8 +801,8 @@ function main() {
       attachStdinDiag(body, stdinRead);
       // Completion events (Stop) fire the happy animation, are low-frequency,
       // and matter more than a few ms of latency. Give them a generous POST
-      // timeout so a momentarily slow (but alive) Clawd still receives them;
-      // connection-refused (Clawd not running) still fails instantly, so an
+      // timeout so a momentarily slow (but alive) Duck still receives them;
+      // connection-refused (Duck not running) still fails instantly, so an
       // idle machine is never penalized. High-frequency events keep 100ms so
       // they never stall the agent.
       const isCompletionEvent = body.event === "Stop";
@@ -811,7 +811,7 @@ function main() {
       // the server's /state cap and trigger a headerless 413 (read back as
       // posted=false, dropping the happy completion). hooks/state-payload-size.js.
       const fitted = fitStateBodyToByteBudget(body);
-      // Persist the real session evidence before POST. If Clawd is restarting,
+      // Persist the real session evidence before POST. If Duck is restarting,
       // the HTTP request may fail but the next process can still recover the
       // same session id and last sustained state. This is best-effort and never
       // changes the hook's stdout or exit contract.

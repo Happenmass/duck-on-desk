@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="assets/icon.png" width="128" alt="Clawd">
+  <img src="assets/icon.png" width="128" alt="Duck">
 </p>
-<h1 align="center">Clawd on Desk</h1>
+<h1 align="center">Duck on Desk</h1>
 <p align="center">
   <a href="README.md">English</a>
   ·
@@ -16,21 +16,21 @@
   <a href="README.es.md">Español</a>
 </p>
 <p align="center">
-  <a href="https://github.com/rullerzhou-afk/clawd-on-desk/releases"><img src="https://img.shields.io/github/v/release/rullerzhou-afk/clawd-on-desk" alt="Version"></a>
+  <a href="https://github.com/rullerzhou-afk/duck-on-desk/releases"><img src="https://img.shields.io/github/v/release/rullerzhou-afk/duck-on-desk" alt="Version"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Platform">
 </p>
 <p align="center">
-  <a href="https://github.com/rullerzhou-afk/clawd-on-desk/stargazers"><img src="https://img.shields.io/github/stars/rullerzhou-afk/clawd-on-desk?style=flat&logo=github&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/rullerzhou-afk/duck-on-desk/stargazers"><img src="https://img.shields.io/github/stars/rullerzhou-afk/duck-on-desk?style=flat&logo=github&color=yellow" alt="Stars"></a>
   <a href="https://github.com/hesreallyhim/awesome-claude-code"><img src="https://awesome.re/mentioned-badge-flat.svg" alt="Mentioned in Awesome Claude Code"></a>
 </p>
 
 <p align="center">
-  <img src="assets/hero.gif" alt="Clawd on Desk のアニメーションデモ。AI コーディングエージェントの状態に合わせて、ピクセルのカニが睡眠、思考、ツール実行中のタイピング、サブエージェント 1 個ではヘッドホングルーヴ、複数では3ボールジャグリング、権限リクエストの通知、タスク完了後のお祝いへリアルタイムに切り替わります。Claude Code、Codex、Cursor、Copilot、Gemini、Antigravity、Qwen、Pi、OpenClaw などに対応しています。">
+  <img src="assets/hero.gif" alt="Duck on Desk のアニメーションデモ。AI コーディングエージェントの状態に合わせて、ピクセルのカニが睡眠、思考、ツール実行中のタイピング、サブエージェント 1 個ではヘッドホングルーヴ、複数では3ボールジャグリング、権限リクエストの通知、タスク完了後のお祝いへリアルタイムに切り替わります。Claude Code、Codex、Cursor、Copilot、Gemini、Antigravity、Qwen、Pi、OpenClaw などに対応しています。">
 </p>
 
-Clawd はデスクトップに住むペットで、AI コーディングエージェントが今何をしているかにリアルタイムで反応します。長いタスクを開始したら席を外し、Clawd が完了を知らせたら戻ってくるだけです。
+Duck はデスクトップに住むペットで、AI コーディングエージェントが今何をしているかにリアルタイムで反応します。長いタスクを開始したら席を外し、Duck が完了を知らせたら戻ってくるだけです。
 
-プロンプトを入力すると考え、ツールが動くとタイピングし、サブエージェントが動くとヘッドホングルーヴや3ボールジャグリングになり、権限確認ではカードを表示し、タスク完了時には喜び、離席中は眠ります。組み込みテーマとして **Clawd**（ピクセルのカニ）、**Calico**（三毛猫）、**Cloudling**（云宝）を同梱し、カスタムテーマと Codex Pet アニメーションパックのインポートにも対応しています。
+プロンプトを入力すると考え、ツールが動くとタイピングし、サブエージェントが動くとヘッドホングルーヴや3ボールジャグリングになり、権限確認ではカードを表示し、タスク完了時には喜び、離席中は眠ります。組み込みテーマとして **Duck**（ピクセルのカニ）、**Calico**（三毛猫）、**Cloudling**（云宝）を同梱し、カスタムテーマと Codex Pet アニメーションパックのインポートにも対応しています。
 
 > Windows 11、macOS、Ubuntu/Linux に対応しています。Windows リリースでは x64 と ARM64 のインストーラーを個別に提供します。ソースから実行するには Node.js が必要です。**Claude Code**、**Codex CLI**、**Copilot CLI**、**Gemini CLI**、**Antigravity CLI (agy)**、**Cursor Agent**、**CodeBuddy**、**WorkBuddy**、**Kiro CLI**、**Kimi Code CLI (Kimi-CLI)**、**Qwen Code**、**ZCode**、**CodeWhale**、**opencode**、**MiMo Code**、**Pi**、**OpenClaw**、**Hermes Agent**、**Qoder**、**QoderWork**、**QwenWork（千问办公）**、**Reasonix CLI**、**DeepSeek Harness** と連携します。
 
@@ -40,38 +40,38 @@ Clawd はデスクトップに住むペットで、AI コーディングエー�
 - **Claude Code** — command hook と HTTP permission hook による完全統合
 - **Codex CLI** — official hooks を主経路にし、JSONL フォールバック（`~/.codex/sessions/`）も利用。自動登録され、実際の権限バブルに対応
 - **Copilot CLI** — `~/.copilot/hooks/hooks.json` の command hook に対応
-- **Gemini CLI** — `~/.gemini/settings.json` の command hook に対応（Clawd 起動時に自動登録、または `npm run install:gemini-hooks`）
-- **Antigravity CLI (agy)** — `~/.gemini/config/hooks.json` の command hook に対応（Antigravity config がある場合は Clawd 起動時に自動登録、または `npm run install:antigravity-hooks`）。**state-only** のため、Clawd は agy の権限バブルを表示しません。Allow / Deny / Always-allow は agy 自身のターミナルメニューで選択します
-- **Cursor Agent** — `~/.cursor/hooks.json` の [Cursor IDE hooks](https://cursor.com/docs/agent/hooks) に対応（Clawd 起動時に自動登録、または `npm run install:cursor-hooks`）
-- **CodeBuddy** — `~/.codebuddy/settings.json` 経由で Claude Code 互換の command hook と HTTP permission hook に対応（Clawd 起動時に自動登録、または `node hooks/codebuddy-install.js`）
-- **カスタム HTTP Agent** — Settings で別のローカルアプリを登録し、アプリまたは adapter から Clawd の動的 `/state` エンドポイントへイベントを送信します。登録だけでは hook はインストールされず、v1 は state-only です。詳細は[カスタム HTTP Agent ガイド](docs/guides/custom-agent-http.md)を参照してください
+- **Gemini CLI** — `~/.gemini/settings.json` の command hook に対応（Duck 起動時に自動登録、または `npm run install:gemini-hooks`）
+- **Antigravity CLI (agy)** — `~/.gemini/config/hooks.json` の command hook に対応（Antigravity config がある場合は Duck 起動時に自動登録、または `npm run install:antigravity-hooks`）。**state-only** のため、Duck は agy の権限バブルを表示しません。Allow / Deny / Always-allow は agy 自身のターミナルメニューで選択します
+- **Cursor Agent** — `~/.cursor/hooks.json` の [Cursor IDE hooks](https://cursor.com/docs/agent/hooks) に対応（Duck 起動時に自動登録、または `npm run install:cursor-hooks`）
+- **CodeBuddy** — `~/.codebuddy/settings.json` 経由で Claude Code 互換の command hook と HTTP permission hook に対応（Duck 起動時に自動登録、または `node hooks/codebuddy-install.js`）
+- **カスタム HTTP Agent** — Settings で別のローカルアプリを登録し、アプリまたは adapter から Duck の動的 `/state` エンドポイントへイベントを送信します。登録だけでは hook はインストールされず、v1 は state-only です。詳細は[カスタム HTTP Agent ガイド](docs/guides/custom-agent-http.md)を参照してください
 - **WorkBuddy** — `~/.workbuddy-ai/settings.json`（現行）または `~/.workbuddy/settings.json`（旧版）の Claude Code 互換 command hook に対応（Settings → Agents からインストール、または `node hooks/workbuddy-install.js`）。状態と Notification のみを同期し、権限判断は WorkBuddy のネイティブ GUI に残ります
-- **Kiro CLI** — `~/.kiro/agents/` 配下のカスタムエージェント設定に command hook を注入。Clawd 起動時には Kiro 組み込みの `kiro_default` から再同期される `clawd` エージェントも自動作成されるため、`kiro-cli --agent clawd` または `/agent swap clawd` で挙動差を抑えながら hook を利用できます（Clawd 起動時に自動登録、または `npm run install:kiro-hooks`）。state hook は macOS と Windows で検証済みです。
-- **Kimi Code CLI (Kimi-CLI)** — `~/.kimi/config.toml` の command hook（`[[hooks]]` エントリ）に対応（Clawd 起動時に自動登録、または `npm run install:kimi-hooks`）
-- **Qwen Code** — `~/.qwen/settings.json` の command hook に対応（Clawd 起動時に自動登録、または `npm run install:qwen-hooks`）。状態追跡と Qwen `PermissionRequest` のデスクトップ権限バブルに対応します
-- **ZCode** — `~/.zcode/cli/config.json` の `hooks.events.*` に登録する、任意の状態 hook + blocking `PermissionRequest` hook（Settings → Agents から導入、または `npm run install:zcode-hooks`）。Clawd は手動 Allow / Deny バブルを表示し、global / per-session の permission automation は defer のままです。明示的な global または hook 単位の `enabled:false` を保持し、第三者の `PermissionRequest` hook がある場合は上書きしません
+- **Kiro CLI** — `~/.kiro/agents/` 配下のカスタムエージェント設定に command hook を注入。Duck 起動時には Kiro 組み込みの `kiro_default` から再同期される `duck` エージェントも自動作成されるため、`kiro-cli --agent duck` または `/agent swap duck` で挙動差を抑えながら hook を利用できます（Duck 起動時に自動登録、または `npm run install:kiro-hooks`）。state hook は macOS と Windows で検証済みです。
+- **Kimi Code CLI (Kimi-CLI)** — `~/.kimi/config.toml` の command hook（`[[hooks]]` エントリ）に対応（Duck 起動時に自動登録、または `npm run install:kimi-hooks`）
+- **Qwen Code** — `~/.qwen/settings.json` の command hook に対応（Duck 起動時に自動登録、または `npm run install:qwen-hooks`）。状態追跡と Qwen `PermissionRequest` のデスクトップ権限バブルに対応します
+- **ZCode** — `~/.zcode/cli/config.json` の `hooks.events.*` に登録する、任意の状態 hook + blocking `PermissionRequest` hook（Settings → Agents から導入、または `npm run install:zcode-hooks`）。Duck は手動 Allow / Deny バブルを表示し、global / per-session の permission automation は defer のままです。明示的な global または hook 単位の `enabled:false` を保持し、第三者の `PermissionRequest` hook がある場合は上書きしません
 - **opencode** — `~/.config/opencode/` 配下の有効なファイル（`config.json` → `opencode.json` → `opencode.jsonc`、後のファイルが優先）経由の任意の [plugin integration](https://opencode.ai/docs/plugins)（Settings → Agents からインストール）。遅延のないイベントストリーミングと Allow/Always/Deny 付きの権限バブルに対応します。`task` の子セッションは headless で、表示中のマルチセッションアニメーション集約には参加しません
 - **MiMo Code** — `~/.config/mimocode/mimocode.jsonc` 経由の任意の [plugin integration](https://opencode.ai/docs/plugins)（Settings → Agents からインストール、または `node hooks/mimocode-install.js`）。opencode と同じ `@mimo-ai/plugin` SDK と権限動作を共有し、`task` の子セッションも headless です
-- **Pi** — `~/.pi/agent/extensions/clawd-on-desk` のグローバル extension で連携します（Clawd 起動時に自動登録、または `npm run install:pi-extension`）。インタラクティブな Pi セッションのライフサイクルとツール活動だけを状態同期し、Pi のデフォルト YOLO 動作を維持します
-- **OpenClaw** — `~/.openclaw/openclaw.json` の plugin path で state-only 連携します（OpenClaw config が既にある場合は Clawd 起動時に自動登録、または `npm run install:openclaw-plugin`）。Phase 1 はローカル `openclaw tui --local` セッションのアニメーションのみを対象とし、権限バブルやターミナルフォーカスには対応しません
-- **Hermes Agent** — Hermes の管理 plugin ディレクトリ経由の [plugin integration](https://hermes-agent.org/)（Hermes インストール済みの場合は Clawd 起動時に自動登録、または `npm run install:hermes-plugin`）。状態、セッション、SessionEnd、ターミナルフォーカスに対応
-- **Qoder** — `~/.qoder/settings.json` の command hook で state-only 連携します（`~/.qoder/` ディレクトリがある場合は Clawd 起動時に自動登録、または `npm run install:qoder-hooks`）。Phase 1 はアニメーションのみを対象とし、権限リクエストは通知として観察するだけで、Clawd は権限バブルを表示せず代わりに応答もしません。Allow / Deny は Qoder 自身の権限フローで選択します
-- **QwenWork（千问办公）** — `~/.QwenWorkCN/settings.json` の command hook による hook-only / state-only 連携です（Settings → Agents から導入、または `npm run install:qwenwork-hooks`。削除は `npm run uninstall:qwenwork-hooks`）。対応プラットフォームは macOS / Windows デスクトップのみで、[qwenwork.cn/download](https://qwenwork.cn/download) に Linux クライアントはないため WSL ペアリングも提供しません。Phase 1 はアニメーションと Session HUD を駆動します。`PermissionRequest` / `PermissionDenied` は観察のみで `working` にマップされ、hook の stdout は常に `{}`、Clawd は allow/deny を返しません。権限の決定は QwenWork 自身のフローだけが行います。startup recovery はありません（デスクトップの常駐プロセスはターン実行中を意味しないため）
-- **DeepSeek Harness** — Clawd 管理の DSH in-process plugin を使う、実験的な web-profile-only 連携です。公開 session event が session ごとの順序で Clawd の状態を駆動し、公開の blocking `approval/request` は Allow Once / Deny バブルを表示できます。決定がなければ常に DSH ネイティブの web answerer に戻ります。`ask_user_question` は完全に DSH ネイティブ provider に残り、Clawd は DSH projection storage を一切読みません。詳細は [DeepSeek Harness ガイド](docs/guides/dsh-setup.md)
-- **複数エージェントの共存** — すべてのエージェントを同時に動かせます。Clawd は各セッションを個別に追跡します
+- **Pi** — `~/.pi/agent/extensions/duck-on-desk` のグローバル extension で連携します（Duck 起動時に自動登録、または `npm run install:pi-extension`）。インタラクティブな Pi セッションのライフサイクルとツール活動だけを状態同期し、Pi のデフォルト YOLO 動作を維持します
+- **OpenClaw** — `~/.openclaw/openclaw.json` の plugin path で state-only 連携します（OpenClaw config が既にある場合は Duck 起動時に自動登録、または `npm run install:openclaw-plugin`）。Phase 1 はローカル `openclaw tui --local` セッションのアニメーションのみを対象とし、権限バブルやターミナルフォーカスには対応しません
+- **Hermes Agent** — Hermes の管理 plugin ディレクトリ経由の [plugin integration](https://hermes-agent.org/)（Hermes インストール済みの場合は Duck 起動時に自動登録、または `npm run install:hermes-plugin`）。状態、セッション、SessionEnd、ターミナルフォーカスに対応
+- **Qoder** — `~/.qoder/settings.json` の command hook で state-only 連携します（`~/.qoder/` ディレクトリがある場合は Duck 起動時に自動登録、または `npm run install:qoder-hooks`）。Phase 1 はアニメーションのみを対象とし、権限リクエストは通知として観察するだけで、Duck は権限バブルを表示せず代わりに応答もしません。Allow / Deny は Qoder 自身の権限フローで選択します
+- **QwenWork（千问办公）** — `~/.QwenWorkCN/settings.json` の command hook による hook-only / state-only 連携です（Settings → Agents から導入、または `npm run install:qwenwork-hooks`。削除は `npm run uninstall:qwenwork-hooks`）。対応プラットフォームは macOS / Windows デスクトップのみで、[qwenwork.cn/download](https://qwenwork.cn/download) に Linux クライアントはないため WSL ペアリングも提供しません。Phase 1 はアニメーションと Session HUD を駆動します。`PermissionRequest` / `PermissionDenied` は観察のみで `working` にマップされ、hook の stdout は常に `{}`、Duck は allow/deny を返しません。権限の決定は QwenWork 自身のフローだけが行います。startup recovery はありません（デスクトップの常駐プロセスはターン実行中を意味しないため）
+- **DeepSeek Harness** — Duck 管理の DSH in-process plugin を使う、実験的な web-profile-only 連携です。公開 session event が session ごとの順序で Duck の状態を駆動し、公開の blocking `approval/request` は Allow Once / Deny バブルを表示できます。決定がなければ常に DSH ネイティブの web answerer に戻ります。`ask_user_question` は完全に DSH ネイティブ provider に残り、Duck は DSH projection storage を一切読みません。詳細は [DeepSeek Harness ガイド](docs/guides/dsh-setup.md)
+- **複数エージェントの共存** — すべてのエージェントを同時に動かせます。Duck は各セッションを個別に追跡します
 
 ### アニメーションと操作
-- **リアルタイムな状態認識** — agent hook とログポーリングが Clawd のアニメーションを自動で切り替えます
+- **リアルタイムな状態認識** — agent hook とログポーリングが Duck のアニメーションを自動で切り替えます
 - **12 種類のアニメーション状態** — idle、thinking、typing、building、headphones groove、multi-subagent juggling、error、happy、notification、sweeping、carrying、sleeping
-- **Codex Pet インポート** — `Settings...` → `Theme` から Codex Pet zip パッケージをインポートすると、Clawd が atlas アニメーションを管理テーマに変換します
-- **視線追従** — idle 状態では Clawd がカーソルを追い、体の傾きや影の伸びも変化します
+- **Codex Pet インポート** — `Settings...` → `Theme` から Codex Pet zip パッケージをインポートすると、Duck が atlas アニメーションを管理テーマに変換します
+- **視線追従** — idle 状態では Duck がカーソルを追い、体の傾きや影の伸びも変化します
 - **睡眠シーケンス** — 60 秒アイドルが続くと、あくび、うとうと、倒れ込み、睡眠へ移行します。マウス移動で驚いて起きるアニメーションが再生されます
 - **クリックリアクション** — ダブルクリックでつつき、4 回クリックでじたばたします
-- **どの状態からでもドラッグ** — いつでも Clawd をつかめます（Pointer Capture により素早いフリックでも取り落としません）。離すと元の状態へ戻ります
-- **Mini mode** — 右端へドラッグ、または右クリックの「Mini Mode」で有効化。Clawd が画面端に隠れ、ホバーで顔を出し、mini 通知やお祝い、放物線ジャンプの遷移を行います
+- **どの状態からでもドラッグ** — いつでも Duck をつかめます（Pointer Capture により素早いフリックでも取り落としません）。離すと元の状態へ戻ります
+- **Mini mode** — 右端へドラッグ、または右クリックの「Mini Mode」で有効化。Duck が画面端に隠れ、ホバーで顔を出し、mini 通知やお祝い、放物線ジャンプの遷移を行います
 
 ### 権限バブル
-- **アプリ内権限レビュー** — Claude Code、Codex CLI、CodeBuddy、opencode、MiMo Code がツール権限を要求すると、ターミナルで待つ代わりに Clawd がフローティングバブルカードを表示します
+- **アプリ内権限レビュー** — Claude Code、Codex CLI、CodeBuddy、opencode、MiMo Code がツール権限を要求すると、ターミナルで待つ代わりに Duck がフローティングバブルカードを表示します
 - **許可 / 拒否 / エージェント固有の追加操作** — ワンクリックで承認または拒否できます。対応エージェントでは permission rule や `Always` 操作も利用できます
 - **グローバルホットキー** — 最新の権限バブルに対して `Ctrl+Shift+Y` で許可、`Ctrl+Shift+N` で拒否（バブル表示中だけ登録されます）
 - **スタックレイアウト** — 複数の権限リクエストは右下から上方向へ積み重なります
@@ -85,23 +85,23 @@ Clawd はデスクトップに住むペットで、AI コーディングエー�
 ### セッション情報
 - **マルチセッション追跡** — すべてのエージェントのセッションから、優先度の最も高い状態を解決します
 - **サブエージェント認識** — サブエージェント 1 個で headphones groove、2 個以上で three-ball juggling
-- **Sessions dashboard + HUD** — 右クリックまたは tray → `Open Dashboard` から live session、最近のイベント、エイリアス、ターミナルジャンプを確認できます。Clawd の近くにはコンパクトな HUD が表示され、現在の live session を見失いません
+- **Sessions dashboard + HUD** — 右クリックまたは tray → `Open Dashboard` から live session、最近のイベント、エイリアス、ターミナルジャンプを確認できます。Duck の近くにはコンパクトな HUD が表示され、現在の live session を見失いません
 - **ターミナルフォーカス** — Dashboard/HUD の操作で特定セッションのターミナルへジャンプできます。notification/attention 状態では関連するターミナルを自動で前面にします
 - **プロセス生存確認** — 対応エージェントのプロセスがクラッシュまたは終了したことを検知し、孤立セッションを片付けます
-- **起動時リカバリー** — Clawd の再起動時に対応エージェントがまだ動いていれば、眠らずに起きたままになります
+- **起動時リカバリー** — Duck の再起動時に対応エージェントがまだ動いていれば、眠らずに起きたままになります
 
 ### モバイルコンパニオン（PWA）
-- **スマホでライブミラー** — `Settings...` → `Mobile / PWA` を有効にし、スマホでペアリング URL を開くと、Clawd Mobile ウェブアプリがエージェントのセッションと状態をリアルタイムに表示します
+- **スマホでライブミラー** — `Settings...` → `Mobile / PWA` を有効にし、スマホでペアリング URL を開くと、Duck Mobile ウェブアプリがエージェントのセッションと状態をリアルタイムに表示します
 - **読み取り専用設計** — LAN ブリッジは状態のブロードキャストのみを行い、スマホから PC を操作することはできません（リモート承認はロードマップにあります）
 - **LAN 限定 + トークン保護** — ペアリングにはトークンが必要で、トークンは猶予期間つきで自動ローテーションされ、ワンクリックで再生成・リセットできます
 - **インストール可能** — PWA なので、ホーム画面に追加すればアプリのように使えます
-> モバイルコンパニオンのラインは、最初のプロトタイプからトークンローテーションまで、コアコントリビューター [@Bynlk](https://github.com/Bynlk) が作り上げ、リードしています。ネイティブ Android アプリを備えた姉妹プロジェクト [clawd-on-mobile](https://github.com/Bynlk/clawd-on-mobile) も同氏がメンテナンスしています。
+> モバイルコンパニオンのラインは、最初のプロトタイプからトークンローテーションまで、コアコントリビューター [@Bynlk](https://github.com/Bynlk) が作り上げ、リードしています。ネイティブ Android アプリを備えた姉妹プロジェクト [duck-on-mobile](https://github.com/Bynlk/duck-on-mobile) も同氏がメンテナンスしています。
 
 ### システム
-- **クリック透過** — 透明部分のクリックは背面ウィンドウへ通り、Clawd の体だけが操作対象になります
+- **クリック透過** — 透明部分のクリックは背面ウィンドウへ通り、Duck の体だけが操作対象になります
 - **位置の記憶** — 再起動後も最後に置いた場所を覚えます（mini mode を含む）
-- **単一インスタンスロック** — Clawd ウィンドウの重複起動を防ぎます
-- **自動起動** — Claude Code の SessionStart hook により、Clawd が起動していない場合に自動で起動できます
+- **単一インスタンスロック** — Duck ウィンドウの重複起動を防ぎます
+- **自動起動** — Claude Code の SessionStart hook により、Duck が起動していない場合に自動で起動できます
 - **Do Not Disturb** — 右クリックまたは tray メニューから sleep mode に入り、起こすまで hook event をすべて抑制します。DND 中は権限バブルも抑制されます。Codex、opencode、MiMo Code はネイティブプロンプトに戻り、Claude Code と CodeBuddy は組み込みの権限フローに戻ります。Antigravity と Pi は state-only です
 - **効果音** — タスク完了や権限リクエスト時に短い音を鳴らします（システムトレイまたは設定から切り替え、10 秒クールダウン、DND 中は自動ミュート）
 - **システムトレイ** — DND mode、自動起動、更新確認
@@ -112,12 +112,12 @@ Clawd はデスクトップに住むペットで、AI コーディングエー�
 
 <table>
   <tr>
-    <td align="center"><img src="assets/gif/clawd-idle.gif" width="100"><br><sub>Idle</sub></td>
-    <td align="center"><img src="assets/gif/clawd-thinking.gif" width="100"><br><sub>Thought Bubble</sub></td>
-    <td align="center"><img src="assets/gif/clawd-typing.gif" width="100"><br><sub>Typing</sub></td>
-    <td align="center"><img src="assets/gif/clawd-building.gif" width="100"><br><sub>Building</sub></td>
-    <td align="center"><img src="assets/gif/clawd-headphones-groove.gif" width="100"><br><sub>1 Subagent</sub></td>
-    <td align="center"><img src="assets/gif/clawd-juggling.gif" width="100"><br><sub>2+ Subagents</sub></td>
+    <td align="center"><img src="assets/gif/duck-idle.gif" width="100"><br><sub>Idle</sub></td>
+    <td align="center"><img src="assets/gif/duck-thinking.gif" width="100"><br><sub>Thought Bubble</sub></td>
+    <td align="center"><img src="assets/gif/duck-typing.gif" width="100"><br><sub>Typing</sub></td>
+    <td align="center"><img src="assets/gif/duck-building.gif" width="100"><br><sub>Building</sub></td>
+    <td align="center"><img src="assets/gif/duck-headphones-groove.gif" width="100"><br><sub>1 Subagent</sub></td>
+    <td align="center"><img src="assets/gif/duck-juggling.gif" width="100"><br><sub>2+ Subagents</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="assets/gif/calico-idle.gif" width="80"><br><sub>Calico Idle</sub></td>
@@ -141,39 +141,39 @@ event-to-state mapping、mini mode、クリックリアクションの詳細: **
 
 ## マルチディスプレイ
 
-Clawd はマルチモニター環境に適応します。起動したディスプレイに合わせて比例サイズを決め、縦長モニターでは読みやすさを保つために上限付きで拡大し、ディスプレイ間のドラッグにも対応します。
+Duck はマルチモニター環境に適応します。起動したディスプレイに合わせて比例サイズを決め、縦長モニターでは読みやすさを保つために上限付きで拡大し、ディスプレイ間のドラッグにも対応します。
 
-<p align="center"><sub>実際のマルチモニター挙動は、<a href="assets/videos/clawd-multi-monitor-demo.mp4">このリポジトリ内のデモ動画</a>で確認できます。</sub></p>
+<p align="center"><sub>実際のマルチモニター挙動は、<a href="assets/videos/duck-multi-monitor-demo.mp4">このリポジトリ内のデモ動画</a>で確認できます。</sub></p>
 
 ## クイックスタート
 
-通常利用では、**[GitHub Releases](https://github.com/rullerzhou-afk/clawd-on-desk/releases/latest)** から最新のビルド済みインストーラーをダウンロードしてください。
+通常利用では、**[GitHub Releases](https://github.com/rullerzhou-afk/duck-on-desk/releases/latest)** から最新のビルド済みインストーラーをダウンロードしてください。
 
-- **Windows**: `Clawd-on-Desk-Setup-<version>-x64.exe` または `Clawd-on-Desk-Setup-<version>-arm64.exe`
+- **Windows**: `Duck-on-Desk-Setup-<version>-x64.exe` または `Duck-on-Desk-Setup-<version>-arm64.exe`
 - **macOS**: `.dmg`
 - **Linux**: `.AppImage` または `.deb`
 
-インストール後に Clawd を起動してください。対応エージェントの hook/plugin は起動時に自動同期されます。
+インストール後に Duck を起動してください。対応エージェントの hook/plugin は起動時に自動同期されます。
 
 ソースからの実行は、コントリビュート、未リリースコードのテスト、または連携のデバッグを行う場合だけを推奨します。ソースインストールでは Electron/build tooling をダウンロードし、大きな `node_modules` ツリーが作成されることがあります。
 
 ```bash
 # リポジトリを clone
-git clone https://github.com/rullerzhou-afk/clawd-on-desk.git
-cd clawd-on-desk
+git clone https://github.com/rullerzhou-afk/duck-on-desk.git
+cd duck-on-desk
 
 # 依存関係をインストール
 npm install
 
-# Clawd を起動（起動時に Claude Code hooks を自動登録）
+# Duck を起動（起動時に Claude Code hooks を自動登録）
 npm start
 ```
 
-**Claude Code** と **Codex CLI** はデフォルトで hook が同期されます。その他の Agent は、先に **Settings → Agents** で対応する integration をインストールしてください。インストール済みかつ有効な integration だけが Clawd 起動時に同期されます。Remote SSH、WSL、macOS/Linux のプラットフォーム別メモも含めた詳細: **[docs/guides/setup-guide.md](docs/guides/setup-guide.md)**
+**Claude Code** と **Codex CLI** はデフォルトで hook が同期されます。その他の Agent は、先に **Settings → Agents** で対応する integration をインストールしてください。インストール済みかつ有効な integration だけが Duck 起動時に同期されます。Remote SSH、WSL、macOS/Linux のプラットフォーム別メモも含めた詳細: **[docs/guides/setup-guide.md](docs/guides/setup-guide.md)**
 
-リモートサーバーで Claude Code / Codex CLI を動かし、状態と権限バブルをローカル Clawd に転送したい場合は、アプリ内の **Settings → Remote SSH → Deploy / Repair Hooks** を使います。共有サーバー分離の境界、完全な手順、Doctor の境界、FAQ はこちら: **[docs/guides/guide-remote-ssh.md](docs/guides/guide-remote-ssh.md)**
+リモートサーバーで Claude Code / Codex CLI を動かし、状態と権限バブルをローカル Duck に転送したい場合は、アプリ内の **Settings → Remote SSH → Deploy / Repair Hooks** を使います。共有サーバー分離の境界、完全な手順、Doctor の境界、FAQ はこちら: **[docs/guides/guide-remote-ssh.md](docs/guides/guide-remote-ssh.md)**
 
-公式の `Codex + WSL` ステータス、Clawd の現在の実装境界、そして誤解しやすい理由については、こちらを参照してください: **[docs/guides/codex-wsl-clarification.md](docs/guides/codex-wsl-clarification.md)**
+公式の `Codex + WSL` ステータス、Duck の現在の実装境界、そして誤解しやすい理由については、こちらを参照してください: **[docs/guides/codex-wsl-clarification.md](docs/guides/codex-wsl-clarification.md)**
 
 ## 既知の制限
 
@@ -181,7 +181,7 @@ npm start
 
 ## カスタムテーマ
 
-Clawd はカスタムテーマに対応しています。標準のカニを、自分のキャラクターやアニメーションに置き換えられます。既存の Codex Pet パッケージがある場合は、`Settings...` → `Theme` → `Import pet zip` から取り込むと、Clawd が atlas を管理テーマへ自動変換します。
+Duck はカスタムテーマに対応しています。標準のカニを、自分のキャラクターやアニメーションに置き換えられます。既存の Codex Pet パッケージがある場合は、`Settings...` → `Theme` → `Import pet zip` から取り込むと、Duck が atlas を管理テーマへ自動変換します。
 
 **クイックスタート:**
 1. テーマを scaffold します。
@@ -192,7 +192,7 @@ Clawd はカスタムテーマに対応しています。標準のカニを、�
    ```
    引数なしでも動作します。ユーザーテーマディレクトリ内に、次に利用可能な `my-theme` scaffold を作成します。
 2. `theme.json` を編集し、アセット（SVG、GIF、APNG、WebP、PNG、JPG、JPEG）を作成します
-3. Clawd を再起動するか、`Settings...` → `Theme` → 自分のテーマを選択します
+3. Duck を再起動するか、`Settings...` → `Theme` → 自分のテーマを選択します
 
 **最小構成のテーマ:** SVG 1 個（視線追従付き idle）+ GIF/APNG 7 個（thinking、working、error、happy、notification、sleeping、waking）。視線追従を無効にすれば、すべての状態で任意の形式を利用できます。
 
@@ -218,7 +218,7 @@ node scripts/validate-theme.js path/to/your-theme
 
 ## コントリビュート
 
-Clawd on Desk はコミュニティ主導のプロジェクトです。バグ報告、機能案、Pull Request を歓迎します。相談したい場合は [issue](https://github.com/rullerzhou-afk/clawd-on-desk/issues) を開くか、直接 PR を送ってください。
+Duck on Desk はコミュニティ主導のプロジェクトです。バグ報告、機能案、Pull Request を歓迎します。相談したい場合は [issue](https://github.com/rullerzhou-afk/duck-on-desk/issues) を開くか、直接 PR を送ってください。
 
 ### メンテナー
 
@@ -232,7 +232,7 @@ Clawd on Desk はコミュニティ主導のプロジェクトです。バグ報
 
 ### コントリビューター
 
-Clawd をより良くしてくれたすべての方に感謝します。
+Duck をより良くしてくれたすべての方に感謝します。
 
 <table>
   <tr>
@@ -373,7 +373,7 @@ Clawd をより良くしてくれたすべての方に感謝します。
 
 ## 謝辞
 
-- Clawd のピクセルアートは [@marciogranzotto](https://github.com/marciogranzotto) による [clawd-tank](https://github.com/marciogranzotto/clawd-tank) を参考にしています
+- Duck のピクセルアートは [@marciogranzotto](https://github.com/marciogranzotto) による [duck-tank](https://github.com/marciogranzotto/duck-tank) を参考にしています
 - [LINUX DO](https://linux.do/) コミュニティで共有されました
 
 ## ライセンス
@@ -382,7 +382,7 @@ Clawd をより良くしてくれたすべての方に感謝します。
 
 **Artwork および同梱テーマアセット（`assets/` と `themes/*/assets/` を含む）は AGPL-3.0 の対象外です。** すべての権利は各著作権者に帰属します。詳細は [assets/LICENSE](assets/LICENSE) と以下の注記を参照してください。
 
-- **Clawd** キャラクターは [Anthropic](https://www.anthropic.com) の所有物です。このプロジェクトは非公式のファンプロジェクトであり、Anthropic との提携または承認を受けたものではありません。
+- **Duck** キャラクターは [Anthropic](https://www.anthropic.com) の所有物です。このプロジェクトは非公式のファンプロジェクトであり、Anthropic との提携または承認を受けたものではありません。
 - **Calico cat (三毛猫)** のアートワークは 鹿鹿 ([@rullerzhou-afk](https://github.com/rullerzhou-afk)) によるものです。All rights reserved.
 - **Cloudling (云宝)** のアートワークは 鹿鹿 ([@rullerzhou-afk](https://github.com/rullerzhou-afk)) によるものです。All rights reserved. Cloudling のビジュアル方針には OpenAI Codex ロゴへのオマージュが含まれています。Codex/OpenAI の標章は OpenAI に帰属し、このプロジェクトは OpenAI との提携または承認を受けたものではありません。
 - **サードパーティのコントリビューション**: 著作権は各アーティストに帰属します。

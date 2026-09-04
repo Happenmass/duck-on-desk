@@ -4,7 +4,7 @@ const { validateThemeShape } = require("../theme-loader");
 
 function checkThemeHealth(options = {}) {
   const prefs = options.prefs || {};
-  const themeId = options.themeId || prefs.theme || "clawd";
+  const themeId = options.themeId || prefs.theme || "duck";
   const variantMap = prefs.themeVariant || {};
   const variant = options.variant || variantMap[themeId] || "default";
   const overrides = options.overrides !== undefined
@@ -19,7 +19,7 @@ function checkThemeHealth(options = {}) {
       status: "fail",
       level: "warning",
       detail: result.errors.join("; "),
-      textHint: "Open Settings -> Theme and switch to the default 'clawd' theme.",
+      textHint: "Open Settings -> Theme and switch to the default 'duck' theme.",
       themeId,
       variant,
       result,

@@ -222,7 +222,7 @@ test("settings window runtime creates the Settings BrowserWindow with taskbar id
   const win = FakeBrowserWindow.instances[0];
 
   assert.strictEqual(runtime.getWindow(), win);
-  assert.strictEqual(win.options.title, "Clawd Settings");
+  assert.strictEqual(win.options.title, "Duck Settings");
   assert.strictEqual(win.options.x, 240);
   assert.strictEqual(win.options.y, 120);
   assert.strictEqual(win.options.width, 800);
@@ -258,37 +258,37 @@ test("settings window runtime creates the Settings BrowserWindow with taskbar id
 });
 
 test("settings window uses and refreshes the localized title", () => {
-  let title = "Clawd 设置";
+  let title = "Duck 设置";
   const { runtime } = createRuntime({ runtime: { getTitle: () => title } });
 
   runtime.open();
   const win = FakeBrowserWindow.instances[0];
-  assert.strictEqual(win.options.title, "Clawd 设置");
+  assert.strictEqual(win.options.title, "Duck 设置");
 
-  title = "Clawd 設定";
+  title = "Duck 設定";
   runtime.applyTitleToWindow();
-  assert.strictEqual(win.title, "Clawd 設定");
+  assert.strictEqual(win.title, "Duck 設定");
 });
 
 test("did-finish-load reapplies the localized title after the HTML <title> loads", () => {
   // The HTML page ships a fixed English <title>, which Electron applies once
   // the document loads. The did-finish-load callback must reapply the localized
   // native title so the title bar never reverts to English mid-session.
-  let title = "Clawd 设置";
+  let title = "Duck 设置";
   const { runtime } = createRuntime({ runtime: { getTitle: () => title } });
 
   runtime.open();
   const win = FakeBrowserWindow.instances[0];
-  assert.strictEqual(win.options.title, "Clawd 设置");
+  assert.strictEqual(win.options.title, "Duck 设置");
 
   // Simulate the page finishing load with a new localized title in effect.
   win.calls = [];
-  title = "Clawd 設定";
+  title = "Duck 設定";
   win.emitWebContents("did-finish-load");
 
   assert.deepStrictEqual(
     win.calls.at(-1),
-    ["setTitle", "Clawd 設定"],
+    ["setTitle", "Duck 設定"],
     "localized title reapplied after did-finish-load",
   );
 });

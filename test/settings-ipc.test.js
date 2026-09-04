@@ -56,7 +56,7 @@ class FakeIpcMain {
 }
 
 function makeTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "clawd-settings-ipc-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "duck-settings-ipc-"));
 }
 
 function createDeferred() {
@@ -148,7 +148,7 @@ function createHarness(overrides = {}) {
     senderFrame: settingsMainFrame,
   };
   const activeTheme = overrides.activeTheme || {
-    _id: "clawd",
+    _id: "duck",
     sounds: { complete: "complete.mp3" },
   };
   const settingsController = overrides.settingsController || {
@@ -168,7 +168,7 @@ function createHarness(overrides = {}) {
     getSoundUrl: () => null,
     listThemesWithMetadata: () => [],
     getThemeMetadata: (themeId) => ({ name: themeId }),
-    ensureUserThemesDir: () => path.join(os.tmpdir(), "clawd-user-themes"),
+    ensureUserThemesDir: () => path.join(os.tmpdir(), "duck-user-themes"),
   };
   const codexPetMain = overrides.codexPetMain || {
     decorateThemeMetadata: (theme) => theme,
@@ -403,7 +403,7 @@ test("settings IPC preserves picker error codes and does not write an impossible
 test("settings:list-themes uses active runtime capabilities over raw metadata", async () => {
   const { ipcMain } = createHarness({
     activeTheme: {
-      _id: "clawd",
+      _id: "duck",
       _capabilities: { petTint: true, accessories: false },
       sounds: {},
     },
@@ -412,7 +412,7 @@ test("settings:list-themes uses active runtime capabilities over raw metadata", 
       getSoundOverridesDir: () => null,
       getSoundUrl: () => null,
       listThemesWithMetadata: () => [{
-        id: "clawd",
+        id: "duck",
         capabilities: { petTint: true, accessories: true, reactions: true },
       }],
       getThemeMetadata: () => null,
@@ -421,7 +421,7 @@ test("settings:list-themes uses active runtime capabilities over raw metadata", 
   });
 
   assert.deepStrictEqual(await ipcMain.invoke("settings:list-themes"), [{
-    id: "clawd",
+    id: "duck",
     active: true,
     capabilities: { petTint: true, accessories: false, reactions: true },
   }]);
@@ -505,7 +505,7 @@ test("settings IPC delegates Codex Pet theme channels and decorates metadata", a
       getSoundOverridesDir: () => null,
       getSoundUrl: () => null,
       listThemesWithMetadata: () => [
-        { id: "clawd", name: "Clawd" },
+        { id: "duck", name: "Duck" },
         { id: "imported-pet", name: "Imported Pet" },
       ],
       getThemeMetadata: () => null,
@@ -535,7 +535,7 @@ test("settings IPC delegates Codex Pet theme channels and decorates metadata", a
   });
 
   assert.deepStrictEqual(await ipcMain.invoke("settings:list-themes"), [
-    { id: "clawd", name: "Clawd", active: false, managedCodexPet: false },
+    { id: "duck", name: "Duck", active: false, managedCodexPet: false },
     { id: "imported-pet", name: "Imported Pet", active: true, managedCodexPet: true },
   ]);
   assert.deepStrictEqual(await ipcMain.invoke("settings:refresh-codex-pets"), {
@@ -571,7 +571,7 @@ test("settings IPC opens the user themes directory", async () => {
       getSoundUrl: () => null,
       listThemesWithMetadata: () => [],
       getThemeMetadata: () => null,
-      ensureUserThemesDir: () => "C:\\Users\\Example\\AppData\\Roaming\\Clawd\\themes",
+      ensureUserThemesDir: () => "C:\\Users\\Example\\AppData\\Roaming\\Duck\\themes",
     },
     shell: {
       openPath: async (dir) => {
@@ -584,12 +584,12 @@ test("settings IPC opens the user themes directory", async () => {
 
   assert.deepStrictEqual(await ipcMain.invoke("settings:open-user-themes-dir"), {
     status: "ok",
-    path: "C:\\Users\\Example\\AppData\\Roaming\\Clawd\\themes",
+    path: "C:\\Users\\Example\\AppData\\Roaming\\Duck\\themes",
   });
-  assert.deepStrictEqual(openCalls, ["C:\\Users\\Example\\AppData\\Roaming\\Clawd\\themes"]);
+  assert.deepStrictEqual(openCalls, ["C:\\Users\\Example\\AppData\\Roaming\\Duck\\themes"]);
 });
 
-test("settings IPC imports Clawd user theme zip packages", async () => {
+test("settings IPC imports Duck user theme zip packages", async () => {
   const root = makeTempDir();
   try {
     const userThemesDir = path.join(root, "user-themes");
@@ -643,7 +643,7 @@ test("settings IPC imports Clawd user theme zip packages", async () => {
     });
     assert.deepStrictEqual(dialogParent, { id: "parent", sender: settingsWindow.webContents });
     assert.deepStrictEqual(dialogOptions.properties, ["openFile"]);
-    assert.deepStrictEqual(dialogOptions.filters, [{ name: "Clawd theme zip", extensions: ["zip"] }]);
+    assert.deepStrictEqual(dialogOptions.filters, [{ name: "Duck theme zip", extensions: ["zip"] }]);
     assert.strictEqual(
       fs.readFileSync(path.join(userThemesDir, "pixel-cat", "theme.json"), "utf8"),
       JSON.stringify(themeJson)
@@ -707,7 +707,7 @@ test("settings IPC copies sound overrides, removes stale siblings, and invalidat
     assert.strictEqual(activeTheme._soundOverrideFiles.complete, path.join(overridesDir, "complete.wav"));
     assert.deepStrictEqual(calls, [
       ["applyCommand", "setSoundOverride", {
-        themeId: "clawd",
+        themeId: "duck",
         soundName: "complete",
         file: "complete.wav",
         originalName: "picked.wav",
@@ -781,7 +781,7 @@ test("settings IPC serves agent/about/update/external and remove-theme dialog he
         { id: "claude-code", name: "Claude Code", eventSource: "hook", capabilities: {} },
         { id: "opencode", name: "opencode", eventSource: "hook", capabilities: {} },
       ],
-      getHookServerPort: () => 23335,
+      getHookServerPort: () => 24335,
       getRecentHookEvents: ({ agentId }) => [{
         timestamp: 12345,
         agentId,
@@ -843,7 +843,7 @@ test("settings IPC serves agent/about/update/external and remove-theme dialog he
         sourcePath: "C:\\NovaAI",
         executablePath: "C:\\NovaAI\\NovaAI.exe",
         processName: "NovaAI.exe",
-        stateEndpoint: "http://127.0.0.1:23335/state",
+        stateEndpoint: "http://127.0.0.1:24335/state",
         lastStateEvent: { timestamp: 12345, eventType: "PreToolUse" },
         capabilities: {
           httpHook: true,
@@ -858,7 +858,7 @@ test("settings IPC serves agent/about/update/external and remove-theme dialog he
     ]);
     assert.deepStrictEqual(await ipcMain.invoke("settings:get-about-info"), {
       version: "1.2.3",
-      repoUrl: "https://github.com/rullerzhou-afk/clawd-on-desk",
+      repoUrl: "https://github.com/rullerzhou-afk/duck-on-desk",
       license: "AGPL-3.0",
       copyright: "\u00a9 2026 Ruller_Lulu",
       authorName: "Ruller_Lulu / \u9e7f\u9e7f",
@@ -954,12 +954,12 @@ test("settings IPC exposes read-only agent installation detection", async () => 
 // #895 T11d: asserted through the real detector against a throwaway home, so it
 // pins the behaviour the Settings page depends on rather than which option keys
 // happen to be passed. Codex must reach the Agents tab; Claude must not, because
-// Clawd's own sync creates ~/.claude and its presence proves nothing. Settings
+// Duck's own sync creates ~/.claude and its presence proves nothing. Settings
 // previously withheld both, and the catalog then labelled the ones it had never
 // examined as "not detected locally".
 test("settings IPC scan examines Codex locally and still withholds Claude", async () => {
   const { detectAgentInstallations: realDetect } = require("../src/agent-installation-detector");
-  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-ipc-detect-"));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-ipc-detect-"));
   fs.mkdirSync(path.join(homeDir, ".codex"));
   const { ipcMain, runtime } = createHarness({
     detectAgentInstallations: (options) => realDetect({ ...options, homeDir, platform: "darwin", env: {} }),

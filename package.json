@@ -1,5 +1,5 @@
 {
-  "name": "clawd-on-desk",
+  "name": "duck-on-desk",
   "version": "1.0.0",
   "description": "A desktop pet that reacts to your Claude Code sessions in real-time.",
   "main": "src/main.js",
@@ -32,7 +32,7 @@
     "register-protocol:dev": "node launch.js --register-protocol"
   },
   "keywords": [
-    "clawd",
+    "duck",
     "desktop-pet",
     "electron",
     "claude-code"

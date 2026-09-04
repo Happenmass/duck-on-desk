@@ -43,7 +43,7 @@ describe("opencode JSONC installer — merged config semantics (#825)", () => {
   const OC_PLUGIN_DIR = "/abs/hooks/opencode-plugin";
 
   function ocDir() {
-    return fs.mkdtempSync(path.join(os.tmpdir(), "clawd-opencode-merged-"));
+    return fs.mkdtempSync(path.join(os.tmpdir(), "duck-opencode-merged-"));
   }
   function inDir(dir, name, text) {
     const p = path.join(dir, name);
@@ -223,7 +223,7 @@ describe("opencode JSONC installer — merged config semantics (#825)", () => {
     // register() used to read os.homedir() directly while unregister() honored
     // options.homeDir — a caller passing a sandbox home silently edited the
     // REAL ~/.config/opencode. Locked in both directions.
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-opencode-home-"));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "duck-opencode-home-"));
     fs.mkdirSync(path.join(home, ".config", "opencode"), { recursive: true });
     const expected = path.join(home, ".config", "opencode", "opencode.json");
 
@@ -259,7 +259,7 @@ describe("opencode JSONC engine — element-level edits", () => {
   const PLUGIN_DIR = "/abs/hooks/opencode-plugin";
 
   function tmpConfig(text) {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-opencode-jsonc-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-opencode-jsonc-"));
     const jsoncPath = path.join(dir, "opencode.jsonc");
     if (text !== undefined) fs.writeFileSync(jsoncPath, text);
     return { dir, jsoncPath, configPath: path.join(dir, "opencode.json") };

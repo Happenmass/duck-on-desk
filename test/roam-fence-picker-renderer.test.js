@@ -212,7 +212,7 @@ test("keyboard can create, move, resize, and confirm a selection", () => {
 test("renderer provides Brazilian Portuguese picker copy", () => {
   const harness = createHarness("pt-BR");
   assert.strictEqual(harness.document.documentElement.lang, "pt-BR");
-  assert.strictEqual(harness.title.textContent, "Escolher a área de atividade do Clawd");
+  assert.strictEqual(harness.title.textContent, "Escolher a área de atividade do Duck");
   assert.match(harness.hint.textContent, /Shift\+setas/);
   assert.strictEqual(harness.confirm.textContent, "Usar esta área");
   assert.strictEqual(harness.cancel.textContent, "Cancelar");

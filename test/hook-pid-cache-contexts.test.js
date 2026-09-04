@@ -42,8 +42,8 @@ const stubPost = (body, opts, cb) => cb(false, null);
 
 describe("#634 ctx contract — buildStateBody seams", () => {
   let hadRemote;
-  before(() => { hadRemote = process.env.CLAWD_REMOTE; delete process.env.CLAWD_REMOTE; });
-  after(() => { if (hadRemote !== undefined) process.env.CLAWD_REMOTE = hadRemote; });
+  before(() => { hadRemote = process.env.DUCK_REMOTE; delete process.env.DUCK_REMOTE; });
+  after(() => { if (hadRemote !== undefined) process.env.DUCK_REMOTE = hadRemote; });
 
   it("codex: state + permission bodies share the guard; Stop is not end", () => {
     const mod = require("../hooks/codex-hook.js");

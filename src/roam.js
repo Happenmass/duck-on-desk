@@ -507,7 +507,7 @@ module.exports = function initRoam(ctx) {
     const animDurationMs = Math.max(1000, dist / ROAM_SPEED_PX_PER_MS);
 
     // ── Face the walk direction ──
-    // Dedicated roam visuals (e.g. clawd's crabwalk) are drawn facing right;
+    // Dedicated roam visuals (e.g. duck's crabwalk) are drawn facing right;
     // tell the renderer to mirror while heading left. Sent before applyState
     // so the flip is settled when the roam visual swaps in. A purely vertical
     // walk keeps the previous heading.

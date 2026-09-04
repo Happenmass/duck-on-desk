@@ -16,7 +16,7 @@ describe("permission bubble HTML assets", () => {
     assert.ok(!bubbleHtml.includes("<style>"));
     assert.doesNotMatch(bubbleHtml, /<script(?!\s+src=)[^>]*>/);
     assert.ok(bubbleHtml.indexOf('<link rel="stylesheet" href="bubble.css">') < bubbleHtml.indexOf('<script src="bubble-renderer.js"></script>'));
-    // bubble-renderer.js destructures window.ClawdBubbleFormat at module top,
+    // bubble-renderer.js destructures window.DuckBubbleFormat at module top,
     // so bubble-format.js must be loaded first or the renderer throws on startup.
     assert.ok(bubbleHtml.indexOf('<script src="bubble-format.js"></script>') < bubbleHtml.indexOf('<script src="bubble-renderer.js"></script>'));
   });

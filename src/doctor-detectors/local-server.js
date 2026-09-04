@@ -11,16 +11,16 @@ function checkLocalServer(serverApi) {
       status: "fail",
       level: "critical",
       detail: "Local server is not listening",
-      textHint: "Restart Clawd. If the issue persists, check ~/.clawd/ permissions.",
+      textHint: "Restart Duck. If the issue persists, check ~/.duck-on-desk/ permissions.",
       runtime: status,
-      fixAction: { type: "restart-clawd" },
+      fixAction: { type: "restart-duck" },
     };
   }
 
   // #681: the same warning branch now also covers runtime IDENTITY, not just
   // the port. Hooks gate their process-tree snapshot on a readable app +
   // ownerPid whose owner is alive; a file that is missing ownerPid, or names a
-  // dead/foreign owner, reads as "Clawd is offline" to every hook — so terminal
+  // dead/foreign owner, reads as "Duck is offline" to every hook — so terminal
   // focus silently stops working for new sessions even though this server is
   // listening. Same level, same Fix, one extra sentence of detail.
   const identityBroken = !status.runtimeIdentityValid || !status.runtimeOwnerAlive;
@@ -34,7 +34,7 @@ function checkLocalServer(serverApi) {
       status: "fail",
       level: "warning",
       detail: `Listening on 127.0.0.1:${status.port}; runtime port is ${status.runtimePort || "missing"}${identityDetail}`,
-      textHint: "Restart Clawd to regenerate the runtime file.",
+      textHint: "Restart Duck to regenerate the runtime file.",
       runtime: status,
       fixAction: { type: "local-server" },
     };

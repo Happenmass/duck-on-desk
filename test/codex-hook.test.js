@@ -19,7 +19,7 @@ const {
   readFirstSessionMeta,
   runCodexHook,
   sanitizeCodexPermissionOutput,
-  startClawdAndWait,
+  startDuckAndWait,
 } = require("../hooks/codex-hook");
 const { readCodexThreadName } = require("../hooks/codex-session-index");
 const { CODEX_WINDOWS_STABLE_ARG, CODEX_WSL_INTEROP_ARG } = require("../hooks/server-config");
@@ -63,17 +63,17 @@ function withTempCodexIndex(lines, fn) {
 describe("Codex official hook", () => {
   it("applies a matching native Windows sidecar atomically", () => {
     const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), "codex-hook-sidecar-"));
-    const stableDir = path.join(codexHome, "clawd-hooks");
+    const stableDir = path.join(codexHome, "duck-hooks");
     const sidecarPath = path.join(stableDir, "codex-hook.js.windows.run");
     const hookPath = path.resolve(__dirname, "..", "hooks", "codex-hook.js");
     const encode = (value) => Buffer.from(String(value), "utf8").toString("base64");
     fs.mkdirSync(stableDir, { recursive: true });
     try {
       fs.writeFileSync(sidecarPath, [
-        "clawd-codex-stable-windows-run-v1",
+        "duck-codex-stable-windows-run-v1",
         encode(process.execPath),
         encode(hookPath),
-        `E${encode("CLAWD_TEST_ENV")}.${encode("环境 ✓")}`,
+        `E${encode("DUCK_TEST_ENV")}.${encode("环境 ✓")}`,
         "",
       ].join("\n"), "utf8");
       const env = {};
@@ -84,7 +84,7 @@ describe("Codex official hook", () => {
         codexHome,
         hookPath,
       }), { applied: true, reason: null, count: 1 });
-      assert.strictEqual(env.CLAWD_TEST_ENV, "环境 ✓");
+      assert.strictEqual(env.DUCK_TEST_ENV, "环境 ✓");
 
       const unmarkedEnv = {};
       assert.strictEqual(applyWindowsStableSidecarEnv({
@@ -106,7 +106,7 @@ describe("Codex official hook", () => {
       }).reason, "target-mismatch");
       assert.deepStrictEqual(mismatchedEnv, {});
 
-      fs.appendFileSync(sidecarPath, `E${encode("CLAWD_PARTIAL")}.%%%\n`, "utf8");
+      fs.appendFileSync(sidecarPath, `E${encode("DUCK_PARTIAL")}.%%%\n`, "utf8");
       const damagedEnv = {};
       assert.deepStrictEqual(applyWindowsStableSidecarEnv({
         platform: "win32",
@@ -407,7 +407,7 @@ describe("Codex official hook", () => {
     });
   });
 
-  it("renames upstream Codex agent fields without polluting Clawd agent_id", () => {
+  it("renames upstream Codex agent fields without polluting Duck agent_id", () => {
     const body = buildStateBody({
       hook_event_name: "PreToolUse",
       session_id: "s1",
@@ -671,7 +671,7 @@ describe("Codex official hook", () => {
     const options = {
       readRuntimeIdentity() {
         identityReads += 1;
-        return { ok: true, reason: null, port: 23335, ownerPid: process.pid };
+        return { ok: true, reason: null, port: 24335, ownerPid: process.pid };
       },
       createPidResolver(resolverOptions) {
         return () => {
@@ -681,14 +681,14 @@ describe("Codex official hook", () => {
         };
       },
       postState(_body, options, callback) {
-        assert.strictEqual(options.preferredPort, 23335);
-        assert.strictEqual(options.runtimePort, 23335);
-        callback(true, 23335);
+        assert.strictEqual(options.preferredPort, 24335);
+        assert.strictEqual(options.runtimePort, 24335);
+        callback(true, 24335);
       },
       postPermission(_body, requestOptions, callback) {
-        assert.strictEqual(requestOptions.preferredPort, 23335);
-        assert.strictEqual(requestOptions.runtimePort, 23335);
-        callback(true, 23335, JSON.stringify({
+        assert.strictEqual(requestOptions.preferredPort, 24335);
+        assert.strictEqual(requestOptions.runtimePort, 24335);
+        callback(true, 24335, JSON.stringify({
           hookSpecificOutput: {
             hookEventName: "PermissionRequest",
             decision: { behavior: "allow" },
@@ -707,12 +707,12 @@ describe("Codex official hook", () => {
     assert.strictEqual(resolveCalls, 2);
     assert.strictEqual(identityReads, 2);
     assert.strictEqual(stateResult.posted, true);
-    assert.strictEqual(stateResult.port, 23335);
+    assert.strictEqual(stateResult.port, 24335);
     assert.strictEqual(permissionResult.posted, true);
-    assert.strictEqual(permissionResult.port, 23335);
+    assert.strictEqual(permissionResult.port, 24335);
   });
 
-  it("starts Clawd and retries a local SessionStart when the server is offline", async () => {
+  it("starts Duck and retries a local SessionStart when the server is offline", async () => {
     const posts = [];
     let autoStarts = 0;
     const result = await runCodexHook({
@@ -725,7 +725,7 @@ describe("Codex official hook", () => {
       postState(_body, options, callback) {
         posts.push(options);
         if (posts.length === 1) callback(false, null);
-        else callback(true, 23334);
+        else callback(true, 24334);
       },
       async runAutoStart() {
         autoStarts += 1;
@@ -736,10 +736,10 @@ describe("Codex official hook", () => {
     assert.strictEqual(posts.length, 2);
     assert.deepStrictEqual(posts[1], { timeoutMs: 100 });
     assert.strictEqual(result.posted, true);
-    assert.strictEqual(result.port, 23334);
+    assert.strictEqual(result.port, 24334);
   });
 
-  it("does not start Clawd for an offline non-SessionStart event", async () => {
+  it("does not start Duck for an offline non-SessionStart event", async () => {
     let autoStarts = 0;
     const result = await runCodexHook({
       hook_event_name: "UserPromptSubmit",
@@ -847,13 +847,13 @@ describe("Codex official hook", () => {
       },
       readRuntimeIdentity() {
         identityReads += 1;
-        return identityReads >= 2 ? { ok: true, port: 23335, ownerPid: 999 } : null;
+        return identityReads >= 2 ? { ok: true, port: 24335, ownerPid: 999 } : null;
       },
       readCodexAutoStartGate: () => true,
       postState(body, options, callback) {
         postedBodies.push(JSON.parse(body));
         postedOptions.push(options);
-        callback(postedBodies.length === 2, postedBodies.length === 2 ? 23335 : null);
+        callback(postedBodies.length === 2, postedBodies.length === 2 ? 24335 : null);
       },
       async runAutoStart() {},
     });
@@ -864,11 +864,11 @@ describe("Codex official hook", () => {
     assert.deepStrictEqual(postedBodies[1].pid_chain, [333, 222]);
     assert.deepStrictEqual(postedOptions[1], {
       timeoutMs: 100,
-      preferredPort: 23335,
-      runtimePort: 23335,
+      preferredPort: 24335,
+      runtimePort: 24335,
     });
     assert.strictEqual(result.body.source_pid, 222);
-    assert.strictEqual(result.port, 23335);
+    assert.strictEqual(result.port, 24335);
   });
 
   it("re-observes an authoritative runtime after auto-start and skips legacy PID resolution on retry", async () => {
@@ -892,9 +892,9 @@ describe("Codex official hook", () => {
           };
         }
         return {
-          identity: { ok: true, reason: null, port: 23335, ownerPid: 999 },
+          identity: { ok: true, reason: null, port: 24335, ownerPid: 999 },
           observation: {
-            port: 23335,
+            port: 24335,
             ownerPid: 999,
             version: 1,
             instanceGeneration: "retry-generation",
@@ -912,7 +912,7 @@ describe("Codex official hook", () => {
       postState(bodyText, options, callback) {
         postedBodies.push(JSON.parse(bodyText));
         postedOptions.push(options);
-        callback(postedBodies.length === 2, postedBodies.length === 2 ? 23335 : null);
+        callback(postedBodies.length === 2, postedBodies.length === 2 ? 24335 : null);
       },
       async runAutoStart() {},
     });
@@ -923,19 +923,19 @@ describe("Codex official hook", () => {
     for (const key of ["source_pid", "agent_pid", "pid_chain", "editor", "wt_hwnd"]) {
       assert.strictEqual(Object.prototype.hasOwnProperty.call(postedBodies[1], key), false);
     }
-    assert.strictEqual(postedOptions[1].preferredPort, 23335);
-    assert.strictEqual(postedOptions[1].runtimePort, 23335);
+    assert.strictEqual(postedOptions[1].preferredPort, 24335);
+    assert.strictEqual(postedOptions[1].runtimePort, 24335);
     assert.strictEqual(postedOptions[1].windowsProcessChain.runtimeObservation.agentMode, "b1a-authoritative");
     assert.strictEqual(result.posted, true);
   });
 
-  describe("startClawdAndWait", () => {
+  describe("startDuckAndWait", () => {
     it("spawns the production helper and cleans up after exit", async () => {
       const child = new EventEmitter();
       const cleared = [];
       let timeoutCallback = null;
       let spawnCall = null;
-      const pending = startClawdAndWait({
+      const pending = startDuckAndWait({
         spawn(command, args, options) {
           spawnCall = { command, args, options };
           return child;
@@ -965,7 +965,7 @@ describe("Codex official hook", () => {
 
     it("settles on child error and synchronous spawn failure", async () => {
       const child = new EventEmitter();
-      const pending = startClawdAndWait({
+      const pending = startDuckAndWait({
         spawn: () => child,
         setTimeout: () => 7,
         clearTimeout() {},
@@ -973,7 +973,7 @@ describe("Codex official hook", () => {
       child.emit("error", new Error("spawn failed"));
       await pending;
 
-      await startClawdAndWait({
+      await startDuckAndWait({
         spawn() { throw new Error("sync spawn failed"); },
       });
     });
@@ -983,7 +983,7 @@ describe("Codex official hook", () => {
       let timeoutCallback = null;
       let killed = 0;
       child.kill = () => { killed += 1; };
-      const pending = startClawdAndWait({
+      const pending = startDuckAndWait({
         spawn: () => child,
         timeoutMs: 25,
         setTimeout(callback, timeoutMs) {
@@ -1003,8 +1003,8 @@ describe("Codex official hook", () => {
   });
 
   describe("remote mode", () => {
-    before(() => { process.env.CLAWD_REMOTE = "1"; });
-    after(() => { delete process.env.CLAWD_REMOTE; });
+    before(() => { process.env.DUCK_REMOTE = "1"; });
+    after(() => { delete process.env.DUCK_REMOTE; });
 
     it("uses host instead of local pid fields", () => {
       const body = buildStateBody({ hook_event_name: "UserPromptSubmit", session_id: "s1" }, () => {

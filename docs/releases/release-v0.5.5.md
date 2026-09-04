@@ -18,11 +18,11 @@ First-class Ubuntu/Linux support. Includes runtime fixes (scoping Windows-only F
 
 ### Remote SSH Agent Support (Issue #9)
 
-Run Clawd on a remote server and sync state back to your local desktop pet. Includes a one-click `remote-deploy.sh` setup script for SSH environments.
+Run Duck on a remote server and sync state back to your local desktop pet. Includes a one-click `remote-deploy.sh` setup script for SSH environments.
 
 ### Auto-Recover Hooks Wiped by CC-Switch (Issue #37)
 
-CC-Switch overwrites `~/.claude/settings.json` when switching providers, wiping all registered hooks. Clawd now watches the `~/.claude/` directory and automatically re-registers hooks within seconds when they disappear. Includes debounce (1s) and rate-limiting (5s) to avoid write conflicts.
+CC-Switch overwrites `~/.claude/settings.json` when switching providers, wiping all registered hooks. Duck now watches the `~/.claude/` directory and automatically re-registers hooks within seconds when they disappear. Includes debounce (1s) and rate-limiting (5s) to avoid write conflicts.
 
 ### Large Permission Payload Support (Issue #36)
 

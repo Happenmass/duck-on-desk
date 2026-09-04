@@ -6,25 +6,25 @@ const { EventEmitter } = require("node:events");
 const path = require("node:path");
 
 const {
-  CLAWD_SERVER_HEADER,
-  CLAWD_SERVER_ID,
-  CLAWD_HOOK_PID_HEADER,
-  CLAWD_PROCESS_INSTANCE_HEADER,
+  DUCK_SERVER_HEADER,
+  DUCK_SERVER_ID,
+  DUCK_HOOK_PID_HEADER,
+  DUCK_PROCESS_INSTANCE_HEADER,
 } = require("../hooks/server-config");
 const {
   MAX_STATE_BODY_BYTES,
-  CLAWD_METADATA_ACCEPTED_HEADER,
+  DUCK_METADATA_ACCEPTED_HEADER,
   sendStateHealthResponse,
   handleStatePost,
 } = require("../src/server-route-state");
 const { classifyPermissionInteraction } = require("../src/permission-automation-policy");
-const { buildStateBody } = require("../hooks/clawd-hook");
+const { buildStateBody } = require("../hooks/duck-hook");
 const { makeSessionKey } = require("../src/session-key");
 const createAgentRuntimeMain = require("../src/agent-runtime-main");
 const initState = require("../src/state");
 const themeLoader = require("../src/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
-const metadataContractTheme = themeLoader.loadTheme("clawd");
+const metadataContractTheme = themeLoader.loadTheme("duck");
 const localSessionKey = (rawSessionId) => makeSessionKey({
   profileId: "local",
   rawSessionId,
@@ -173,15 +173,15 @@ describe("server-route-state health", () => {
   it("returns the same /state health payload and header", () => {
     const res = makeRes();
 
-    sendStateHealthResponse(res, { getHookServerPort: () => 23334 });
+    sendStateHealthResponse(res, { getHookServerPort: () => 24334 });
 
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.headers["Content-Type"], "application/json");
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
     assert.deepStrictEqual(JSON.parse(res.body), {
       ok: true,
-      app: CLAWD_SERVER_ID,
-      port: 23334,
+      app: DUCK_SERVER_ID,
+      port: 24334,
     });
   });
 });
@@ -846,7 +846,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], "1");
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], "1");
     assert.strictEqual(res.calls.updateSession.length, 0);
     assert.strictEqual(res.calls.setState.length, 0);
     assert.strictEqual(metadataCalls.length, 1);
@@ -872,7 +872,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], undefined);
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], undefined);
     assert.deepStrictEqual(metadataCalls, []);
   });
 
@@ -894,7 +894,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], "1");
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], "1");
     assert.strictEqual(metadataCalls[0][0], makeSessionKey({
       profileId: "ssh-work",
       rawSessionId: "sid",
@@ -952,7 +952,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], "1");
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], "1");
     assert.strictEqual(metadataCalls.length, 1);
     assert.strictEqual(metadataCalls[0][0], localSessionKey("oc:abc"));
     assert.strictEqual(metadataCalls[0][1].contextUsageOrigin, "opencode-statusline");
@@ -982,8 +982,8 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], undefined);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], undefined);
     assert.strictEqual(metadataCalls.length, 1);
   });
 
@@ -1008,7 +1008,7 @@ describe("server-route-state POST", () => {
       const changed = await post({
         context_usage: { used: 100, limit: 1000, source: "opencode" },
       });
-      assert.strictEqual(changed.headers[CLAWD_METADATA_ACCEPTED_HEADER], "1");
+      assert.strictEqual(changed.headers[DUCK_METADATA_ACCEPTED_HEADER], "1");
       assert.strictEqual(Object.hasOwn(forwarded.at(-1)[1], "contextUsage"), true);
       assert.deepStrictEqual(forwarded.at(-1)[1].contextUsage, {
         used: 100,
@@ -1021,26 +1021,26 @@ describe("server-route-state POST", () => {
       const identical = await post({
         context_usage: { used: 100, limit: 1000, source: "opencode" },
       });
-      assert.strictEqual(identical.headers[CLAWD_METADATA_ACCEPTED_HEADER], "1");
+      assert.strictEqual(identical.headers[DUCK_METADATA_ACCEPTED_HEADER], "1");
       assert.strictEqual(api.sessions.get(sessionId).metadataUpdatedAt, metadataStamp, "accepted no-op must not restamp freshness");
 
       const withoutLimit = await post({
         context_usage: { used: 120, source: "opencode" },
       });
-      assert.strictEqual(withoutLimit.headers[CLAWD_METADATA_ACCEPTED_HEADER], "1");
+      assert.strictEqual(withoutLimit.headers[DUCK_METADATA_ACCEPTED_HEADER], "1");
       assert.deepStrictEqual(api.sessions.get(sessionId).contextUsage, {
         used: 120,
         source: "opencode",
       });
 
       const titleOnly = await post({ session_title: "\u0001\u0002" });
-      assert.strictEqual(titleOnly.headers[CLAWD_METADATA_ACCEPTED_HEADER], undefined);
+      assert.strictEqual(titleOnly.headers[DUCK_METADATA_ACCEPTED_HEADER], undefined);
 
       const merged = await post({
         session_title: "\u0001\u0002",
         context_usage: { used: 150, limit: 1000, source: "opencode" },
       });
-      assert.strictEqual(merged.headers[CLAWD_METADATA_ACCEPTED_HEADER], "1");
+      assert.strictEqual(merged.headers[DUCK_METADATA_ACCEPTED_HEADER], "1");
       assert.strictEqual(Object.hasOwn(forwarded.at(-1)[1], "contextUsage"), true);
       assert.strictEqual(api.sessions.get(sessionId).contextUsage.used, 150);
       assert.strictEqual(api.sessions.get(sessionId).sessionTitle, null, "invalid title must not block valid context");
@@ -1062,7 +1062,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], undefined);
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], undefined);
     assert.strictEqual(metadataCalls.length, 0);
   });
 
@@ -1122,7 +1122,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], undefined);
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], undefined);
     assert.strictEqual(metadataCalls.length, 0);
   });
 
@@ -1154,7 +1154,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], "1");
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], "1");
     assert.strictEqual(res.calls.updateSession.length, 0, "title-only metadata must not call updateSession");
     assert.strictEqual(res.calls.setState.length, 0);
     assert.strictEqual(metadataCalls.length, 1);
@@ -1197,7 +1197,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], "1");
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], "1");
     assert.strictEqual(metadataCalls.length, 1, "title+context should coalesce into a single metadata update");
     assert.deepStrictEqual(metadataCalls[0][1], {
       contextUsage: { used: 300, limit: 1000, percent: 30, source: "codex" },
@@ -1218,7 +1218,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_METADATA_ACCEPTED_HEADER], undefined);
+    assert.strictEqual(res.headers[DUCK_METADATA_ACCEPTED_HEADER], undefined);
     assert.strictEqual(metadataCalls.length, 0, "empty metadata payload must not call updateSessionMetadata");
   });
 
@@ -1328,7 +1328,7 @@ describe("server-route-state POST", () => {
       session_id: "stale:sid",
       event: "PreToolUse",
       agent_id: "custom-stale-0123456789ab",
-      hook_source: "clawd-hook",
+      hook_source: "duck-hook",
     }));
 
     assert.strictEqual(res.statusCode, 204);
@@ -1372,7 +1372,7 @@ describe("server-route-state POST", () => {
     });
 
     assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
     assert.deepStrictEqual(res.calls.recorder.map((entry) => entry.outcome).filter(Boolean), ["disabled"]);
     assert.deepStrictEqual(res.calls.updateSession, []);
   });
@@ -1413,7 +1413,7 @@ describe("server-route-state POST", () => {
     const res = await callStatePost(body);
 
     assert.strictEqual(res.statusCode, 200);
-    assert.strictEqual(res.headers[CLAWD_SERVER_HEADER], CLAWD_SERVER_ID);
+    assert.strictEqual(res.headers[DUCK_SERVER_HEADER], DUCK_SERVER_ID);
     assert.strictEqual(res.calls.updateSession.length, 1);
   });
 
@@ -1428,8 +1428,8 @@ describe("server-route-state POST", () => {
 describe("server-route-state Windows B1a process metadata", () => {
   const generation = "state-route-generation";
   const headers = {
-    [CLAWD_HOOK_PID_HEADER.toLowerCase()]: "4321",
-    [CLAWD_PROCESS_INSTANCE_HEADER.toLowerCase()]: generation,
+    [DUCK_HOOK_PID_HEADER.toLowerCase()]: "4321",
+    [DUCK_PROCESS_INSTANCE_HEADER.toLowerCase()]: generation,
   };
 
   function runtime(agentId, mode) {
@@ -1532,7 +1532,7 @@ describe("server-route-state Windows B1a process metadata", () => {
       agent_id: "codex",
       source_pid: 88,
     }), {
-      headers: { [CLAWD_HOOK_PID_HEADER.toLowerCase()]: "4321" },
+      headers: { [DUCK_HOOK_PID_HEADER.toLowerCase()]: "4321" },
       options: {
         isWinHost: true,
         windowsProcessChainRuntime: runtime("codex", "b1a-authoritative"),

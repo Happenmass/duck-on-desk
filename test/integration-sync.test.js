@@ -48,7 +48,7 @@ function makeRuntime(overrides = {}) {
   const { ctx: ctxOverrides = {}, ...runtimeOverrides } = overrides;
   const ctx = createGuardedIntegrationCtx({
     autoStartWithClaude: true,
-    syncClawdHooksImpl: (options) => {
+    syncDuckHooksImpl: (options) => {
       calls.push({ name: "claude", options });
       return { status: "ok", source: "claude" };
     },
@@ -87,7 +87,7 @@ describe("integration sync runtime", () => {
     };
     console.warn = (...args) => {
       const message = args.map((arg) => String(arg)).join(" ");
-      if (/^Clawd:\s+failed to (?:sync|repair)\b/i.test(message)) {
+      if (/^Duck:\s+failed to (?:sync|repair)\b/i.test(message)) {
         integrationFailureWarnings.push(message);
         return;
       }
@@ -116,7 +116,7 @@ describe("integration sync runtime", () => {
     const ctx = createGuardedIntegrationCtx({}, calls);
     const runtime = createIntegrationSyncRuntime({ ctx });
     allowedIntegrationFailureWarningPatterns.push(
-      /^Clawd:\s+failed to sync Codex hooks:\s+Missing integration test fake: syncCodexHooksImpl$/
+      /^Duck:\s+failed to sync Codex hooks:\s+Missing integration test fake: syncCodexHooksImpl$/
     );
 
     const result = runtime.syncCodexHooks();
@@ -139,10 +139,10 @@ describe("integration sync runtime", () => {
     ]);
   });
 
-  it("syncClawdHooks passes auto-start, the current server port, and sync provenance", () => {
+  it("syncDuckHooks passes auto-start, the current server port, and sync provenance", () => {
     const { runtime, calls } = makeRuntime();
 
-    const result = runtime.syncClawdHooks();
+    const result = runtime.syncDuckHooks();
 
     assert.deepStrictEqual(result, { status: "ok", source: "claude" });
     assert.deepStrictEqual(calls, [
@@ -150,10 +150,10 @@ describe("integration sync runtime", () => {
     ]);
   });
 
-  it("syncClawdHooks forwards an explicit source/automatic pair unchanged", () => {
+  it("syncDuckHooks forwards an explicit source/automatic pair unchanged", () => {
     const { runtime, calls } = makeRuntime();
 
-    runtime.syncClawdHooks({ source: "doctor", automatic: false });
+    runtime.syncDuckHooks({ source: "doctor", automatic: false });
 
     assert.deepStrictEqual(calls, [
       { name: "claude", options: { autoStart: true, port: 24444, source: "doctor", automatic: false } },
@@ -179,7 +179,7 @@ describe("integration sync runtime", () => {
     let resolveSync;
     const { runtime, calls } = makeRuntime({
       ctx: {
-        syncClawdHooksImpl: (options) => {
+        syncDuckHooksImpl: (options) => {
           calls.push({ name: "claude", options });
           return new Promise((resolve) => { resolveSync = resolve; });
         },
@@ -199,7 +199,7 @@ describe("integration sync runtime", () => {
   it("does not start the Claude watcher when a synchronous sync result is an error (Settings Enable failure)", () => {
     const { runtime, calls } = makeRuntime({
       ctx: {
-        syncClawdHooksImpl: (options) => {
+        syncDuckHooksImpl: (options) => {
           calls.push({ name: "claude", options });
           return { status: "error", message: "write failed" };
         },
@@ -219,7 +219,7 @@ describe("integration sync runtime", () => {
   it("does not start the Claude watcher when an async sync resolves an error (Settings Install failure)", async () => {
     const { runtime, calls } = makeRuntime({
       ctx: {
-        syncClawdHooksImpl: async (options) => {
+        syncDuckHooksImpl: async (options) => {
           calls.push({ name: "claude", options });
           return { status: "error", message: "source script missing" };
         },
@@ -472,7 +472,7 @@ describe("integration sync runtime", () => {
   });
 
   it("uninstallIntegrationForAgent passes Codex cleanup markers on the real fallback path", () => {
-    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-cleanup-"));
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-cleanup-"));
     try {
       const hooksPath = path.join(homeDir, ".codex", "hooks.json");
       fs.mkdirSync(path.dirname(hooksPath), { recursive: true });
@@ -529,7 +529,7 @@ describe("integration sync runtime", () => {
       installed: true,
       skipped: false,
       updated: false,
-      extensionDir: "C:/Users/Tester/.pi/agent/extensions/clawd-on-desk",
+      extensionDir: "C:/Users/Tester/.pi/agent/extensions/duck-on-desk",
     });
     console.log = (message) => logs.push(message);
 

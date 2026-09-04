@@ -39,7 +39,7 @@ test("settings validators preserve primitive validation behavior", () => {
 });
 
 test("settings validators preserve string and object validation behavior", () => {
-  assert.deepStrictEqual(validators.requireString("name")("Clawd"), { status: "ok" });
+  assert.deepStrictEqual(validators.requireString("name")("Duck"), { status: "ok" });
   assert.strictEqual(validators.requireString("name")("").status, "error");
   assert.deepStrictEqual(validators.requireString("name", { allowEmpty: true })(""), { status: "ok" });
 

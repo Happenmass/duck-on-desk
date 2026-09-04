@@ -25,7 +25,7 @@ function createMacDockVisibilityCoordinator(options = {}) {
     try {
       dock.setIcon(dockIconPath);
     } catch (err) {
-      warn("Clawd: failed to install macOS Dock icon:", err);
+      warn("Duck: failed to install macOS Dock icon:", err);
     }
   }
 
@@ -33,7 +33,7 @@ function createMacDockVisibilityCoordinator(options = {}) {
     try {
       return shouldInstallDockIcon() === true;
     } catch (err) {
-      warn("Clawd: failed to resolve macOS Dock icon policy:", err);
+      warn("Duck: failed to resolve macOS Dock icon policy:", err);
       return false;
     }
   }
@@ -42,7 +42,7 @@ function createMacDockVisibilityCoordinator(options = {}) {
     try {
       reapplyMacVisibility();
     } catch (err) {
-      warn("Clawd: failed to reapply macOS window visibility after Dock transition:", err);
+      warn("Duck: failed to reapply macOS window visibility after Dock transition:", err);
     }
   }
 
@@ -55,7 +55,7 @@ function createMacDockVisibilityCoordinator(options = {}) {
       if (typeof win.isFocused !== "function" || !win.isFocused()) return null;
       return win;
     } catch (err) {
-      warn("Clawd: failed to inspect Settings focus before Dock transition:", err);
+      warn("Duck: failed to inspect Settings focus before Dock transition:", err);
       return null;
     }
   }
@@ -66,7 +66,7 @@ function createMacDockVisibilityCoordinator(options = {}) {
       if (app && typeof app.focus === "function") app.focus({ steal: true });
       if (typeof win.focus === "function") win.focus();
     } catch (err) {
-      warn("Clawd: failed to preserve Settings focus while hiding Dock:", err);
+      warn("Duck: failed to preserve Settings focus while hiding Dock:", err);
     }
   }
 
@@ -81,7 +81,7 @@ function createMacDockVisibilityCoordinator(options = {}) {
     const installIcon = visible && resolveInstallDockIcon();
     if (installIcon) installDockIcon();
     if (!app || typeof app.setActivationPolicy !== "function") {
-      warn("Clawd: macOS activation policy API is unavailable");
+      warn("Duck: macOS activation policy API is unavailable");
       reapplyVisibility();
       return;
     }
@@ -102,7 +102,7 @@ function createMacDockVisibilityCoordinator(options = {}) {
           try {
             applyNativeVisibility(target);
           } catch (err) {
-            warn("Clawd: macOS Dock transition failed:", err);
+            warn("Duck: macOS Dock transition failed:", err);
           }
           needsDrain = desiredVisible !== target;
         }

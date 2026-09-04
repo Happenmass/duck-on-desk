@@ -10,12 +10,12 @@ const assetDirectionStage = document.getElementById("pet-asset-direction-stage")
 const mediaLayer = document.getElementById("pet-media-layer") || container;
 const accessoryLayer = document.getElementById("pet-accessory-layer") || container;
 const particleLayer = document.getElementById("pet-particle-layer") || container;
-const accessoryEl = document.getElementById("clawd-accessory");
-const mouthAccessoryEl = document.getElementById("clawd-mouth-accessory");
+const accessoryEl = document.getElementById("duck-accessory");
+const mouthAccessoryEl = document.getElementById("duck-mouth-accessory");
 const accessoryLayout = globalThis.petAccessoryLayout || null;
 const accessoryDescriptor = globalThis.petAccessoryDescriptor || null;
 const visualSwapPolicy = globalThis.petVisualSwapPolicy || {};
-let clawdEl = document.getElementById("clawd");
+let duckEl = document.getElementById("duck");
 let pendingNext = null;
 const LOW_POWER_IDLE_PAUSE_MS = 5000;
 const SWAP_LOAD_FALLBACK_MS = visualSwapPolicy.SWAP_LOAD_FALLBACK_MS || 3000;
@@ -24,7 +24,7 @@ const SWAP_VISIBILITY_RESCUE_BUFFER_MS = visualSwapPolicy.SWAP_VISIBILITY_RESCUE
 const EYE_ATTACH_RETRY_MS = 16;
 const EYE_ATTACH_MAX_ATTEMPTS = 60;
 const WAKE_OBJECT_RELOAD_RETRIES = 1;
-const LOW_POWER_PAUSE_STYLE_ID = "clawd-low-power-pause-svg";
+const LOW_POWER_PAUSE_STYLE_ID = "duck-low-power-pause-svg";
 const LOW_POWER_PAUSE_STATES = new Set(["idle", "mini-idle", "dozing"]);
 const LOW_POWER_BOUNDARY_EPSILON_MS = 80;
 const CLOUDLING_POINTER_BRIDGE_STATES = new Set(["idle", "mini-idle", "mini-peek"]);
@@ -141,7 +141,7 @@ function initWithConfig(cfg) {
   isDragReacting = false;
   currentDragSvg = null;
   currentDragDirection = null;
-  _idleFollowSvg = tc.idleFollowSvg || "clawd-idle-follow.svg";
+  _idleFollowSvg = tc.idleFollowSvg || "duck-idle-follow.svg";
   // Pre-IPC first frame rests on the user-selected idle visual when one is set.
   _initialIdleSvg = tc.idleDefaultVisual || _idleFollowSvg;
   _glyphFlipDefs = tc.glyphFlips || { "pixel-z": 4, "pixel-z-small": 3 };
@@ -171,7 +171,7 @@ function initWithConfig(cfg) {
   _hasRoamVisual = !!tc.hasRoamVisual;
   _roamFlipAssets = !!tc.roamFlipAssets;
 
-  applyObjectScaleStyle(clawdEl, getObjectSvgName(clawdEl), null);
+  applyObjectScaleStyle(duckEl, getObjectSvgName(duckEl), null);
   applyObjectScaleStyle(pendingNext, getObjectSvgName(pendingNext), null);
   for (const slotName of ACCESSORY_SLOT_NAMES) {
     const slot = _accessorySlots[slotName];
@@ -217,7 +217,7 @@ function getObjectSvgRoot(objectEl) {
 }
 
 function getCurrentSvgRoot() {
-  return getObjectSvgRoot(clawdEl);
+  return getObjectSvgRoot(duckEl);
 }
 
 function setSvgRootLowPowerPaused(root, paused) {
@@ -270,10 +270,10 @@ function syncAccessorySvgLowPowerPaused(paused) {
 }
 
 function setCurrentScriptedSvgLowPowerPaused(paused) {
-  const target = clawdEl;
+  const target = duckEl;
   if (!target || target.tagName !== "OBJECT") return;
   try {
-    const fn = target.contentWindow && target.contentWindow.__clawdSetLowPowerPaused;
+    const fn = target.contentWindow && target.contentWindow.__duckSetLowPowerPaused;
     if (typeof fn === "function") fn(!!paused);
   } catch {}
 }
@@ -531,7 +531,7 @@ function setViewportOffset(offsetY) {
   const next = Number.isFinite(offsetY) ? Math.max(0, Math.round(offsetY)) : 0;
   if (next === _viewportOffsetY) return;
   _viewportOffsetY = next;
-  applyObjectScaleStyle(clawdEl, currentDisplayedSvg, currentState);
+  applyObjectScaleStyle(duckEl, currentDisplayedSvg, currentState);
   if (pendingNext) {
     applyObjectScaleStyle(pendingNext, getObjectSvgName(pendingNext), currentState);
   }
@@ -601,7 +601,7 @@ function reportAccessoryMirror(mirrored) {
 function applyMiniFlip(el, state = currentState) {
   if (!assetDirectionStage || !assetDirectionStage.style) return;
   const activeFlip = shouldApplyMiniAssetFlip(state);
-  if (el) el.__clawdAssetDirectionFlip = activeFlip;
+  if (el) el.__duckAssetDirectionFlip = activeFlip;
   assetDirectionStage.style.scale = activeFlip ? "-1 1" : "none";
   reportAccessoryMirror(petAccessoryMirror.isAccessoryMirrored(state, miniFlipContext()));
 
@@ -613,7 +613,7 @@ function applyMiniFlip(el, state = currentState) {
   for (const child of getPetMediaElements()) {
     const childFlip = child === el
       ? activeFlip
-      : child.__clawdAssetDirectionFlip === true;
+      : child.__duckAssetDirectionFlip === true;
     if (childFlip === activeFlip) {
       child.style.scale = "none";
       child.style.transformOrigin = "";
@@ -685,10 +685,10 @@ function applyPetTintToElement(element) {
   if (!element) return;
   const isPetObject = element.tagName === "OBJECT"
     && element.classList
-    && element.classList.contains("clawd-object");
+    && element.classList.contains("duck-object");
   const isPetImg = element.tagName === "IMG"
     && element.classList
-    && element.classList.contains("clawd-img");
+    && element.classList.contains("duck-img");
   if (!isPetObject && !isPetImg) return;
   element.style.filter = _petTintSupported ? _petTintPayload.filter : "";
 }
@@ -818,7 +818,7 @@ function noteAccessoryDiagnostic(slotName, file, reason) {
   const key = `${file || "unknown"}|${reason}`;
   if (slot.diagnostics.has(key)) return;
   slot.diagnostics.add(key);
-  try { console.warn(`Clawd: ${slotName} accessory fallback for ${file || "unknown"}: ${reason}`); } catch {}
+  try { console.warn(`Duck: ${slotName} accessory fallback for ${file || "unknown"}: ${reason}`); } catch {}
 }
 
 function getAccessoryDescriptor(slotName, file, state) {
@@ -916,8 +916,8 @@ function deferSwapUntilAccessorySettles(file, state, next, callback) {
     shouldWaitForAccessoryAsset(slotName, file, state)
   ));
   if (waitingSlots.length === 0) return false;
-  if (next.__clawdWaitingForAccessory) return true;
-  next.__clawdWaitingForAccessory = true;
+  if (next.__duckWaitingForAccessory) return true;
+  next.__duckWaitingForAccessory = true;
   let settled = false;
   let remaining = waitingSlots.length;
   const resume = () => {
@@ -925,7 +925,7 @@ function deferSwapUntilAccessorySettles(file, state, next, callback) {
     remaining--;
     if (remaining > 0) return;
     settled = true;
-    next.__clawdWaitingForAccessory = false;
+    next.__duckWaitingForAccessory = false;
     callback();
   };
   for (const slotName of waitingSlots) {
@@ -947,7 +947,7 @@ function getCurrentAccessoryContext(slotName) {
   const slot = getAccessorySlot(slotName);
   if (!slot || !slot.supported || !slot.attachments) return null;
   if (!slot.payload || slot.payload.id === "none" || !slot.payload.assetFile) return null;
-  if (!clawdEl || !clawdEl.isConnected || !currentDisplayedSvg) return null;
+  if (!duckEl || !duckEl.isConnected || !currentDisplayedSvg) return null;
   const descriptor = getAccessoryDescriptor(slotName, currentDisplayedSvg, currentDisplayedState);
   if (!descriptor || typeof descriptor !== "object") return null;
   return {
@@ -955,7 +955,7 @@ function getCurrentAccessoryContext(slotName) {
     slot,
     file: currentDisplayedSvg,
     state: currentDisplayedState,
-    media: clawdEl,
+    media: duckEl,
     descriptor,
   };
 }
@@ -1178,7 +1178,7 @@ function clearTestShake() {
     clearTimeout(testShakeTimer);
     testShakeTimer = null;
   }
-  if (facingStage) facingStage.classList.remove("clawd-test-shake");
+  if (facingStage) facingStage.classList.remove("duck-test-shake");
 }
 
 function clearTestReactionVisuals() {
@@ -1195,7 +1195,7 @@ function burstTestConfetti() {
     const startX = 30 + Math.floor((i / count) * 40);
     const dx = (i % 2 === 0 ? 1 : -1) * (10 + (i * 7) % 60);
     const delay = (i % 6) * 40;
-    particle.className = "clawd-test-confetti";
+    particle.className = "duck-test-confetti";
     particle.style.left = `${startX}%`;
     particle.style.background = TEST_CONFETTI_COLORS[i % TEST_CONFETTI_COLORS.length];
     particle.style.setProperty("--test-confetti-dx", `${dx}px`);
@@ -1214,10 +1214,10 @@ function shakePetForTestFailure() {
   if (!facingStage) return;
   // Force a style flush so consecutive failed test runs restart the wobble.
   void facingStage.offsetWidth;
-  facingStage.classList.add("clawd-test-shake");
+  facingStage.classList.add("duck-test-shake");
   testShakeTimer = setTimeout(() => {
     testShakeTimer = null;
-    try { facingStage.classList.remove("clawd-test-shake"); } catch {}
+    try { facingStage.classList.remove("duck-test-shake"); } catch {}
   }, 650);
 }
 
@@ -1271,11 +1271,11 @@ window.electronAPI.onMiniModeChange((enabled, edge, options) => {
   if (enabled) clearTestReactionVisuals();
   miniLeftFlip = !!enabled && edge === "left";
   container.classList.toggle("mini-left", miniLeftFlip);
-  applyMiniFlip(clawdEl, currentState);
+  applyMiniFlip(duckEl, currentState);
   if (miniLeftFlip) {
-    applyGlyphFlipCompensation(clawdEl);
+    applyGlyphFlipCompensation(duckEl);
   } else {
-    removeGlyphFlipCompensation(clawdEl);
+    removeGlyphFlipCompensation(duckEl);
   }
   if (!enabled) applyMiniClip(null);
   if (shouldUseCloudlingPointerBridge(currentState, currentDisplayedSvg) && lastCloudlingPointerPayload) {
@@ -1322,8 +1322,8 @@ function applyGlyphFlipCompensation(objectEl) {
     const doc = objectEl.contentDocument;
     if (!doc) return;
     const svgWindow = objectEl.contentWindow;
-    if (svgWindow && typeof svgWindow.__clawdSetGlyphFlipCompensation === "function") {
-      svgWindow.__clawdSetGlyphFlipCompensation(true);
+    if (svgWindow && typeof svgWindow.__duckSetGlyphFlipCompensation === "function") {
+      svgWindow.__duckSetGlyphFlipCompensation(true);
     }
     for (const [id, w] of Object.entries(_glyphFlipDefs)) {
       const el = doc.getElementById(id);
@@ -1338,8 +1338,8 @@ function removeGlyphFlipCompensation(objectEl) {
     const doc = objectEl.contentDocument;
     if (!doc) return;
     const svgWindow = objectEl.contentWindow;
-    if (svgWindow && typeof svgWindow.__clawdSetGlyphFlipCompensation === "function") {
-      svgWindow.__clawdSetGlyphFlipCompensation(false);
+    if (svgWindow && typeof svgWindow.__duckSetGlyphFlipCompensation === "function") {
+      svgWindow.__duckSetGlyphFlipCompensation(false);
     }
     for (const id of Object.keys(_glyphFlipDefs)) {
       const el = doc.getElementById(id);
@@ -1365,7 +1365,7 @@ function getObjectSvgName(objectEl) {
 // Img channel: <img> for all other formats (SVG/GIF/APNG/WebP pure playback)
 
 /**
- * Determine if a state should attach Clawd-controlled eye tracking.
+ * Determine if a state should attach Duck-controlled eye tracking.
  */
 function needsEyeTracking(state) {
   return _eyeTrackingStates.includes(state);
@@ -1407,8 +1407,8 @@ function refreshAccessoryMediaChannel() {
     const pendingIsObject = pendingNext.tagName === "OBJECT";
     if (wantsObject !== pendingIsObject) {
       const file = pendingSvgFile;
-      const visualRequest = pendingNext.__clawdVisualRequest || null;
-      const fallbackFromObject = pendingNext.__clawdFallbackFromObject === true;
+      const visualRequest = pendingNext.__duckVisualRequest || null;
+      const fallbackFromObject = pendingNext.__duckFallbackFromObject === true;
       cancelPendingSwap("channel-refresh", { retainedRequest: visualRequest });
       detachEyeTracking();
       swapToFile(file, pendingState, undefined, { visualRequest, fallbackFromObject });
@@ -1419,9 +1419,9 @@ function refreshAccessoryMediaChannel() {
   // Do not let the older displayed file cancel and replace it merely because
   // that displayed element still needs a channel correction.
   if (pendingNext) return false;
-  if (!clawdEl || !clawdEl.isConnected || !currentDisplayedSvg) return false;
+  if (!duckEl || !duckEl.isConnected || !currentDisplayedSvg) return false;
   const wantsObject = needsObjectChannel(currentDisplayedState, currentDisplayedSvg);
-  const currentIsObject = clawdEl.tagName === "OBJECT";
+  const currentIsObject = duckEl.tagName === "OBJECT";
   if (wantsObject === currentIsObject) return false;
   cancelPendingSwap();
   detachEyeTracking();
@@ -1478,10 +1478,10 @@ function applyCloudlingPointerBridge(payload) {
   lastCloudlingPointerPayload = normalized;
   if (shouldSuppressPassiveTrackingForLowPower()) return;
   if (!shouldUseCloudlingPointerBridge(currentState, currentDisplayedSvg)) return;
-  callCloudlingPointerBridge(clawdEl, getDisplayedCloudlingPointerPayload(normalized));
+  callCloudlingPointerBridge(duckEl, getDisplayedCloudlingPointerPayload(normalized));
 }
 
-function clearCloudlingPointerBridge(objectEl = clawdEl) {
+function clearCloudlingPointerBridge(objectEl = duckEl) {
   const payload = {
     ...(lastCloudlingPointerPayload || { x: 0, y: 0 }),
     inside: false,
@@ -1557,7 +1557,7 @@ function usesDirectionalDragBridge(file) {
 function warnDirectionalDragBridgeOnce(reason) {
   if (directionalDragBridgeWarnings.has(reason)) return;
   directionalDragBridgeWarnings.add(reason);
-  console.warn(`Clawd: directional drag bridge unavailable (${reason}); keeping the fallback direction.`);
+  console.warn(`Duck: directional drag bridge unavailable (${reason}); keeping the fallback direction.`);
 }
 
 function applyDirectionalDragToObject(objectEl, direction, options = {}) {
@@ -1574,12 +1574,12 @@ function applyDirectionalDragToObject(objectEl, direction, options = {}) {
       if (warn) warnDirectionalDragBridgeOnce("contentDocument unavailable");
       return false;
     }
-    if (root.getAttribute("data-clawd-drag-directional") !== "v1") {
+    if (root.getAttribute("data-duck-drag-directional") !== "v1") {
       if (warn) warnDirectionalDragBridgeOnce("v1 marker missing");
       return false;
     }
-    if (root.getAttribute("data-clawd-drag-direction") !== normalized) {
-      root.setAttribute("data-clawd-drag-direction", normalized);
+    if (root.getAttribute("data-duck-drag-direction") !== normalized) {
+      root.setAttribute("data-duck-drag-direction", normalized);
     }
     return true;
   } catch {
@@ -1618,7 +1618,7 @@ function restartCodexPetVisualAnimation(root) {
 function warnCodexPetVisualBridgeOnce(reason) {
   if (codexPetVisualBridgeWarnings.has(reason)) return;
   codexPetVisualBridgeWarnings.add(reason);
-  console.warn(`Clawd: Codex Pet visual bridge unavailable (${reason}); using a normal media swap.`);
+  console.warn(`Duck: Codex Pet visual bridge unavailable (${reason}); using a normal media swap.`);
 }
 
 function applyCodexPetVisualToObject(objectEl, file, options = {}) {
@@ -1635,16 +1635,16 @@ function applyCodexPetVisualToObject(objectEl, file, options = {}) {
       if (warn) warnCodexPetVisualBridgeOnce("contentDocument unavailable");
       return false;
     }
-    if (root.getAttribute("data-clawd-codex-pet-visuals") !== "v1") {
+    if (root.getAttribute("data-duck-codex-pet-visuals") !== "v1") {
       if (warn) warnCodexPetVisualBridgeOnce("v1 marker missing");
       return false;
     }
-    const unchanged = root.getAttribute("data-clawd-codex-pet-visual") === visual;
-    if (!unchanged) root.setAttribute("data-clawd-codex-pet-visual", visual);
+    const unchanged = root.getAttribute("data-duck-codex-pet-visual") === visual;
+    if (!unchanged) root.setAttribute("data-duck-codex-pet-visual", visual);
     if (visual === "drag-directional") {
       const direction = normalizeDragDirection(options.direction);
-      if (direction && root.getAttribute("data-clawd-drag-direction") !== direction) {
-        root.setAttribute("data-clawd-drag-direction", direction);
+      if (direction && root.getAttribute("data-duck-drag-direction") !== direction) {
+        root.setAttribute("data-duck-drag-direction", direction);
       }
     }
     if (unchanged && options.restart === true) restartCodexPetVisualAnimation(root);
@@ -1661,7 +1661,7 @@ function startDragReaction(requestOrDirection, legacyDirection) {
   if (dndEnabled) {
     notifyVisualSettlement(visualRequest, "failed", {
       actualFile: currentDisplayedSvg || null,
-      channel: clawdEl && clawdEl.tagName === "OBJECT" ? "object" : "img",
+      channel: duckEl && duckEl.tagName === "OBJECT" ? "object" : "img",
       verified: false,
     });
     return;
@@ -1674,20 +1674,20 @@ function startDragReaction(requestOrDirection, legacyDirection) {
   currentDragDirection = normalizedDirection;
   if (isDragReacting && currentDragSvg === dragSvg) {
     if (usesDirectionalDragBridge(dragSvg) && currentDisplayedSvg === dragSvg) {
-      applyDirectionalDragToObject(clawdEl, currentDragDirection, { warn: true });
+      applyDirectionalDragToObject(duckEl, currentDragDirection, { warn: true });
     }
     if (usesDirectionalDragBridge(dragSvg) && pendingNext && pendingSvgFile === dragSvg) {
       applyDirectionalDragToObject(pendingNext, currentDragDirection);
     }
     if (!visualRequest) return;
     if (pendingNext && pendingSvgFile === dragSvg) {
-      pendingNext.__clawdVisualRequest = visualRequest;
+      pendingNext.__duckVisualRequest = visualRequest;
       return;
     }
-    if (clawdEl && clawdEl.isConnected && currentDisplayedSvg === dragSvg) {
+    if (duckEl && duckEl.isConnected && currentDisplayedSvg === dragSvg) {
       notifyVisualSettlement(visualRequest, "already-displayed", {
         actualFile: dragSvg,
-        channel: clawdEl.tagName === "OBJECT" ? "object" : "img",
+        channel: duckEl.tagName === "OBJECT" ? "object" : "img",
         verified: true,
       });
       return;
@@ -1717,7 +1717,7 @@ function endDragReaction() {
 }
 
 // --- Generic swap function: handles both <object> and <img> channels ---
-let currentDisplayedSvg = getObjectSvgName(clawdEl);
+let currentDisplayedSvg = getObjectSvgName(duckEl);
 let currentDisplayedState = null;
 let currentDisplayedAssetUrl = null;
 let pendingSvgFile = null; // tracks the SVG currently being loaded (for dedup)
@@ -1809,7 +1809,7 @@ function fadeOutAndRemove(el, durationMs) {
 }
 
 function getPetMediaElements() {
-  return [...mediaLayer.querySelectorAll("object.clawd-object, img.clawd-img")];
+  return [...mediaLayer.querySelectorAll("object.duck-object, img.duck-img")];
 }
 
 function isVisiblyOpaque(el) {
@@ -1857,14 +1857,14 @@ function scheduleSwapVisibilityRescue(token, file, state) {
     if (pendingNext && pendingSvgFile === file) {
       // A verified media load can remain pending solely while an accessory's
       // bounded waiter settles. Restarting here discards that progress.
-      if (pendingNext.__clawdWaitingForAccessory) return;
+      if (pendingNext.__duckWaitingForAccessory) return;
       forceImageChannelReload(file, getPendingSwapState(pendingNext, state), true, {
-        visualRequest: pendingNext.__clawdVisualRequest || null,
+        visualRequest: pendingNext.__duckVisualRequest || null,
       });
       return;
     }
 
-    if (forceVisiblePetElement(clawdEl)) return;
+    if (forceVisiblePetElement(duckEl)) return;
     forceImageChannelReload(file, state);
   }, getSwapVisibilityRescueDelay(file));
   swapVisibilityRescueTimer = timer;
@@ -1873,9 +1873,9 @@ function scheduleSwapVisibilityRescue(token, file, state) {
 function getPendingSwapState(next, fallbackState) {
   if (
     next
-    && Object.prototype.hasOwnProperty.call(next, "__clawdPendingState")
+    && Object.prototype.hasOwnProperty.call(next, "__duckPendingState")
   ) {
-    return next.__clawdPendingState;
+    return next.__duckPendingState;
   }
   return fallbackState;
 }
@@ -1883,7 +1883,7 @@ function getPendingSwapState(next, fallbackState) {
 function forceImageChannelReload(file, state, allowImageFallback = true, options = {}) {
   if (!allowImageFallback) return false;
   if (!file) return false;
-  console.warn("Clawd: animation stayed invisible; reloading through the image channel:", file);
+  console.warn("Duck: animation stayed invisible; reloading through the image channel:", file);
   swapToFile(file, state, false, {
     allowImageFallback: false,
     visualRequest: options.visualRequest || null,
@@ -1897,19 +1897,19 @@ function forceImageChannelReload(file, state, allowImageFallback = true, options
 function cancelPendingSwap(reason = "superseded", options = {}) {
   const next = pendingNext;
   if (!next) return false;
-  const visualRequest = normalizeVisualRequest(next.__clawdVisualRequest);
+  const visualRequest = normalizeVisualRequest(next.__duckVisualRequest);
   const retainedRequest = normalizeVisualRequest(options.retainedRequest);
   const requestRetained = !!(
     visualRequest
     && retainedRequest
     && visualRequest.visualGeneration === retainedRequest.visualGeneration
   );
-  if (typeof next.__clawdSwapCancelled === "function") {
-    next.__clawdSwapCancelled(reason);
+  if (typeof next.__duckSwapCancelled === "function") {
+    next.__duckSwapCancelled(reason);
   }
-  if (next.__clawdImageLoadTimer) {
-    clearTimeout(next.__clawdImageLoadTimer);
-    next.__clawdImageLoadTimer = null;
+  if (next.__duckImageLoadTimer) {
+    clearTimeout(next.__duckImageLoadTimer);
+    next.__duckImageLoadTimer = null;
   }
   if (next.tagName === "OBJECT") releaseObject(next);
   else releaseImg(next);
@@ -1937,7 +1937,7 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
     && options.forceDocumentReload !== true
     && currentDisplayedAssetUrl
     && getAssetDirectoryUrl(currentDisplayedAssetUrl) === getAssetDirectoryUrl(url)
-    && applyCodexPetVisualToObject(clawdEl, file, {
+    && applyCodexPetVisualToObject(duckEl, file, {
       direction: isDragReacting && currentDragSvg === file ? currentDragDirection : null,
       restart: true,
       warn: true,
@@ -1948,19 +1948,19 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
     currentDisplayedSvg = file;
     currentDisplayedState = state;
     currentDisplayedAssetUrl = url;
-    applyObjectScaleStyle(clawdEl, file, state);
-    applyPetTintToElement(clawdEl);
-    applyMiniFlip(clawdEl, state);
+    applyObjectScaleStyle(duckEl, file, state);
+    applyPetTintToElement(duckEl);
+    applyMiniFlip(duckEl, state);
     refreshAccessoryLayout();
     notifyPetVisualReadyOnce();
     settleSuccessfulVisual(visualRequest, file, "bridge", {
       fallback: options.fallbackFromObject === true,
     });
-    if (state && tracksEyesForFile(state, file)) attachEyeTracking(clawdEl);
+    if (state && tracksEyesForFile(state, file)) attachEyeTracking(duckEl);
     else detachEyeTracking();
-    if (miniLeftFlip) applyGlyphFlipCompensation(clawdEl);
+    if (miniLeftFlip) applyGlyphFlipCompensation(duckEl);
     scheduleLowPowerIdlePause();
-    if (typeof options.onReady === "function") options.onReady(clawdEl);
+    if (typeof options.onReady === "function") options.onReady(duckEl);
     return;
   }
 
@@ -1974,28 +1974,28 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
     // Object channel: <object type="image/svg+xml">
     const next = document.createElement("object");
     next.type = "image/svg+xml";
-    next.className = "clawd-object";
-    next.id = "clawd";
+    next.className = "duck-object";
+    next.id = "duck";
     next.style.opacity = "0";
-    next.__clawdPendingState = state;
-    next.__clawdVisualRequest = visualRequest;
-    next.__clawdFallbackFromObject = options.fallbackFromObject === true;
+    next.__duckPendingState = state;
+    next.__duckVisualRequest = visualRequest;
+    next.__duckFallbackFromObject = options.fallbackFromObject === true;
     applyObjectScaleStyle(next, file, state);
     applyPetTintToElement(next);
     let swapCallbackSettled = false;
     const finishSwapReady = () => {
       if (swapCallbackSettled) return;
       swapCallbackSettled = true;
-      next.__clawdSwapCancelled = null;
+      next.__duckSwapCancelled = null;
       if (typeof options.onReady === "function") options.onReady(next);
     };
     const finishSwapError = (reason) => {
       if (swapCallbackSettled) return;
       swapCallbackSettled = true;
-      next.__clawdSwapCancelled = null;
+      next.__duckSwapCancelled = null;
       if (typeof options.onError === "function") options.onError(reason);
     };
-    next.__clawdSwapCancelled = finishSwapError;
+    next.__duckSwapCancelled = finishSwapError;
 
     const swap = () => {
       if (pendingNext !== next) return;
@@ -2016,7 +2016,7 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
       }
       next.style.opacity = "1";
 
-      for (const child of [...mediaLayer.querySelectorAll("object.clawd-object, img.clawd-img")]) {
+      for (const child of [...mediaLayer.querySelectorAll("object.duck-object, img.duck-img")]) {
         if (child !== next) {
           if (fadeOutMs > 0) fadeOutAndRemove(child, fadeOutMs);
           else if (child.tagName === "OBJECT") releaseObject(child);
@@ -2026,15 +2026,15 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
       pendingNext = null;
       pendingSvgFile = null;
       pendingAssetUrl = null;
-      clawdEl = next;
+      duckEl = next;
       currentDisplayedSvg = file;
       currentDisplayedState = commitState;
       currentDisplayedAssetUrl = url;
       applyMiniFlip(next, commitState);
       refreshAccessoryLayout();
       notifyPetVisualReadyOnce();
-      settleSuccessfulVisual(next.__clawdVisualRequest, file, "object", {
-        fallback: next.__clawdFallbackFromObject === true,
+      settleSuccessfulVisual(next.__duckVisualRequest, file, "object", {
+        fallback: next.__duckFallbackFromObject === true,
       });
 
       if (commitState && tracksEyesForFile(commitState, file)) {
@@ -2051,7 +2051,7 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
     const retryThroughImage = (reason) => {
       if (pendingNext !== next) return;
       const retryState = getPendingSwapState(next, state);
-      const retryRequest = next.__clawdVisualRequest;
+      const retryRequest = next.__duckVisualRequest;
       releaseObject(next);
       if (pendingNext === next) {
         pendingNext = null;
@@ -2102,12 +2102,12 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
   } else {
     // Img channel: <img> for pure playback (all formats)
     const next = document.createElement("img");
-    next.className = "clawd-img";
-    next.id = "clawd";
+    next.className = "duck-img";
+    next.id = "duck";
     next.style.opacity = "0";
-    next.__clawdPendingState = state;
-    next.__clawdVisualRequest = visualRequest;
-    next.__clawdFallbackFromObject = options.fallbackFromObject === true;
+    next.__duckPendingState = state;
+    next.__duckVisualRequest = visualRequest;
+    next.__duckFallbackFromObject = options.fallbackFromObject === true;
     applyObjectScaleStyle(next, file, state);
     applyPetTintToElement(next);
 
@@ -2115,9 +2115,9 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
       if (pendingNext !== next) return;
       const commitState = getPendingSwapState(next, state);
       if (deferSwapUntilAccessorySettles(file, commitState, next, swap)) return;
-      if (next.__clawdImageLoadTimer) {
-        clearTimeout(next.__clawdImageLoadTimer);
-        next.__clawdImageLoadTimer = null;
+      if (next.__duckImageLoadTimer) {
+        clearTimeout(next.__duckImageLoadTimer);
+        next.__duckImageLoadTimer = null;
       }
       if (swapToken === activeSwapToken) clearSwapVisibilityRescueTimer();
       const fadeInMs = (_transitions[file] && _transitions[file].in) || 0;
@@ -2131,7 +2131,7 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
       }
       next.style.opacity = "1";
 
-      for (const child of [...mediaLayer.querySelectorAll("object.clawd-object, img.clawd-img")]) {
+      for (const child of [...mediaLayer.querySelectorAll("object.duck-object, img.duck-img")]) {
         if (child !== next) {
           if (fadeOutMs > 0) fadeOutAndRemove(child, fadeOutMs);
           else if (child.tagName === "OBJECT") releaseObject(child);
@@ -2141,15 +2141,15 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
       pendingNext = null;
       pendingSvgFile = null;
       pendingAssetUrl = null;
-      clawdEl = next;
+      duckEl = next;
       currentDisplayedSvg = file;
       currentDisplayedState = commitState;
       currentDisplayedAssetUrl = url;
       applyMiniFlip(next, commitState);
       refreshAccessoryLayout();
       notifyPetVisualReadyOnce();
-      settleSuccessfulVisual(next.__clawdVisualRequest, file, "img", {
-        fallback: next.__clawdFallbackFromObject === true,
+      settleSuccessfulVisual(next.__duckVisualRequest, file, "img", {
+        fallback: next.__duckFallbackFromObject === true,
       });
       scheduleLowPowerIdlePause();
       if (typeof options.onReady === "function") options.onReady(next);
@@ -2158,9 +2158,9 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
     next.addEventListener("load", swap, { once: true });
     const failImageSwap = (reason) => {
       if (pendingNext !== next) return;
-      if (next.__clawdImageLoadTimer) {
-        clearTimeout(next.__clawdImageLoadTimer);
-        next.__clawdImageLoadTimer = null;
+      if (next.__duckImageLoadTimer) {
+        clearTimeout(next.__duckImageLoadTimer);
+        next.__duckImageLoadTimer = null;
       }
       if (next.tagName === "IMG") releaseImg(next);
       if (pendingNext === next) {
@@ -2169,7 +2169,7 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
         pendingAssetUrl = null;
       }
       clearSwapVisibilityRescueTimer();
-      notifyVisualSettlement(next.__clawdVisualRequest, "failed", {
+      notifyVisualSettlement(next.__duckVisualRequest, "failed", {
         actualFile: currentDisplayedSvg || null,
         channel: "img",
         verified: false,
@@ -2194,9 +2194,9 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
     scheduleSwapVisibilityRescue(swapToken, file, state);
     // A timed-out image is not verified and must never replace the visible
     // element merely to force progress.
-    next.__clawdImageLoadTimer = setTimeout(() => {
+    next.__duckImageLoadTimer = setTimeout(() => {
       if (pendingNext !== next) return;
-      if (next.__clawdWaitingForAccessory) return;
+      if (next.__duckWaitingForAccessory) return;
       failImageSwap("image-load-timeout");
     }, SWAP_LOAD_FALLBACK_MS);
   }
@@ -2205,7 +2205,7 @@ function swapToFile(file, state, useObjectChannel, options = {}) {
 function renderStateFile(requestOrState, legacySvg) {
   const visualRequest = normalizeVisualRequest(requestOrState);
   if (requestOrState && typeof requestOrState === "object" && !visualRequest) {
-    try { console.warn("Clawd: ignored malformed visual request"); } catch {}
+    try { console.warn("Duck: ignored malformed visual request"); } catch {}
     return;
   }
   const state = visualRequest ? visualRequest.displayState : requestOrState;
@@ -2237,10 +2237,10 @@ function renderStateFile(requestOrState, legacySvg) {
   // the previous theme until a drag/click forces a different animation.
   const desiredObjectChannel = lowPowerStaticImageOverride ? false : needsObjectChannel(state, effectiveSvg);
   const desiredAssetUrl = getAssetUrl(effectiveSvg);
-  const alreadyDisplayed = clawdEl && clawdEl.isConnected
+  const alreadyDisplayed = duckEl && duckEl.isConnected
     && currentDisplayedSvg === effectiveSvg
     && currentDisplayedAssetUrl === desiredAssetUrl;
-  const displayedChannelMatches = !alreadyDisplayed || ((clawdEl.tagName === "OBJECT") === desiredObjectChannel);
+  const displayedChannelMatches = !alreadyDisplayed || ((duckEl.tagName === "OBJECT") === desiredObjectChannel);
   const alreadyPending = pendingSvgFile === effectiveSvg
     && pendingNext
     && pendingAssetUrl === desiredAssetUrl;
@@ -2270,7 +2270,7 @@ function renderStateFile(requestOrState, legacySvg) {
     // roam mirror would leak into the mini entry (and vice versa).
     if (alreadyDisplayed) {
       currentDisplayedState = state;
-      applyMiniFlip(clawdEl, state);
+      applyMiniFlip(duckEl, state);
       refreshAccessoryLayout();
     }
     if (alreadyPending && pendingChannelMatches) {
@@ -2278,13 +2278,13 @@ function renderStateFile(requestOrState, legacySvg) {
       // cannot. Retarget the pending commit so its eventual direction,
       // attachment descriptor, layout, and eye-tracking decision all use the
       // newest state rather than the state captured when loading began.
-      pendingNext.__clawdPendingState = state;
-      pendingNext.__clawdVisualRequest = visualRequest;
+      pendingNext.__duckPendingState = state;
+      pendingNext.__duckVisualRequest = visualRequest;
       applyObjectScaleStyle(pendingNext, effectiveSvg, state);
     }
     if (alreadyDisplayed) {
       if (tracksEyesForFile(state, effectiveSvg) && !eyeTarget && !_trackingLayers) {
-        if (clawdEl.tagName === "OBJECT") attachEyeTracking(clawdEl);
+        if (duckEl.tagName === "OBJECT") attachEyeTracking(duckEl);
       } else if (!tracksEyesForFile(state, effectiveSvg)) {
         detachEyeTracking();
       }
@@ -2295,7 +2295,7 @@ function renderStateFile(requestOrState, legacySvg) {
     }
     currentIdleSvg = effectiveSvg;
     if (alreadyDisplayed) {
-      const channel = clawdEl.tagName === "OBJECT" ? "object" : "img";
+      const channel = duckEl.tagName === "OBJECT" ? "object" : "img";
       notifyVisualSettlement(visualRequest, effectiveSvg === visualRequest?.file
         ? "already-displayed"
         : "fallback", {
@@ -2326,7 +2326,7 @@ window.electronAPI.onStateChange((requestOrState, legacySvg) => {
 // --- Eye tracking (idle state only) ---
 // Two systems coexist:
 //   1. Single-target (legacy): eyeTarget/bodyTarget/shadowTarget + applyEyeMove
-//      Used by default clawd theme (tc.eyeTracking.ids config)
+//      Used by default duck theme (tc.eyeTracking.ids config)
 //   2. Layered tracking: per-element <g> wrappers + independent easing per layer
 //      Used when tc.eyeTracking.trackingLayers is defined (e.g. calico theme)
 
@@ -2529,9 +2529,9 @@ function _cleanupLayeredTracking() {
   _cancelLayerAnimLoop();
 
   // Unwrap elements in the current SVG if still accessible
-  if (_trackingLayers && clawdEl && clawdEl.tagName === "OBJECT") {
+  if (_trackingLayers && duckEl && duckEl.tagName === "OBJECT") {
     try {
-      _unwrapAll(clawdEl.contentDocument);
+      _unwrapAll(duckEl.contentDocument);
     } catch {}
   }
 
@@ -2607,15 +2607,15 @@ function detachEyeTracking() {
 }
 
 function isEyeTrackingReady() {
-  if (!clawdEl || clawdEl.tagName !== "OBJECT" || !clawdEl.isConnected) return false;
+  if (!duckEl || duckEl.tagName !== "OBJECT" || !duckEl.isConnected) return false;
   let currentDocument = null;
   try {
-    currentDocument = clawdEl.contentDocument;
+    currentDocument = duckEl.contentDocument;
   } catch {
     return false;
   }
   if (!currentDocument) return false;
-  if (_trackingLayers && _layeredTrackingObj === clawdEl) {
+  if (_trackingLayers && _layeredTrackingObj === duckEl) {
     return _layeredTrackingDocument === currentDocument;
   }
   return !!(eyeTarget
@@ -2680,8 +2680,8 @@ function recoverFromSystemWake(payload) {
   const needsEyes = tracksEyesForFile(currentState, currentDisplayedSvg);
   const shouldReloadEyeObject = lowPowerIdleMode
     && needsEyes
-    && clawdEl
-    && clawdEl.tagName === "OBJECT"
+    && duckEl
+    && duckEl.tagName === "OBJECT"
     && currentDisplayedSvg;
 
   if (shouldReloadEyeObject) {
@@ -2697,7 +2697,7 @@ function recoverFromSystemWake(payload) {
     const finishWakeEyeObjectReload = (objectEl) => {
       waitForWakeEyeTrackingReady((eyeTrackingReady) => {
         if (pendingSystemWakeId !== wakeContext.id) return;
-        const stillCurrentWakeObject = clawdEl === objectEl
+        const stillCurrentWakeObject = duckEl === objectEl
           && currentDisplayedSvg === wakeContext.wakeSvg
           && currentState === wakeContext.wakeState;
         const ready = stillCurrentWakeObject && eyeTrackingReady;
@@ -2716,8 +2716,8 @@ function recoverFromSystemWake(payload) {
 
     const failWakeEyeObjectReload = () => {
       if (pendingSystemWakeId !== wakeContext.id) return;
-      if (clawdEl && clawdEl.tagName === "OBJECT" && clawdEl.isConnected) {
-        attachEyeTracking(clawdEl);
+      if (duckEl && duckEl.tagName === "OBJECT" && duckEl.isConnected) {
+        attachEyeTracking(duckEl);
       }
       const eyeTrackingReady = isEyeTrackingReady();
       finishSystemWake({
@@ -2759,9 +2759,9 @@ function recoverFromSystemWake(payload) {
     return;
   }
 
-  if (needsEyes && !isEyeTrackingReady() && clawdEl && clawdEl.tagName === "OBJECT") {
+  if (needsEyes && !isEyeTrackingReady() && duckEl && duckEl.tagName === "OBJECT") {
     detachEyeTracking();
-    attachEyeTracking(clawdEl);
+    attachEyeTracking(duckEl);
   }
 
   const status = {
@@ -2791,8 +2791,8 @@ window.electronAPI.onEyeMove((dx, dy) => {
 
   if ((eyeTarget || _trackingLayers) && !isEyeTrackingReady()) {
     detachEyeTracking();
-    if (clawdEl && clawdEl.isConnected && clawdEl.tagName === "OBJECT"
-      && tracksEyesForFile(currentState, currentDisplayedSvg)) attachEyeTracking(clawdEl);
+    if (duckEl && duckEl.isConnected && duckEl.tagName === "OBJECT"
+      && tracksEyesForFile(currentState, currentDisplayedSvg)) attachEyeTracking(duckEl);
     return;
   }
 
@@ -2825,7 +2825,7 @@ if (window.electronAPI && typeof window.electronAPI.onRoamHeading === "function"
     // without a swap, and if this message lands after the state-change (IPC
     // order across channels is not contractual) the flip captured at IMG
     // creation is stale — refresh both the on-screen and the pending element.
-    applyMiniFlip(clawdEl, currentState);
+    applyMiniFlip(duckEl, currentState);
   });
 }
 
@@ -2842,7 +2842,7 @@ function reportSoundPlaybackError(phase, err) {
     window.electronAPI.reportSoundPlaybackError({ phase, message });
     return;
   }
-  try { console.warn(`Clawd sound ${phase} failed:`, message); } catch {}
+  try { console.warn(`Duck sound ${phase} failed:`, message); } catch {}
 }
 
 function cacheAudio(url) {
@@ -2926,9 +2926,9 @@ window.electronAPI.onInvalidateSoundCache((url) => {
 
 // --- Wake from doze (smooth eye opening) ---
 window.electronAPI.onWakeFromDoze(() => {
-  if (clawdEl && clawdEl.tagName === "OBJECT" && clawdEl.contentDocument) {
+  if (duckEl && duckEl.tagName === "OBJECT" && duckEl.contentDocument) {
     try {
-      const eyes = clawdEl.contentDocument.getElementById(_eyeIds.dozeEyes || "eyes-doze");
+      const eyes = duckEl.contentDocument.getElementById(_eyeIds.dozeEyes || "eyes-doze");
       if (eyes) eyes.style.transform = "scaleY(1)";
     } catch (e) {}
   }

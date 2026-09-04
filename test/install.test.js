@@ -34,20 +34,20 @@ const {
   readClaudeVersionFallback,
   readClaudeVersionFallbackAsync,
   getClaudeVersionAsync,
-  isClawdPermissionUrl,
+  isDuckPermissionUrl,
   parseClaudeInstallCliOptions,
 } = __test;
 
 // registerHooks derives the hook command format from real-environment WSL
 // signals; clear them so command-format assertions stay deterministic when
 // the suite itself runs inside WSL.
-delete process.env.CLAWD_WSL_DISTRO;
+delete process.env.DUCK_WSL_DISTRO;
 delete process.env.WSL_DISTRO_NAME;
 
 const tempDirs = [];
 
 function makeTempSettings(initialSettings = {}) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-install-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-install-"));
   const settingsPath = path.join(tmpDir, "settings.json");
   fs.writeFileSync(settingsPath, JSON.stringify(initialSettings, null, 2), "utf8");
   tempDirs.push(tmpDir);
@@ -83,8 +83,8 @@ function getManagedStateHookEntries(settings, event) {
   ));
 }
 
-function getClawdCommands(settings, event) {
-  return getCommandHookEntries(settings, event, "clawd-hook.js").map((hook) => hook.command);
+function getDuckCommands(settings, event) {
+  return getCommandHookEntries(settings, event, "duck-hook.js").map((hook) => hook.command);
 }
 
 function getHttpUrls(settings, event) {
@@ -592,7 +592,7 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const stopHooks = getCommandHookEntries(settings, "Stop", "clawd-hook.js");
+    const stopHooks = getCommandHookEntries(settings, "Stop", "duck-hook.js");
     assert.strictEqual(stopHooks.length, 1);
     assert.strictEqual(stopHooks[0].shell, "powershell");
     assert.strictEqual(stopHooks[0].async, true);
@@ -602,20 +602,20 @@ describe("Hook installer version compatibility", () => {
   });
 
   it("keeps remote hooks bash-compatible even when the platform is win32", () => {
-    const hook = __test.buildCommandHookSpec("node", "/tmp/clawd-hook.js", "Stop", {
+    const hook = __test.buildCommandHookSpec("node", "/tmp/duck-hook.js", "Stop", {
       platform: "win32",
       remote: true,
     });
 
     assert.strictEqual(hook.type, "command");
-    assert.match(hook.command, /^CLAWD_REMOTE=1 /);
-    assert.match(hook.command, /"node" "\/tmp\/clawd-hook\.js" Stop$/);
+    assert.match(hook.command, /^DUCK_REMOTE=1 /);
+    assert.match(hook.command, /"node" "\/tmp\/duck-hook\.js" Stop$/);
   });
 
-  it("keeps WSL --remote on a bare CLAWD_REMOTE prefix", () => {
+  it("keeps WSL --remote on a bare DUCK_REMOTE prefix", () => {
     const hook = __test.buildCommandHookSpec(
       "/usr/bin/node",
-      "/home/u/.claude/hooks/clawd-hook.js",
+      "/home/u/.claude/hooks/duck-hook.js",
       "Stop",
       {
         platform: "linux",
@@ -624,30 +624,30 @@ describe("Hook installer version compatibility", () => {
         env: {},
       },
     );
-    assert.match(hook.command, /^CLAWD_REMOTE=1 /);
-    assert.doesNotMatch(hook.command, /CLAWD_SSH_REMOTE|CLAWD_REMOTE_IDENTITY_PATH/);
+    assert.match(hook.command, /^DUCK_REMOTE=1 /);
+    assert.doesNotMatch(hook.command, /DUCK_SSH_REMOTE|DUCK_REMOTE_IDENTITY_PATH/);
   });
 
   it("uses the plain (unquoted) command format for WSL installs", () => {
     // Quoted-without-shell breaks Claude Code's hook runner on WSL — quotes
     // become part of the executable name (silent hook failure, the root
     // cause this PR fixes). Native POSIX keeps the quoted form.
-    const hook = __test.buildCommandHookSpec("/usr/bin/node", "/home/u/.claude/hooks/clawd-hook.js", "Stop", {
+    const hook = __test.buildCommandHookSpec("/usr/bin/node", "/home/u/.claude/hooks/duck-hook.js", "Stop", {
       platform: "linux",
       wslDistro: "Ubuntu",
     });
 
     assert.strictEqual(hook.type, "command");
-    assert.strictEqual(hook.command, "/usr/bin/node /home/u/.claude/hooks/clawd-hook.js Stop");
+    assert.strictEqual(hook.command, "/usr/bin/node /home/u/.claude/hooks/duck-hook.js Stop");
     assert.ok(!("shell" in hook), "WSL hooks must not carry a shell field");
   });
 
   it("keeps the quoted command format for native POSIX (no wslDistro)", () => {
-    const hook = __test.buildCommandHookSpec("/usr/bin/node", "/opt/app dir/clawd-hook.js", "Stop", {
+    const hook = __test.buildCommandHookSpec("/usr/bin/node", "/opt/app dir/duck-hook.js", "Stop", {
       platform: "linux",
     });
 
-    assert.strictEqual(hook.command, '"/usr/bin/node" "/opt/app dir/clawd-hook.js" Stop');
+    assert.strictEqual(hook.command, '"/usr/bin/node" "/opt/app dir/duck-hook.js" Stop');
   });
 
   it("registers remote hooks as async with reverse-tunnel headroom", () => {
@@ -661,9 +661,9 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const stopHooks = getCommandHookEntries(settings, "Stop", "clawd-hook.js");
+    const stopHooks = getCommandHookEntries(settings, "Stop", "duck-hook.js");
     assert.strictEqual(stopHooks.length, 1);
-    assert.ok(stopHooks[0].command.startsWith("CLAWD_REMOTE=1 "), stopHooks[0].command);
+    assert.ok(stopHooks[0].command.startsWith("DUCK_REMOTE=1 "), stopHooks[0].command);
     assert.strictEqual(stopHooks[0].async, true);
     assert.strictEqual(stopHooks[0].timeout, 10);
     assert.ok(!Object.prototype.hasOwnProperty.call(stopHooks[0], "shell"));
@@ -680,7 +680,7 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const stopHooks = getCommandHookEntries(settings, "Stop", "clawd-hook.js");
+    const stopHooks = getCommandHookEntries(settings, "Stop", "duck-hook.js");
     assert.strictEqual(stopHooks.length, 1);
     assert.ok(!Object.prototype.hasOwnProperty.call(stopHooks[0], "shell"));
     assert.strictEqual(stopHooks[0].async, true);
@@ -698,7 +698,7 @@ describe("Hook installer version compatibility", () => {
 
     const settings = readSettings(settingsPath);
     assert.ok(Array.isArray(settings.hooks.StopFailure));
-    assert.deepStrictEqual(getClawdCommands(settings, "StopFailure").length, 1);
+    assert.deepStrictEqual(getDuckCommands(settings, "StopFailure").length, 1);
     assert.strictEqual(result.versionStatus, "known");
     assert.strictEqual(result.version, "2.1.78");
   });
@@ -732,13 +732,13 @@ describe("Hook installer version compatibility", () => {
     assert.strictEqual(result.versionStatus, "unknown");
   });
 
-  it("removes stale Clawd StopFailure hooks while preserving third-party entries when version is known too old", () => {
+  it("removes stale Duck StopFailure hooks while preserving third-party entries when version is known too old", () => {
     const settingsPath = makeTempSettings({
       hooks: {
         StopFailure: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/tmp/clawd-hook.js" StopFailure' }],
+            hooks: [{ type: "command", command: 'node "/tmp/duck-hook.js" StopFailure' }],
           },
         ],
         PostCompact: [],
@@ -771,7 +771,7 @@ describe("Hook installer version compatibility", () => {
         StopFailure: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/tmp/clawd-hook.js" StopFailure' }],
+            hooks: [{ type: "command", command: 'node "/tmp/duck-hook.js" StopFailure' }],
           },
         ],
       },
@@ -785,7 +785,7 @@ describe("Hook installer version compatibility", () => {
 
     const settings = readSettings(settingsPath);
     assert.ok(Array.isArray(settings.hooks.StopFailure));
-    assert.strictEqual(getClawdCommands(settings, "StopFailure").length, 1);
+    assert.strictEqual(getDuckCommands(settings, "StopFailure").length, 1);
     assert.strictEqual(result.removed, 0);
   });
 
@@ -795,7 +795,7 @@ describe("Hook installer version compatibility", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/old/path/clawd-hook.js" Stop' }],
+            hooks: [{ type: "command", command: 'node "/old/path/duck-hook.js" Stop' }],
           },
         ],
       },
@@ -808,10 +808,10 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const commands = getClawdCommands(settings, "Stop");
+    const commands = getDuckCommands(settings, "Stop");
     assert.strictEqual(result.updated, 1);
     assert.strictEqual(commands.length, 1);
-    assert.ok(commands[0].includes('hooks/clawd-hook.js'));
+    assert.ok(commands[0].includes('hooks/duck-hook.js'));
     assert.ok(!commands[0].includes('/old/path/'));
   });
 
@@ -821,7 +821,7 @@ describe("Hook installer version compatibility", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: '"node" "/old/path/clawd-hook.js" Stop' }],
+            hooks: [{ type: "command", command: '"node" "/old/path/duck-hook.js" Stop' }],
           },
         ],
       },
@@ -836,7 +836,7 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const stopHooks = getCommandHookEntries(settings, "Stop", "clawd-hook.js");
+    const stopHooks = getCommandHookEntries(settings, "Stop", "duck-hook.js");
     assert.strictEqual(result.updated, 1);
     assert.strictEqual(stopHooks.length, 1);
     assert.strictEqual(stopHooks[0].shell, "powershell");
@@ -853,7 +853,7 @@ describe("Hook installer version compatibility", () => {
             hooks: [{
               type: "command",
               shell: "powershell",
-              command: '& "node" "/old/path/clawd-hook.js" Stop',
+              command: '& "node" "/old/path/duck-hook.js" Stop',
             }],
           },
         ],
@@ -869,7 +869,7 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const stopHooks = getCommandHookEntries(settings, "Stop", "clawd-hook.js");
+    const stopHooks = getCommandHookEntries(settings, "Stop", "duck-hook.js");
     assert.strictEqual(result.updated, 1);
     assert.strictEqual(stopHooks.length, 1);
     assert.ok(!Object.prototype.hasOwnProperty.call(stopHooks[0], "shell"));
@@ -916,7 +916,7 @@ describe("Hook installer version compatibility", () => {
     assert.strictEqual(second.updated, 0);
 
     const settings = readSettings(settingsPath);
-    const stopHooks = getCommandHookEntries(settings, "Stop", "clawd-hook.js");
+    const stopHooks = getCommandHookEntries(settings, "Stop", "duck-hook.js");
     assert.strictEqual(stopHooks.length, 1);
     assert.strictEqual(stopHooks[0].shell, "powershell");
     assert.ok(stopHooks[0].command.startsWith("& "), stopHooks[0].command);
@@ -929,7 +929,7 @@ describe("Hook installer version compatibility", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: `"${existingAbsPath}" "/app/hooks/clawd-hook.js" Stop` }],
+            hooks: [{ type: "command", command: `"${existingAbsPath}" "/app/hooks/duck-hook.js" Stop` }],
           },
         ],
       },
@@ -944,7 +944,7 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const commands = getClawdCommands(settings, "Stop");
+    const commands = getDuckCommands(settings, "Stop");
     assert.strictEqual(commands.length, 1);
     // Must still contain the original absolute nvm path, NOT bare "node"
     assert.ok(commands[0].includes(existingAbsPath), `expected ${existingAbsPath} in: ${commands[0]}`);
@@ -965,7 +965,7 @@ describe("Hook installer version compatibility", () => {
             hooks: [{
               type: "command",
               shell: "powershell",
-              command: `& "${existingWinPath}" "C:/app/hooks/clawd-hook.js" Stop`,
+              command: `& "${existingWinPath}" "C:/app/hooks/duck-hook.js" Stop`,
             }],
           },
         ],
@@ -981,7 +981,7 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const commands = getClawdCommands(settings, "Stop");
+    const commands = getDuckCommands(settings, "Stop");
     assert.strictEqual(commands.length, 1);
     assert.ok(commands[0].includes(existingWinPath), `expected ${existingWinPath} in: ${commands[0]}`);
     assert.ok(!commands[0].includes('& "node"'), "should not downgrade to bare node");
@@ -1066,7 +1066,7 @@ describe("Hook installer version compatibility", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ command: `"${existingAbsPath}" "/app/hooks/clawd-hook.js" Stop` }],
+            hooks: [{ command: `"${existingAbsPath}" "/app/hooks/duck-hook.js" Stop` }],
           },
         ],
       },
@@ -1080,7 +1080,7 @@ describe("Hook installer version compatibility", () => {
     });
 
     const settings = readSettings(settingsPath);
-    const stopHooks = getCommandHookEntries(settings, "Stop", "clawd-hook.js");
+    const stopHooks = getCommandHookEntries(settings, "Stop", "duck-hook.js");
     assert.ok(result.updated >= 1);
     assert.strictEqual(stopHooks.length, 1);
     assert.strictEqual(stopHooks[0].type, "command");
@@ -1212,26 +1212,26 @@ describe("Hook installer version compatibility", () => {
 });
 
 describe("Claude permission hook ownership", () => {
-  it("recognizes only exact Clawd PermissionRequest URLs on managed ports", () => {
+  it("recognizes only exact Duck PermissionRequest URLs on managed ports", () => {
     for (const port of SERVER_PORTS) {
       assert.strictEqual(
-        isClawdPermissionUrl(`http://127.0.0.1:${port}/permission`),
+        isDuckPermissionUrl(`http://127.0.0.1:${port}/permission`),
         true,
-        `expected managed port ${port} to be Clawd-owned`
+        `expected managed port ${port} to be Duck-owned`
       );
       assert.strictEqual(
-        isClawdPermissionUrl(`http://127.0.0.1:${port}/permission?nonce=${"a".repeat(32)}`),
+        isDuckPermissionUrl(`http://127.0.0.1:${port}/permission?nonce=${"a".repeat(32)}`),
         true,
       );
     }
 
-    assert.strictEqual(isClawdPermissionUrl("http://127.0.0.1:8080/permission"), false);
-    assert.strictEqual(isClawdPermissionUrl("http://localhost:23333/permission"), false);
-    assert.strictEqual(isClawdPermissionUrl("https://127.0.0.1:23333/permission"), false);
-    assert.strictEqual(isClawdPermissionUrl("http://127.0.0.1:23333/permission?x=1"), false);
-    assert.strictEqual(isClawdPermissionUrl("http://127.0.0.1:23333/permission#frag"), false);
-    assert.strictEqual(isClawdPermissionUrl("http://user@127.0.0.1:23333/permission"), false);
-    assert.strictEqual(isClawdPermissionUrl("http://127.0.0.1/permission"), false);
+    assert.strictEqual(isDuckPermissionUrl("http://127.0.0.1:8080/permission"), false);
+    assert.strictEqual(isDuckPermissionUrl("http://localhost:24333/permission"), false);
+    assert.strictEqual(isDuckPermissionUrl("https://127.0.0.1:24333/permission"), false);
+    assert.strictEqual(isDuckPermissionUrl("http://127.0.0.1:24333/permission?x=1"), false);
+    assert.strictEqual(isDuckPermissionUrl("http://127.0.0.1:24333/permission#frag"), false);
+    assert.strictEqual(isDuckPermissionUrl("http://user@127.0.0.1:24333/permission"), false);
+    assert.strictEqual(isDuckPermissionUrl("http://127.0.0.1/permission"), false);
   });
 
   it("remote native transport removes managed permission hooks that query keeps", () => {
@@ -1261,8 +1261,8 @@ describe("Claude permission hook ownership", () => {
     assert.deepStrictEqual(getHttpUrls(readSettings(settingsPath), "PermissionRequest"), []);
   });
 
-  it("preserves third-party local PermissionRequest URLs while adding Clawd HTTP hook", () => {
-    const clawdUrl = buildPermissionUrl(SERVER_PORTS[0]);
+  it("preserves third-party local PermissionRequest URLs while adding Duck HTTP hook", () => {
+    const duckUrl = buildPermissionUrl(SERVER_PORTS[0]);
     const settingsPath = makeTempSettings({
       hooks: {
         PermissionRequest: [
@@ -1289,11 +1289,11 @@ describe("Claude permission hook ownership", () => {
     assert.deepStrictEqual(getHttpUrls(settings, "PermissionRequest"), [
       "http://127.0.0.1:8080/permission",
       "http://localhost:8080/permission",
-      clawdUrl,
+      duckUrl,
     ]);
   });
 
-  it("updates stale Clawd PermissionRequest URLs on managed fallback ports", () => {
+  it("updates stale Duck PermissionRequest URLs on managed fallback ports", () => {
     const expectedUrl = buildPermissionUrl(SERVER_PORTS[0]);
     const staleUrl = buildPermissionUrl(SERVER_PORTS[SERVER_PORTS.length - 1]);
     const settingsPath = makeTempSettings({
@@ -1327,13 +1327,13 @@ describe("Hook installer deprecated hook cleanup", () => {
   it("recognizes only the strict env-indirected command grammar (#852)", () => {
     const settings = {
       env: {
-        CLAWD_NODE_BIN: "/opt/homebrew/bin/node",
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: "/opt/homebrew/bin/node",
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       },
     };
     assert.strictEqual(
       classifyManagedClaudeStateHookCommand(
-        "$CLAWD_NODE_BIN $CLAWD_HOOK_PATH WorktreeCreate",
+        "$DUCK_NODE_BIN $DUCK_HOOK_PATH WorktreeCreate",
         settings,
         "WorktreeCreate"
       ),
@@ -1341,7 +1341,7 @@ describe("Hook installer deprecated hook cleanup", () => {
     );
     assert.strictEqual(
       classifyManagedClaudeStateHookCommand(
-        'node "${CLAWD_HOOK_PATH}" WorktreeCreate',
+        'node "${DUCK_HOOK_PATH}" WorktreeCreate',
         settings,
         "WorktreeCreate"
       ),
@@ -1349,7 +1349,7 @@ describe("Hook installer deprecated hook cleanup", () => {
     );
     assert.strictEqual(
       classifyManagedClaudeStateHookCommand(
-        '"/opt/homebrew/bin/node" "${CLAWD_HOOK_PATH}" WorktreeCreate',
+        '"/opt/homebrew/bin/node" "${DUCK_HOOK_PATH}" WorktreeCreate',
         settings,
         "WorktreeCreate"
       ),
@@ -1357,7 +1357,7 @@ describe("Hook installer deprecated hook cleanup", () => {
     );
     assert.strictEqual(
       classifyManagedClaudeStateHookCommand(
-        '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" Stop',
+        '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" Stop',
         settings,
         "WorktreeCreate"
       ),
@@ -1366,7 +1366,7 @@ describe("Hook installer deprecated hook cleanup", () => {
     );
     assert.strictEqual(
       classifyManagedClaudeStateHookCommand(
-        '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH_SUFFIX}" WorktreeCreate',
+        '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH_SUFFIX}" WorktreeCreate',
         settings,
         "WorktreeCreate"
       ),
@@ -1374,7 +1374,7 @@ describe("Hook installer deprecated hook cleanup", () => {
     );
     assert.strictEqual(
       classifyManagedClaudeStateHookCommand(
-        '"/usr/local/bin/node-wrapper" "${CLAWD_HOOK_PATH}" WorktreeCreate',
+        '"/usr/local/bin/node-wrapper" "${DUCK_HOOK_PATH}" WorktreeCreate',
         settings,
         "WorktreeCreate"
       ),
@@ -1383,12 +1383,12 @@ describe("Hook installer deprecated hook cleanup", () => {
     );
     assert.strictEqual(
       classifyManagedClaudeStateHookCommand(
-        '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" WorktreeCreate',
-        { env: { CLAWD_HOOK_PATH: "/tmp/user-worktree.js" } },
+        '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" WorktreeCreate',
+        { env: { DUCK_HOOK_PATH: "/tmp/user-worktree.js" } },
         "WorktreeCreate"
       ),
       null,
-      "settings.env must independently prove the clawd-hook.js basename"
+      "settings.env must independently prove the duck-hook.js basename"
     );
   });
 
@@ -1407,13 +1407,13 @@ describe("Hook installer deprecated hook cleanup", () => {
     );
   });
 
-  it("removes stale Clawd WorktreeCreate hook while preserving user-authored entries", () => {
+  it("removes stale Duck WorktreeCreate hook while preserving user-authored entries", () => {
     const settingsPath = makeTempSettings({
       hooks: {
         WorktreeCreate: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/tmp/clawd-hook.js" WorktreeCreate' }],
+            hooks: [{ type: "command", command: 'node "/tmp/duck-hook.js" WorktreeCreate' }],
           },
           {
             matcher: "",
@@ -1436,17 +1436,17 @@ describe("Hook installer deprecated hook cleanup", () => {
       settings.hooks.WorktreeCreate[0].hooks[0].command,
       'node "/tmp/user-worktree.js" WorktreeCreate'
     );
-    assert.strictEqual(getClawdCommands(settings, "WorktreeCreate").length, 0);
+    assert.strictEqual(getDuckCommands(settings, "WorktreeCreate").length, 0);
     assert.ok(result.removed >= 1);
   });
 
-  it("deletes WorktreeCreate key when the only entry was the Clawd hook", () => {
+  it("deletes WorktreeCreate key when the only entry was the Duck hook", () => {
     const settingsPath = makeTempSettings({
       hooks: {
         WorktreeCreate: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/tmp/clawd-hook.js" WorktreeCreate' }],
+            hooks: [{ type: "command", command: 'node "/tmp/duck-hook.js" WorktreeCreate' }],
           },
         ],
       },
@@ -1464,8 +1464,8 @@ describe("Hook installer deprecated hook cleanup", () => {
 
   it("removes every env-owned WorktreeCreate form, preserves settings.env, and backs up cleanup-only writes (#852)", () => {
     const env = {
-      CLAWD_NODE_BIN: "/opt/homebrew/bin/node",
-      CLAWD_HOOK_PATH: "/Applications/Clawd on Desk.app/Contents/Resources/app.asar.unpacked/hooks/clawd-hook.js",
+      DUCK_NODE_BIN: "/opt/homebrew/bin/node",
+      DUCK_HOOK_PATH: "/Applications/Duck on Desk.app/Contents/Resources/app.asar.unpacked/hooks/duck-hook.js",
       USER_SETTING: "preserve-me",
     };
     const settingsPath = makeTempSettings({
@@ -1476,17 +1476,17 @@ describe("Hook installer deprecated hook cleanup", () => {
             matcher: "",
             hooks: [{
               type: "command",
-              command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" WorktreeCreate',
+              command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" WorktreeCreate',
               timeout: 5,
             }],
           },
           {
             matcher: "",
-            hooks: [{ type: "command", command: '"/opt/homebrew/bin/node" "${CLAWD_HOOK_PATH}" WorktreeCreate' }],
+            hooks: [{ type: "command", command: '"/opt/homebrew/bin/node" "${DUCK_HOOK_PATH}" WorktreeCreate' }],
           },
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "${CLAWD_HOOK_PATH}" WorktreeCreate' }],
+            hooks: [{ type: "command", command: 'node "${DUCK_HOOK_PATH}" WorktreeCreate' }],
           },
         ],
       },
@@ -1509,8 +1509,8 @@ describe("Hook installer deprecated hook cleanup", () => {
 
   it("folds env and canonical active hooks by position while preserving auto-start, matcher, and third-party fields (#852)", () => {
     const env = {
-      CLAWD_NODE_BIN: "/opt/homebrew/bin/node",
-      CLAWD_HOOK_PATH: "/Applications/Clawd on Desk.app/Contents/Resources/app.asar.unpacked/hooks/clawd-hook.js",
+      DUCK_NODE_BIN: "/opt/homebrew/bin/node",
+      DUCK_HOOK_PATH: "/Applications/Duck on Desk.app/Contents/Resources/app.asar.unpacked/hooks/duck-hook.js",
     };
     const currentHookPath = getClaudeHookScriptPath().replace(/\\/g, "/");
     const thirdParty = {
@@ -1528,7 +1528,7 @@ describe("Hook installer deprecated hook cleanup", () => {
           wrapperCustom: "keep-wrapper",
           hooks: [
             { type: "command", command: '"node" "/old/auto-start.js"' },
-            { type: "command", command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" SessionStart', timeout: 5 },
+            { type: "command", command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" SessionStart', timeout: 5 },
             {
               type: "command",
               command: `"/opt/homebrew/bin/node" "${currentHookPath}" SessionStart`,
@@ -1589,14 +1589,14 @@ describe("Hook installer deprecated hook cleanup", () => {
     const thirdParty = { type: "command", command: 'node "/tmp/user-stop.js" Stop', timeout: 17 };
     const settingsPath = makeTempSettings({
       env: {
-        CLAWD_NODE_BIN: nodeBin,
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: nodeBin,
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       },
       hooks: {
         Stop: [
           {
             type: "command",
-            command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" Stop',
+            command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" Stop',
             timeout: 5,
             flatCustom: "owned-flat",
           },
@@ -1626,8 +1626,8 @@ describe("Hook installer deprecated hook cleanup", () => {
     const settingsPath = makeTempSettings({
       hooks: {
         Stop: [
-          { matcher: "a", hooks: [{ type: "command", command: '"/usr/bin/node" "/old-a/clawd-hook.js" Stop' }] },
-          { matcher: "b", hooks: [{ type: "command", command: '"/usr/bin/node" "/old-b/clawd-hook.js" Stop' }] },
+          { matcher: "a", hooks: [{ type: "command", command: '"/usr/bin/node" "/old-a/duck-hook.js" Stop' }] },
+          { matcher: "b", hooks: [{ type: "command", command: '"/usr/bin/node" "/old-b/duck-hook.js" Stop' }] },
         ],
       },
     });
@@ -1642,7 +1642,7 @@ describe("Hook installer deprecated hook cleanup", () => {
   });
 
   it("preserves a literal hook when the resolved Node path falls outside external env grammar (#852)", () => {
-    const envCommand = '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" SessionStart';
+    const envCommand = '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" SessionStart';
     const hookScript = getClaudeHookScriptPath();
     const cases = [
       { platform: "win32", nodeBin: "C:\\Program Files (x86)\\nodejs\\node.exe" },
@@ -1657,8 +1657,8 @@ describe("Hook installer deprecated hook cleanup", () => {
       });
       const settingsPath = makeTempSettings({
         env: {
-          CLAWD_NODE_BIN: "/opt/homebrew/bin/node",
-          CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+          DUCK_NODE_BIN: "/opt/homebrew/bin/node",
+          DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
         },
         hooks: {
           SessionStart: [{ matcher: "", hooks: [
@@ -1679,7 +1679,7 @@ describe("Hook installer deprecated hook cleanup", () => {
       const hooks = getCommandHookEntries(readSettings(settingsPath), "SessionStart");
       assert.strictEqual(hooks.length, 1, `${platform} should converge to one state hook`);
       assert.strictEqual(hooks[0].command, literalHook.command);
-      assert.ok(!hooks[0].command.includes("CLAWD_HOOK_PATH"));
+      assert.ok(!hooks[0].command.includes("DUCK_HOOK_PATH"));
     }
   });
 
@@ -1693,13 +1693,13 @@ describe("Hook installer deprecated hook cleanup", () => {
     for (const event of CLAUDE_CORE_HOOK_EVENTS) {
       hooks[event] = [{ matcher: "", hooks: [{
         type: "command",
-        command: `"${"${CLAWD_NODE_BIN}"}" "${"${CLAWD_HOOK_PATH}"}" ${event}`,
+        command: `"${"${DUCK_NODE_BIN}"}" "${"${DUCK_HOOK_PATH}"}" ${event}`,
         timeout: 5,
       }] }];
     }
     hooks.PermissionRequest = [{ matcher: "", hooks: [{ type: "http", url: permissionUrl, timeout: 600 }] }];
     const settingsPath = makeTempSettings({
-      env: { CLAWD_NODE_BIN: envNode, CLAWD_HOOK_PATH: hookScript },
+      env: { DUCK_NODE_BIN: envNode, DUCK_HOOK_PATH: hookScript },
       hooks,
     });
     const existing = new Set([resolvedNode, envNode, hookScript, autoStartScript]);
@@ -1736,11 +1736,11 @@ describe("Hook installer deprecated hook cleanup", () => {
   });
 
   it("preserves an env-owned active hook instead of rewriting it to bare node when no absolute Node is usable (#852)", () => {
-    const command = '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" SessionStart';
+    const command = '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" SessionStart';
     const settingsPath = makeTempSettings({
       env: {
-        CLAWD_NODE_BIN: "node",
-        CLAWD_HOOK_PATH: "/Applications/Clawd on Desk.app/Contents/Resources/app.asar.unpacked/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: "node",
+        DUCK_HOOK_PATH: "/Applications/Duck on Desk.app/Contents/Resources/app.asar.unpacked/hooks/duck-hook.js",
       },
       hooks: {
         SessionStart: [{ matcher: "", hooks: [{ type: "command", command, timeout: 5 }] }],
@@ -1765,13 +1765,13 @@ describe("Hook installer deprecated hook cleanup", () => {
     const envNode = "/opt/homebrew/bin/node";
     const settingsPath = makeTempSettings({
       env: {
-        CLAWD_NODE_BIN: envNode,
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: envNode,
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       },
       hooks: {
         Stop: [{ matcher: "", hooks: [{
           type: "command",
-          command: `"${staleNode}" "${"${CLAWD_HOOK_PATH}"}" Stop`,
+          command: `"${staleNode}" "${"${DUCK_HOOK_PATH}"}" Stop`,
         }] }],
       },
     });
@@ -1798,11 +1798,11 @@ describe("Hook installer deprecated hook cleanup", () => {
 
   it("never canonicalizes a shell-breaking settings.env Node value even when access succeeds (#852)", () => {
     const unsafeNode = '/tmp/a";noop;"/node';
-    const command = '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" Stop';
+    const command = '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" Stop';
     const settingsPath = makeTempSettings({
       env: {
-        CLAWD_NODE_BIN: unsafeNode,
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: unsafeNode,
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       },
       hooks: {
         Stop: [{ matcher: "", hooks: [{ type: "command", command }] }],
@@ -1827,12 +1827,12 @@ describe("Hook installer deprecated hook cleanup", () => {
   });
 
   it("fails closed on compound and single-quoted env-indirected worktree commands (#852)", () => {
-    const compound = '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" WorktreeCreate && create-real-worktree';
-    const singleQuoted = "'${CLAWD_NODE_BIN}' '${CLAWD_HOOK_PATH}' WorktreeCreate";
+    const compound = '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" WorktreeCreate && create-real-worktree';
+    const singleQuoted = "'${DUCK_NODE_BIN}' '${DUCK_HOOK_PATH}' WorktreeCreate";
     const settingsPath = makeTempSettings({
       env: {
-        CLAWD_NODE_BIN: "/opt/homebrew/bin/node",
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: "/opt/homebrew/bin/node",
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       },
       hooks: {
         WorktreeCreate: [{ matcher: "", hooks: [
@@ -1856,19 +1856,19 @@ describe("Hook installer deprecated hook cleanup", () => {
 
   it("applies env ownership to versioned and HTTP-only all-delete reconciliation (#852)", () => {
     const env = {
-      CLAWD_NODE_BIN: "/opt/homebrew/bin/node",
-      CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+      DUCK_NODE_BIN: "/opt/homebrew/bin/node",
+      DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
     };
     const userPermission = { type: "command", command: 'node "/tmp/user-permission.js" PermissionRequest', timeout: 19, async: false };
     const settingsPath = makeTempSettings({
       env,
       hooks: {
         StopFailure: [{ matcher: "", hooks: [
-          { type: "command", command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" StopFailure' },
+          { type: "command", command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" StopFailure' },
           { type: "command", command: 'node "/tmp/user-stop-failure.js" StopFailure' },
         ] }],
         PermissionRequest: [{ matcher: "", hooks: [
-          { type: "command", command: 'node "${CLAWD_HOOK_PATH}" PermissionRequest' },
+          { type: "command", command: 'node "${DUCK_HOOK_PATH}" PermissionRequest' },
           userPermission,
         ] }],
       },
@@ -1896,8 +1896,8 @@ describe("Hook installer deprecated hook cleanup", () => {
 describe("Hook installer unregisterHooks", () => {
   it("removes env-owned state hooks while preserving settings.env and mixed third-party siblings (#852)", () => {
     const env = {
-      CLAWD_NODE_BIN: "/opt/homebrew/bin/node",
-      CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+      DUCK_NODE_BIN: "/opt/homebrew/bin/node",
+      DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       SHARED_BY_USER: "yes",
     };
     const userHook = { type: "command", command: 'node "/tmp/user.js" Stop', timeout: 23 };
@@ -1905,7 +1905,7 @@ describe("Hook installer unregisterHooks", () => {
       env,
       hooks: {
         Stop: [{ matcher: "keep-me", hooks: [
-          { type: "command", command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" Stop' },
+          { type: "command", command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" Stop' },
           userHook,
         ] }],
       },
@@ -1919,7 +1919,7 @@ describe("Hook installer unregisterHooks", () => {
     assert.deepStrictEqual(settings.hooks.Stop[0].hooks, [userHook]);
   });
 
-  it("removes Clawd command hooks, HTTP hook, and auto-start while preserving third-party hooks", () => {
+  it("removes Duck command hooks, HTTP hook, and auto-start while preserving third-party hooks", () => {
     const settingsPath = makeTempSettings({
       hooks: {
         SessionStart: [
@@ -1929,7 +1929,7 @@ describe("Hook installer unregisterHooks", () => {
           },
           {
             matcher: "",
-            hooks: [{ type: "command", shell: "powershell", command: '& "node" "/tmp/clawd-hook.js" SessionStart' }],
+            hooks: [{ type: "command", shell: "powershell", command: '& "node" "/tmp/duck-hook.js" SessionStart' }],
           },
           {
             matcher: "",
@@ -1939,13 +1939,13 @@ describe("Hook installer unregisterHooks", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", shell: "powershell", command: '& "node" "/tmp/clawd-hook.js" Stop' }],
+            hooks: [{ type: "command", shell: "powershell", command: '& "node" "/tmp/duck-hook.js" Stop' }],
           },
         ],
         PermissionRequest: [
           {
             matcher: "",
-            hooks: [{ type: "http", url: "http://127.0.0.1:23335/permission", timeout: 600 }],
+            hooks: [{ type: "http", url: "http://127.0.0.1:24335/permission", timeout: 600 }],
           },
           {
             matcher: "",
@@ -1963,8 +1963,8 @@ describe("Hook installer unregisterHooks", () => {
     const settings = readSettings(settingsPath);
 
     assert.deepStrictEqual(result, { removed: 4, changed: true });
-    assert.deepStrictEqual(getClawdCommands(settings, "SessionStart"), []);
-    assert.deepStrictEqual(getClawdCommands(settings, "Stop"), []);
+    assert.deepStrictEqual(getDuckCommands(settings, "SessionStart"), []);
+    assert.deepStrictEqual(getDuckCommands(settings, "Stop"), []);
     assert.deepStrictEqual(
       settings.hooks.SessionStart[0].hooks[0].command,
       'node "/tmp/third-party.js" SessionStart'
@@ -1976,7 +1976,7 @@ describe("Hook installer unregisterHooks", () => {
     assert.ok(!Object.prototype.hasOwnProperty.call(settings.hooks, "Stop"));
   });
 
-  it("keeps third-party PermissionRequest hooks when no Clawd HTTP hook is present", () => {
+  it("keeps third-party PermissionRequest hooks when no Duck HTTP hook is present", () => {
     const settingsPath = makeTempSettings({
       hooks: {
         PermissionRequest: [
@@ -2002,13 +2002,13 @@ describe("Hook installer unregisterHooks", () => {
     ]);
   });
 
-  it("recognizes stale Clawd PermissionRequest URLs on any managed port", () => {
+  it("recognizes stale Duck PermissionRequest URLs on any managed port", () => {
     const settingsPath = makeTempSettings({
       hooks: {
         PermissionRequest: [
           {
             matcher: "",
-            hooks: [{ type: "http", url: "http://127.0.0.1:23337/permission", timeout: 600 }],
+            hooks: [{ type: "http", url: "http://127.0.0.1:24337/permission", timeout: 600 }],
           },
         ],
       },
@@ -2027,7 +2027,7 @@ describe("Hook installer unregisterHooks", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/tmp/clawd-hook.js" Stop' }],
+            hooks: [{ type: "command", command: 'node "/tmp/duck-hook.js" Stop' }],
           },
         ],
       },
@@ -2040,13 +2040,13 @@ describe("Hook installer unregisterHooks", () => {
     assert.deepStrictEqual(second, { removed: 0, changed: false });
   });
 
-  it("keeps empty hooks object when every Clawd entry is removed", () => {
+  it("keeps empty hooks object when every Duck entry is removed", () => {
     const settingsPath = makeTempSettings({
       hooks: {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: 'node "/tmp/clawd-hook.js" Stop' }],
+            hooks: [{ type: "command", command: 'node "/tmp/duck-hook.js" Stop' }],
           },
         ],
       },
@@ -2067,7 +2067,7 @@ describe("async hook installer parity", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: `"${existingAbsPath}" "/app/hooks/clawd-hook.js" Stop` }],
+            hooks: [{ type: "command", command: `"${existingAbsPath}" "/app/hooks/duck-hook.js" Stop` }],
           },
         ],
       },
@@ -2106,7 +2106,7 @@ describe("async hook installer parity", () => {
     assert.strictEqual(accessCalls, 1, "existing Node path should be validated exactly once");
     assert.strictEqual(execFileCalls, 0, "resolver should not run once the existing path is confirmed valid");
 
-    const commands = getClawdCommands(readSettings(settingsPath), "Stop");
+    const commands = getDuckCommands(readSettings(settingsPath), "Stop");
     assert.ok(commands.some((command) => command.includes(existingAbsPath)), commands.join("\n"));
   });
 
@@ -2117,7 +2117,7 @@ describe("async hook installer parity", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: `& "${existingAbsPath}" "C:/app/hooks/clawd-hook.js" Stop` }],
+            hooks: [{ type: "command", command: `& "${existingAbsPath}" "C:/app/hooks/duck-hook.js" Stop` }],
           },
         ],
       },
@@ -2139,7 +2139,7 @@ describe("async hook installer parity", () => {
     });
 
     assert.strictEqual(accessMode, fs.constants.F_OK, "Windows has no executable-bit semantics; existence check must use F_OK");
-    const commands = getClawdCommands(readSettings(settingsPath), "Stop");
+    const commands = getDuckCommands(readSettings(settingsPath), "Stop");
     assert.ok(commands.some((command) => command.includes(existingAbsPath)), commands.join("\n"));
   });
 
@@ -2151,7 +2151,7 @@ describe("async hook installer parity", () => {
         Stop: [
           {
             matcher: "",
-            hooks: [{ type: "command", command: `"${staleAbsPath}" "/app/hooks/clawd-hook.js" Stop` }],
+            hooks: [{ type: "command", command: `"${staleAbsPath}" "/app/hooks/duck-hook.js" Stop` }],
           },
         ],
       },
@@ -2174,7 +2174,7 @@ describe("async hook installer parity", () => {
       },
     });
 
-    const commands = getClawdCommands(readSettings(settingsPath), "Stop");
+    const commands = getDuckCommands(readSettings(settingsPath), "Stop");
     assert.ok(commands.some((command) => command.includes(resolvedAbsPath)), commands.join("\n"));
     assert.ok(!commands.some((command) => command.includes(staleAbsPath)), commands.join("\n"));
   });
@@ -2197,12 +2197,12 @@ describe("async hook installer parity", () => {
       },
     });
 
-    const commands = getClawdCommands(readSettings(settingsPath), "Stop");
+    const commands = getDuckCommands(readSettings(settingsPath), "Stop");
     assert.ok(commands.some((command) => command.includes(explicitNodeBin)), commands.join("\n"));
   });
 
   it("registerHooksAsync migrates a stale hook path to the current authoritative script path", async () => {
-    const oldTempPath = "/tmp/clawd-on-desk/hooks/clawd-hook.js";
+    const oldTempPath = "/tmp/duck-on-desk/hooks/duck-hook.js";
     const settingsPath = makeTempSettings({
       hooks: {
         Stop: [
@@ -2222,7 +2222,7 @@ describe("async hook installer parity", () => {
       claudeVersionInfo: { version: "2.1.78", source: "test", status: "known" },
     });
 
-    const commands = getClawdCommands(readSettings(settingsPath), "Stop");
+    const commands = getDuckCommands(readSettings(settingsPath), "Stop");
     const currentScriptPath = getClaudeHookScriptPath();
     assert.ok(commands.some((command) => command.includes(currentScriptPath)), commands.join("\n"));
     assert.ok(!commands.some((command) => command.includes(oldTempPath)), commands.join("\n"));
@@ -2255,7 +2255,7 @@ describe("async hook installer parity", () => {
       },
     });
 
-    const commands = getClawdCommands(readSettings(settingsPath), "Stop");
+    const commands = getDuckCommands(readSettings(settingsPath), "Stop");
     assert.ok(commands.some((command) => command.startsWith(`"${nodeBin}" "`)), commands.join("\n"));
   });
 
@@ -2263,13 +2263,13 @@ describe("async hook installer parity", () => {
     const envNode = "/custom/node/bin/node";
     const settingsPath = makeTempSettings({
       env: {
-        CLAWD_NODE_BIN: envNode,
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: envNode,
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       },
       hooks: {
         Stop: [{ matcher: "", hooks: [{
           type: "command",
-          command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" Stop',
+          command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" Stop',
         }] }],
       },
     });
@@ -2299,13 +2299,13 @@ describe("async hook installer parity", () => {
     const validNode = "/Opt/custom/bin/node";
     const settingsPath = makeTempSettings({
       env: {
-        CLAWD_NODE_BIN: "node",
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: "node",
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       },
       hooks: {
         Stop: [
-          { matcher: "", hooks: [{ type: "command", command: `"${staleNode}" "${"${CLAWD_HOOK_PATH}"}" Stop` }] },
-          { matcher: "", hooks: [{ type: "command", command: `"${validNode}" "${"${CLAWD_HOOK_PATH}"}" Stop` }] },
+          { matcher: "", hooks: [{ type: "command", command: `"${staleNode}" "${"${DUCK_HOOK_PATH}"}" Stop` }] },
+          { matcher: "", hooks: [{ type: "command", command: `"${validNode}" "${"${DUCK_HOOK_PATH}"}" Stop` }] },
         ],
       },
     });
@@ -2335,11 +2335,11 @@ describe("async hook installer parity", () => {
   });
 
   it("registerHooksAsync preserves an env hook when neither resolver nor env supplies a safe Node path (#852)", async () => {
-    const command = '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" Stop';
+    const command = '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" Stop';
     const settingsPath = makeTempSettings({
       env: {
-        CLAWD_NODE_BIN: "node",
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: "node",
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       },
       hooks: {
         Stop: [{ matcher: "", hooks: [{ type: "command", command }] }],
@@ -2392,16 +2392,16 @@ describe("async hook installer parity", () => {
   it("sync and async registration produce the same env migration and async is a no-op after sync (#852)", async () => {
     const initial = {
       env: {
-        CLAWD_NODE_BIN: "/opt/homebrew/bin/node",
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: "/opt/homebrew/bin/node",
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
       },
       hooks: {
         SessionStart: [{ matcher: "", hooks: [
-          { type: "command", command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" SessionStart' },
-          { type: "command", command: '"/opt/homebrew/bin/node" "/old/clawd-hook.js" SessionStart' },
+          { type: "command", command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" SessionStart' },
+          { type: "command", command: '"/opt/homebrew/bin/node" "/old/duck-hook.js" SessionStart' },
         ] }],
         WorktreeCreate: [{ matcher: "", hooks: [
-          { type: "command", command: 'node "${CLAWD_HOOK_PATH}" WorktreeCreate', timeout: 5 },
+          { type: "command", command: 'node "${DUCK_HOOK_PATH}" WorktreeCreate', timeout: 5 },
         ] }],
       },
     };
@@ -2434,22 +2434,22 @@ describe("async hook installer parity", () => {
   it("unregisterHooksAsync removes env and literal entries exactly like unregisterHooks (#852)", async () => {
     const initial = {
       env: {
-        CLAWD_NODE_BIN: "/opt/homebrew/bin/node",
-        CLAWD_HOOK_PATH: "/Applications/Clawd/hooks/clawd-hook.js",
+        DUCK_NODE_BIN: "/opt/homebrew/bin/node",
+        DUCK_HOOK_PATH: "/Applications/Duck/hooks/duck-hook.js",
         USER_SETTING: "preserve-me",
       },
       hooks: {
         Stop: [{ matcher: "", custom: "keep-wrapper", hooks: [
-          { type: "command", command: '"/usr/bin/node" "/tmp/clawd-hook.js" Stop' },
-          { type: "command", command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" Stop', timeout: 5 },
+          { type: "command", command: '"/usr/bin/node" "/tmp/duck-hook.js" Stop' },
+          { type: "command", command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" Stop', timeout: 5 },
           { type: "command", command: 'node "/tmp/user-stop.js" Stop', timeout: 33 },
         ] }],
         WorktreeCreate: [{ matcher: "", hooks: [{
           type: "command",
-          command: '"${CLAWD_NODE_BIN}" "${CLAWD_HOOK_PATH}" WorktreeCreate',
+          command: '"${DUCK_NODE_BIN}" "${DUCK_HOOK_PATH}" WorktreeCreate',
           timeout: 5,
         }] }],
-        PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:23333/permission" }] }],
+        PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:24333/permission" }] }],
       },
     };
     const syncSettingsPath = makeTempSettings(initial);
@@ -2485,14 +2485,14 @@ describe("Hook installer settings backup", () => {
 
     assert.ok(result.backupPath, "should return a backupPath");
     assert.ok(fs.existsSync(result.backupPath), "backup file should exist on disk");
-    // Backup holds the ORIGINAL pre-install content (the user's own hook, no Clawd hooks).
+    // Backup holds the ORIGINAL pre-install content (the user's own hook, no Duck hooks).
     assert.deepStrictEqual(readSettings(result.backupPath), original);
-    // Live file was mutated (Clawd hooks added) and the user's hook is preserved.
-    assert.ok(getClawdCommands(readSettings(settingsPath), "Stop").length > 0, "Clawd hooks should be installed");
+    // Live file was mutated (Duck hooks added) and the user's hook is preserved.
+    assert.ok(getDuckCommands(readSettings(settingsPath), "Stop").length > 0, "Duck hooks should be installed");
   });
 
   it("does not back up when settings.json does not pre-exist", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-install-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-install-"));
     tempDirs.push(tmpDir);
     const settingsPath = path.join(tmpDir, "settings.json"); // intentionally absent
 
@@ -2522,7 +2522,7 @@ describe("Hook installer settings backup", () => {
 
   it("caps backups under repeated re-register instead of piling up unbounded", () => {
     // Simulates a CC-Switch style write war: an external tool keeps stripping
-    // Clawd's hooks from settings.json, the watcher keeps re-registering them.
+    // Duck's hooks from settings.json, the watcher keeps re-registering them.
     // Each real write snapshots the prior file, but the total must stay bounded.
     const thirdParty = { hooks: { Stop: [{ matcher: "", hooks: [{ type: "command", command: "user-own-hook" }] }] } };
     const settingsPath = makeTempSettings(thirdParty);
@@ -2530,7 +2530,7 @@ describe("Hook installer settings backup", () => {
     const countBaks = () => fs.readdirSync(dir).filter((n) => n.endsWith(".bak")).length;
 
     for (let i = 0; i < 8; i++) {
-      // External tool overwrites settings.json back to third-party-only (drops Clawd hooks).
+      // External tool overwrites settings.json back to third-party-only (drops Duck hooks).
       fs.writeFileSync(settingsPath, JSON.stringify(thirdParty, null, 2), "utf-8");
       const result = registerHooks({ silent: true, settingsPath, claudeVersionInfo: versionInfo, backupKeep: 3 });
       assert.ok(result.backupPath, "each re-register over an existing file should back up");
@@ -2540,8 +2540,8 @@ describe("Hook installer settings backup", () => {
     }
 
     assert.strictEqual(countBaks(), 3, `backups must stay capped at backupKeep, found ${countBaks()}`);
-    // The live file still has Clawd's hooks plus the user's own hook preserved.
-    assert.ok(getClawdCommands(readSettings(settingsPath), "Stop").length > 0, "Clawd hooks still installed");
+    // The live file still has Duck's hooks plus the user's own hook preserved.
+    assert.ok(getDuckCommands(readSettings(settingsPath), "Stop").length > 0, "Duck hooks still installed");
   });
 });
 
@@ -2587,10 +2587,10 @@ describe("Claude Code statusline installer", () => {
   });
 
   // Remote deploys run install.js --remote ON the remote (POSIX shells only —
-  // deploy aborts on cmd.exe), and CLAWD_REMOTE=1 is what makes the
+  // deploy aborts on cmd.exe), and DUCK_REMOTE=1 is what makes the
   // statusline stamp body.host so quota rides the reverse tunnel. The adapter
   // itself keeps a short best-effort transport timeout to protect visible UI.
-  it("remote: prefixes the command with CLAWD_REMOTE=1 and stays marker-detectable", () => {
+  it("remote: prefixes the command with DUCK_REMOTE=1 and stays marker-detectable", () => {
     const settingsPath = makeTempSettings({});
 
     const result = registerClaudeStatusline({
@@ -2604,7 +2604,7 @@ describe("Claude Code statusline installer", () => {
     assert.strictEqual(result.installed, true);
     assert.strictEqual(result.changed, true);
     const command = readSettings(settingsPath).statusLine.command;
-    assert.ok(command.startsWith("CLAWD_REMOTE=1 "), command);
+    assert.ok(command.startsWith("DUCK_REMOTE=1 "), command);
     assert.ok(command.includes(STATUSLINE_MARKER));
 
     // Re-register (deploy repair) must be idempotent on the remote form too.
@@ -2648,7 +2648,7 @@ describe("Claude Code statusline installer", () => {
   };
 
   function makeChainSidecarPath() {
-    return path.join(fs.mkdtempSync(path.join(os.tmpdir(), "clawd-chain-sidecar-")), "clawd-statusline-chain.json");
+    return path.join(fs.mkdtempSync(path.join(os.tmpdir(), "duck-chain-sidecar-")), "duck-statusline-chain.json");
   }
 
   it("remote --chain-existing: wraps a third-party statusline via the sidecar", () => {
@@ -2668,7 +2668,7 @@ describe("Claude Code statusline installer", () => {
     assert.strictEqual(result.skippedExisting, false);
     assert.strictEqual(result.chained, true);
     const command = readSettings(settingsPath).statusLine.command;
-    assert.ok(command.startsWith("CLAWD_REMOTE=1 "), command);
+    assert.ok(command.startsWith("DUCK_REMOTE=1 "), command);
     assert.ok(command.includes(STATUSLINE_MARKER));
     assert.ok(command.endsWith(" --chain"), command);
     // The user's original survives byte-for-byte in the sidecar.
@@ -2844,7 +2844,7 @@ describe("Claude Code statusline installer", () => {
   });
 
   it("registers into a UTF-8-BOM'd settings.json instead of throwing (Notepad's default save format)", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-install-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-install-"));
     const settingsPath = path.join(tmpDir, "settings.json");
     fs.writeFileSync(settingsPath, "﻿" + JSON.stringify({ model: "opus" }), "utf8");
     tempDirs.push(tmpDir);
@@ -2870,7 +2870,7 @@ describe("Claude Code statusline installer", () => {
     assert.strictEqual(readSettings(settingsPath).statusLine, undefined);
   });
 
-  it("unregister removes only a Clawd-owned statusline", () => {
+  it("unregister removes only a Duck-owned statusline", () => {
     const settingsPath = makeTempSettings({});
     registerClaudeStatusline({ silent: true, settingsPath, nodeBin: "/usr/local/bin/node" });
 

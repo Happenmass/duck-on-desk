@@ -52,7 +52,7 @@ const autoStartWithClaude = {
 };
 
 // autoStartWithCodex controls a durable gate read by the retained official
-// Codex hook while Clawd is offline. Every toggle first publishes false. The
+// Codex hook while Duck is offline. Every toggle first publishes false. The
 // main-process post-commit subscriber publishes the effective true value only
 // after prefs persistence succeeds, so a failed commit can never leave a newly
 // enabled cold-launch permission behind.
@@ -227,18 +227,18 @@ async function repairLocalServer(_payload, deps) {
   }
 }
 
-function restartClawd(payload, deps) {
+function restartDuck(payload, deps) {
   if (!payload || payload.confirmed !== true) {
-    return { status: "error", message: "restartClawd requires confirmation" };
+    return { status: "error", message: "restartDuck requires confirmation" };
   }
-  if (!deps || typeof deps.restartClawd !== "function") {
-    return { status: "error", message: "restartClawd requires deps.restartClawd" };
+  if (!deps || typeof deps.restartDuck !== "function") {
+    return { status: "error", message: "restartDuck requires deps.restartDuck" };
   }
   try {
-    deps.restartClawd();
-    return { status: "ok", message: "Clawd is restarting" };
+    deps.restartDuck();
+    return { status: "ok", message: "Duck is restarting" };
   } catch (err) {
-    return { status: "error", message: `restartClawd: ${err && err.message}` };
+    return { status: "error", message: `restartDuck: ${err && err.message}` };
   }
 }
 
@@ -263,8 +263,8 @@ function createRepairDoctorIssue({ repairAgentIntegration, setBubbleCategoryEnab
     if (type === "local-server") {
       return repairLocalServer(payload, deps);
     }
-    if (type === "restart-clawd") {
-      return restartClawd(payload, deps);
+    if (type === "restart-duck") {
+      return restartDuck(payload, deps);
     }
     return {
       status: "error",
@@ -284,6 +284,6 @@ module.exports = {
   manageClaudeHooksAutomatically,
   openAtLogin,
   repairLocalServer,
-  restartClawd,
+  restartDuck,
   uninstallHooks,
 };

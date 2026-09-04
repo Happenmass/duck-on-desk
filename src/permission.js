@@ -17,8 +17,8 @@ const path = require("path");
 const http = require("http");
 const { timingSafeEqual } = require("crypto");
 const {
-  CLAWD_SERVER_HEADER,
-  CLAWD_SERVER_ID,
+  DUCK_SERVER_HEADER,
+  DUCK_SERVER_ID,
 } = require("../hooks/server-config");
 const { isOpencodeFamilyEntry, getFamilyConfig } = require("../agents/opencode-family");
 const { isPassiveNotifyEntry } = require("./passive-notify-entry");
@@ -151,11 +151,11 @@ function clampBubbleHeight(naturalHeight, workAreaHeight, reserve = BUBBLE_HEIGH
 function deferMacFloatingVisibility(ctx, win) {
   if (!isMac || !win || win.isDestroyed()) return;
   const deferUntil = Date.now() + MAC_FLOATING_TOPMOST_DELAY_MS;
-  win.__clawdMacDeferredVisibilityUntil = deferUntil;
+  win.__duckMacDeferredVisibilityUntil = deferUntil;
   setTimeout(() => {
     if (!win || win.isDestroyed()) return;
-    if (win.__clawdMacDeferredVisibilityUntil === deferUntil) {
-      delete win.__clawdMacDeferredVisibilityUntil;
+    if (win.__duckMacDeferredVisibilityUntil === deferUntil) {
+      delete win.__duckMacDeferredVisibilityUntil;
     }
     if (typeof ctx.reapplyMacVisibility === "function") ctx.reapplyMacVisibility();
   }, MAC_FLOATING_TOPMOST_DELAY_MS);
@@ -1484,7 +1484,7 @@ function clearHiddenEditingFlags(entry) {
   entry.textInputActive = false;
   const bubble = entry.bubble;
   if (!isLiveBrowserWindow(bubble)) return;
-  try { delete bubble.__clawdMacImeEditing; } catch {}
+  try { delete bubble.__duckMacImeEditing; } catch {}
 }
 
 function setRequestWindowVisible(entry, visible, bounds, geometry) {
@@ -1492,12 +1492,12 @@ function setRequestWindowVisible(entry, visible, bounds, geometry) {
   if (!isLiveBrowserWindow(bubble)) return;
   if (visible) {
     try { applyZoomToWindow(bubble, geometry.scale); } catch {}
-    if (bounds && !bubble.__clawdMacImeEditing) {
+    if (bounds && !bubble.__duckMacImeEditing) {
       try { bubble.setBounds(bounds); } catch {}
     }
     try {
       if (isWin) bubble.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
-      if (isMac && !bubble.__clawdMacImeEditing) bubble.setAlwaysOnTop(true, MAC_TOPMOST_LEVEL);
+      if (isMac && !bubble.__duckMacImeEditing) bubble.setAlwaysOnTop(true, MAC_TOPMOST_LEVEL);
     } catch {}
     const needsShow = typeof bubble.isVisible !== "function" || !bubble.isVisible();
     if (needsShow && typeof bubble.showInactive === "function") {
@@ -2253,7 +2253,7 @@ function showPermissionBubble(permEntry) {
     // private space) that occludes the OS IME candidate window. They stay
     // cross-space visible via Electron and drop out of always-on-top while a text
     // field is focused (handleImeEditing) so CJK input popups can surface.
-    if (isMac && needsTextInput) bub.__clawdMacTextInputBubble = true;
+    if (isMac && needsTextInput) bub.__duckMacTextInputBubble = true;
 
     if (isWin) {
       bub.setAlwaysOnTop(true, WIN_TOPMOST_LEVEL);
@@ -2361,7 +2361,7 @@ function showPermissionBubble(permEntry) {
       bub.showInactive();
     }
     repositionDependentBubbles();
-    // macOS: defer full visibility restoration to avoid activating Clawd
+    // macOS: defer full visibility restoration to avoid activating Duck
     if (isMac) deferMacFloatingVisibility(ctx, bub);
     else ctx.reapplyMacVisibility();
 
@@ -2932,7 +2932,7 @@ function sendPermissionResponse(res, decisionOrBehavior, message, hookEventName 
   permLog(`response: ${responseBody}`);
   res.writeHead(200, {
     "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
+    [DUCK_SERVER_HEADER]: DUCK_SERVER_ID,
   });
   res.end(responseBody);
 }
@@ -2940,7 +2940,7 @@ function sendPermissionResponse(res, decisionOrBehavior, message, hookEventName 
 function sendNoDecisionResponse(res, reason = "", label = "permission") {
   if (!res || res.writableEnded || res.destroyed || res.headersSent) return false;
   if (reason) permLog(`${label} no-decision: ${reason}`);
-  res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
+  res.writeHead(204, { [DUCK_SERVER_HEADER]: DUCK_SERVER_ID });
   res.end();
   return true;
 }
@@ -2958,7 +2958,7 @@ function sendCodexPermissionResponse(res, decisionOrBehavior, message) {
   permLog(`codex response: ${responseBody}`);
   res.writeHead(200, {
     "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
+    [DUCK_SERVER_HEADER]: DUCK_SERVER_ID,
   });
   res.end(responseBody);
   return true;
@@ -3009,7 +3009,7 @@ function handleBubbleExpanded(event, expanded) {
   const senderWin = BrowserWindow.fromWebContents(event.sender);
   const perm = pendingPermissions.find((entry) => entry.bubble === senderWin);
   if (!perm) return false;
-  // Codex request_user_input is intentionally read-only in Clawd because the
+  // Codex request_user_input is intentionally read-only in Duck because the
   // answer must travel over Codex Desktop's private app-server connection.
   // Expanding a copy of the options implies that they are actionable here.
   // Treat any stale/old renderer expansion request as the card's real action:
@@ -3259,7 +3259,7 @@ function handleQueueSelect(event, selection) {
 // drop out of always-on-top so the OS IME candidate window (Chinese/Japanese/
 // Korean input popup) can surface — it floats above normal windows only, so any
 // always-on-top level (and the native SkyLight stationary path) occludes it.
-// We only flip the __clawdMacImeEditing flag here and let reapplyMacVisibility()
+// We only flip the __duckMacImeEditing flag here and let reapplyMacVisibility()
 // apply the actual editing-vs-normal window state, so both directions round-trip
 // through one place (topmost-runtime.js) instead of being hand-rolled twice.
 // The renderer clears the flag on element blur AND on window blur (e.g. Cmd-Tab
@@ -3271,9 +3271,9 @@ function handleImeEditing(event, editing) {
   perm.textInputActive = editing === true;
   syncPermissionShortcuts();
   if (!isMac) return;
-  const wasEditing = perm.bubble.__clawdMacImeEditing === true;
-  if (editing) perm.bubble.__clawdMacImeEditing = true;
-  else delete perm.bubble.__clawdMacImeEditing;
+  const wasEditing = perm.bubble.__duckMacImeEditing === true;
+  if (editing) perm.bubble.__duckMacImeEditing = true;
+  else delete perm.bubble.__duckMacImeEditing;
   if (typeof ctx.reapplyMacVisibility === "function") ctx.reapplyMacVisibility();
   if (!editing && wasEditing) {
     if (typeof ctx.repositionFloatingBubbles === "function") {
@@ -3296,8 +3296,8 @@ function handleImeEditing(event, editing) {
 // flag would stay stuck and keep the pet faded + click-through. Called from
 // the bubble's render-process-gone listener.
 function handleBubbleRendererGone(bubble) {
-  if (!bubble || !bubble.__clawdMacImeEditing) return;
-  delete bubble.__clawdMacImeEditing;
+  if (!bubble || !bubble.__duckMacImeEditing) return;
+  delete bubble.__duckMacImeEditing;
   if (typeof ctx.reapplyMacVisibility === "function") ctx.reapplyMacVisibility();
 }
 
@@ -3805,8 +3805,8 @@ function cleanup() {
   for (const perm of [...pendingPermissions]) {
     if (perm._delayTimer) clearTimeout(perm._delayTimer);
     if (perm.autoExpireTimer) clearTimeout(perm.autoExpireTimer);
-    if (isPassiveNotifyEntry(perm)) dismissPassiveNotify(perm, "Clawd is quitting");
-    else dismissInteractivePermissionWithoutDecision(perm, "Clawd is quitting");
+    if (isPassiveNotifyEntry(perm)) dismissPassiveNotify(perm, "Duck is quitting");
+    else dismissInteractivePermissionWithoutDecision(perm, "Duck is quitting");
   }
   destroyQueueWindow({ resetEpisode: true });
   permissionBubbleWindows.clear();

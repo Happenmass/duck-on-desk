@@ -4,41 +4,41 @@
 
 Most lifecycle events from agents (Claude Code hooks, Codex JSONL, Copilot hooks) map to the same animation states.
 
-Subagent events still map to the logical `juggling` state, but Clawd now chooses a tiered asset by live subagent count: 1 subagent uses `clawd-headphones-groove.svg`, while 2+ subagents use `clawd-working-juggling.svg`. The old Clawd conducting asset is retired; Calico and Cloudling still use their conducting animations for their 2+ subagent tier.
+Subagent events still map to the logical `juggling` state, but Duck now chooses a tiered asset by live subagent count: 1 subagent uses `duck-headphones-groove.svg`, while 2+ subagents use `duck-working-juggling.svg`. The old Duck conducting asset is retired; Calico and Cloudling still use their conducting animations for their 2+ subagent tier.
 
 The idle rows below describe the theme's stock behavior. Settings → Animation & Sound → Animations can instead choose any idle visual declared by the active theme as its persistent resting look. This changes only the visual shown while the logical state is `idle`: task, permission, completion, sleep, reaction, and roam states still take precedence and return to the selected look afterward. The choice is stored per theme and falls back to the theme default if the file disappears. Non-default idle visuals intentionally do not use cursor eye tracking or spin-to-dizzy.
 
-Clawd also has a conditional Outlaw idle easter egg: while both the Western cowboy hat and cigarette are selected, an eligible ordinary idle roll has a 50% chance to play `clawd-outlaw-bender.svg`, with a 30-minute cooldown. Hidden, low-power, mini, roaming, dragging, menu-open, and non-idle periods do not consume the roll or cooldown. The animation embeds its own hat and cigarette, so the two external accessory layers are hidden only for that file.
+Duck also has a conditional Outlaw idle easter egg: while both the Western cowboy hat and cigarette are selected, an eligible ordinary idle roll has a 50% chance to play `duck-outlaw-bender.svg`, with a 30-minute cooldown. Hidden, low-power, mini, roaming, dragging, menu-open, and non-idle periods do not consume the roll or cooldown. The animation embeds its own hat and cigarette, so the two external accessory layers are hidden only for that file.
 
-| Agent Event | State | Animation | Clawd | Calico | Cloudling |
+| Agent Event | State | Animation | Duck | Calico | Cloudling |
 |---|---|---|---|---|---|
-| Idle (no activity) | idle | Eye-tracking follow | <img src="../../assets/gif/clawd-idle.gif" width="160"> | <img src="../../assets/gif/calico-idle.gif" width="130"> | <img src="../../assets/gif/cloudling-idle.gif" width="140"> |
-| Idle (random) | idle | Reading / patrol | <img src="../../assets/gif/clawd-idle-reading.gif" width="160"> | | <img src="../../assets/gif/cloudling-idle-reading.gif" width="140"> |
-| UserPromptSubmit | thinking | Thought bubble + spark | <img src="../../assets/gif/clawd-thinking.gif" width="160"> | <img src="../../assets/gif/calico-thinking.gif" width="130"> | <img src="../../assets/gif/cloudling-thinking.gif" width="140"> |
-| PreToolUse / PostToolUse (1 session) | working (typing) | Typing | <img src="../../assets/gif/clawd-typing.gif" width="160"> | <img src="../../assets/gif/calico-typing.gif" width="130"> | <img src="../../assets/gif/cloudling-typing.gif" width="140"> |
-| PreToolUse / PostToolUse (2 sessions) | working (2-session tier) | Headphones groove | <img src="../../assets/gif/clawd-headphones-groove.gif" width="160"> | <img src="../../assets/gif/calico-juggling.gif" width="130"> | <img src="../../assets/gif/cloudling-juggling.gif" width="140"> |
-| PreToolUse (3+ sessions) | working (building) | Building | <img src="../../assets/gif/clawd-building.gif" width="160"> | <img src="../../assets/gif/calico-building.gif" width="130"> | <img src="../../assets/gif/cloudling-building.gif" width="140"> |
-| SubagentStart (1 live subagent) | juggling | Headphones groove | <img src="../../assets/gif/clawd-headphones-groove.gif" width="160"> | <img src="../../assets/gif/calico-juggling.gif" width="130"> | <img src="../../assets/gif/cloudling-juggling.gif" width="140"> |
-| SubagentStart (2+ live subagents) | juggling (2+ tier) | Three-ball juggling | <img src="../../assets/gif/clawd-juggling.gif" width="160"> | <img src="../../assets/gif/calico-conducting.gif" width="130"> | <img src="../../assets/gif/cloudling-conducting.gif" width="140"> |
-| PostToolUseFailure | error | Error | <img src="../../assets/gif/clawd-error.gif" width="160"> | <img src="../../assets/gif/calico-error.gif" width="130"> | <img src="../../assets/gif/cloudling-error.gif" width="140"> |
-| Stop / PostCompact | attention | Happy | <img src="../../assets/gif/clawd-happy.gif" width="160"> | <img src="../../assets/gif/calico-happy.gif" width="130"> | <img src="../../assets/gif/cloudling-attention.gif" width="140"> |
-| PermissionRequest | notification | Alert | <img src="../../assets/gif/clawd-notification.gif" width="160"> | <img src="../../assets/gif/calico-notification.gif" width="130"> | <img src="../../assets/gif/cloudling-notification.gif" width="140"> |
-| Codex `request_user_input` | notification | Alert + read-only question card | <img src="../../assets/gif/clawd-notification.gif" width="160"> | <img src="../../assets/gif/calico-notification.gif" width="130"> | <img src="../../assets/gif/cloudling-notification.gif" width="140"> |
-| PreCompact | sweeping | Sweeping | <img src="../../assets/gif/clawd-sweeping.gif" width="160"> | <img src="../../assets/gif/calico-sweeping.gif" width="130"> | <img src="../../assets/gif/cloudling-sweeping.gif" width="140"> |
-| WorktreeCreate | carrying | Carrying | <img src="../../assets/gif/clawd-carrying.gif" width="160"> | <img src="../../assets/gif/calico-carrying.gif" width="130"> | <img src="../../assets/gif/cloudling-carrying.gif" width="140"> |
-| 60s mouse idle | sleeping | Sleep | <img src="../../assets/gif/clawd-sleeping.gif" width="160"> | <img src="../../assets/gif/calico-sleeping.gif" width="130"> | <img src="../../assets/gif/cloudling-sleeping.gif" width="140"> |
+| Idle (no activity) | idle | Eye-tracking follow | <img src="../../assets/gif/duck-idle.gif" width="160"> | <img src="../../assets/gif/calico-idle.gif" width="130"> | <img src="../../assets/gif/cloudling-idle.gif" width="140"> |
+| Idle (random) | idle | Reading / patrol | <img src="../../assets/gif/duck-idle-reading.gif" width="160"> | | <img src="../../assets/gif/cloudling-idle-reading.gif" width="140"> |
+| UserPromptSubmit | thinking | Thought bubble + spark | <img src="../../assets/gif/duck-thinking.gif" width="160"> | <img src="../../assets/gif/calico-thinking.gif" width="130"> | <img src="../../assets/gif/cloudling-thinking.gif" width="140"> |
+| PreToolUse / PostToolUse (1 session) | working (typing) | Typing | <img src="../../assets/gif/duck-typing.gif" width="160"> | <img src="../../assets/gif/calico-typing.gif" width="130"> | <img src="../../assets/gif/cloudling-typing.gif" width="140"> |
+| PreToolUse / PostToolUse (2 sessions) | working (2-session tier) | Headphones groove | <img src="../../assets/gif/duck-headphones-groove.gif" width="160"> | <img src="../../assets/gif/calico-juggling.gif" width="130"> | <img src="../../assets/gif/cloudling-juggling.gif" width="140"> |
+| PreToolUse (3+ sessions) | working (building) | Building | <img src="../../assets/gif/duck-building.gif" width="160"> | <img src="../../assets/gif/calico-building.gif" width="130"> | <img src="../../assets/gif/cloudling-building.gif" width="140"> |
+| SubagentStart (1 live subagent) | juggling | Headphones groove | <img src="../../assets/gif/duck-headphones-groove.gif" width="160"> | <img src="../../assets/gif/calico-juggling.gif" width="130"> | <img src="../../assets/gif/cloudling-juggling.gif" width="140"> |
+| SubagentStart (2+ live subagents) | juggling (2+ tier) | Three-ball juggling | <img src="../../assets/gif/duck-juggling.gif" width="160"> | <img src="../../assets/gif/calico-conducting.gif" width="130"> | <img src="../../assets/gif/cloudling-conducting.gif" width="140"> |
+| PostToolUseFailure | error | Error | <img src="../../assets/gif/duck-error.gif" width="160"> | <img src="../../assets/gif/calico-error.gif" width="130"> | <img src="../../assets/gif/cloudling-error.gif" width="140"> |
+| Stop / PostCompact | attention | Happy | <img src="../../assets/gif/duck-happy.gif" width="160"> | <img src="../../assets/gif/calico-happy.gif" width="130"> | <img src="../../assets/gif/cloudling-attention.gif" width="140"> |
+| PermissionRequest | notification | Alert | <img src="../../assets/gif/duck-notification.gif" width="160"> | <img src="../../assets/gif/calico-notification.gif" width="130"> | <img src="../../assets/gif/cloudling-notification.gif" width="140"> |
+| Codex `request_user_input` | notification | Alert + read-only question card | <img src="../../assets/gif/duck-notification.gif" width="160"> | <img src="../../assets/gif/calico-notification.gif" width="130"> | <img src="../../assets/gif/cloudling-notification.gif" width="140"> |
+| PreCompact | sweeping | Sweeping | <img src="../../assets/gif/duck-sweeping.gif" width="160"> | <img src="../../assets/gif/calico-sweeping.gif" width="130"> | <img src="../../assets/gif/cloudling-sweeping.gif" width="140"> |
+| WorktreeCreate | carrying | Carrying | <img src="../../assets/gif/duck-carrying.gif" width="160"> | <img src="../../assets/gif/calico-carrying.gif" width="130"> | <img src="../../assets/gif/cloudling-carrying.gif" width="140"> |
+| 60s mouse idle | sleeping | Sleep | <img src="../../assets/gif/duck-sleeping.gif" width="160"> | <img src="../../assets/gif/calico-sleeping.gif" width="130"> | <img src="../../assets/gif/cloudling-sleeping.gif" width="140"> |
 | SessionEnd | remove session; idle if no live sessions | No sleep transition | | | |
 
 ## Kimi Code CLI (Kimi-CLI) Hook Events
 
-Kimi Code CLI (Kimi-CLI) now uses hook-only integration (`~/.kimi/config.toml`), and maps these 13 hook events to shared Clawd states:
+Kimi Code CLI (Kimi-CLI) now uses hook-only integration (`~/.kimi/config.toml`), and maps these 13 hook events to shared Duck states:
 
 | Kimi Hook Event | State |
 |---|---|
 | SessionStart | idle |
 | SessionEnd | remove session; idle if no live sessions |
 | UserPromptSubmit | thinking |
-| PreToolUse | working by default. Explicit payload approval signals (`permission_required` / `requires_approval` / `waiting_for_approval` / `is_permission_request`) always flip the permission animation immediately. Beyond that, the persistent mode decides how permission-gated tools are treated: **`suspect` (installer default)** arms a deferred heuristic — if no `PostToolUse` lands within the suspect window, Kimi is assumed blocked on its approval TUI and the cue fires; `explicit` reacts to explicit signals only (which current kimi-cli never emits — effectively no cues). The installer (`npm run install:kimi-hooks` and the auto-sync at startup) persists the mode as a `--permission-mode=<mode>` flag on the `command` field of `~/.kimi/config.toml`, preserving a previously chosen mode across re-syncs. Runtime env vars override the persisted flag: `CLAWD_KIMI_PERMISSION_MODE=explicit\|suspect` (beats the persisted argv flag; `CLAWD_KIMI_DISABLE_PRETOOL_PERMISSION` and `CLAWD_KIMI_PERMISSION_IMMEDIATE` are checked before it), `CLAWD_KIMI_PERMISSION_IMMEDIATE=1` forces immediate remap for gated tools, `CLAWD_KIMI_PERMISSION_SUSPECT=1` (legacy alias) enables suspect for the current process, `CLAWD_KIMI_PERMISSION_SUSPECT_MS=<ms>` tunes the suspect window, `CLAWD_KIMI_DISABLE_PRETOOL_PERMISSION=1` keeps explicit-only behavior regardless of other switches. Queued gated calls are tracked in a per-session gate ledger: each answered approval re-arms the cue for the next pending one. |
+| PreToolUse | working by default. Explicit payload approval signals (`permission_required` / `requires_approval` / `waiting_for_approval` / `is_permission_request`) always flip the permission animation immediately. Beyond that, the persistent mode decides how permission-gated tools are treated: **`suspect` (installer default)** arms a deferred heuristic — if no `PostToolUse` lands within the suspect window, Kimi is assumed blocked on its approval TUI and the cue fires; `explicit` reacts to explicit signals only (which current kimi-cli never emits — effectively no cues). The installer (`npm run install:kimi-hooks` and the auto-sync at startup) persists the mode as a `--permission-mode=<mode>` flag on the `command` field of `~/.kimi/config.toml`, preserving a previously chosen mode across re-syncs. Runtime env vars override the persisted flag: `DUCK_KIMI_PERMISSION_MODE=explicit\|suspect` (beats the persisted argv flag; `DUCK_KIMI_DISABLE_PRETOOL_PERMISSION` and `DUCK_KIMI_PERMISSION_IMMEDIATE` are checked before it), `DUCK_KIMI_PERMISSION_IMMEDIATE=1` forces immediate remap for gated tools, `DUCK_KIMI_PERMISSION_SUSPECT=1` (legacy alias) enables suspect for the current process, `DUCK_KIMI_PERMISSION_SUSPECT_MS=<ms>` tunes the suspect window, `DUCK_KIMI_DISABLE_PRETOOL_PERMISSION=1` keeps explicit-only behavior regardless of other switches. Queued gated calls are tracked in a per-session gate ledger: each answered approval re-arms the cue for the next pending one. |
 | PostToolUse | working |
 | PostToolUseFailure | error |
 | Stop | attention |
@@ -53,7 +53,7 @@ Kimi Code CLI (Kimi-CLI) now uses hook-only integration (`~/.kimi/config.toml`),
 
 Gemini CLI stays on hook-only integration, but two Gemini-native events are intentionally not forced into the shared Claude/Codex semantics:
 
-| Gemini Hook Event | Clawd behavior |
+| Gemini Hook Event | Duck behavior |
 |---|---|
 | AfterAgent | Recorded as `AfterAgent` and the session returns to `idle`. It does not remap to shared `Stop`, so Gemini turns no longer auto-show the `attention` / done animation. |
 | PreCompress | Recorded as `PreCompress` in session history, but does not switch the pet to `sweeping`. The current visible state (usually `thinking` or `working`) stays in place. |
@@ -72,13 +72,13 @@ ZCode uses config-file hooks under `~/.zcode/cli/config.json`:
 | Stop | attention |
 | PermissionRequest | notification (fail-closed path only) |
 
-`PermissionRequest` is a blocking permission approval since Phase 2: the hook waits on Clawd's local bubble or remote approval and answers a manual allow/deny via `hookSpecificOutput` on stdout. Permission automation deliberately defers for ZCode until its tool surface and session identity are audited. The `notification` mapping above only fires on the fail-closed path (missing/unknown tool name) or when Clawd is not running; a real decision never posts `/state`. ZCode does not provide a `SessionEnd` hook in this integration, so completion relies on `Stop` plus Clawd's normal process-liveness and stale-session cleanup. When Clawd yields no decision (timeout, disconnect, DND, bubbles off), the hook prints `{}` and ZCode's own permission flow takes over.
+`PermissionRequest` is a blocking permission approval since Phase 2: the hook waits on Duck's local bubble or remote approval and answers a manual allow/deny via `hookSpecificOutput` on stdout. Permission automation deliberately defers for ZCode until its tool surface and session identity are audited. The `notification` mapping above only fires on the fail-closed path (missing/unknown tool name) or when Duck is not running; a real decision never posts `/state`. ZCode does not provide a `SessionEnd` hook in this integration, so completion relies on `Stop` plus Duck's normal process-liveness and stale-session cleanup. When Duck yields no decision (timeout, disconnect, DND, bubbles off), the hook prints `{}` and ZCode's own permission flow takes over.
 
 ## Pi Extension Events
 
-Pi uses a global extension (`~/.pi/agent/extensions/clawd-on-desk`) and maps interactive-session lifecycle events to shared Clawd states:
+Pi uses a global extension (`~/.pi/agent/extensions/duck-on-desk`) and maps interactive-session lifecycle events to shared Duck states:
 
-| Pi Extension Event | Clawd Event | State |
+| Pi Extension Event | Duck Event | State |
 |---|---|---|
 | session_start | SessionStart | idle |
 | before_agent_start | UserPromptSubmit | thinking |
@@ -90,19 +90,19 @@ Pi uses a global extension (`~/.pi/agent/extensions/clawd-on-desk`) and maps int
 | session_compact | PostCompact | attention |
 | session_shutdown | SessionEnd | remove session; idle if no live sessions |
 
-Pi is state-only in Clawd: Clawd does not intercept permissions or add confirmation prompts, so Pi keeps its default YOLO execution behavior.
+Pi is state-only in Duck: Duck does not intercept permissions or add confirmation prompts, so Pi keeps its default YOLO execution behavior.
 
 ## Mini Mode
 
 Drag to the right screen edge (or right-click → "Mini Mode") to enter mini mode — half-body visible at screen edge, peeking out on hover.
 
-| Trigger | Mini Reaction | Clawd | Calico | Cloudling |
+| Trigger | Mini Reaction | Duck | Calico | Cloudling |
 |---|---|---|---|---|
-| Default | Breathing + blinking + eye tracking | <img src="../../assets/gif/clawd-mini-idle.gif" width="100"> | <img src="../../assets/gif/calico-mini-idle.gif" width="80"> | <img src="../../assets/gif/cloudling-mini-idle.gif" width="90"> |
-| Hover | Peek out + wave | <img src="../../assets/gif/clawd-mini-peek.gif" width="100"> | <img src="../../assets/gif/calico-mini-peek.gif" width="80"> | <img src="../../assets/gif/cloudling-mini-peek.gif" width="90"> |
-| Notification | Alert pop | <img src="../../assets/gif/clawd-mini-alert.gif" width="100"> | <img src="../../assets/gif/calico-mini-alert.gif" width="80"> | <img src="../../assets/gif/cloudling-mini-alert.gif" width="90"> |
-| Task complete | Happy celebration | <img src="../../assets/gif/clawd-mini-happy.gif" width="100"> | <img src="../../assets/gif/calico-mini-happy.gif" width="80"> | <img src="../../assets/gif/cloudling-mini-happy.gif" width="90"> |
+| Default | Breathing + blinking + eye tracking | <img src="../../assets/gif/duck-mini-idle.gif" width="100"> | <img src="../../assets/gif/calico-mini-idle.gif" width="80"> | <img src="../../assets/gif/cloudling-mini-idle.gif" width="90"> |
+| Hover | Peek out + wave | <img src="../../assets/gif/duck-mini-peek.gif" width="100"> | <img src="../../assets/gif/calico-mini-peek.gif" width="80"> | <img src="../../assets/gif/cloudling-mini-peek.gif" width="90"> |
+| Notification | Alert pop | <img src="../../assets/gif/duck-mini-alert.gif" width="100"> | <img src="../../assets/gif/calico-mini-alert.gif" width="80"> | <img src="../../assets/gif/cloudling-mini-alert.gif" width="90"> |
+| Task complete | Happy celebration | <img src="../../assets/gif/duck-mini-happy.gif" width="100"> | <img src="../../assets/gif/calico-mini-happy.gif" width="80"> | <img src="../../assets/gif/cloudling-mini-happy.gif" width="90"> |
 
 ## Click Reactions
 
-Easter eggs — try double-clicking, rapid 4-clicks, or poking Clawd repeatedly to discover hidden reactions.
+Easter eggs — try double-clicking, rapid 4-clicks, or poking Duck repeatedly to discover hidden reactions.

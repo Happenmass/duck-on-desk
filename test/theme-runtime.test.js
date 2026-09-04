@@ -35,21 +35,21 @@ function validThemeJson(overrides = {}) {
 }
 
 function makeFixture() {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-theme-runtime-"));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "duck-theme-runtime-"));
   tempDirs.push(tmp);
   const appDir = path.join(tmp, "src");
   const userData = path.join(tmp, "userData");
   fs.mkdirSync(appDir, { recursive: true });
   fs.mkdirSync(path.join(tmp, "assets", "svg"), { recursive: true });
   fs.mkdirSync(path.join(tmp, "assets", "sounds"), { recursive: true });
-  for (const id of ["clawd", "calico"]) {
+  for (const id of ["duck", "calico"]) {
     const themeDir = path.join(tmp, "themes", id);
     fs.mkdirSync(themeDir, { recursive: true });
     fs.writeFileSync(
       path.join(themeDir, "theme.json"),
       JSON.stringify(validThemeJson({
         name: id,
-        variants: id === "clawd"
+        variants: id === "duck"
           ? {
               default: { name: "Default" },
               cozy: {
@@ -169,13 +169,13 @@ describe("theme-runtime active ownership", () => {
     const { runtime } = createRuntime();
     themeLoader.bindActiveThemeRuntime(runtime);
 
-    const clawd = runtime.loadInitialTheme("clawd");
+    const duck = runtime.loadInitialTheme("duck");
     const loadedCalico = themeLoader.loadTheme("calico", { strict: true });
 
-    assert.strictEqual(clawd._id, "clawd");
+    assert.strictEqual(duck._id, "duck");
     assert.strictEqual(loadedCalico._id, "calico");
-    assert.strictEqual(runtime.getActiveTheme()._id, "clawd");
-    assert.strictEqual(themeLoader.getActiveTheme()._id, "clawd");
+    assert.strictEqual(runtime.getActiveTheme()._id, "duck");
+    assert.strictEqual(themeLoader.getActiveTheme()._id, "duck");
     assert.deepStrictEqual(themeLoader.getRendererConfig(), runtime.getRendererConfig());
 
     runtime.loadInitialTheme("calico");
@@ -185,7 +185,7 @@ describe("theme-runtime active ownership", () => {
   it("fails fast when legacy active config facades bind an owner without a theme context", () => {
     makeFixture();
     themeLoader.bindActiveThemeRuntime({
-      getActiveTheme: () => ({ _id: "clawd" }),
+      getActiveTheme: () => ({ _id: "duck" }),
     });
 
     assert.throws(
@@ -198,12 +198,12 @@ describe("theme-runtime active ownership", () => {
     makeFixture();
     const { runtime } = createRuntime();
 
-    const theme = runtime.loadInitialTheme("clawd", {
+    const theme = runtime.loadInitialTheme("duck", {
       variant: "cozy",
       overrides: { states: { idle: { file: "idle-custom.svg" } } },
     });
 
-    assert.strictEqual(theme._id, "clawd");
+    assert.strictEqual(theme._id, "duck");
     assert.strictEqual(theme._variantId, "cozy");
     assert.strictEqual(theme.timings.idleMouseMoveThreshold, 42);
     assert.deepStrictEqual(theme.states.idle, ["idle-custom.svg"]);
@@ -214,22 +214,22 @@ describe("theme-runtime active ownership", () => {
   it("dedups an already-active theme without running the reload protocol", () => {
     makeFixture();
     const { runtime, calls } = createRuntime();
-    runtime.loadInitialTheme("clawd");
+    runtime.loadInitialTheme("duck");
 
-    const result = runtime.activateTheme("clawd");
+    const result = runtime.activateTheme("duck");
 
-    assert.deepStrictEqual(result, { themeId: "clawd", variantId: "default" });
+    assert.deepStrictEqual(result, { themeId: "duck", variantId: "default" });
     assert.deepStrictEqual(calls, []);
   });
 
   it("explicitly reloads an already-active theme through the full reload protocol", () => {
     makeFixture();
     const { runtime, calls } = createRuntime();
-    runtime.loadInitialTheme("clawd");
+    runtime.loadInitialTheme("duck");
 
     const result = runtime.reloadActiveTheme();
 
-    assert.deepStrictEqual(result, { themeId: "clawd", variantId: "default" });
+    assert.deepStrictEqual(result, { themeId: "duck", variantId: "default" });
     assert.ok(calls.includes("state.cleanup"));
     assert.ok(calls.includes("state.refreshTheme"));
     assert.ok(calls.includes("syncRendererState"));
@@ -241,16 +241,16 @@ describe("theme-runtime active ownership", () => {
     const { runtime } = createRuntime();
     runtime.loadInitialTheme("calico");
 
-    const result = runtime.activateTheme("clawd", "missing");
+    const result = runtime.activateTheme("duck", "missing");
 
-    assert.deepStrictEqual(result, { themeId: "clawd", variantId: "default" });
+    assert.deepStrictEqual(result, { themeId: "duck", variantId: "default" });
     assert.strictEqual(runtime.getActiveTheme()._variantId, "default");
   });
 
   it("switches themes through the cleanup, refresh, and sequencer protocol", () => {
     makeFixture();
     const { runtime, calls } = createRuntime();
-    runtime.loadInitialTheme("clawd");
+    runtime.loadInitialTheme("duck");
 
     const result = runtime.activateTheme("calico");
 
@@ -279,9 +279,9 @@ describe("theme-runtime active ownership", () => {
   it("refreshes active theme hitbox overrides without running the full reload protocol", () => {
     makeFixture();
     const { runtime, calls } = createRuntime();
-    runtime.loadInitialTheme("clawd");
+    runtime.loadInitialTheme("duck");
 
-    const result = runtime.refreshActiveThemeHitboxOverrides("clawd", {
+    const result = runtime.refreshActiveThemeHitboxOverrides("duck", {
       hitbox: {
         wide: {
           "thinking.svg": true,
@@ -289,7 +289,7 @@ describe("theme-runtime active ownership", () => {
       },
     });
 
-    assert.deepStrictEqual(result, { themeId: "clawd", variantId: "default" });
+    assert.deepStrictEqual(result, { themeId: "duck", variantId: "default" });
     assert.deepStrictEqual(runtime.getActiveTheme().wideHitboxFiles, ["thinking.svg"]);
     assert.deepStrictEqual(calls, [
       "state.refreshTheme",
@@ -305,7 +305,7 @@ describe("theme-runtime active ownership", () => {
     const { runtime, calls } = createRuntime({
       computeFinalDragBounds: () => ({ x: 15, y: 25, width: 100, height: 100 }),
     });
-    runtime.loadInitialTheme("clawd");
+    runtime.loadInitialTheme("duck");
 
     runtime.activateTheme("calico");
 
@@ -325,7 +325,7 @@ describe("theme-runtime active ownership", () => {
         getMiniMode: () => true,
       },
     });
-    runtime.loadInitialTheme("clawd");
+    runtime.loadInitialTheme("duck");
 
     runtime.activateTheme("calico");
 
@@ -340,7 +340,7 @@ describe("theme-runtime active ownership", () => {
         getMiniTransitioning: () => true,
       },
     });
-    runtime.loadInitialTheme("clawd");
+    runtime.loadInitialTheme("duck");
 
     runtime.activateTheme("calico");
 
@@ -351,7 +351,7 @@ describe("theme-runtime active ownership", () => {
   it("cleanup tears down the sequencer and resets reload state", () => {
     makeFixture();
     const { runtime, calls } = createRuntime({ deferSequencerFinish: true });
-    runtime.loadInitialTheme("clawd");
+    runtime.loadInitialTheme("duck");
     runtime.activateTheme("calico");
 
     assert.strictEqual(runtime.isReloadInProgress(), true);

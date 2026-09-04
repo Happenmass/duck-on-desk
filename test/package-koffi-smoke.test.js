@@ -23,15 +23,15 @@ const {
 
 test("packaged smoke mode is opt-in and requires target/output", () => {
   assert.equal(parseSmokeArgs(["--unrelated"]), null);
-  assert.throws(() => parseSmokeArgs(["--clawd-package-smoke"]), /target.*required/i);
+  assert.throws(() => parseSmokeArgs(["--duck-package-smoke"]), /target.*required/i);
   assert.throws(
-    () => parseSmokeArgs(["--clawd-package-smoke", "--clawd-package-smoke-target=windows-x64"]),
+    () => parseSmokeArgs(["--duck-package-smoke", "--duck-package-smoke-target=windows-x64"]),
     /output.*required/i,
   );
   const parsed = parseSmokeArgs([
-    "--clawd-package-smoke",
-    "--clawd-package-smoke-target=windows-x64",
-    "--clawd-package-smoke-output=dist/smoke.json",
+    "--duck-package-smoke",
+    "--duck-package-smoke-target=windows-x64",
+    "--duck-package-smoke-output=dist/smoke.json",
   ]);
   assert.equal(parsed.targetId, "windows-x64");
   assert.equal(path.isAbsolute(parsed.outputPath), true);
@@ -71,7 +71,7 @@ test("packaged smoke runner parser rejects incomplete invocations", () => {
 });
 
 test("packaged smoke cleanup removes only its exact adjacent temporary profile", (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-smoke-cleanup-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-smoke-cleanup-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const output = path.join(root, "windows-x64.json");
   const profile = path.join(root, ".koffi-smoke-user-data-1234");

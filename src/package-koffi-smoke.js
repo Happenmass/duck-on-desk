@@ -4,9 +4,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { getReleaseTarget, resolveRuntimeTarget } = require("./native-package-target");
 
-const SMOKE_FLAG = "--clawd-package-smoke";
-const TARGET_PREFIX = "--clawd-package-smoke-target=";
-const OUTPUT_PREFIX = "--clawd-package-smoke-output=";
+const SMOKE_FLAG = "--duck-package-smoke";
+const TARGET_PREFIX = "--duck-package-smoke-target=";
+const OUTPUT_PREFIX = "--duck-package-smoke-output=";
 
 function comparablePath(value) {
   let resolved = path.resolve(String(value || ""));

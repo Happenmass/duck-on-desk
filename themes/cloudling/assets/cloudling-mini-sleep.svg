@@ -239,7 +239,7 @@ function renderFrame(seconds) {
   return s;
 }
 
-window.__clawdSetGlyphFlipCompensation = enabled => {
+window.__duckSetGlyphFlipCompensation = enabled => {
   const next = !!enabled;
   if (next === glyphFlipCompensation) return;
   glyphFlipCompensation = next;

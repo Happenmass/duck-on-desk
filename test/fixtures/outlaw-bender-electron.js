@@ -127,7 +127,7 @@ async function main() {
       const object = document.getElementById("bender");
       const timer = setTimeout(() => reject(new Error("bender re-entry timed out")), 5000);
       object.addEventListener("load", () => { clearTimeout(timer); resolve(true); }, { once: true });
-      object.data = "../../assets/svg/clawd-outlaw-bender.svg?_t=second";
+      object.data = "../../assets/svg/duck-outlaw-bender.svg?_t=second";
     })`);
     const restarted = await inspect(win, 0);
     assert(restarted.master === samples[0].master, "same-file re-entry did not restart at the first pose");

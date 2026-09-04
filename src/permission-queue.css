@@ -43,7 +43,7 @@ body { padding: 6px; }
 
 .queue-card {
   width: 100%;
-  height: calc(100vh / var(--clawd-text-zoom, 1) - 12px);
+  height: calc(100vh / var(--duck-text-zoom, 1) - 12px);
   overflow: hidden;
   border: 1px solid var(--card-border);
   border-radius: 16px;

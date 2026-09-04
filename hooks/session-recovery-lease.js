@@ -92,7 +92,7 @@ function getRecoveryDir(options = {}) {
   if (typeof options.recoveryDir === "string" && options.recoveryDir) {
     return path.resolve(options.recoveryDir);
   }
-  return path.join(os.homedir(), ".clawd", LEASE_DIR_NAME);
+  return path.join(os.homedir(), ".duck-on-desk", LEASE_DIR_NAME);
 }
 
 function ensureRecoveryDir(options = {}) {
@@ -445,7 +445,7 @@ function classifyBody(body, options = {}) {
 }
 
 function updateRecoveryLeaseFromStateBody(body, options = {}) {
-  if (options.remote === true || process.env.CLAWD_REMOTE || (body && body.wsl_distro)) {
+  if (options.remote === true || process.env.DUCK_REMOTE || (body && body.wsl_distro)) {
     return { written: false, reason: "remote-filesystem" };
   }
   const agentId = normalizeAgentId(body && body.agent_id);

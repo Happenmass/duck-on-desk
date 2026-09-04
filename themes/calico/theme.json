@@ -152,12 +152,12 @@
     }
   ],
   "displayHintMap": {
-    "clawd-working-building.svg": "calico-working-building.apng",
-    "clawd-working-typing.svg": "calico-working-typing.apng",
-    "clawd-headphones-groove.svg": "calico-working-juggling.apng",
-    "clawd-working-juggling.svg": "calico-working-juggling.apng",
-    "clawd-working-conducting.svg": "calico-working-conducting.apng",
-    "clawd-working-thinking.svg": "calico-thinking.apng"
+    "duck-working-building.svg": "calico-working-building.apng",
+    "duck-working-typing.svg": "calico-working-typing.apng",
+    "duck-headphones-groove.svg": "calico-working-juggling.apng",
+    "duck-working-juggling.svg": "calico-working-juggling.apng",
+    "duck-working-conducting.svg": "calico-working-conducting.apng",
+    "duck-working-thinking.svg": "calico-thinking.apng"
   },
   "timings": {
     "minDisplay": {

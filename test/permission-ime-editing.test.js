@@ -57,9 +57,9 @@ describe("macOS IME editing wiring", () => {
     const permission = read("permission.js");
     assert.match(permission, /on\("bubble-ime-editing"/);
     assert.match(permission, /function handleImeEditing/);
-    assert.match(permission, /__clawdMacImeEditing = true/);
+    assert.match(permission, /__duckMacImeEditing = true/);
     // Text-input bubbles opt out of the native SkyLight stationary treatment.
-    assert.match(permission, /__clawdMacTextInputBubble = true/);
+    assert.match(permission, /__duckMacTextInputBubble = true/);
   });
 });
 
@@ -118,11 +118,11 @@ describe("handleImeEditing (macOS)", () => {
     pendingPermissions.push({ bubble });
 
     handleImeEditing(eventFor(bubble), true);
-    assert.strictEqual(bubble.__clawdMacImeEditing, true);
+    assert.strictEqual(bubble.__duckMacImeEditing, true);
     assert.deepStrictEqual(calls, ["reapply"]);
 
     handleImeEditing(eventFor(bubble), false);
-    assert.strictEqual(bubble.__clawdMacImeEditing, undefined);
+    assert.strictEqual(bubble.__duckMacImeEditing, undefined);
     assert.deepStrictEqual(calls, ["reapply", "reapply", "reposition", "dodge"]);
 
     handleImeEditing(eventFor(bubble), false);
@@ -151,7 +151,7 @@ describe("handleImeEditing (macOS)", () => {
     pendingPermissions.push({ bubble });
 
     handleImeEditing(eventFor(bubble), true);
-    assert.strictEqual(bubble.__clawdMacImeEditing, undefined);
+    assert.strictEqual(bubble.__duckMacImeEditing, undefined);
     assert.strictEqual(reapply.length, 0);
   });
 });

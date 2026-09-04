@@ -1,6 +1,6 @@
 "use strict";
 
-const { canOfferLocalFolder, focusUnavailableReasonKey } = globalThis.ClawdSessionFocusUnavailable;
+const { canOfferLocalFolder, focusUnavailableReasonKey } = globalThis.DuckSessionFocusUnavailable;
 
 const HUD_MAX_EXPANDED_ROWS = 3;
 const HUD_MAX_EXPANDED_ROWS_LABELS = 5;

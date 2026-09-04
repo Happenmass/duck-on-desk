@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Clawd - Claude Code statusline adapter.
+// Duck - Claude Code statusline adapter.
 // Registered as `statusLine.command` in ~/.claude/settings.json by
 // hooks/install.js (registerClaudeStatusline). Claude Code pipes a JSON
 // telemetry payload (model, workspace, context_window, rate_limits, etc.)
@@ -42,14 +42,14 @@ function resolveChainSidecarPath(options = {}) {
   if (typeof options.chainSidecarPath === "string" && options.chainSidecarPath) {
     return options.chainSidecarPath;
   }
-  if (typeof env.CLAWD_STATUSLINE_SIDECAR_PATH === "string"
-    && env.CLAWD_STATUSLINE_SIDECAR_PATH) {
-    return env.CLAWD_STATUSLINE_SIDECAR_PATH;
+  if (typeof env.DUCK_STATUSLINE_SIDECAR_PATH === "string"
+    && env.DUCK_STATUSLINE_SIDECAR_PATH) {
+    return env.DUCK_STATUSLINE_SIDECAR_PATH;
   }
   const claudeConfigDir = typeof env.CLAUDE_CONFIG_DIR === "string" && env.CLAUDE_CONFIG_DIR
     ? env.CLAUDE_CONFIG_DIR
     : path.join(os.homedir(), ".claude");
-  return path.join(claudeConfigDir, "hooks", "clawd-statusline-chain.json");
+  return path.join(claudeConfigDir, "hooks", "duck-statusline-chain.json");
 }
 // A hung chained script must not accumulate orphan processes across
 // statusline refreshes: Claude Code refreshes sub-second and nothing
@@ -158,7 +158,7 @@ function postStateBody(body, deps, env) {
   const postState = deps.postState || postStateToRunningServer;
   return new Promise((resolve) => {
     // Status-line context forwarding is best-effort telemetry, not a blocking
-    // hook. Keep its small timeout even on CLAWD_REMOTE: the shared transport
+    // hook. Keep its small timeout even on DUCK_REMOTE: the shared transport
     // normally raises every remote request to 5s, which is appropriate for
     // state/permission hooks but lets a stale reverse tunnel accumulate
     // long-lived status-line processes. The payload itself is still stamped as
@@ -220,7 +220,7 @@ async function main(deps = {}) {
 
   let chainResult = null;
   try {
-    const remote = !!env.CLAWD_REMOTE;
+    const remote = !!env.DUCK_REMOTE;
     const body = buildStateBody(payload, contextUsage, {
       remote,
       host: remote && deps.readHostPrefix ? deps.readHostPrefix() : undefined,

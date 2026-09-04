@@ -28,11 +28,11 @@ function baseHitBox(theme, file) {
 
 describe("accessory-aware hit boxes", () => {
   it("does not add a transparent hat region when no accessory is worn", () => {
-    const theme = themeLoader.loadTheme("clawd", { strict: true });
+    const theme = themeLoader.loadTheme("duck", { strict: true });
     for (const file of [
-      "clawd-working-typing.svg",
-      "clawd-headphones-groove.svg",
-      "clawd-working-building.svg",
+      "duck-working-typing.svg",
+      "duck-headphones-groove.svg",
+      "duck-working-building.svg",
     ]) {
       const base = baseHitBox(theme, file);
       assert.strictEqual(
@@ -50,8 +50,8 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("keeps selected-accessory geometry size-aware without a one-size-fits-all envelope", () => {
-    const theme = themeLoader.loadTheme("clawd", { strict: true });
-    for (const file of ["clawd-working-typing.svg", "clawd-working-building.svg"]) {
+    const theme = themeLoader.loadTheme("duck", { strict: true });
+    for (const file of ["duck-working-typing.svg", "duck-working-building.svg"]) {
       const base = baseHitBox(theme, file);
       const tops = new Set();
       const heights = new Set();
@@ -76,11 +76,11 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("reaches the built-in safety helmet in the 3+ session building pose", () => {
-    const theme = themeLoader.loadTheme("clawd", { strict: true });
-    const box = theme.fileHitBoxes["clawd-working-building.svg"];
+    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const box = theme.fileHitBoxes["duck-working-building.svg"];
     const shared = theme.hitBoxes.default;
 
-    // assets/svg/clawd-working-building.svg puts the helmet at
+    // assets/svg/duck-working-building.svg puts the helmet at
     // translate(0.5 1) scale(0.7) over local y 0..10, so it rests at y 1..8;
     // body-bounce's translateY(-2px) at 30% plus body-squash's scale(0.95,1.05)
     // lift its top to about -1.8. This override exists for that, and it applies
@@ -103,7 +103,7 @@ describe("accessory-aware hit boxes", () => {
     // This is the structural half: a followTarget accessory rides the animation
     // and needs an envelope, a static one does not, and an envelope for a file
     // that no longer animates is dead weight nobody would notice.
-    for (const themeId of ["clawd", "cloudling"]) {
+    for (const themeId of ["duck", "cloudling"]) {
       const theme = themeLoader.loadTheme(themeId, { strict: true });
       const files = (theme.customization.accessories || {}).files || {};
       const animated = Object.keys(files).filter((file) => files[file] && files[file].followTarget);
@@ -141,22 +141,22 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("keeps headphones hatless without hiding its animated mouth accessory", () => {
-    const theme = themeLoader.loadTheme("clawd", { strict: true });
-    const file = "clawd-headphones-groove.svg";
+    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const file = "duck-headphones-groove.svg";
     const head = theme.customization.accessories.files[file];
     const mouth = theme.customization.mouthAccessories.files[file];
 
     assert.deepStrictEqual(head, { visibility: "hidden" });
-    assert.strictEqual(BUILTIN_ACCESSORY_MOTION_PADDING.clawd[file], undefined);
+    assert.strictEqual(BUILTIN_ACCESSORY_MOTION_PADDING.duck[file], undefined);
     assert.strictEqual(mouth.followTarget.id, "accessory-anchor");
-    assert.ok(BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING.clawd[file]);
+    assert.ok(BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING.duck[file]);
   });
 
   it("keeps a separate measured envelope for every visible animated mouth descriptor", () => {
-    const theme = themeLoader.loadTheme("clawd", { strict: true });
+    const theme = themeLoader.loadTheme("duck", { strict: true });
     const files = theme.customization.mouthAccessories.files;
     const animated = Object.keys(files).filter((file) => files[file] && files[file].followTarget);
-    const measured = BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING.clawd;
+    const measured = BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING.duck;
 
     assert.deepStrictEqual(animated.filter((file) => !measured[file]), []);
     assert.deepStrictEqual(Object.keys(measured).filter((file) => !animated.includes(file)), []);
@@ -164,8 +164,8 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("unions head and mouth hit geometry without reviving hidden slots", () => {
-    const theme = themeLoader.loadTheme("clawd", { strict: true });
-    const file = "clawd-working-typing.svg";
+    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const file = "duck-working-typing.svg";
     const base = baseHitBox(theme, file);
     const head = resolvePetAccessoryPayload("wizard-hat", theme);
     const mouth = buildPetMouthAccessoryPayload("cigarette", theme);
@@ -180,7 +180,7 @@ describe("accessory-aware hit boxes", () => {
       assert.ok(both.y + both.h + EPSILON >= box.y + box.h);
     }
 
-    const hiddenFile = "clawd-working-building.svg";
+    const hiddenFile = "duck-working-building.svg";
     const hiddenBase = baseHitBox(theme, hiddenFile);
     assert.deepStrictEqual(
       resolveAccessoryAwareHitBox(
@@ -195,8 +195,8 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("keeps hidden accessories from changing the animation hitbox", () => {
-    const theme = themeLoader.loadTheme("clawd", { strict: true });
-    const file = "clawd-collapse-sleep.svg";
+    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const file = "duck-collapse-sleep.svg";
     const base = baseHitBox(theme, file);
     assert.strictEqual(
       resolveAccessoryAwareHitBox(

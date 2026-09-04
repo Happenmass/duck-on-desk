@@ -232,5 +232,5 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = settingsSizeSliderExports;
 }
 if (typeof globalThis !== "undefined") {
-  globalThis.ClawdSettingsSizeSlider = settingsSizeSliderExports;
+  globalThis.DuckSettingsSizeSlider = settingsSizeSliderExports;
 }

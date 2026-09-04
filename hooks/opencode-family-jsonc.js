@@ -60,7 +60,7 @@ function entryIsExactManagedPlugin(entry, pluginDir) {
   return typeof entry === "string" && normalizePluginEntry(entry) === normalizePluginEntry(pluginDir);
 }
 
-// Ownership rule shared by register AND unregister: Clawd owns the exact
+// Ownership rule shared by register AND unregister: Duck owns the exact
 // managed path plus any ABSOLUTE entry whose directory basename matches the
 // plugin dir (a stale install at another location). Register updates such
 // entries in place; unregister must remove them too — an asymmetric sweep
@@ -310,7 +310,7 @@ function registerJsonc({ cfg, agentId, configPath, pluginDir, options = {} }) {
   }
 
   if (!options.silent) {
-    console.log(`Clawd ${agentId} plugin → ${editedPath}`);
+    console.log(`Duck ${agentId} plugin → ${editedPath}`);
     if (created) console.log(`  Created ${cfg.configFileName}`);
     if (added) console.log(`  Registered: ${pluginDir}`);
     if (skipped) console.log(`  Already registered: ${pluginDir}`);
@@ -343,7 +343,7 @@ function unregisterJsonc({ cfg, agentId, configPath, pluginDir, options = {} }) 
   }
 
   const changed = removed > 0;
-  if (!options.silent) console.log(`Clawd ${agentId} plugin entries removed: ${removed}`);
+  if (!options.silent) console.log(`Duck ${agentId} plugin entries removed: ${removed}`);
   const result = { removed, changed, skipped: !changed, configPath, pluginDir };
   if (options.backup === true) {
     result.backupPath = backupPaths[0] || null;

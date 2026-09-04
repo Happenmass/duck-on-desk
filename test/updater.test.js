@@ -211,7 +211,7 @@ describe("updater visual flow", () => {
       },
       applyState: (state, svgOverride) => applied.push({ state, svgOverride }),
       resolveDisplayState: () => overlayState === "checking" ? "thinking" : (overlayState ? "notification" : "idle"),
-      getSvgOverride: (state) => state === "thinking" ? "clawd-working-debugger.svg" : null,
+      getSvgOverride: (state) => state === "thinking" ? "duck-working-debugger.svg" : null,
       showUpdateBubble: (payload) => bubbles.push(payload),
     });
     const updater = initUpdater(ctx, makeDeps({
@@ -234,11 +234,11 @@ describe("updater visual flow", () => {
     assert.deepStrictEqual(visualStates, ["checking", null]);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "up-to-date"]);
     assert.ok(
-      applied.some((entry) => entry.state === "thinking" && entry.svgOverride === "clawd-working-debugger.svg")
+      applied.some((entry) => entry.state === "thinking" && entry.svgOverride === "duck-working-debugger.svg")
     );
   });
 
-  it("does not assume a clawd-specific checking override when the current theme has none", async () => {
+  it("does not assume a duck-specific checking override when the current theme has none", async () => {
     const visualStates = [];
     const bubbles = [];
     const applied = [];
@@ -294,7 +294,7 @@ describe("updater visual flow", () => {
         if (overlayState === "available") return "notification";
         return overlayState || "idle";
       },
-      getSvgOverride: (state) => state === "thinking" ? "clawd-working-debugger.svg" : null,
+      getSvgOverride: (state) => state === "thinking" ? "duck-working-debugger.svg" : null,
       showUpdateBubble: async (payload) => {
         bubbles.push(payload);
         if (payload.mode === "available") return "later";
@@ -330,7 +330,7 @@ describe("updater visual flow", () => {
 
     assert.deepStrictEqual(visualStates, ["checking", "available", null]);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available"]);
-    assert.ok(applied.some((entry) => entry.state === "thinking" && entry.svgOverride === "clawd-working-debugger.svg"));
+    assert.ok(applied.some((entry) => entry.state === "thinking" && entry.svgOverride === "duck-working-debugger.svg"));
     assert.ok(applied.some((entry) => entry.state === "notification" && entry.svgOverride == null));
   });
 
@@ -504,7 +504,7 @@ describe("updater visual flow", () => {
     assert.deepStrictEqual(visualStates, ["checking", null]);
     assert.ok(appliedStates.includes("error"));
     assert.deepStrictEqual(requests, [
-      "api.github.com/repos/rullerzhou-afk/clawd-on-desk/releases/latest",
+      "api.github.com/repos/rullerzhou-afk/duck-on-desk/releases/latest",
     ]);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "error"]);
     assert.match(bubbles[1].detail, /Code: NETWORK_OFFLINE/);
@@ -533,7 +533,7 @@ describe("updater visual flow", () => {
         {
           statusCode: 302,
           headers: {
-            location: "https://github.com/rullerzhou-afk/clawd-on-desk/releases/tag/v0.5.10",
+            location: "https://github.com/rullerzhou-afk/duck-on-desk/releases/tag/v0.5.10",
           },
         },
       ], requests),
@@ -542,8 +542,8 @@ describe("updater visual flow", () => {
     await updater.checkForUpdates(true);
 
     assert.deepStrictEqual(requests, [
-      "api.github.com/repos/rullerzhou-afk/clawd-on-desk/releases/latest",
-      "github.com/rullerzhou-afk/clawd-on-desk/releases/latest",
+      "api.github.com/repos/rullerzhou-afk/duck-on-desk/releases/latest",
+      "github.com/rullerzhou-afk/duck-on-desk/releases/latest",
     ]);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "up-to-date"]);
   });
@@ -581,7 +581,7 @@ describe("updater visual flow", () => {
         {
           statusCode: 302,
           headers: {
-            location: "https://github.com/rullerzhou-afk/clawd-on-desk/releases/tag/v0.5.11",
+            location: "https://github.com/rullerzhou-afk/duck-on-desk/releases/tag/v0.5.11",
           },
         },
       ], requests),
@@ -593,8 +593,8 @@ describe("updater visual flow", () => {
 
     assert.strictEqual(updateChecks, 1);
     assert.deepStrictEqual(requests, [
-      "api.github.com/repos/rullerzhou-afk/clawd-on-desk/releases/latest",
-      "github.com/rullerzhou-afk/clawd-on-desk/releases/latest",
+      "api.github.com/repos/rullerzhou-afk/duck-on-desk/releases/latest",
+      "github.com/rullerzhou-afk/duck-on-desk/releases/latest",
     ]);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available"]);
   });
@@ -623,8 +623,8 @@ describe("updater visual flow", () => {
     await updater.checkForUpdates(true);
 
     assert.deepStrictEqual(requests, [
-      "api.github.com/repos/rullerzhou-afk/clawd-on-desk/releases/latest",
-      "github.com/rullerzhou-afk/clawd-on-desk/releases/latest",
+      "api.github.com/repos/rullerzhou-afk/duck-on-desk/releases/latest",
+      "github.com/rullerzhou-afk/duck-on-desk/releases/latest",
     ]);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "error"]);
     assert.match(bubbles[1].detail, /GitHub releases redirect returned 200/);
@@ -645,7 +645,7 @@ describe("updater visual flow", () => {
     await updater.checkForUpdates(true);
 
     assert.deepStrictEqual(requests, [
-      "api.github.com/repos/rullerzhou-afk/clawd-on-desk/releases/latest",
+      "api.github.com/repos/rullerzhou-afk/duck-on-desk/releases/latest",
     ]);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "error"]);
     assert.match(bubbles[1].detail, /Code: UNKNOWN/);
@@ -812,11 +812,11 @@ describe("updater visual flow", () => {
         tag_name: "v0.6.1",
         assets: [
           {
-            name: "Clawd-on-Desk-Setup-0.6.1-x64.exe",
+            name: "Duck-on-Desk-Setup-0.6.1-x64.exe",
             browser_download_url: "https://example.invalid/x64.exe",
           },
           {
-            name: "Clawd-on-Desk-Setup-0.6.1-arm64.exe",
+            name: "Duck-on-Desk-Setup-0.6.1-arm64.exe",
             browser_download_url: "https://example.invalid/arm64.exe",
           },
         ],
@@ -830,7 +830,7 @@ describe("updater visual flow", () => {
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "available", "ready"]);
     assert.match(bubbles[1].title, /ARM64/);
     assert.match(bubbles[1].message, /native Windows ARM64 installer/i);
-    assert.match(bubbles[1].message, /Clawd v0\.6\.1/);
+    assert.match(bubbles[1].message, /Duck v0\.6\.1/);
     assert.doesNotMatch(bubbles[1].message, /vv0\.6\.1/);
     assert.strictEqual(openedUrls[0], "https://example.invalid/arm64.exe");
     assert.strictEqual(autoUpdateChecks, 0);
@@ -860,7 +860,7 @@ describe("updater visual flow", () => {
       httpsGetImpl: makeLatestReleaseResponse({
         tag_name: "v0.6.1",
         assets: [{
-          name: "Clawd-on-Desk-Setup-0.6.1-arm64.exe",
+          name: "Duck-on-Desk-Setup-0.6.1-arm64.exe",
           browser_download_url: "https://example.invalid/arm64.exe",
         }],
       }),
@@ -896,7 +896,7 @@ describe("updater visual flow", () => {
         tag_name: "v0.6.1",
         assets: [
           {
-            name: "Clawd-on-Desk-Setup-0.6.1-x64.exe",
+            name: "Duck-on-Desk-Setup-0.6.1-x64.exe",
             browser_download_url: "https://example.invalid/x64.exe",
           },
         ],
@@ -942,7 +942,7 @@ describe("updater visual flow", () => {
         {
           statusCode: 302,
           headers: {
-            location: "https://github.com/rullerzhou-afk/clawd-on-desk/releases/tag/v0.6.1",
+            location: "https://github.com/rullerzhou-afk/duck-on-desk/releases/tag/v0.6.1",
           },
         },
       ], requests),
@@ -951,8 +951,8 @@ describe("updater visual flow", () => {
     await updater.checkForUpdates(true);
 
     assert.deepStrictEqual(requests, [
-      "api.github.com/repos/rullerzhou-afk/clawd-on-desk/releases/latest",
-      "github.com/rullerzhou-afk/clawd-on-desk/releases/latest",
+      "api.github.com/repos/rullerzhou-afk/duck-on-desk/releases/latest",
+      "github.com/rullerzhou-afk/duck-on-desk/releases/latest",
     ]);
     assert.deepStrictEqual(openedUrls, []);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking", "up-to-date"]);
@@ -1004,7 +1004,7 @@ describe("updater visual flow", () => {
         {
           statusCode: 302,
           headers: {
-            location: "https://github.com/rullerzhou-afk/clawd-on-desk/releases/tag/v0.6.1",
+            location: "https://github.com/rullerzhou-afk/duck-on-desk/releases/tag/v0.6.1",
           },
         },
       ], requests),
@@ -1014,8 +1014,8 @@ describe("updater visual flow", () => {
 
     assert.strictEqual(updateChecks, 1);
     assert.deepStrictEqual(requests, [
-      "api.github.com/repos/rullerzhou-afk/clawd-on-desk/releases/latest",
-      "github.com/rullerzhou-afk/clawd-on-desk/releases/latest",
+      "api.github.com/repos/rullerzhou-afk/duck-on-desk/releases/latest",
+      "github.com/rullerzhou-afk/duck-on-desk/releases/latest",
     ]);
     assert.deepStrictEqual(openedUrls, []);
     assert.deepStrictEqual(bubbles.map((bubble) => bubble.mode), ["checking"]);
@@ -1043,7 +1043,7 @@ describe("updater visual flow", () => {
         tag_name: "v0.6.1",
         assets: [
           {
-            name: "Clawd-on-Desk-Setup-0.6.1-arm64.exe",
+            name: "Duck-on-Desk-Setup-0.6.1-arm64.exe",
             browser_download_url: "https://example.invalid/arm64.exe",
           },
         ],
@@ -1091,7 +1091,7 @@ describe("updater visual flow", () => {
       tag_name: "v0.6.1",
       assets: [
         {
-          name: "Clawd-on-Desk-Setup-0.6.1-arm64.exe",
+          name: "Duck-on-Desk-Setup-0.6.1-arm64.exe",
           browser_download_url: "https://example.invalid/arm64.exe",
         },
       ],
@@ -1104,7 +1104,7 @@ describe("updater visual flow", () => {
       tag_name: "v0.6.1",
       assets: [
         {
-          name: "Clawd-on-Desk-Setup-0.6.1-arm64.exe",
+          name: "Duck-on-Desk-Setup-0.6.1-arm64.exe",
           browser_download_url: "https://example.invalid/arm64.exe",
         },
       ],
@@ -1163,7 +1163,7 @@ describe("updater visual flow", () => {
       tag_name: "v0.6.1",
       assets: [
         {
-          name: "Clawd-on-Desk-Setup-0.6.1-arm64.exe",
+          name: "Duck-on-Desk-Setup-0.6.1-arm64.exe",
           browser_download_url: "https://example.invalid/arm64.exe",
         },
       ],
@@ -1184,7 +1184,7 @@ describe("updater visual flow", () => {
       tag_name: "v0.6.1",
       assets: [
         {
-          name: "Clawd-on-Desk-Setup-0.6.1-x64.exe",
+          name: "Duck-on-Desk-Setup-0.6.1-x64.exe",
           browser_download_url: "https://example.invalid/x64.exe",
         },
       ],
@@ -1425,7 +1425,7 @@ describe("updater visual flow", () => {
     assert.strictEqual(quitAndInstallCalls, 0);
     assert.strictEqual(autoUpdater.autoInstallOnAppQuit, true);
     assert.strictEqual(updater.getUpdateCheckSnapshot().state, "idle");
-    assert.match(bubbles[0].message, /quit and reopen Clawd/i);
+    assert.match(bubbles[0].message, /quit and reopen Duck/i);
   });
 
   it("shows a visible error instead of up-to-date when macOS staging fails with 404", async () => {
@@ -1590,9 +1590,9 @@ describe("updater Windows ARM64 migration helpers", () => {
     const { findWindowsArm64InstallerAsset } = initUpdater.__test;
     const asset = findWindowsArm64InstallerAsset({
       assets: [
-        { name: "Clawd-on-Desk-Setup-0.6.1-arm64.exe.blockmap", browser_download_url: "blockmap" },
-        { name: "Clawd-on-Desk-Setup-0.6.1-x64.exe", browser_download_url: "x64" },
-        { name: "Clawd-on-Desk-Setup-0.6.1-arm64.exe", browser_download_url: "arm64" },
+        { name: "Duck-on-Desk-Setup-0.6.1-arm64.exe.blockmap", browser_download_url: "blockmap" },
+        { name: "Duck-on-Desk-Setup-0.6.1-x64.exe", browser_download_url: "x64" },
+        { name: "Duck-on-Desk-Setup-0.6.1-arm64.exe", browser_download_url: "arm64" },
       ],
     });
 

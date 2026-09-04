@@ -6,18 +6,18 @@
 
 1. OpenAI 공식 문서 기준으로 Codex가 WSL에서 동작하는가.
 2. Codex hooks와 `.codex` 상태가 Windows와 WSL 사이에서 자동으로 공유되는가.
-3. Clawd가 현재 WSL의 별도 Linux home 안에 있는 Codex 세션을 자동으로 감지할 수 있는가.
+3. Duck가 현재 WSL의 별도 Linux home 안에 있는 Codex 세션을 자동으로 감지할 수 있는가.
 
-이 세 질문의 답은 서로 다릅니다. 대부분의 혼선은 OpenAI의 공식 지원 범위와 Clawd의 현재 구현 범위를 같은 이야기로 받아들이면서 생깁니다.
+이 세 질문의 답은 서로 다릅니다. 대부분의 혼선은 OpenAI의 공식 지원 범위와 Duck의 현재 구현 범위를 같은 이야기로 받아들이면서 생깁니다.
 
 ## TL;DR
 
 - OpenAI는 Codex의 WSL2 실행을 공식적으로 안내합니다.
 - 현재 Codex CLI는 hooks를 `[features].hooks = true` feature flag로 활성화합니다. 이전 버전과 일부 문서에서 쓰던 `[features].codex_hooks` 키는 deprecated 되었습니다.
-- Clawd는 이제 Codex official hooks를 기본 경로로 사용하고, `~/.codex/sessions` JSONL 폴링을 fallback으로 유지합니다.
+- Duck는 이제 Codex official hooks를 기본 경로로 사용하고, `~/.codex/sessions` JSONL 폴링을 fallback으로 유지합니다.
 - Windows native Codex hooks는 2026-04-26에 로컬에서 검증되었습니다. Windows hook command는 PowerShell의 `&` 호출 연산자를 사용해야 합니다.
-- Clawd가 Windows에서 실행되고 Codex가 기본 Linux home을 쓰는 WSL 안에서 실행되면, Clawd는 `/home/<user>/.codex/sessions`를 자동으로 읽지 못합니다.
-- 따라서 "Codex가 WSL을 지원하지 않는다"는 표현은 부정확합니다. 더 정확한 표현은 "Codex는 공식적으로 WSL2를 지원하지만, Windows에서 실행되는 Clawd는 WSL의 별도 Linux `~/.codex`를 자동으로 수정하거나 폴링하지 않는다. WSL Codex 세션을 보내려면 WSL 안에서 remote mode hooks를 설치하거나 `CODEX_HOME`을 공유해야 한다"입니다.
+- Duck가 Windows에서 실행되고 Codex가 기본 Linux home을 쓰는 WSL 안에서 실행되면, Duck는 `/home/<user>/.codex/sessions`를 자동으로 읽지 못합니다.
+- 따라서 "Codex가 WSL을 지원하지 않는다"는 표현은 부정확합니다. 더 정확한 표현은 "Codex는 공식적으로 WSL2를 지원하지만, Windows에서 실행되는 Duck는 WSL의 별도 Linux `~/.codex`를 자동으로 수정하거나 폴링하지 않는다. WSL Codex 세션을 보내려면 WSL 안에서 remote mode hooks를 설치하거나 `CODEX_HOME`을 공유해야 한다"입니다.
 
 ## 1. OpenAI 공식 현황
 
@@ -66,7 +66,7 @@ hooks = true
 
 - <https://developers.openai.com/codex/hooks>
 
-Clawd의 Codex installer는 `~/.codex/hooks.json`를 쓰고, 사용자가 hooks를 명시적으로 끄지 않은 경우 이 feature flag를 켭니다. deprecated된 `codex_hooks` 키가 있으면 `hooks`로 마이그레이션하되, 사용자가 명시한 false 값은 유지합니다.
+Duck의 Codex installer는 `~/.codex/hooks.json`를 쓰고, 사용자가 hooks를 명시적으로 끄지 않은 경우 이 feature flag를 켭니다. deprecated된 `codex_hooks` 키가 있으면 `hooks`로 마이그레이션하되, 사용자가 명시한 false 값은 유지합니다.
 
 ### WSL과 Windows는 기본적으로 `.codex`를 공유하지 않습니다
 
@@ -88,9 +88,9 @@ export CODEX_HOME=/mnt/c/Users/<windows-user>/.codex
 
 즉, 별도 설정이 없다면 WSL 안의 Codex는 Linux home 아래에 로그와 세션 데이터를 쓴다는 뜻입니다.
 
-## 2. Clawd의 현재 구현
+## 2. Duck의 현재 구현
 
-### Clawd는 official hooks를 먼저 쓰고 JSONL 폴링을 fallback으로 유지합니다
+### Duck는 official hooks를 먼저 쓰고 JSONL 폴링을 fallback으로 유지합니다
 
 이 저장소에서 Codex 연동 설정은 [`agents/codex.js`](../../agents/codex.js)에 있습니다.
 
@@ -102,29 +102,29 @@ Official hook 구현은 [`hooks/codex-hook.js`](../../hooks/codex-hook.js)에 �
 런타임에서는:
 
 - official hooks가 SessionStart, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, Stop을 처리합니다.
-- PermissionRequest는 기본적으로 intercept 모드입니다. Clawd가 실제 Allow/Deny bubble을 띄웁니다. 사용자는 Codex permission mode를 native로 전환해 Codex AutoReview/native prompt가 계속 처리하게 할 수 있습니다.
+- PermissionRequest는 기본적으로 intercept 모드입니다. Duck가 실제 Allow/Deny bubble을 띄웁니다. 사용자는 Codex permission mode를 native로 전환해 Codex AutoReview/native prompt가 계속 처리하게 할 수 있습니다.
 - JSONL 폴링은 hooks가 꺼진 세션과 web search, context compaction, turn aborted처럼 official hooks가 다루지 않는 이벤트를 위해 계속 켜 둡니다.
 
 Fallback monitor에서 `~`는 현재 실행 중인 프로세스의 `os.homedir()`로 확장됩니다. 즉:
 
-- Clawd가 Windows에서 실행되면 `C:\Users\<user>\.codex\sessions`
-- Clawd가 Linux에서 실행되면 `/home/<user>/.codex/sessions`
+- Duck가 Windows에서 실행되면 `C:\Users\<user>\.codex\sessions`
+- Duck가 Linux에서 실행되면 `/home/<user>/.codex/sessions`
 
 를 읽습니다.
 
-그래서 Windows 호스트에서 실행 중인 Clawd는 WSL Linux home 안의 `/home/<user>/.codex/sessions`를 자동으로 읽지 못합니다.
+그래서 Windows 호스트에서 실행 중인 Duck는 WSL Linux home 안의 `/home/<user>/.codex/sessions`를 자동으로 읽지 못합니다.
 
-### 현재 Clawd에는 WSL home에 자동 설치하는 경로가 없습니다
+### 현재 Duck에는 WSL home에 자동 설치하는 경로가 없습니다
 
 현재 메인 프로세스는 호스트 OS의 home에 Codex official hooks를 동기화하고 fallback monitor를 시작합니다. 사용자 설정 가능한 WSL sessionDir도 없고, 기본적으로 `\\wsl$\...`를 스캔하지 않으며, Windows 앱이 `/home/<user>/.codex/hooks.json`를 자동으로 수정하지도 않습니다.
 
 현재 상태를 정리하면:
 
-- `Windows native Codex + Windows Clawd`: official hooks로 기본 동작하며 JSONL fallback도 유지
-- `WSL2 Codex + Windows Clawd + Linux 기본 home`: 기본값으로는 동작하지 않음. WSL 안에서 remote mode hooks를 설치하거나 remote fallback monitor를 실행해야 함
+- `Windows native Codex + Windows Duck`: official hooks로 기본 동작하며 JSONL fallback도 유지
+- `WSL2 Codex + Windows Duck + Linux 기본 home`: 기본값으로는 동작하지 않음. WSL 안에서 remote mode hooks를 설치하거나 remote fallback monitor를 실행해야 함
 - `WSL2 Codex + Windows .codex 공유`: OpenAI의 `CODEX_HOME` 문서를 기준으로 보면 설정과 session 상태를 공유할 수 있음
 
-마지막 항목은 OpenAI의 공유 방식과 Clawd의 현재 hook 및 fallback 폴링 동작을 조합한 추론입니다.
+마지막 항목은 OpenAI의 공유 방식과 Duck의 현재 hook 및 fallback 폴링 동작을 조합한 추론입니다.
 
 ### 원격/우회 패턴은 이미 있지만 WSL 기본 지원과는 다릅니다
 
@@ -137,7 +137,7 @@ identity를 사용합니다. [`scripts/remote-deploy.sh`](../../scripts/remote-d
 유지합니다. 반대편 환경에서 확인된 `<CODEX_HOME>/sessions`를 폴링하며,
 Remote SSH에서는 같은 identity-pinned layout 안에서만 실행됩니다.
 
-현재 이 스크립트는 문서상 원격 SSH 시나리오에 맞춰 설명되어 있습니다. 즉, "로그는 다른 쪽에 있고 상태만 돌려보낸다"는 패턴은 이미 있지만, 이것이 곧 "Clawd가 WSL 안의 Codex를 기본값으로 자동 감지한다"는 뜻은 아닙니다.
+현재 이 스크립트는 문서상 원격 SSH 시나리오에 맞춰 설명되어 있습니다. 즉, "로그는 다른 쪽에 있고 상태만 돌려보낸다"는 패턴은 이미 있지만, 이것이 곧 "Duck가 WSL 안의 Codex를 기본값으로 자동 감지한다"는 뜻은 아닙니다.
 
 ## 3. 왜 현재 문서가 오해를 만들기 쉬운가
 
@@ -178,32 +178,32 @@ Remote SSH에서는 같은 identity-pinned layout 안에서만 실행됩니다.
 
 1. OpenAI는 Codex의 WSL2 실행을 공식적으로 지원합니다.
 2. 현재 Codex CLI는 `hooks` feature flag를 사용하며, `codex_hooks`는 deprecated 되었습니다.
-3. Clawd는 Codex official hooks를 기본 경로로 사용하고 JSONL 폴링을 fallback으로 유지합니다.
-4. Clawd는 현재 호스트 머신의 `.codex` home에 hooks를 동기화하고 fallback logs를 폴링합니다.
-5. 따라서 Codex가 WSL2 안에서 Linux 기본 `~/.codex`를 사용하면 Windows Clawd는 그 세션을 기본값으로 자동 감지하지 못합니다.
+3. Duck는 Codex official hooks를 기본 경로로 사용하고 JSONL 폴링을 fallback으로 유지합니다.
+4. Duck는 현재 호스트 머신의 `.codex` home에 hooks를 동기화하고 fallback logs를 폴링합니다.
+5. 따라서 Codex가 WSL2 안에서 Linux 기본 `~/.codex`를 사용하면 Windows Duck는 그 세션을 기본값으로 자동 감지하지 못합니다.
 6. 현재 문서의 문제는 "WSL이 전혀 안 적혀 있다"가 아니라 "`Codex + WSL` 경계를 충분히 명시하지 않았다"에 가깝습니다.
 
 ## 5. 외부 설명용 권장 문구
 
 이슈나 사용자 답변에 넣을 한 문단이 필요하다면 아래 표현이 가장 안전합니다.
 
-> OpenAI 공식 문서 기준으로 Codex는 WSL2를 지원합니다. Clawd는 Codex official hooks로 통합하며 JSONL 폴링을 fallback으로 유지합니다. Clawd가 Windows에서 실행되고 Codex가 Linux 기본 home을 쓰는 WSL 안에서 실행되면, Clawd는 그 WSL `~/.codex`를 자동으로 수정하거나 폴링하지 않습니다. WSL 안에서 remote mode hooks를 설치하거나, `CODEX_HOME`을 공유하거나, remote fallback monitor를 실행해야 합니다. 현재 문제는 "Codex가 WSL을 지원하지 않는다"기보다 "Clawd의 연동 경계와 문서 설명이 충분히 명확하지 않았다"에 가깝습니다.
+> OpenAI 공식 문서 기준으로 Codex는 WSL2를 지원합니다. Duck는 Codex official hooks로 통합하며 JSONL 폴링을 fallback으로 유지합니다. Duck가 Windows에서 실행되고 Codex가 Linux 기본 home을 쓰는 WSL 안에서 실행되면, Duck는 그 WSL `~/.codex`를 자동으로 수정하거나 폴링하지 않습니다. WSL 안에서 remote mode hooks를 설치하거나, `CODEX_HOME`을 공유하거나, remote fallback monitor를 실행해야 합니다. 현재 문제는 "Codex가 WSL을 지원하지 않는다"기보다 "Duck의 연동 경계와 문서 설명이 충분히 명확하지 않았다"에 가깝습니다.
 
 ## 6. 현재 가능한 경로
 
-지금 목표가 "Windows의 Clawd가 WSL 안의 Codex를 감지하게 만들기"라면 현실적인 경로는 세 가지입니다.
+지금 목표가 "Windows의 Duck가 WSL 안의 Codex를 감지하게 만들기"라면 현실적인 경로는 세 가지입니다.
 
 1. OpenAI 문서대로 WSL의 `CODEX_HOME`을 Windows `%USERPROFILE%\.codex`로 맞춘다.
-2. WSL 안에서 `node hooks/codex-install.js --remote`를 실행해 Codex official hooks가 WSL localhost forwarding을 통해 Windows Clawd로 POST하게 한다.
+2. WSL 안에서 `node hooks/codex-install.js --remote`를 실행해 Codex official hooks가 WSL localhost forwarding을 통해 Windows Duck로 POST하게 한다.
 3. 이 저장소의 [`hooks/codex-remote-monitor.js`](../../hooks/codex-remote-monitor.js) 패턴을 활용해 WSL 쪽에서 상태를 Windows로 밀어 넣는다.
-4. Clawd 자체를 확장해서 `\\wsl$\...` sessionDir를 직접 지원하게 만든다.
+4. Duck 자체를 확장해서 `\\wsl$\...` sessionDir를 직접 지원하게 만든다.
 
 이 셋은 의미가 다릅니다.
 
 - 1번은 OpenAI가 공식 문서에서 제시한 공유 방식
-- 2번은 Codex hooks가 사용 가능할 때 Clawd에서 지연이 가장 낮은 경로
+- 2번은 Codex hooks가 사용 가능할 때 Duck에서 지연이 가장 낮은 경로
 - 3번은 official hooks가 불가능하거나 꺼진 경우의 fallback
-- 4번은 Clawd의 새 기능 추가
+- 4번은 Duck의 새 기능 추가
 
 ## 참고 자료
 

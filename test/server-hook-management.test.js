@@ -136,7 +136,7 @@ function makeServer(overrides = {}) {
       PermissionRequest: [
         {
           matcher: "",
-          hooks: [{ type: "http", url: "http://127.0.0.1:23333/permission", timeout: 600 }],
+          hooks: [{ type: "http", url: "http://127.0.0.1:24333/permission", timeout: 600 }],
         },
       ],
     },
@@ -156,7 +156,7 @@ function makeServer(overrides = {}) {
     setTimeout: timers.setTimeout,
     clearTimeout: timers.clearTimeout,
     now: timers.now,
-    getPortCandidates: () => [23333],
+    getPortCandidates: () => [24333],
     readRuntimePort: () => null,
     writeRuntimeConfig: () => true,
     clearRuntimeConfig: () => true,
@@ -173,7 +173,7 @@ function makeServer(overrides = {}) {
         return existingPaths.has(p);
       },
     },
-    syncClawdHooksImpl: () => syncCalls.push("claude"),
+    syncDuckHooksImpl: () => syncCalls.push("claude"),
     syncCodexHooksImpl: () => syncCalls.push("codex"),
     repairCodexHooksImpl: () => syncCalls.push("codex-repair"),
     syncOpencodePluginImpl: () => syncCalls.push("opencode"),
@@ -207,7 +207,7 @@ function healthyClaudeSettingsWithThirdPartyHook() {
       }],
       PermissionRequest: [{
         matcher: "",
-        hooks: [{ type: "http", url: "http://127.0.0.1:23333/permission", timeout: 600 }],
+        hooks: [{ type: "http", url: "http://127.0.0.1:24333/permission", timeout: 600 }],
       }],
     },
   };
@@ -330,7 +330,7 @@ describe("server Claude hook management", () => {
         PermissionRequest: [
           {
             matcher: "",
-            hooks: [{ type: "http", url: "http://127.0.0.1:23335/permission", timeout: 600 }],
+            hooks: [{ type: "http", url: "http://127.0.0.1:24335/permission", timeout: 600 }],
           },
         ],
       },
@@ -376,7 +376,7 @@ describe("server Claude hook management", () => {
 
   it("keeps suspicious-shrink guard status when Claude repair fails and clears it on cleanup", async () => {
     const { api, timers, getWatcher, setSettingsRaw } = makeServer({
-      syncClawdHooksImpl: () => ({ status: "error", message: "write failed" }),
+      syncDuckHooksImpl: () => ({ status: "error", message: "write failed" }),
     });
     setSettingsRaw(JSON.stringify(healthyClaudeSettingsWithThirdPartyHook()));
 
@@ -528,28 +528,28 @@ function withPatchedInstallModule(patches, run) {
 }
 
 // These exercise server.js's OWN default queue-backed implementation — every
-// other test in this file injects ctx.syncClawdHooksImpl and so never reaches
-// it. Passing syncClawdHooksImpl: undefined opts back into the real
+// other test in this file injects ctx.syncDuckHooksImpl and so never reaches
+// it. Passing syncDuckHooksImpl: undefined opts back into the real
 // hooks/install.js-backed path (server.js only fills in its queued default
 // when the caller hasn't already provided a seam).
 describe("server Claude hook operation queue (default, non-injected implementation)", () => {
-  it("syncClawdHooks registers hooks and, for startup, also registers the statusline", async () => {
+  it("syncDuckHooks registers hooks and, for startup, also registers the statusline", async () => {
     const calls = [];
     await withPatchedInstallModule({
       registerHooksAsync: async (opts) => { calls.push(["register", opts]); return { added: 1, updated: 0, removed: 0 }; },
       registerClaudeStatusline: (opts) => { calls.push(["statusline", opts]); return { changed: true }; },
     }, async () => {
       const { api } = makeServer({
-        syncClawdHooksImpl: undefined,
+        syncDuckHooksImpl: undefined,
         claudeQuotaCollectionEnabled: true,
       });
-      const result = await api.syncClawdHooks({ source: "startup", automatic: true });
+      const result = await api.syncDuckHooks({ source: "startup", automatic: true });
       assert.strictEqual(result.status, "ok");
       assert.deepStrictEqual(calls.map((c) => c[0]), ["register", "statusline"]);
     });
   });
 
-  it("startup keeps Claude usage collection opt-in and removes only a Clawd-owned statusline", async () => {
+  it("startup keeps Claude usage collection opt-in and removes only a Duck-owned statusline", async () => {
     const calls = [];
     await withPatchedInstallModule({
       registerHooksAsync: async () => ({ added: 0, updated: 0, removed: 0 }),
@@ -560,11 +560,11 @@ describe("server Claude hook operation queue (default, non-injected implementati
       },
     }, async () => {
       const { api } = makeServer({
-        syncClawdHooksImpl: undefined,
+        syncDuckHooksImpl: undefined,
         claudeQuotaCollectionEnabled: false,
         clearClaudeStatuslineAuthority: (profileId) => calls.push(["clear-authority", profileId]),
       });
-      const result = await api.syncClawdHooks({ source: "startup", automatic: true });
+      const result = await api.syncDuckHooks({ source: "startup", automatic: true });
       assert.strictEqual(result.status, "ok");
       assert.deepStrictEqual(calls.map((call) => Array.isArray(call) ? call[0] : call), [
         "unregister",
@@ -581,7 +581,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
         skippedExisting: true,
       }),
     }, async () => {
-      const { api } = makeServer({ syncClawdHooksImpl: undefined });
+      const { api } = makeServer({ syncDuckHooksImpl: undefined });
       const result = await api.setClaudeQuotaCollectionEnabled({
         enabled: true,
         source: "settings-quota-collection",
@@ -600,7 +600,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
       },
     }, async () => {
       const { api } = makeServer({
-        syncClawdHooksImpl: undefined,
+        syncDuckHooksImpl: undefined,
         clearClaudeStatuslineAuthority: (profileId) => calls.push(["clear-authority", profileId]),
       });
       assert.strictEqual(api.isClaudeStatuslineMetadataAllowed(), true);
@@ -621,7 +621,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
     await withPatchedInstallModule({
       unregisterClaudeStatusline: () => { throw new Error("statusline remove failed"); },
     }, async () => {
-      const { api } = makeServer({ syncClawdHooksImpl: undefined });
+      const { api } = makeServer({ syncDuckHooksImpl: undefined });
       assert.strictEqual(api.isClaudeStatuslineMetadataAllowed(), true);
       const result = await api.setClaudeQuotaCollectionEnabled({
         enabled: false,
@@ -643,12 +643,12 @@ describe("server Claude hook operation queue (default, non-injected implementati
         return { installed: true, changed: false, skippedExisting: true };
       },
     }, async () => {
-      const { api } = makeServer({ syncClawdHooksImpl: undefined });
+      const { api } = makeServer({ syncDuckHooksImpl: undefined });
       const disabled = await api.setClaudeQuotaCollectionEnabled({ enabled: false });
       assert.strictEqual(disabled.status, "ok");
       assert.strictEqual(api.isClaudeStatuslineMetadataAllowed(), false);
 
-      const enabled = await api.syncClawdHooks({
+      const enabled = await api.syncDuckHooks({
         source: "settings-agent-enable",
         automatic: false,
       });
@@ -658,27 +658,27 @@ describe("server Claude hook operation queue (default, non-injected implementati
     });
   });
 
-  it("syncClawdHooks skips the statusline for legacy/periodic/doctor/watch sources", async () => {
+  it("syncDuckHooks skips the statusline for legacy/periodic/doctor/watch sources", async () => {
     for (const source of ["settings", "doctor", "settings-watch", "periodic-health"]) {
       const calls = [];
       await withPatchedInstallModule({
         registerHooksAsync: async () => { calls.push("register"); return { added: 0, updated: 0, removed: 0 }; },
         registerClaudeStatusline: () => { calls.push("statusline"); return { changed: false }; },
       }, async () => {
-        const { api } = makeServer({ syncClawdHooksImpl: undefined });
-        await api.syncClawdHooks({ source, automatic: false });
+        const { api } = makeServer({ syncDuckHooksImpl: undefined });
+        await api.syncDuckHooks({ source, automatic: false });
         assert.deepStrictEqual(calls, ["register"], source);
       });
     }
   });
 
-  it("syncClawdHooks (Doctor Fix / Settings Install path) does not write when the current source script is missing", async () => {
+  it("syncDuckHooks (Doctor Fix / Settings Install path) does not write when the current source script is missing", async () => {
     const calls = [];
     await withPatchedInstallModule({
       registerHooksAsync: async () => { calls.push("register"); return { added: 1, updated: 0, removed: 0 }; },
     }, async () => {
       const { api } = makeServer({
-        syncClawdHooksImpl: undefined,
+        syncDuckHooksImpl: undefined,
         fs: {
           watch() { return new FakeWatcher(() => {}); },
           readFileSync() { return "{}"; },
@@ -686,7 +686,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
         },
       });
 
-      const result = await api.syncClawdHooks({ source: "doctor", automatic: false });
+      const result = await api.syncDuckHooks({ source: "doctor", automatic: false });
 
       assert.strictEqual(result.status, "error");
       assert.strictEqual(result.reason, "source-script-missing");
@@ -694,7 +694,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
     });
   });
 
-  it("syncClawdHooks (Doctor Fix / Settings Install path) reports failure instead of a blind ok when the write does not verify healthy", async () => {
+  it("syncDuckHooks (Doctor Fix / Settings Install path) reports failure instead of a blind ok when the write does not verify healthy", async () => {
     await withPatchedInstallModule({
       // The installer "succeeds" (no throw) but structurally can't fix
       // anything — e.g. a permission error silently no-ops the write, or the
@@ -703,7 +703,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
       registerHooksAsync: async () => ({ added: 0, updated: 0, removed: 0 }),
     }, async () => {
       const { api } = makeServer({
-        syncClawdHooksImpl: undefined,
+        syncDuckHooksImpl: undefined,
         fs: {
           watch() { return new FakeWatcher(() => {}); },
           readFileSync() { return JSON.stringify({ hooks: {} }); }, // no managed hooks at all, before or after
@@ -711,7 +711,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
         },
       });
 
-      const result = await api.syncClawdHooks({ source: "doctor", automatic: false });
+      const result = await api.syncDuckHooks({ source: "doctor", automatic: false });
 
       assert.strictEqual(result.status, "error");
       assert.match(result.message, /did not verify healthy/);
@@ -719,37 +719,37 @@ describe("server Claude hook operation queue (default, non-injected implementati
     });
   });
 
-  it("syncClawdHooks (Doctor Fix / Settings Install path) reports ok once the write actually verifies healthy", async () => {
+  it("syncDuckHooks (Doctor Fix / Settings Install path) reports ok once the write actually verifies healthy", async () => {
     await withPatchedInstallModule({
       registerHooksAsync: async () => ({ added: 1, updated: 0, removed: 0 }),
     }, async () => {
       // Default makeServer() fixture is already healthy for core hooks.
-      const { api } = makeServer({ syncClawdHooksImpl: undefined });
+      const { api } = makeServer({ syncDuckHooksImpl: undefined });
 
-      const result = await api.syncClawdHooks({ source: "doctor", automatic: false });
+      const result = await api.syncDuckHooks({ source: "doctor", automatic: false });
 
       assert.deepStrictEqual(result, { status: "ok", added: 1, updated: 0, removed: 0 });
     });
   });
 
-  it("syncClawdHooks (Doctor Fix / Settings Install path) reports failure, not a blind ok, when an unparseable Clawd command remains after write", async () => {
+  it("syncDuckHooks (Doctor Fix / Settings Install path) reports failure, not a blind ok, when an unparseable Duck command remains after write", async () => {
     await withPatchedInstallModule({
       // The installer runs but — like the real installer — never rewrites a
-      // Clawd-owned command it could not parse in the first place (blindly
-      // rewriting it risks stomping something Clawd does not actually own).
+      // Duck-owned command it could not parse in the first place (blindly
+      // rewriting it risks stomping something Duck does not actually own).
       // Nothing automatically repairable remains, but the config is still
       // visibly broken — must not be reported as a successful Fix/Install.
       registerHooksAsync: async () => ({ added: 0, updated: 0, removed: 0 }),
     }, async () => {
       const { api } = makeServer({
-        syncClawdHooksImpl: undefined,
+        syncDuckHooksImpl: undefined,
         fs: {
           watch() { return new FakeWatcher(() => {}); },
           readFileSync() {
             return JSON.stringify({
               hooks: {
-                Stop: [{ matcher: "", hooks: [{ type: "command", command: '"clawd-hook.js"' }] }],
-                PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:23333/permission", timeout: 600 }] }],
+                Stop: [{ matcher: "", hooks: [{ type: "command", command: '"duck-hook.js"' }] }],
+                PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:24333/permission", timeout: 600 }] }],
               },
             });
           },
@@ -757,7 +757,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
         },
       });
 
-      const result = await api.syncClawdHooks({ source: "doctor", automatic: false });
+      const result = await api.syncDuckHooks({ source: "doctor", automatic: false });
 
       assert.strictEqual(result.status, "error");
       assert.match(result.message, /did not verify healthy/);
@@ -768,16 +768,16 @@ describe("server Claude hook operation queue (default, non-injected implementati
     });
   });
 
-  it("syncClawdHooks reports failure when a non-repairable declared core event remains missing", async () => {
+  it("syncDuckHooks reports failure when a non-repairable declared core event remains missing", async () => {
     await withPatchedInstallModule({
       registerHooksAsync: async () => ({ added: 0, updated: 0, removed: 0 }),
     }, async () => {
       const { api } = makeServer({
-        syncClawdHooksImpl: undefined,
+        syncDuckHooksImpl: undefined,
         coreEvents: ["Stop", "PreToolUse"],
       });
 
-      const result = await api.syncClawdHooks({ source: "doctor", automatic: false });
+      const result = await api.syncDuckHooks({ source: "doctor", automatic: false });
 
       assert.strictEqual(result.status, "error");
       assert.match(result.message, /did not verify healthy/);
@@ -795,7 +795,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
         unregisterClaudeStatusline: () => { calls.push("statusline-remove"); return { removed: 1, changed: true }; },
       }, async () => {
         const { api } = makeServer({
-          syncClawdHooksImpl: undefined,
+          syncDuckHooksImpl: undefined,
           clearClaudeStatuslineAuthority: (profileId) => calls.push(["clear-authority", profileId]),
         });
         const result = await api.uninstallClaudeHooks({ source, automatic: false });
@@ -812,7 +812,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
       unregisterHooksAsync: async () => ({ removed: 1, changed: true }),
       unregisterClaudeStatusline: () => { throw new Error("owned statusline remove failed"); },
     }, async () => {
-      const { api } = makeServer({ syncClawdHooksImpl: undefined });
+      const { api } = makeServer({ syncDuckHooksImpl: undefined });
       assert.strictEqual(api.isClaudeStatuslineMetadataAllowed(), true);
       const result = await api.uninstallClaudeHooks({
         source: "settings-agent-uninstall",
@@ -829,8 +829,8 @@ describe("server Claude hook operation queue (default, non-injected implementati
       registerHooksAsync: async () => ({ added: 1, updated: 0, removed: 0 }),
       registerClaudeStatusline: () => { throw new Error("statusline boom"); },
     }, async () => {
-      const { api } = makeServer({ syncClawdHooksImpl: undefined });
-      const result = await api.syncClawdHooks({ source: "startup", automatic: true });
+      const { api } = makeServer({ syncDuckHooksImpl: undefined });
+      const result = await api.syncDuckHooks({ source: "startup", automatic: true });
       assert.strictEqual(result.status, "ok");
     });
   });
@@ -848,7 +848,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
           hooks: {
             Stop: [{ matcher: "", hooks: [{ type: "command", command: `node "${EXPECTED_HOOK_SCRIPT_PATH}" Stop` }] }],
             SessionStart: [{ matcher: "", hooks: [{ type: "command", command: `node "${EXPECTED_AUTO_START_SCRIPT_PATH}"` }] }],
-            PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:23333/permission", timeout: 600 }] }],
+            PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:24333/permission", timeout: 600 }] }],
           },
         }));
         return {};
@@ -858,7 +858,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
       },
       unregisterAutoStart: () => { calls.push(["unregister"]); return true; },
     }, async () => {
-      const { api, setSettingsRaw } = makeServer({ syncClawdHooksImpl: undefined });
+      const { api, setSettingsRaw } = makeServer({ syncDuckHooksImpl: undefined });
       setSettingsRawRef = setSettingsRaw;
       const onResult = await api.setClaudeAutoStart({ enabled: true, source: "auto-start" });
       const offResult = await api.setClaudeAutoStart({ enabled: false, source: "auto-start" });
@@ -874,7 +874,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
       registerHooksAsync: async (opts) => { calls.push(["register", opts]); return {}; },
     }, async () => {
       const { api } = makeServer({
-        syncClawdHooksImpl: undefined,
+        syncDuckHooksImpl: undefined,
         fs: {
           watch() { return new FakeWatcher(() => {}); },
           readFileSync() { return "{}"; },
@@ -896,7 +896,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
       registerHooksAsync: async (opts) => { calls.push(["register", opts]); return {}; },
     }, async () => {
       const { api } = makeServer({
-        syncClawdHooksImpl: undefined,
+        syncDuckHooksImpl: undefined,
         fs: {
           watch() { return new FakeWatcher(() => {}); },
           readFileSync() { return "{}"; },
@@ -918,7 +918,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
       // entry — the settings fixture is left exactly as before.
       registerHooksAsync: async () => ({}),
     }, async () => {
-      const { api } = makeServer({ syncClawdHooksImpl: undefined });
+      const { api } = makeServer({ syncDuckHooksImpl: undefined });
 
       const result = await api.setClaudeAutoStart({ enabled: true, source: "auto-start" });
 
@@ -927,7 +927,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
     });
   });
 
-  it("serializes syncClawdHooks and setClaudeAutoStart onto the same queue (max concurrency 1)", async () => {
+  it("serializes syncDuckHooks and setClaudeAutoStart onto the same queue (max concurrency 1)", async () => {
     const order = [];
     await withPatchedInstallModule({
       registerHooksAsync: async () => {
@@ -937,8 +937,8 @@ describe("server Claude hook operation queue (default, non-injected implementati
         return { added: 0, updated: 0, removed: 0 };
       },
     }, async () => {
-      const { api } = makeServer({ syncClawdHooksImpl: undefined });
-      const p1 = api.syncClawdHooks({ source: "settings", automatic: false });
+      const { api } = makeServer({ syncDuckHooksImpl: undefined });
+      const p1 = api.syncDuckHooks({ source: "settings", automatic: false });
       const p2 = api.setClaudeAutoStart({ enabled: true, source: "auto-start" });
       await Promise.all([p1, p2]);
       // Both enable's registerHooksAsync call and the plain sync call go
@@ -951,9 +951,9 @@ describe("server Claude hook operation queue (default, non-injected implementati
   });
 
   it("cleanup() disposes the operation queue so further Claude mutations are rejected", async () => {
-    const { api } = makeServer({ syncClawdHooksImpl: undefined });
+    const { api } = makeServer({ syncDuckHooksImpl: undefined });
     api.cleanup();
-    const result = await api.syncClawdHooks({ source: "settings", automatic: false });
+    const result = await api.syncDuckHooks({ source: "settings", automatic: false });
     assert.strictEqual(result.status, "error");
   });
 
@@ -963,7 +963,7 @@ describe("server Claude hook operation queue (default, non-injected implementati
       unregisterHooksAsync: async () => { calls.push("unregister"); return { removed: 2, changed: true }; },
       unregisterClaudeStatusline: () => { calls.push("statusline-remove"); return { removed: 0, changed: false }; },
     }, async () => {
-      const { api } = makeServer({ syncClawdHooksImpl: undefined });
+      const { api } = makeServer({ syncDuckHooksImpl: undefined });
       const result = await api.uninstallIntegrationForAgent("claude-code");
       assert.strictEqual(result.status, "ok");
       assert.strictEqual(result.removed, 2);
@@ -988,7 +988,7 @@ function makeServerWithLiveAutoStart(initialValue) {
   let settingsRaw = JSON.stringify({
     hooks: {
       Stop: [{ matcher: "", hooks: [{ type: "command", command: `node "${EXPECTED_HOOK_SCRIPT_PATH}" Stop` }] }],
-      PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:23333/permission", timeout: 600 }] }],
+      PermissionRequest: [{ matcher: "", hooks: [{ type: "http", url: "http://127.0.0.1:24333/permission", timeout: 600 }] }],
     },
   });
   const existingPaths = new Set([EXPECTED_HOOK_SCRIPT_PATH, EXPECTED_AUTO_START_SCRIPT_PATH]);
@@ -1001,7 +1001,7 @@ function makeServerWithLiveAutoStart(initialValue) {
     setTimeout: timers.setTimeout,
     clearTimeout: timers.clearTimeout,
     now: timers.now,
-    getPortCandidates: () => [23333],
+    getPortCandidates: () => [24333],
     readRuntimePort: () => null,
     writeRuntimeConfig: () => true,
     clearRuntimeConfig: () => true,
@@ -1037,15 +1037,15 @@ describe("server Claude hook management — live autoStartWithClaude ctx (#657 f
     }, async () => {
       const { api, setLiveAutoStart } = makeServerWithLiveAutoStart(false);
 
-      await api.syncClawdHooks({ source: "doctor", automatic: false });
+      await api.syncDuckHooks({ source: "doctor", automatic: false });
       assert.deepStrictEqual(calls, [false], "reflects the startup value before any toggle");
 
       setLiveAutoStart(true); // simulates the user flipping the Settings toggle at runtime
-      await api.syncClawdHooks({ source: "doctor", automatic: false });
+      await api.syncDuckHooks({ source: "doctor", automatic: false });
       assert.deepStrictEqual(calls, [false, true], "must track the CURRENT setting, not the value frozen when the server started");
 
       setLiveAutoStart(false);
-      await api.syncClawdHooks({ source: "doctor", automatic: false });
+      await api.syncDuckHooks({ source: "doctor", automatic: false });
       assert.deepStrictEqual(calls, [false, true, false], "must track a toggle back off just as well");
     });
   });

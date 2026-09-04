@@ -148,7 +148,7 @@ These contract fields justify the implementation's trusted native-ID lane and ex
 
 ## Repository evidence
 
-`hooks/clawd-hook.js` also emits a synthetic `SubagentStart` for current `PreToolUse(Agent)` and legacy `PreToolUse(Task)`. It forwards `payload.agent_id` independently, so a nested subagent-tool call can contain the parent child ID. Therefore classification must use explicit lifecycle provenance (or the incoming Agent/Task tool name) before considering an ID native.
+`hooks/duck-hook.js` also emits a synthetic `SubagentStart` for current `PreToolUse(Agent)` and legacy `PreToolUse(Task)`. It forwards `payload.agent_id` independently, so a nested subagent-tool call can contain the parent child ID. Therefore classification must use explicit lifecycle provenance (or the incoming Agent/Task tool name) before considering an ID native.
 
 The implemented tracker uses independent evidence floors:
 

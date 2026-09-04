@@ -40,7 +40,7 @@ function errorCount(stdout) {
 }
 
 function mkTempThemeDir() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-validate-theme-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-validate-theme-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -129,7 +129,7 @@ describe("validate-theme.js CLI (real process, spawnSync)", () => {
   it("a surplus positional argument is refused, not ignored", () => {
     // Same silent-drop: a second theme path was accepted and discarded, so
     // validating two themes in one command quietly validated only the first.
-    const result = runValidateTheme([CALICO, path.join(REPO_ROOT, "themes", "clawd")]);
+    const result = runValidateTheme([CALICO, path.join(REPO_ROOT, "themes", "duck")]);
     assert.strictEqual(result.status, 1, result.stderr || result.stdout);
     assert.match(result.stderr, /Unexpected extra argument/);
   });
@@ -235,7 +235,7 @@ describe("validate-theme.js CLI (real process, spawnSync)", () => {
   for (const [label, value] of [
     ["null", "null"],
     ["a number", "5"],
-    ["a string", '"clawd"'],
+    ["a string", '"duck"'],
     ["a boolean", "true"],
   ]) {
     it(`theme.json parses to ${label}, not a JSON object`, () => {

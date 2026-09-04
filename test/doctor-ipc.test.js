@@ -50,10 +50,10 @@ describe("Doctor IPC helpers", () => {
     assert.deepStrictEqual(__test.normalizeDoctorConnectionTestPayload({ durationMs: 1000 }), { durationMs: 1000 });
   });
 
-  it("normalizes doctor:open-clawd-log payloads to string names only", () => {
+  it("normalizes doctor:open-duck-log payloads to string names only", () => {
     assert.deepStrictEqual(__test.normalizeDoctorOpenLogPayload(null), {});
     assert.deepStrictEqual(__test.normalizeDoctorOpenLogPayload("bad"), {});
     assert.deepStrictEqual(__test.normalizeDoctorOpenLogPayload({ name: 123 }), {});
-    assert.deepStrictEqual(__test.normalizeDoctorOpenLogPayload({ name: "clawd.log" }), { name: "clawd.log" });
+    assert.deepStrictEqual(__test.normalizeDoctorOpenLogPayload({ name: "duck.log" }), { name: "duck.log" });
   });
 });

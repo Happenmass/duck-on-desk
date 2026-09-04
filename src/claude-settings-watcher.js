@@ -17,7 +17,7 @@ const {
   hasNoAutomaticRepairWork,
 } = require("./claude-hook-health");
 
-const HOOK_MARKER = "clawd-hook.js";
+const HOOK_MARKER = "duck-hook.js";
 const SETTINGS_FILENAME = "settings.json";
 const MANAGED_COMMAND_MARKERS = Object.freeze([
   HOOK_MARKER,
@@ -123,7 +123,7 @@ function countCommandHooksInEntries(entries, options = {}) {
  * Count total command hooks across every event in the hooks object.
  * Handles both nested format (entry.hooks[].command) and flat format (entry.command).
  * HTTP hooks (type: "http") are excluded because they cannot encode the marker.
- * TODO: Decide whether non-Clawd HTTP hooks should contribute to third-party shrink detection.
+ * TODO: Decide whether non-Duck HTTP hooks should contribute to third-party shrink detection.
  * @param {object|null|undefined} hooks
  * @returns {number}
  */
@@ -209,7 +209,7 @@ function initialHealthStatus(nowFn) {
  * runHealthCheck() is the single decision function shared by both the fs
  * watcher's debounced callback and the periodic timer — see §6.6 of the
  * #657 plan. It never writes settings.json itself; repair is delegated to
- * ctx.syncClawdHooks(), which in production routes through the server-owned
+ * ctx.syncDuckHooks(), which in production routes through the server-owned
  * Claude hook operation queue (src/claude-hook-operations.js).
  */
 function createClaudeSettingsWatcher(ctx = {}) {
@@ -387,7 +387,7 @@ function createClaudeSettingsWatcher(ctx = {}) {
       // Rewriting settings.json here would only point it at a path that
       // still doesn't exist — reconcile is deliberately never attempted.
       if (!sourceMissingLogged) {
-        console.warn("Clawd: the current Claude hook source script is missing — reinstall or re-extract Clawd to restore automatic hook repair");
+        console.warn("Duck: the current Claude hook source script is missing — reinstall or re-extract Duck to restore automatic hook repair");
         sourceMissingLogged = true;
       }
       updateHealthStatus({
@@ -397,7 +397,7 @@ function createClaudeSettingsWatcher(ctx = {}) {
         source: reason,
         issueSignature: null,
         issues: report.issues,
-        message: "Claude hook source script is missing; reinstall or re-extract Clawd",
+        message: "Claude hook source script is missing; reinstall or re-extract Duck",
       });
       scheduleHealthCheck(healthCheckIntervalMs, "periodic-health");
       return;
@@ -448,7 +448,7 @@ function createClaudeSettingsWatcher(ctx = {}) {
       // external fix, and re-popping the same notification every 5 minutes
       // would just be noise (#657 plan §4.6: "不得每轮重复弹通知").
       if (!shrinkNotified) {
-        console.warn("Clawd: settings.json shrank suspiciously — skipping auto-repair to preserve third-party hooks");
+        console.warn("Duck: settings.json shrank suspiciously — skipping auto-repair to preserve third-party hooks");
         if (typeof ctx.notifySuspiciousShrink === "function") ctx.notifySuspiciousShrink(lastTrustedSnapshot, currentSnapshot);
         shrinkNotified = true;
       }
@@ -466,10 +466,10 @@ function createClaudeSettingsWatcher(ctx = {}) {
 
     let repairResult;
     try {
-      if (typeof ctx.syncClawdHooks !== "function") {
-        repairResult = { status: "error", message: "syncClawdHooks is not wired" };
+      if (typeof ctx.syncDuckHooks !== "function") {
+        repairResult = { status: "error", message: "syncDuckHooks is not wired" };
       } else {
-        repairResult = await ctx.syncClawdHooks({ source: repairSourceForReason(reason), automatic: true });
+        repairResult = await ctx.syncDuckHooks({ source: repairSourceForReason(reason), automatic: true });
       }
     } catch (err) {
       repairResult = { status: "error", message: err && err.message };
@@ -593,7 +593,7 @@ function createClaudeSettingsWatcher(ctx = {}) {
         updateTrustedSnapshot(seedRaw, seedReport);
       }
     } catch (err) {
-      console.warn("Clawd: could not seed settings baseline:", err.message);
+      console.warn("Duck: could not seed settings baseline:", err.message);
     }
 
     try {
@@ -607,11 +607,11 @@ function createClaudeSettingsWatcher(ctx = {}) {
       });
       if (settingsWatcher && typeof settingsWatcher.on === "function") {
         settingsWatcher.on("error", (err) => {
-          console.warn("Clawd: settings watcher error:", err.message);
+          console.warn("Duck: settings watcher error:", err.message);
         });
       }
     } catch (err) {
-      console.warn("Clawd: failed to watch settings directory:", err.message);
+      console.warn("Duck: failed to watch settings directory:", err.message);
       settingsWatcher = null;
       return false;
     }

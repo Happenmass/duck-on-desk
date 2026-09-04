@@ -1,4 +1,4 @@
-// test/clawd-hook-pid-cache.test.js — #634: the Claude adapter side of the
+// test/duck-hook-pid-cache.test.js — #634: the Claude adapter side of the
 // shared-resolver migration.
 //
 // Two layers:
@@ -19,7 +19,7 @@ const path = require("node:path");
 const pidCache = require("../hooks/pid-cache");
 
 const NS = "claude-code";
-const CWD = "/repo/clawd-hook-cache-test";
+const CWD = "/repo/duck-hook-cache-test";
 const DEAD_PID = 2147483646;
 
 // Isolate the cache directory (#634): the end-to-end SessionStart tests drive the
@@ -28,7 +28,7 @@ const DEAD_PID = 2147483646;
 // module object, so the override covers both layers.
 let ISO_DIR;
 before(() => {
-  ISO_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-hook-cache-iso-"));
+  ISO_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "duck-hook-cache-iso-"));
   pidCache.__setCacheDirForTests(ISO_DIR);
 });
 after(() => {
@@ -39,7 +39,7 @@ after(() => {
 let seq = 0;
 const usedV1 = [];
 const usedV2 = [];
-function freshSid() { const s = `clawd-hook-cache-${process.pid}-${seq++}`; usedV1.push(s); usedV2.push(s); return s; }
+function freshSid() { const s = `duck-hook-cache-${process.pid}-${seq++}`; usedV1.push(s); usedV2.push(s); return s; }
 afterEach(() => {
   for (const s of usedV1.splice(0)) pidCache.dropPidCache(s, CWD);
   for (const s of usedV2.splice(0)) pidCache.dropPidCacheV2(NS, s, CWD);
@@ -49,7 +49,7 @@ afterEach(() => {
 // Layer 1 — adapter mapping (context-capturing fake resolver)
 // ═══════════════════════════════════════════════════════════════════════════
 describe("buildStateBody adapter → shared resolver context (#634)", () => {
-  const { buildStateBody } = require("../hooks/clawd-hook.js");
+  const { buildStateBody } = require("../hooks/duck-hook.js");
 
   // Captures every resolver context and returns a preset metadata object.
   function capture(returns = emptyMeta()) {
@@ -114,9 +114,9 @@ describe("buildStateBody adapter → shared resolver context (#634)", () => {
     assert.strictEqual(missingSid.calls[0].cacheable, false);
   });
 
-  it("remote mode (CLAWD_REMOTE) bypasses the resolver entirely (zero context calls)", () => {
-    const hadRemote = process.env.CLAWD_REMOTE;
-    process.env.CLAWD_REMOTE = "1";
+  it("remote mode (DUCK_REMOTE) bypasses the resolver entirely (zero context calls)", () => {
+    const hadRemote = process.env.DUCK_REMOTE;
+    process.env.DUCK_REMOTE = "1";
     try {
       const r = capture();
       const body = buildStateBody("PreToolUse", { session_id: "s", cwd: CWD }, r);
@@ -124,8 +124,8 @@ describe("buildStateBody adapter → shared resolver context (#634)", () => {
       assert.ok(!("source_pid" in body), "remote body carries no local pid");
       assert.strictEqual(typeof body.host, "string");
     } finally {
-      if (hadRemote === undefined) delete process.env.CLAWD_REMOTE;
-      else process.env.CLAWD_REMOTE = hadRemote;
+      if (hadRemote === undefined) delete process.env.DUCK_REMOTE;
+      else process.env.DUCK_REMOTE = hadRemote;
     }
   });
 
@@ -199,20 +199,20 @@ function liveSubset(extra = {}) {
   return { stablePid: process.pid, agentPid: process.pid, headless: true, detectedEditor: "code", ...extra };
 }
 
-// Loads clawd-hook wired to the REAL shared resolver: patches child_process for a
+// Loads duck-hook wired to the REAL shared resolver: patches child_process for a
 // counting execFileSync, forces process.platform, reloads shared-process then
-// clawd-hook. Exposes the shared-process module so each test builds a FRESH
+// duck-hook. Exposes the shared-process module so each test builds a FRESH
 // resolver (clean in-process _cached).
 function loadRealResolver({ platform }) {
   const cpKey = require.resolve("child_process");
   const spKey = require.resolve("../hooks/shared-process");
-  const chKey = require.resolve("../hooks/clawd-hook");
+  const chKey = require.resolve("../hooks/duck-hook");
   const origCp = require.cache[cpKey];
   const origSp = require.cache[spKey];
   const origCh = require.cache[chKey];
   const origPlatform = Object.getOwnPropertyDescriptor(process, "platform");
-  const hadRemote = process.env.CLAWD_REMOTE;
-  delete process.env.CLAWD_REMOTE;
+  const hadRemote = process.env.DUCK_REMOTE;
+  delete process.env.DUCK_REMOTE;
 
   // psComm / psCommand default to the original "bash" for every `ps` query, so
   // the pre-existing non-Windows cases are byte-for-byte unchanged. A test that
@@ -237,12 +237,12 @@ function loadRealResolver({ platform }) {
   delete require.cache[spKey];
   const sp = require("../hooks/shared-process");
   delete require.cache[chKey];
-  const ch = require("../hooks/clawd-hook");
+  const ch = require("../hooks/duck-hook");
 
   const CLAUDE_OPTS = {
     agentNames: { win: new Set(["claude.exe"]), mac: new Set(["claude"]) },
     agentCmdlineCheck: (cmd) => cmd.includes("claude-code") || cmd.includes("@anthropic-ai"),
-    // #681: mirror production — clawd-hook.js hands the resolver the same
+    // #681: mirror production — duck-hook.js hands the resolver the same
     // predicate. Reuse the module's own export rather than restating the regex,
     // so this harness cannot drift from what actually ships.
     headlessCheck: ch.isClaudeHeadlessCommandLine,
@@ -251,27 +251,27 @@ function loadRealResolver({ platform }) {
   // process. Without it the Windows resolver short-circuits to the offline
   // shape, and every "cache hit = zero spawn" assertion below would pass
   // vacuously — zero spawn because the gate refused, not because the cache
-  // worked. Never reads the developer's real ~/.clawd/runtime.json.
+  // worked. Never reads the developer's real ~/.duck-on-desk/runtime.json.
   const makeResolve = () => sp.createPidResolver({
     ...CLAUDE_OPTS,
     platformConfig: sp.getPlatformConfig(),
-    readRuntimeIdentity: () => ({ ok: true, reason: null, port: 23333, ownerPid: process.pid }),
+    readRuntimeIdentity: () => ({ ok: true, reason: null, port: 24333, ownerPid: process.pid }),
     env: {},
   });
 
   const restore = () => {
     Object.defineProperty(process, "platform", origPlatform);
-    if (hadRemote !== undefined) process.env.CLAWD_REMOTE = hadRemote;
+    if (hadRemote !== undefined) process.env.DUCK_REMOTE = hadRemote;
     if (origCp) require.cache[cpKey] = origCp; else delete require.cache[cpKey];
     if (origSp) require.cache[spKey] = origSp; else delete require.cache[spKey];
     if (origCh) require.cache[chKey] = origCh; else delete require.cache[chKey];
     require("../hooks/shared-process");
-    require("../hooks/clawd-hook"); // put natively-loaded instances back
+    require("../hooks/duck-hook"); // put natively-loaded instances back
   };
   return { buildStateBody: ch.buildStateBody, makeResolve, state, restore };
 }
 
-describe("clawd-hook end-to-end with the real resolver — Windows", () => {
+describe("duck-hook end-to-end with the real resolver — Windows", () => {
   let env;
   before(() => { env = loadRealResolver({ platform: "win32" }); });
   after(() => env.restore());
@@ -284,7 +284,7 @@ describe("clawd-hook end-to-end with the real resolver — Windows", () => {
   }
   // Mirrors main(): prewarm no-arg resolve() on SessionStart before build.
   function buildStateBodyPrewarmAware(env, event, payload, resolve) {
-    if (event === "SessionStart" && !process.env.CLAWD_REMOTE) resolve();
+    if (event === "SessionStart" && !process.env.DUCK_REMOTE) resolve();
     return env.buildStateBody(event, payload, resolve);
   }
 
@@ -431,8 +431,8 @@ describe("clawd-hook end-to-end with the real resolver — Windows", () => {
   });
 
   it("remote mode never resolves a local PID (bypass before the resolver)", () => {
-    const hadRemote = process.env.CLAWD_REMOTE;
-    process.env.CLAWD_REMOTE = "1";
+    const hadRemote = process.env.DUCK_REMOTE;
+    process.env.DUCK_REMOTE = "1";
     env.state.spawns = 0;
     try {
       const resolve = env.makeResolve();
@@ -441,13 +441,13 @@ describe("clawd-hook end-to-end with the real resolver — Windows", () => {
       assert.ok(!("source_pid" in body));
       assert.strictEqual(typeof body.host, "string");
     } finally {
-      if (hadRemote === undefined) delete process.env.CLAWD_REMOTE;
-      else process.env.CLAWD_REMOTE = hadRemote;
+      if (hadRemote === undefined) delete process.env.DUCK_REMOTE;
+      else process.env.DUCK_REMOTE = hadRemote;
     }
   });
 });
 
-describe("clawd-hook end-to-end with the real resolver — non-Windows", () => {
+describe("duck-hook end-to-end with the real resolver — non-Windows", () => {
   let env;
   before(() => { env = loadRealResolver({ platform: "linux" }); });
   after(() => env.restore());

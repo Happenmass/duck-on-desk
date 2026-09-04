@@ -201,7 +201,7 @@ function sessionDisplayFolder(id, sessionLike) {
   const cwd = sessionLike && sessionLike.cwd;
   if (!cwd || typeof cwd !== "string") return "";
   // Session metadata can cross operating-system boundaries (for example a
-  // Windows agent reported to a macOS/Linux Clawd). Select the path dialect
+  // Windows agent reported to a macOS/Linux Duck). Select the path dialect
   // from the value instead of the host, while preserving backslashes that
   // are legal characters in a POSIX path component.
   const windowsPath = /^[A-Za-z]:[\\/]/.test(cwd) || /^([\\/])\1/.test(cwd);

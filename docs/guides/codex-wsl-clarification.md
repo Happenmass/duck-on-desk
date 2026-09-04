@@ -6,18 +6,18 @@ This note separates three questions that are easy to conflate:
 
 1. Whether OpenAI officially supports running Codex in WSL.
 2. Whether Codex hooks and `.codex` state are shared between Windows and WSL.
-3. Whether Clawd can currently auto-detect Codex sessions that live inside WSL's separate Linux home.
+3. Whether Duck can currently auto-detect Codex sessions that live inside WSL's separate Linux home.
 
-Those answers are not the same. Most confusion comes from mixing the official Codex product support story with Clawd's current integration boundaries.
+Those answers are not the same. Most confusion comes from mixing the official Codex product support story with Duck's current integration boundaries.
 
 ## TL;DR
 
 - OpenAI officially supports running Codex in WSL2.
 - Current Codex CLI builds enable hooks through `[features].hooks = true`; older builds and some docs used the deprecated `[features].codex_hooks` key.
-- Clawd now uses Codex official hooks as the primary integration and keeps `~/.codex/sessions` JSONL polling as fallback.
+- Duck now uses Codex official hooks as the primary integration and keeps `~/.codex/sessions` JSONL polling as fallback.
 - Windows native Codex hooks were verified locally on April 26, 2026; hook commands on Windows must use PowerShell's `&` call operator.
-- When Clawd runs on Windows while Codex runs inside WSL with the default Linux home directory, Clawd does not automatically see `/home/<user>/.codex/sessions`.
-- So "Codex does not support WSL" is inaccurate. The more accurate statement is: "Codex officially supports WSL2, but Windows Clawd does not automatically modify or poll WSL's separate Linux `~/.codex`; install hooks in WSL remote mode or share `CODEX_HOME` when you want WSL Codex sessions to report back."
+- When Duck runs on Windows while Codex runs inside WSL with the default Linux home directory, Duck does not automatically see `/home/<user>/.codex/sessions`.
+- So "Codex does not support WSL" is inaccurate. The more accurate statement is: "Codex officially supports WSL2, but Windows Duck does not automatically modify or poll WSL's separate Linux `~/.codex`; install hooks in WSL remote mode or share `CODEX_HOME` when you want WSL Codex sessions to report back."
 
 ## 1. OpenAI's current official position
 
@@ -66,7 +66,7 @@ Reference:
 
 - <https://developers.openai.com/codex/hooks>
 
-Clawd's Codex installer writes `~/.codex/hooks.json` and enables this feature flag unless the user explicitly set hooks to `false`. If it sees the deprecated `codex_hooks` key, it migrates it to `hooks` while preserving an explicit false value.
+Duck's Codex installer writes `~/.codex/hooks.json` and enables this feature flag unless the user explicitly set hooks to `false`. If it sees the deprecated `codex_hooks` key, it migrates it to `hooks` while preserving an explicit false value.
 
 ### WSL and Windows do not share `.codex` by default
 
@@ -88,9 +88,9 @@ Reference:
 
 That matters because it confirms that a default WSL Codex session writes into Linux home unless the user explicitly changes `CODEX_HOME`.
 
-## 2. Clawd's current implementation
+## 2. Duck's current implementation
 
-### Clawd uses official hooks first, with JSONL polling as fallback
+### Duck uses official hooks first, with JSONL polling as fallback
 
 In this repository, Codex integration is configured in [`agents/codex.js`](../../agents/codex.js):
 
@@ -102,29 +102,29 @@ The official hook implementation is in [`hooks/codex-hook.js`](../../hooks/codex
 At runtime:
 
 - official hooks handle SessionStart, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, and Stop
-- PermissionRequest defaults to intercept mode: Clawd shows a real Allow/Deny bubble. Users can switch Codex permission mode to native if they want Codex AutoReview/native prompts to stay in charge.
+- PermissionRequest defaults to intercept mode: Duck shows a real Allow/Deny bubble. Users can switch Codex permission mode to native if they want Codex AutoReview/native prompts to stay in charge.
 - JSONL polling remains active for hook-disabled sessions and events official hooks do not cover, such as web search, compaction, and abort
 
 The fallback monitor expands `~` using the current process's own `os.homedir()`. In practice:
 
-- if Clawd runs on Windows, it polls `C:\Users\<user>\.codex\sessions`
-- if Clawd runs on Linux, it polls `/home/<user>/.codex/sessions`
+- if Duck runs on Windows, it polls `C:\Users\<user>\.codex\sessions`
+- if Duck runs on Linux, it polls `/home/<user>/.codex/sessions`
 
-So a Windows-hosted Clawd does not automatically poll `/home/<user>/.codex/sessions` inside WSL.
+So a Windows-hosted Duck does not automatically poll `/home/<user>/.codex/sessions` inside WSL.
 
-### Clawd currently has no automatic "install into WSL home" path
+### Duck currently has no automatic "install into WSL home" path
 
 The current main process starts the Codex official-hook sync and fallback monitor for the host OS's own home directory. There is no user-facing WSL session directory setting, no default `\\wsl$\...` path scan, and no automatic edit of `/home/<user>/.codex/hooks.json` from the Windows app.
 
 That means:
 
-- `Codex native on Windows + Clawd on Windows`: works out of the box through official hooks, with JSONL fallback
-- `Codex in WSL2 + Clawd on Windows + default Linux home`: does not work by default unless hooks are installed inside WSL in remote mode or a remote-side monitor is started
+- `Codex native on Windows + Duck on Windows`: works out of the box through official hooks, with JSONL fallback
+- `Codex in WSL2 + Duck on Windows + default Linux home`: does not work by default unless hooks are installed inside WSL in remote mode or a remote-side monitor is started
 - `Codex in WSL2 + shared Windows Codex home via CODEX_HOME`: inferred to be workable for shared config/session state, because both sides would then point at the same `.codex` directory
 
-The last point is an inference from OpenAI's documented `CODEX_HOME` sharing flow plus Clawd's current hook and fallback polling behavior.
+The last point is an inference from OpenAI's documented `CODEX_HOME` sharing flow plus Duck's current hook and fallback polling behavior.
 
-### Clawd has remote-side hooks and a monitor fallback, but not WSL auto-discovery
+### Duck has remote-side hooks and a monitor fallback, but not WSL auto-discovery
 
 This repo includes app-controlled deployment through **Settings → Remote SSH
 → Deploy / Repair Hooks**. It resolves the profile runtime layout, installs
@@ -177,32 +177,32 @@ As of May 8, 2026:
 
 1. OpenAI officially supports Codex in WSL2.
 2. Current Codex CLI builds use the `hooks` feature flag; `codex_hooks` is deprecated.
-3. Clawd uses official Codex hooks as primary integration and JSONL polling as fallback.
-4. Clawd currently syncs hooks and polls fallback logs in the host machine's own `.codex` home.
-5. So if Codex runs inside WSL2 and still uses Linux `~/.codex`, Windows Clawd does not auto-detect those sessions by default.
+3. Duck uses official Codex hooks as primary integration and JSONL polling as fallback.
+4. Duck currently syncs hooks and polls fallback logs in the host machine's own `.codex` home.
+5. So if Codex runs inside WSL2 and still uses Linux `~/.codex`, Windows Duck does not auto-detect those sessions by default.
 6. The current documentation problem is not "WSL is never mentioned". The problem is that `Codex + WSL` boundaries were not explained explicitly enough.
 
 ## 5. Suggested external wording
 
 If you need one concise explanation for users or issue threads, this is the safest wording:
 
-> OpenAI officially supports running Codex in WSL2. Clawd integrates with Codex through official hooks, with JSONL polling kept as fallback. If Clawd runs on Windows while Codex runs in WSL with Linux's default home directory, Clawd will not automatically modify or poll that WSL `~/.codex`; install hooks in WSL remote mode, share `CODEX_HOME`, or run the remote fallback monitor. The current issue is better described as a Clawd integration and documentation boundary, not as OpenAI failing to support Codex on WSL.
+> OpenAI officially supports running Codex in WSL2. Duck integrates with Codex through official hooks, with JSONL polling kept as fallback. If Duck runs on Windows while Codex runs in WSL with Linux's default home directory, Duck will not automatically modify or poll that WSL `~/.codex`; install hooks in WSL remote mode, share `CODEX_HOME`, or run the remote fallback monitor. The current issue is better described as a Duck integration and documentation boundary, not as OpenAI failing to support Codex on WSL.
 
 ## 6. Current workable paths
 
-If the goal is "make Windows Clawd react to Codex running in WSL", the realistic paths today are:
+If the goal is "make Windows Duck react to Codex running in WSL", the realistic paths today are:
 
 1. Use OpenAI's documented sharing approach and point WSL `CODEX_HOME` at the Windows `%USERPROFILE%\.codex`.
-2. Install Codex official hooks inside WSL with `node hooks/codex-install.js --remote`, so WSL Codex POSTs back to Windows Clawd through WSL localhost forwarding.
+2. Install Codex official hooks inside WSL with `node hooks/codex-install.js --remote`, so WSL Codex POSTs back to Windows Duck through WSL localhost forwarding.
 3. Reuse the repo's fallback remote-side monitor from [`hooks/codex-remote-monitor.js`](../../hooks/codex-remote-monitor.js) and actively send state back to the Windows host.
-4. Extend Clawd itself to support an explicit `\\wsl$\...` session directory.
+4. Extend Duck itself to support an explicit `\\wsl$\...` session directory.
 
 Those options are not equivalent:
 
 - option 1 is an OpenAI-documented sharing flow
-- option 2 is the lowest-latency Clawd path when Codex hooks are available inside WSL
+- option 2 is the lowest-latency Duck path when Codex hooks are available inside WSL
 - option 3 is the fallback for hook-disabled Codex sessions
-- option 4 would be a new Clawd feature, not current default behavior
+- option 4 would be a new Duck feature, not current default behavior
 
 ## References
 

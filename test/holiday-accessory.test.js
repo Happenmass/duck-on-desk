@@ -91,33 +91,33 @@ describe("holiday accessory date rules", () => {
   });
 
   it("keeps the checkbox independent from the saved manual accessory", () => {
-    const manual = { clawd: "wizard-hat", cloudling: "halo" };
-    assert.strictEqual(isHolidayAccessoryEnabledForTheme({ clawd: true }, "clawd"), true);
-    assert.strictEqual(isHolidayAccessoryEnabledForTheme({ clawd: false }, "clawd"), false);
-    assert.strictEqual(isHolidayAccessoryEnabledForTheme("true", "clawd"), false);
+    const manual = { duck: "wizard-hat", cloudling: "halo" };
+    assert.strictEqual(isHolidayAccessoryEnabledForTheme({ duck: true }, "duck"), true);
+    assert.strictEqual(isHolidayAccessoryEnabledForTheme({ duck: false }, "duck"), false);
+    assert.strictEqual(isHolidayAccessoryEnabledForTheme("true", "duck"), false);
 
     assert.strictEqual(getEffectivePetAccessoryIdForTheme({
       petAccessory: manual,
       holidayAccessoryEnabled: {},
-      themeId: "clawd",
+      themeId: "duck",
       date: localDate(12, 24),
     }), "wizard-hat");
     assert.strictEqual(getEffectivePetAccessoryIdForTheme({
       petAccessory: manual,
-      holidayAccessoryEnabled: { clawd: true },
-      themeId: "clawd",
+      holidayAccessoryEnabled: { duck: true },
+      themeId: "duck",
       date: localDate(12, 24),
     }), "santa-hat");
     assert.strictEqual(getEffectivePetAccessoryIdForTheme({
       petAccessory: manual,
-      holidayAccessoryEnabled: { clawd: true },
-      themeId: "clawd",
+      holidayAccessoryEnabled: { duck: true },
+      themeId: "duck",
       date: localDate(12, 28),
     }), "wizard-hat");
     assert.strictEqual(getEffectivePetAccessoryIdForTheme({
       petAccessory: {},
-      holidayAccessoryEnabled: { clawd: true },
-      themeId: "clawd",
+      holidayAccessoryEnabled: { duck: true },
+      themeId: "duck",
       date: localDate(10, 31),
     }), "pumpkin-hat");
   });
@@ -141,11 +141,11 @@ describe("holiday accessory runtime", () => {
     const timers = [];
     let currentDate = localDate(12, 24);
     let snapshot = {
-      petAccessory: { clawd: "wizard-hat" },
-      holidayAccessoryEnabled: { clawd: true },
+      petAccessory: { duck: "wizard-hat" },
+      holidayAccessoryEnabled: { duck: true },
     };
     const theme = {
-      _id: "clawd",
+      _id: "duck",
       _builtin: true,
       _capabilities: { accessories: true },
     };
@@ -218,7 +218,7 @@ describe("holiday accessory runtime", () => {
     const harness = createHarness();
     harness.runtime.start();
     harness.setSnapshot({
-      petAccessory: { clawd: "halo" },
+      petAccessory: { duck: "halo" },
       holidayAccessoryEnabled: {},
     });
     harness.runtime.refresh({ force: true });

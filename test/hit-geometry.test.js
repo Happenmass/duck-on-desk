@@ -7,7 +7,7 @@ const hitGeometry = require("../src/hit-geometry");
 
 themeLoader.init(path.join(__dirname, "..", "src"));
 const calico = themeLoader.loadTheme("calico");
-const clawd = themeLoader.loadTheme("clawd");
+const duck = themeLoader.loadTheme("duck");
 
 function approx(actual, expected, epsilon = 0.01) {
   assert.ok(
@@ -102,8 +102,8 @@ describe("hit geometry", () => {
     approx(padded.bottom, base.bottom + 8);
   });
 
-  it("derives image sizing from object fit for clawd drag svg", () => {
-    const rect = hitGeometry.getAssetRectScreen(clawd, bounds, null, "clawd-react-drag.svg");
+  it("derives image sizing from object fit for duck drag svg", () => {
+    const rect = hitGeometry.getAssetRectScreen(duck, bounds, null, "duck-react-drag.svg");
     approx(rect.x, -30.5);
     approx(rect.y, -53.6);
     approx(rect.w, 261);
@@ -111,9 +111,9 @@ describe("hit geometry", () => {
   });
 
   it("derives the visible content rect from contentBox geometry", () => {
-    const artRect = hitGeometry.getAssetRectScreen(clawd, bounds, "idle", "clawd-idle-follow.svg");
-    const expected = visibleContentRect(clawd, artRect);
-    const actual = hitGeometry.getContentRectScreen(clawd, bounds, "idle", "clawd-idle-follow.svg");
+    const artRect = hitGeometry.getAssetRectScreen(duck, bounds, "idle", "duck-idle-follow.svg");
+    const expected = visibleContentRect(duck, artRect);
+    const actual = hitGeometry.getContentRectScreen(duck, bounds, "idle", "duck-idle-follow.svg");
 
     approx(actual.left, expected.x);
     approx(actual.top, expected.y);

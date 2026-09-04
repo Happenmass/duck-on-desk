@@ -43,7 +43,7 @@ const { getStartupRecoveryProcessNames } = require("../agents/registry");
 const {
   readTranscriptTailEntries: readClaudeTranscriptTailEntries,
   extractLastAssistantTextFromEntries: extractLastClaudeAssistantTextFromEntries,
-} = require("../hooks/clawd-hook");
+} = require("../hooks/duck-hook");
 
 module.exports = function initState(ctx) {
 

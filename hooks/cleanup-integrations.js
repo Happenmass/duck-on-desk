@@ -294,7 +294,7 @@ function parseArgs(argv) {
 }
 
 function printResult(result) {
-  console.log(`Clawd integration cleanup -> ${result.homeDir}`);
+  console.log(`Duck integration cleanup -> ${result.homeDir}`);
   for (const agent of result.agents) {
     const suffix = agent.error ? ` (${agent.error})` : "";
     console.log(`  ${agent.displayName}: ${agent.status}, removed=${agent.removed}${suffix}`);

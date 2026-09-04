@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Clawd Desktop Pet — Auto-Start Script
-// Registered as a SessionStart hook BEFORE clawd-hook.js.
+// Duck Desktop Pet — Auto-Start Script
+// Registered as a SessionStart hook BEFORE duck-hook.js.
 // Checks if the Electron app is running; if not, launches it detached.
 // Uses shared server discovery helpers and should exit quickly in normal cases.
 
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const { discoverClawdPort } = require("./server-config");
+const { discoverDuckPort } = require("./server-config");
 const { buildElectronLaunchConfig } = require("./shared-process");
 
 const INITIAL_DISCOVER_TIMEOUT_MS = 300;
@@ -15,8 +15,8 @@ const STARTUP_READY_TIMEOUT_MS = 6000;
 const STARTUP_DISCOVER_TIMEOUT_MS = 100;
 const STARTUP_POLL_INTERVAL_MS = 100;
 
-function waitForClawdPort(options, callback) {
-  const discover = options.discoverClawdPort || discoverClawdPort;
+function waitForDuckPort(options, callback) {
+  const discover = options.discoverDuckPort || discoverDuckPort;
   const setTimeoutFn = options.setTimeout || setTimeout;
   const nowFn = options.now || Date.now;
   const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : STARTUP_READY_TIMEOUT_MS;
@@ -72,7 +72,7 @@ function resolveMacBundleExecutable(appBundle, options = {}) {
   } catch {}
   // electron-builder's productName is the stable executable name even when a
   // user renames or copies the outer .app bundle in Finder.
-  if (!executableName) executableName = "Clawd on Desk";
+  if (!executableName) executableName = "Duck on Desk";
   return path.posix.join(appBundle, "Contents", "MacOS", executableName);
 }
 
@@ -88,7 +88,7 @@ function spawnDetached(spawnProcess, command, args, options, onError) {
 }
 
 function main(deps = {}) {
-  const discover = deps.discoverClawdPort || discoverClawdPort;
+  const discover = deps.discoverDuckPort || discoverDuckPort;
   const launch = deps.launchApp || launchApp;
   const exit = deps.exit || ((code) => process.exit(code));
 
@@ -98,8 +98,8 @@ function main(deps = {}) {
       return;
     }
     launch();
-    waitForClawdPort({
-      discoverClawdPort: discover,
+    waitForDuckPort({
+      discoverDuckPort: discover,
       setTimeout: deps.setTimeout,
       now: deps.now,
       timeoutMs: deps.startupReadyTimeoutMs,
@@ -114,7 +114,7 @@ function launchApp(options = {}) {
   const platform = options.platform || process.platform;
   const spawnProcess = options.spawn || spawn;
   const onSpawnError = options.onSpawnError || ((err) => {
-    process.stderr.write(`clawd auto-start: ${err && err.message ? err.message : err}\n`);
+    process.stderr.write(`duck auto-start: ${err && err.message ? err.message : err}\n`);
   });
   const isWin = platform === "win32";
   const isMac = platform === "darwin";
@@ -124,9 +124,9 @@ function launchApp(options = {}) {
     if (isPackaged) {
       if (isWin) {
         // __dirname: <install>/resources/app.asar.unpacked/hooks
-        // exe:       <install>/Clawd on Desk.exe
+        // exe:       <install>/Duck on Desk.exe
         const installDir = path.resolve(hooksDir, "..", "..", "..");
-        const exe = path.join(installDir, "Clawd on Desk.exe");
+        const exe = path.join(installDir, "Duck on Desk.exe");
         spawnDetached(
           spawnProcess,
           exe,
@@ -174,7 +174,7 @@ function launchApp(options = {}) {
       );
     }
   } catch (err) {
-    process.stderr.write(`clawd auto-start: ${err.message}\n`);
+    process.stderr.write(`duck auto-start: ${err.message}\n`);
   }
 }
 
@@ -185,7 +185,7 @@ module.exports = {
   STARTUP_READY_TIMEOUT_MS,
   STARTUP_DISCOVER_TIMEOUT_MS,
   STARTUP_POLL_INTERVAL_MS,
-  waitForClawdPort,
+  waitForDuckPort,
   resolveMacBundleExecutable,
   launchApp,
   main,

@@ -47,7 +47,7 @@ const OPENCODE_FAMILY = Object.freeze({
   }),
 });
 
-// Clawd-internal event names (PascalCase) shared by every family member —
+// Duck-internal event names (PascalCase) shared by every family member —
 // the family plugin translates native opencode events into these. Reusing
 // Claude Code event names lets state.js reuse existing transition logic
 // (e.g. SubagentStop → working whitelist). Shared here so the per-agent
@@ -70,7 +70,7 @@ const FAMILY_EVENT_MAP = Object.freeze({
 
 const FAMILY_CAPABILITIES = Object.freeze({
   httpHook: false,          // family permission goes via plugin event forward, not HTTP blocking
-  permissionApproval: true, // Clawd bubble → host REST reply through the reverse bridge
+  permissionApproval: true, // Duck bubble → host REST reply through the reverse bridge
   sessionEnd: true,
   subagent: false,          // Phase 3 will flip to true once subtask lifecycle verified
 });

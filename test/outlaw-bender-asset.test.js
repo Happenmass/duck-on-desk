@@ -6,8 +6,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT = path.join(__dirname, "..");
-const SOURCE = path.join(ROOT, "assets", "source", "outlaw-pr811", "clawd-outlaw-bender.svg");
-const RUNTIME = path.join(ROOT, "assets", "svg", "clawd-outlaw-bender.svg");
+const SOURCE = path.join(ROOT, "assets", "source", "outlaw-pr811", "duck-outlaw-bender.svg");
+const RUNTIME = path.join(ROOT, "assets", "svg", "duck-outlaw-bender.svg");
 const FORBIDDEN = [
   /<script\b/i,
   /<foreignObject\b/i,
@@ -40,7 +40,7 @@ test("builtin outlaw bender has no active, linked, or externally loaded SVG cont
 });
 
 test("the generated full outlaw theme is not shipped", () => {
-  const themeDir = path.join(ROOT, "themes", "clawd-outlaw");
+  const themeDir = path.join(ROOT, "themes", "duck-outlaw");
   assert.strictEqual(fs.existsSync(path.join(themeDir, "theme.json")), false);
   const assetsDir = path.join(themeDir, "assets");
   const shippedAssets = fs.existsSync(assetsDir) ? fs.readdirSync(assetsDir) : [];

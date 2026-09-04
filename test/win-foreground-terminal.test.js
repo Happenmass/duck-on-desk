@@ -219,7 +219,7 @@ describe("createForegroundWindowsTerminalProbe — expected misses (no onError)"
     assertExpectedMiss({ pid: 0 });
   });
 
-  it("OpenProcess fails (e.g. elevated WT vs non-elevated Clawd)", () => {
+  it("OpenProcess fails (e.g. elevated WT vs non-elevated Duck)", () => {
     assertExpectedMiss({ hProcess: null });
   });
 

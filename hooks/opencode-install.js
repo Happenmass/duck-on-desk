@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Register Clawd's opencode plugin in the user's global opencode config.
+// Register Duck's opencode plugin in the user's global opencode config.
 //
 // Thin wrapper over the shared opencode-family installer
 // (hooks/opencode-family-install.js). It preserves the FULL legacy surface —

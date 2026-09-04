@@ -114,7 +114,7 @@ function createHolidayAccessoryRuntime(options = {}) {
   function refresh({ force = false } = {}) {
     let resolved;
     try { resolved = resolveDisplay(); } catch (err) {
-      try { logWarn("Clawd: holiday accessory refresh failed:", err && err.message); } catch {}
+      try { logWarn("Duck: holiday accessory refresh failed:", err && err.message); } catch {}
       return false;
     }
 
@@ -125,7 +125,7 @@ function createHolidayAccessoryRuntime(options = {}) {
           throw new Error("renderer unavailable");
         }
       } catch (err) {
-        try { logWarn("Clawd: holiday accessory delivery failed:", err && err.message); } catch {}
+        try { logWarn("Duck: holiday accessory delivery failed:", err && err.message); } catch {}
         return false;
       }
       commitPetAccessorySlotsCandidate(resolved.candidate);
@@ -150,7 +150,7 @@ function createHolidayAccessoryRuntime(options = {}) {
         // lastAppliedKey alone so the next scheduled refresh retries the
         // geometry, and stay quiet — nothing went wrong.
       } catch (err) {
-        try { logWarn("Clawd: holiday accessory geometry apply failed:", err && err.message); } catch {}
+        try { logWarn("Duck: holiday accessory geometry apply failed:", err && err.message); } catch {}
         return false;
       }
     }

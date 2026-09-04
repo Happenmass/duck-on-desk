@@ -7,15 +7,15 @@ const path = require("node:path");
 const { after, before, beforeEach, describe, it } = require("node:test");
 const { pathToFileURL } = require("node:url");
 
-const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-family-ordering-"));
+const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "duck-family-ordering-"));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
-const runtimeDir = path.join(TMP_HOME, ".clawd");
+const runtimeDir = path.join(TMP_HOME, ".duck-on-desk");
 fs.mkdirSync(runtimeDir, { recursive: true, mode: 0o700 });
 const runtimePath = path.join(runtimeDir, "runtime.json");
 fs.writeFileSync(runtimePath, JSON.stringify({
-  app: "clawd-on-desk",
-  port: 23333,
+  app: "duck-on-desk",
+  port: 24333,
   ownerPid: process.pid,
 }), { mode: 0o600 });
 if (process.platform !== "win32") fs.chmodSync(runtimePath, 0o600);
@@ -48,13 +48,13 @@ function fakeHeaders(values = {}) {
   return { get: (name) => normalized[String(name).toLowerCase()] || null };
 }
 
-function clawdResponse(body = null, { metadataAccepted = body && body.metadata_only === true } = {}) {
+function duckResponse(body = null, { metadataAccepted = body && body.metadata_only === true } = {}) {
   const metadata = !!(body && body.metadata_only === true);
   return {
     status: metadata ? 204 : 200,
     headers: fakeHeaders({
-      "x-clawd-server": "clawd-on-desk",
-      ...(metadataAccepted ? { "x-clawd-metadata-accepted": "1" } : {}),
+      "x-duck-server": "duck-on-desk",
+      ...(metadataAccepted ? { "x-duck-metadata-accepted": "1" } : {}),
     }),
     text: async () => "ok",
   };
@@ -64,7 +64,7 @@ function untrustedResponse() {
   return {
     status: 200,
     headers: fakeHeaders(),
-    text: async () => "not-clawd",
+    text: async () => "not-duck",
   };
 }
 
@@ -179,7 +179,7 @@ before(async () => {
 beforeEach(() => {
   fetchImpl = async (url, opts) => {
     const call = parseFetchCall(url, opts);
-    return clawdResponse(call.body);
+    return duckResponse(call.body);
   };
 });
 
@@ -232,7 +232,7 @@ describe("opencode-family per-session /state FIFO", () => {
         await startGate.promise;
       }
       applyStateBody(serverSessions, call.body);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooks, lifecycle(
@@ -288,7 +288,7 @@ describe("opencode-family per-session /state FIFO", () => {
         await lifecycleGate.promise;
       }
       applyStateBody(serverSessions, call.body);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooks, lifecycle("session.created", "ses_rename", directory, "Title A"));
@@ -324,17 +324,17 @@ describe("opencode-family per-session /state FIFO", () => {
     fetchImpl = async (url, opts) => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
-      return call.body.state === "thinking" ? untrustedResponse() : clawdResponse(call.body);
+      return call.body.state === "thinking" ? untrustedResponse() : duckResponse(call.body);
     };
 
-    plugin.__test.postStateToClawd({
+    plugin.__test.postStateToDuck({
       state: "thinking",
       session_id: "opencode:ses_failure",
       event: "UserPromptSubmit",
       agent_id: "opencode",
       hook_source: "opencode-plugin",
     });
-    plugin.__test.postStateToClawd({
+    plugin.__test.postStateToDuck({
       state: "working",
       session_id: "opencode:ses_failure",
       event: "PreToolUse",
@@ -360,10 +360,10 @@ describe("opencode-family per-session /state FIFO", () => {
       if (call.body.event === "UserPromptSubmit" && call.body.sequence === 0) {
         await firstGate.promise;
       }
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
-    plugin.__test.postStateToClawd({
+    plugin.__test.postStateToDuck({
       state: "thinking",
       session_id: "opencode:ses_coalesce",
       event: "UserPromptSubmit",
@@ -374,7 +374,7 @@ describe("opencode-family per-session /state FIFO", () => {
     await waitFor(() => calls.length === 1, "first state never began");
 
     for (let sequence = 1; sequence <= 100; sequence += 1) {
-      plugin.__test.postStateToClawd({
+      plugin.__test.postStateToDuck({
         state: sequence % 2 ? "working" : "thinking",
         session_id: "opencode:ses_coalesce",
         event: sequence % 2 ? "PreToolUse" : "UserPromptSubmit",
@@ -405,10 +405,10 @@ describe("opencode-family per-session /state FIFO", () => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
       if (call.body.sequence === 0) await firstGate.promise;
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
-    plugin.__test.postStateToClawd({
+    plugin.__test.postStateToDuck({
       state: "thinking",
       session_id: "opencode:ses_terminal",
       event: "UserPromptSubmit",
@@ -417,7 +417,7 @@ describe("opencode-family per-session /state FIFO", () => {
       hook_source: "opencode-plugin",
     });
     await waitFor(() => calls.length === 1, "first state never began");
-    plugin.__test.postStateToClawd({
+    plugin.__test.postStateToDuck({
       state: "working",
       session_id: "opencode:ses_terminal",
       event: "PreToolUse",
@@ -425,7 +425,7 @@ describe("opencode-family per-session /state FIFO", () => {
       agent_id: "opencode",
       hook_source: "opencode-plugin",
     });
-    plugin.__test.postStateToClawd({
+    plugin.__test.postStateToDuck({
       state: "sleeping",
       session_id: "opencode:ses_terminal",
       event: "SessionEnd",
@@ -453,7 +453,7 @@ describe("opencode-family per-session /state FIFO", () => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
       if (calls.length === 1) await firstGate.promise;
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooks, lifecycle("session.created", "ses_bounded", directory, "Bounded"));
@@ -507,7 +507,7 @@ describe("opencode-family per-session /state FIFO", () => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
       if (calls.length === 1) await firstGate.promise;
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooks, lifecycle("session.created", "ses_metadata_bound", directory, "Old title"));
@@ -563,10 +563,10 @@ describe("opencode-family per-session /state FIFO", () => {
       if (call.url.endsWith("/state") && call.body.session_id === "opencode:ses_a") {
         await stateGate.promise;
       }
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
-    plugin.__test.postStateToClawd({
+    plugin.__test.postStateToDuck({
       state: "thinking",
       session_id: "opencode:ses_a",
       event: "UserPromptSubmit",
@@ -575,7 +575,7 @@ describe("opencode-family per-session /state FIFO", () => {
     });
     await waitFor(() => calls.some((call) => call.body.session_id === "opencode:ses_a"), "session A did not block");
 
-    plugin.__test.postStateToClawd({
+    plugin.__test.postStateToDuck({
       state: "working",
       session_id: "opencode:ses_b",
       event: "PreToolUse",
@@ -622,7 +622,7 @@ describe("opencode-family per-session /state FIFO", () => {
       if (blockThinking && call.body.event === "UserPromptSubmit" && call.body.session_id === "opencode:ses_child") {
         await thinkingGate.promise;
       }
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooks, lifecycle("session.created", "ses_root", directory, "Root"));
@@ -673,17 +673,17 @@ describe("opencode-family queued metadata coalescing", () => {
     fetchImpl = async (url, opts) => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
-      return clawdResponse(call.body, { metadataAccepted: false });
+      return duckResponse(call.body, { metadataAccepted: false });
     };
 
-    const completion = plugin.__test.postStateToClawd(metadataState("opencode:ses_no_ack", {
+    const completion = plugin.__test.postStateToDuck(metadataState("opencode:ses_no_ack", {
       context_usage: { used: 10, limit: 100, source: "opencode" },
     }));
     const tail = plugin.__test._statePostTailBySession.get("opencode:ses_no_ack");
     assert.strictEqual(await completion, false, "the metadata snapshot must not report accepted");
     assert.strictEqual(await tail, true, "the queue tail remains a recognized-transport aggregate");
     assert.strictEqual(calls.length, 1, "recognized/no-ack must stop candidate scanning");
-    assert.strictEqual(plugin.__test._cachedPort, 23333);
+    assert.strictEqual(plugin.__test._cachedPort, 24333);
   });
 
   it("projects untrusted or thrown delivery to false snapshot and transport results", async () => {
@@ -692,7 +692,7 @@ describe("opencode-family queued metadata coalescing", () => {
       fetchImpl = mode === "throw"
         ? async () => { throw new Error("fetch failed"); }
         : async () => untrustedResponse();
-      const completion = plugin.__test.postStateToClawd(metadataState(`opencode:ses_${mode}`, {
+      const completion = plugin.__test.postStateToDuck(metadataState(`opencode:ses_${mode}`, {
         context_usage: { used: 10, limit: 100, source: "opencode" },
       }));
       const tail = plugin.__test._statePostTailBySession.get(`opencode:ses_${mode}`);
@@ -709,9 +709,9 @@ describe("opencode-family queued metadata coalescing", () => {
       if (call.body.session_id === sessionID && call.body.metadata_only !== true && calls.length === 1) {
         await gate.promise;
       }
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
-    const active = plugin.__test.postStateToClawd({
+    const active = plugin.__test.postStateToDuck({
       state: "thinking",
       session_id: sessionID,
       event: "UserPromptSubmit",
@@ -726,10 +726,10 @@ describe("opencode-family queued metadata coalescing", () => {
     const plugin = createOpencodeFamilyPlugin(CONFIG);
     const calls = [];
     const { gate, active } = startBlockedLifecycle(plugin, calls);
-    const title = plugin.__test.postStateToClawd(metadataState("opencode:ses_meta", {
+    const title = plugin.__test.postStateToDuck(metadataState("opencode:ses_meta", {
       session_title: "A title",
     }));
-    const context = plugin.__test.postStateToClawd(metadataState("opencode:ses_meta", {
+    const context = plugin.__test.postStateToDuck(metadataState("opencode:ses_meta", {
       context_usage: { used: 10, limit: 100, source: "opencode" },
     }));
 
@@ -746,16 +746,16 @@ describe("opencode-family queued metadata coalescing", () => {
     const plugin = createOpencodeFamilyPlugin(CONFIG);
     const calls = [];
     const { gate, active } = startBlockedLifecycle(plugin, calls);
-    const contextA = plugin.__test.postStateToClawd(metadataState("opencode:ses_meta", {
+    const contextA = plugin.__test.postStateToDuck(metadataState("opencode:ses_meta", {
       context_usage: { used: 10, limit: 100, source: "opencode" },
     }));
-    const contextB = plugin.__test.postStateToClawd(metadataState("opencode:ses_meta", {
+    const contextB = plugin.__test.postStateToDuck(metadataState("opencode:ses_meta", {
       context_usage: { used: 20, limit: 100, source: "opencode" },
     }));
-    const titleA = plugin.__test.postStateToClawd(metadataState("opencode:ses_meta", {
+    const titleA = plugin.__test.postStateToDuck(metadataState("opencode:ses_meta", {
       session_title: "Old title",
     }));
-    const titleB = plugin.__test.postStateToClawd(metadataState("opencode:ses_meta", {
+    const titleB = plugin.__test.postStateToDuck(metadataState("opencode:ses_meta", {
       session_title: "Latest title",
     }));
 
@@ -775,13 +775,13 @@ describe("opencode-family queued metadata coalescing", () => {
     const plugin = createOpencodeFamilyPlugin(CONFIG);
     const calls = [];
     const { gate, active } = startBlockedLifecycle(plugin, calls);
-    const title = plugin.__test.postStateToClawd(metadataState("opencode:ses_meta", {
+    const title = plugin.__test.postStateToDuck(metadataState("opencode:ses_meta", {
       session_title: "Title",
     }));
-    const context = plugin.__test.postStateToClawd(metadataState("opencode:ses_meta", {
+    const context = plugin.__test.postStateToDuck(metadataState("opencode:ses_meta", {
       context_usage: { used: 30, limit: 300, source: "opencode" },
     }));
-    const lifecycleBody = plugin.__test.postStateToClawd({
+    const lifecycleBody = plugin.__test.postStateToDuck({
       state: "working",
       session_id: "opencode:ses_meta",
       event: "PostToolUse",
@@ -809,17 +809,17 @@ describe("opencode-family queued metadata coalescing", () => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
       if (call.body.session_id === "opencode:ses_a") await gateA.promise;
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
-    const a = plugin.__test.postStateToClawd({
+    const a = plugin.__test.postStateToDuck({
       state: "thinking",
       session_id: "opencode:ses_a",
       event: "UserPromptSubmit",
       agent_id: "opencode",
       hook_source: "opencode-plugin",
     });
-    const b = plugin.__test.postStateToClawd(metadataState("opencode:ses_b", {
+    const b = plugin.__test.postStateToDuck(metadataState("opencode:ses_b", {
       context_usage: { used: 1, limit: 10, source: "opencode" },
     }));
     assert.strictEqual(calls.length, 2, "session B waited behind session A");
@@ -858,7 +858,7 @@ describe("opencode-family directory-scoped instance disposal", () => {
     fetchImpl = async (url, opts) => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooksA, lifecycle("session.created", "a_root", directoryA, "A root"));
@@ -944,7 +944,7 @@ describe("opencode-family directory-scoped instance disposal", () => {
     fetchImpl = async (url, opts) => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooksA, {
@@ -988,7 +988,7 @@ describe("opencode-family directory-scoped instance disposal", () => {
     fetchImpl = async (url, opts) => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooksA, lifecycle("session.created", "mixed_a", directoryA, "A"));
@@ -1040,7 +1040,7 @@ describe("opencode-family directory-scoped instance disposal", () => {
     fetchImpl = async (url, opts) => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     assert.strictEqual(plugin.__test._lastInitDirectory, directoryB);
@@ -1050,7 +1050,7 @@ describe("opencode-family directory-scoped instance disposal", () => {
     });
     assert.strictEqual(plugin.__test._lastInitDirectory, directoryA);
 
-    plugin.__test.postStateToClawd({
+    plugin.__test.postStateToDuck({
       state: "thinking",
       event: "UserPromptSubmit",
       session_id: "opencode:legacy_unowned",
@@ -1072,7 +1072,7 @@ describe("opencode-family directory-scoped instance disposal", () => {
     fetchImpl = async (url, opts) => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooksA, lifecycle("session.created", "sid_a", directoryA, "A"));
@@ -1122,7 +1122,7 @@ describe("opencode-family directory-scoped instance disposal", () => {
         await stateGate.promise;
       }
       if (call.url.endsWith("/state")) applyStateBody(serverSessions, call.body);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooksA, lifecycle("session.created", "ghost_a", directoryA, "A"));
@@ -1194,7 +1194,7 @@ describe("opencode-family context usage event wiring", () => {
     fetchImpl = async (url, opts) => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooks, contextMessage("context_wire", 321));
@@ -1242,7 +1242,7 @@ describe("opencode-family context usage event wiring", () => {
     fetchImpl = async (url, opts) => {
       const call = parseFetchCall(url, opts);
       calls.push(call);
-      return clawdResponse(call.body);
+      return duckResponse(call.body);
     };
 
     await emit(hooks, contextMessage("owned_context", 10));

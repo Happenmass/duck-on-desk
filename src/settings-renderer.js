@@ -1,6 +1,6 @@
 "use strict";
 
-const core = globalThis.ClawdSettingsCore;
+const core = globalThis.DuckSettingsCore;
 
 // Icons resolve via settings-icons.js at render time (keyed by tab id),
 // not as emoji/unicode glyphs \u2014 those rendered inconsistently across
@@ -15,7 +15,7 @@ const SIDEBAR_TABS = [
 ];
 
 function getTabIcon(tabId) {
-  const icons = globalThis.ClawdSettingsIcons;
+  const icons = globalThis.DuckSettingsIcons;
   if (icons && typeof icons.getIcon === "function") return icons.getIcon(tabId);
   return "";
 }
@@ -26,10 +26,10 @@ function renderSidebar() {
   if (!sidebar) return;
   sidebar.innerHTML = "";
   if (
-    globalThis.ClawdSettingsDoctorModal
-    && typeof globalThis.ClawdSettingsDoctorModal.renderSidebarIndicator === "function"
+    globalThis.DuckSettingsDoctorModal
+    && typeof globalThis.DuckSettingsDoctorModal.renderSidebarIndicator === "function"
   ) {
-    globalThis.ClawdSettingsDoctorModal.renderSidebarIndicator(sidebar, core);
+    globalThis.DuckSettingsDoctorModal.renderSidebarIndicator(sidebar, core);
   }
   for (const tab of SIDEBAR_TABS) {
     const item = document.createElement("div");
@@ -79,15 +79,15 @@ core.ops.installRenderHooks({
   content: renderContent,
 });
 
-globalThis.ClawdSettingsTabGeneral.init(core);
-globalThis.ClawdSettingsTabAgents.init(core);
-globalThis.ClawdSettingsTabTheme.init(core);
+globalThis.DuckSettingsTabGeneral.init(core);
+globalThis.DuckSettingsTabAgents.init(core);
+globalThis.DuckSettingsTabTheme.init(core);
 // Not a top-level tab anymore — it provides the "on / off" subtab that
-// ClawdSettingsTabAnimOverrides renders. init() just wires up the core refs.
-globalThis.ClawdSettingsTabAnimMap.init(core);
-globalThis.ClawdSettingsTabAnimOverrides.init(core);
-globalThis.ClawdSettingsTabShortcuts.init(core);
-globalThis.ClawdSettingsTabAbout.init(core);
+// DuckSettingsTabAnimOverrides renders. init() just wires up the core refs.
+globalThis.DuckSettingsTabAnimMap.init(core);
+globalThis.DuckSettingsTabAnimOverrides.init(core);
+globalThis.DuckSettingsTabShortcuts.init(core);
+globalThis.DuckSettingsTabAbout.init(core);
 
 core.ops.restoreNavigationState();
 function selectRequestedTab(tab) {

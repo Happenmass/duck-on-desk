@@ -13,9 +13,9 @@ const themeLoader = require("../src/theme-loader");
 const { makeSessionKey } = require("../src/session-key");
 
 function fixture(t, showCard = false) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-input-fence-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-input-fence-"));
   themeLoader.init(path.join(__dirname, "../src"));
-  const theme = JSON.parse(JSON.stringify(themeLoader.loadTheme("clawd")));
+  const theme = JSON.parse(JSON.stringify(themeLoader.loadTheme("duck")));
   theme.timings.minDisplay = {};
   theme.timings.autoReturn = {};
   const noop = () => {};

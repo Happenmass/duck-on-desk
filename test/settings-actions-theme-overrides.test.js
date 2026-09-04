@@ -23,9 +23,9 @@ test("settings theme override actions expose the command surface", () => {
 test("settings theme override actions update an active state slot with explicit reload data", () => {
   const calls = [];
   const snapshot = {
-    theme: "clawd",
+    theme: "duck",
     themeOverrides: {
-      clawd: {
+      duck: {
         hitbox: { wide: { "old.svg": true } },
         sounds: { complete: { file: "done.mp3" } },
       },
@@ -34,7 +34,7 @@ test("settings theme override actions update an active state slot with explicit 
 
   const result = themeOverrideCommands.setAnimationOverride(
     {
-      themeId: "clawd",
+      themeId: "duck",
       slotType: "state",
       stateKey: "attention",
       file: "new-attention.svg",
@@ -50,20 +50,20 @@ test("settings theme override actions update an active state slot with explicit 
   );
 
   assert.strictEqual(result.status, "ok");
-  assert.deepStrictEqual(result.commit.themeOverrides.clawd.states.attention, {
+  assert.deepStrictEqual(result.commit.themeOverrides.duck.states.attention, {
     file: "new-attention.svg",
     transition: { in: 80, out: 120 },
   });
-  assert.deepStrictEqual(result.commit.themeOverrides.clawd.timings, {
+  assert.deepStrictEqual(result.commit.themeOverrides.duck.timings, {
     autoReturn: { attention: 2500 },
   });
-  assert.deepStrictEqual(result.commit.themeOverrides.clawd.hitbox, snapshot.themeOverrides.clawd.hitbox);
-  assert.deepStrictEqual(result.commit.themeOverrides.clawd.sounds, snapshot.themeOverrides.clawd.sounds);
+  assert.deepStrictEqual(result.commit.themeOverrides.duck.hitbox, snapshot.themeOverrides.duck.hitbox);
+  assert.deepStrictEqual(result.commit.themeOverrides.duck.sounds, snapshot.themeOverrides.duck.sounds);
   assert.deepStrictEqual(calls, [
     {
-      themeId: "clawd",
+      themeId: "duck",
       variantId: null,
-      overrideMap: result.commit.themeOverrides.clawd,
+      overrideMap: result.commit.themeOverrides.duck,
     },
   ]);
 });
@@ -71,9 +71,9 @@ test("settings theme override actions update an active state slot with explicit 
 test("settings theme override actions clear transition overrides that match the theme default", () => {
   const calls = [];
   const snapshot = {
-    theme: "clawd",
+    theme: "duck",
     themeOverrides: {
-      clawd: {
+      duck: {
         states: {
           thinking: {
             transition: { in: 160, out: 150 },
@@ -85,7 +85,7 @@ test("settings theme override actions clear transition overrides that match the 
 
   const result = themeOverrideCommands.setAnimationOverride(
     {
-      themeId: "clawd",
+      themeId: "duck",
       slotType: "state",
       stateKey: "thinking",
       transition: { in: 150, out: 150 },
@@ -100,10 +100,10 @@ test("settings theme override actions clear transition overrides that match the 
   );
 
   assert.strictEqual(result.status, "ok");
-  assert.strictEqual(result.commit.themeOverrides.clawd, undefined);
+  assert.strictEqual(result.commit.themeOverrides.duck, undefined);
   assert.deepStrictEqual(calls, [
     {
-      themeId: "clawd",
+      themeId: "duck",
       variantId: null,
       overrideMap: {},
     },
@@ -113,7 +113,7 @@ test("settings theme override actions clear transition overrides that match the 
 test("settings theme override actions keep transition overrides that differ from the theme default", () => {
   const result = themeOverrideCommands.setAnimationOverride(
     {
-      themeId: "clawd",
+      themeId: "duck",
       slotType: "state",
       stateKey: "thinking",
       transition: { in: 160, out: 150 },
@@ -128,7 +128,7 @@ test("settings theme override actions keep transition overrides that differ from
   );
 
   assert.strictEqual(result.status, "ok");
-  assert.deepStrictEqual(result.commit.themeOverrides.clawd.states.thinking, {
+  assert.deepStrictEqual(result.commit.themeOverrides.duck.states.thinking, {
     transition: { in: 160, out: 150 },
   });
 });
@@ -137,7 +137,7 @@ test("settings theme override actions preserve animation and hitbox data when ch
   const snapshot = {
     theme: "calico",
     themeOverrides: {
-      clawd: {
+      duck: {
         states: { attention: { file: "attention.svg" } },
         reactions: { clickLeft: { file: "click.svg" } },
         hitbox: { wide: { "wide.svg": true } },
@@ -147,7 +147,7 @@ test("settings theme override actions preserve animation and hitbox data when ch
   };
 
   const result = themeOverrideCommands.setSoundOverride(
-    { themeId: "clawd", soundName: "complete", file: "complete.mp3", originalName: "picked.mp3" },
+    { themeId: "duck", soundName: "complete", file: "complete.mp3", originalName: "picked.mp3" },
     {
       snapshot,
       activateTheme: () => {
@@ -157,10 +157,10 @@ test("settings theme override actions preserve animation and hitbox data when ch
   );
 
   assert.strictEqual(result.status, "ok");
-  assert.deepStrictEqual(result.commit.themeOverrides.clawd.states, snapshot.themeOverrides.clawd.states);
-  assert.deepStrictEqual(result.commit.themeOverrides.clawd.reactions, snapshot.themeOverrides.clawd.reactions);
-  assert.deepStrictEqual(result.commit.themeOverrides.clawd.hitbox, snapshot.themeOverrides.clawd.hitbox);
-  assert.deepStrictEqual(result.commit.themeOverrides.clawd.sounds, {
+  assert.deepStrictEqual(result.commit.themeOverrides.duck.states, snapshot.themeOverrides.duck.states);
+  assert.deepStrictEqual(result.commit.themeOverrides.duck.reactions, snapshot.themeOverrides.duck.reactions);
+  assert.deepStrictEqual(result.commit.themeOverrides.duck.hitbox, snapshot.themeOverrides.duck.hitbox);
+  assert.deepStrictEqual(result.commit.themeOverrides.duck.sounds, {
     confirm: { file: "confirm.wav" },
     complete: { file: "complete.mp3", originalName: "picked.mp3" },
   });
@@ -171,14 +171,14 @@ test("settings theme override actions import active theme overrides with the com
   const payload = {
     version: 1,
     themes: {
-      clawd: {
+      duck: {
         states: {
           attention: { disabled: true },
         },
       },
     },
   };
-  const snapshot = { theme: "clawd", themeOverrides: {} };
+  const snapshot = { theme: "duck", themeOverrides: {} };
 
   const result = themeOverrideCommands.importAnimationOverrides(payload, {
     snapshot,
@@ -191,9 +191,9 @@ test("settings theme override actions import active theme overrides with the com
   assert.strictEqual(result.importedThemeCount, 1);
   assert.deepStrictEqual(calls, [
     {
-      themeId: "clawd",
+      themeId: "duck",
       variantId: null,
-      overrideMap: result.commit.themeOverrides.clawd,
+      overrideMap: result.commit.themeOverrides.duck,
     },
   ]);
 });
@@ -201,14 +201,14 @@ test("settings theme override actions import active theme overrides with the com
 test("settings theme override actions reset an active theme by reloading without overrides", () => {
   const calls = [];
   const snapshot = {
-    theme: "clawd",
+    theme: "duck",
     themeOverrides: {
-      clawd: { states: { attention: { disabled: true } } },
+      duck: { states: { attention: { disabled: true } } },
       calico: { states: { error: { disabled: true } } },
     },
   };
 
-  const result = themeOverrideCommands.resetThemeOverrides("clawd", {
+  const result = themeOverrideCommands.resetThemeOverrides("duck", {
     snapshot,
     activateTheme: (themeId, variantId, overrideMap) => {
       calls.push({ themeId, variantId, overrideMap });
@@ -216,9 +216,9 @@ test("settings theme override actions reset an active theme by reloading without
   });
 
   assert.strictEqual(result.status, "ok");
-  assert.strictEqual(result.commit.themeOverrides.clawd, undefined);
+  assert.strictEqual(result.commit.themeOverrides.duck, undefined);
   assert.ok(result.commit.themeOverrides.calico);
   assert.deepStrictEqual(calls, [
-    { themeId: "clawd", variantId: null, overrideMap: null },
+    { themeId: "duck", variantId: null, overrideMap: null },
   ]);
 });

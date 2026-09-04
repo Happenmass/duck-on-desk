@@ -1,5 +1,5 @@
 // Claude Code agent configuration
-// Extracted from hardcoded constants in main.js and clawd-hook.js
+// Extracted from hardcoded constants in main.js and duck-hook.js
 
 module.exports = {
   id: "claude-code",

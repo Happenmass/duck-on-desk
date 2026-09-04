@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Clawd — Codex official lifecycle and permission hook.
+// Duck — Codex official lifecycle and permission hook.
 // Registered in ~/.codex/hooks.json by hooks/codex-install.js
 
 const crypto = require("crypto");
@@ -42,7 +42,7 @@ const {
 } = require("./codex-originator");
 const { fitStateBodyToByteBudget } = require("./state-payload-size");
 
-const WINDOWS_STABLE_RUN_SIGNATURE = "clawd-codex-stable-windows-run-v1";
+const WINDOWS_STABLE_RUN_SIGNATURE = "duck-codex-stable-windows-run-v1";
 
 function decodeStableSidecarValue(value) {
   if (typeof value !== "string") throw new Error("invalid-sidecar-value");
@@ -75,11 +75,11 @@ function applyWindowsStableSidecarEnv(options = {}) {
   if (platform !== "win32") return { applied: false, reason: "not-windows" };
   if (!argv.includes(CODEX_WINDOWS_STABLE_ARG)) return { applied: false, reason: "not-stable" };
   if (argv.includes(CODEX_WSL_INTEROP_ARG)) return { applied: false, reason: "wsl-interop" };
-  if (env.CLAWD_REMOTE) return { applied: false, reason: "remote" };
+  if (env.DUCK_REMOTE) return { applied: false, reason: "remote" };
 
   const fsApi = options.fs || fs;
   const codexHome = options.codexHome || env.CODEX_HOME || path.join(os.homedir(), ".codex");
-  const sidecarPath = path.join(codexHome, "clawd-hooks", "codex-hook.js.windows.run");
+  const sidecarPath = path.join(codexHome, "duck-hooks", "codex-hook.js.windows.run");
   let lines;
   try {
     lines = fsApi.readFileSync(sidecarPath, "utf8").replace(/\r\n/g, "\n").split("\n");
@@ -140,7 +140,7 @@ const EVENT_TO_STATE = {
 };
 
 function getCodexPermissionTimeoutMs() {
-  const raw = Number(process.env.CLAWD_CODEX_PERMISSION_TIMEOUT_MS);
+  const raw = Number(process.env.DUCK_CODEX_PERMISSION_TIMEOUT_MS);
   if (Number.isFinite(raw) && raw > 0) return Math.min(raw, CODEX_PERMISSION_TIMEOUT_MS);
   return CODEX_PERMISSION_TIMEOUT_MS;
 }
@@ -462,7 +462,7 @@ function buildPermissionBody(payload, resolve, options = {}) {
   if (toolUseId) body.tool_use_id = toolUseId;
   if (toolInputFingerprint) body.tool_input_fingerprint = toolInputFingerprint;
 
-  if (process.env.CLAWD_REMOTE) {
+  if (process.env.DUCK_REMOTE) {
     body.host = readHostPrefix();
     applyWslSourceFields(body, { remote: true });
     applyOrcaPaneKey(body);
@@ -536,7 +536,7 @@ function buildStateBody(payload, resolve, options = {}) {
   if (toolUseId) body.tool_use_id = toolUseId;
   if (toolInputFingerprint) body.tool_input_fingerprint = toolInputFingerprint;
 
-  if (process.env.CLAWD_REMOTE) {
+  if (process.env.DUCK_REMOTE) {
     body.host = readHostPrefix();
     applyWslSourceFields(body, { remote: true });
     applyOrcaPaneKey(body);
@@ -576,7 +576,7 @@ function requestCodexPermission(body, callback, options = {}) {
   );
 }
 
-function startClawdAndWait(options = {}) {
+function startDuckAndWait(options = {}) {
   const spawnProcess = options.spawn || spawn;
   const setTimeoutFn = options.setTimeout || setTimeout;
   const clearTimeoutFn = options.clearTimeout || clearTimeout;
@@ -642,8 +642,8 @@ async function runCodexHook(payload, options = {}) {
     wslDistro = resolveHookWslDistro();
   } catch {}
   const mayUseWindowsProcessChain = platform === "win32"
-    && !env.CLAWD_REMOTE
-    && !env.CLAWD_WSL_DISTRO
+    && !env.DUCK_REMOTE
+    && !env.DUCK_WSL_DISTRO
     && !wslInterop
     && !wslDistro;
   const readHookContext = options.readWindowsProcessChainHookContext
@@ -774,8 +774,8 @@ async function runCodexHook(payload, options = {}) {
   if (
     result.posted
     || payload.hook_event_name !== "SessionStart"
-    || env.CLAWD_REMOTE
-    || env.CLAWD_WSL_DISTRO
+    || env.DUCK_REMOTE
+    || env.DUCK_WSL_DISTRO
     || wslInterop
     || wslDistro
   ) return result;
@@ -791,7 +791,7 @@ async function runCodexHook(payload, options = {}) {
   // auto-start hook would race this state delivery. Wait for the existing
   // launcher helper to finish its readiness probe, then rebuild this event
   // with fresh runtime and process identity before retrying it.
-  const runAutoStart = options.runAutoStart || startClawdAndWait;
+  const runAutoStart = options.runAutoStart || startDuckAndWait;
   await runAutoStart();
   const retryAttempt = buildStateAttempt();
   return postAttempt(retryAttempt);
@@ -826,5 +826,5 @@ module.exports = {
   runCodexHook,
   sanitizeCodexPermissionDecision,
   sanitizeCodexPermissionOutput,
-  startClawdAndWait,
+  startDuckAndWait,
 };

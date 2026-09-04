@@ -4,8 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Utf8NoBom = New-Object System.Text.UTF8Encoding -ArgumentList $false
-$ClawdPermissionPorts = @(23333, 23334, 23335, 23336, 23337)
-$ClawdCommandMarkers = @("clawd-hook.js", "auto-start.js", "auto-start.sh")
+$DuckPermissionPorts = @(24333, 24334, 24335, 24336, 24337)
+$DuckCommandMarkers = @("duck-hook.js", "auto-start.js", "auto-start.sh")
 
 function Normalize-PathForCompare {
   param([string]$PathValue)
@@ -71,7 +71,7 @@ function Read-TrimmedTextCandidates {
 }
 
 function Resolve-TargetUserHome {
-  $markerPath = Join-Path $InstallDir ".clawd-install-user-home"
+  $markerPath = Join-Path $InstallDir ".duck-on-desk-install-user-home"
   if ([System.IO.File]::Exists($markerPath)) {
     foreach ($candidateText in (Read-TrimmedTextCandidates $markerPath)) {
       $resolved = Resolve-PlausibleUserHome $candidateText
@@ -109,11 +109,11 @@ function Get-StringPropertyValue {
   return $property.Value
 }
 
-function Test-ClawdCommand {
+function Test-DuckCommand {
   param([string]$Command)
   if ([string]::IsNullOrWhiteSpace($Command)) { return $false }
 
-  foreach ($marker in $ClawdCommandMarkers) {
+  foreach ($marker in $DuckCommandMarkers) {
     if ($Command.IndexOf($marker, [System.StringComparison]::Ordinal) -ge 0) {
       return $true
     }
@@ -122,7 +122,7 @@ function Test-ClawdCommand {
   return $false
 }
 
-function Test-ClawdPermissionUrl {
+function Test-DuckPermissionUrl {
   param([string]$Url)
   if ([string]::IsNullOrWhiteSpace($Url)) { return $false }
 
@@ -135,23 +135,23 @@ function Test-ClawdPermissionUrl {
       -and [string]::IsNullOrEmpty($uri.Query) `
       -and [string]::IsNullOrEmpty($uri.Fragment) `
       -and [string]::IsNullOrEmpty($uri.UserInfo) `
-      -and ($ClawdPermissionPorts -contains $uri.Port)
+      -and ($DuckPermissionPorts -contains $uri.Port)
   } catch {
     return $false
   }
 }
 
-function Test-ClawdHttpHook {
+function Test-DuckHttpHook {
   param([object]$Hook)
 
   $type = Get-StringPropertyValue $Hook "type"
   if ($type -ne "http") { return $false }
 
   $url = Get-StringPropertyValue $Hook "url"
-  return Test-ClawdPermissionUrl $url
+  return Test-DuckPermissionUrl $url
 }
 
-function Remove-ClawdHooksFromEntries {
+function Remove-DuckHooksFromEntries {
   param([object[]]$Entries)
 
   $nextEntries = New-Object System.Collections.ArrayList
@@ -165,13 +165,13 @@ function Remove-ClawdHooksFromEntries {
     }
 
     $entryCommand = Get-StringPropertyValue $entry "command"
-    if (Test-ClawdCommand $entryCommand) {
+    if (Test-DuckCommand $entryCommand) {
       $removed++
       $changed = $true
       continue
     }
 
-    if (Test-ClawdHttpHook $entry) {
+    if (Test-DuckHttpHook $entry) {
       $removed++
       $changed = $true
       continue
@@ -190,9 +190,9 @@ function Remove-ClawdHooksFromEntries {
       $removeHook = $false
       if ($null -ne $hook -and $null -ne $hook.PSObject) {
         $hookCommand = Get-StringPropertyValue $hook "command"
-        if (Test-ClawdCommand $hookCommand) {
+        if (Test-DuckCommand $hookCommand) {
           $removeHook = $true
-        } elseif (Test-ClawdHttpHook $hook) {
+        } elseif (Test-DuckHttpHook $hook) {
           $removeHook = $true
         }
       }
@@ -225,7 +225,7 @@ function Remove-ClawdHooksFromEntries {
   }
 }
 
-function Remove-ClawdHooksFromSettings {
+function Remove-DuckHooksFromSettings {
   param([object]$Settings)
 
   $hooksProperty = Get-JsonProperty $Settings "hooks"
@@ -239,7 +239,7 @@ function Remove-ClawdHooksFromSettings {
   foreach ($eventProperty in $eventProperties) {
     if (-not ($eventProperty.Value -is [System.Array])) { continue }
 
-    $result = Remove-ClawdHooksFromEntries -Entries ([object[]]$eventProperty.Value)
+    $result = Remove-DuckHooksFromEntries -Entries ([object[]]$eventProperty.Value)
     if (-not $result.Changed) { continue }
 
     $changed = $true
@@ -270,9 +270,9 @@ try {
   }
 
   if ($null -eq $settings) { exit 0 }
-  if (-not (Remove-ClawdHooksFromSettings $settings)) { exit 0 }
+  if (-not (Remove-DuckHooksFromSettings $settings)) { exit 0 }
 
-  $backupName = "settings.json.clawd-uninstall-{0}.bak" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff")
+  $backupName = "settings.json.duck-on-desk-uninstall-{0}.bak" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff")
   $backupPath = Join-Path (Split-Path -Parent $settingsPath) $backupName
   [System.IO.File]::Copy($settingsPath, $backupPath, $false)
 

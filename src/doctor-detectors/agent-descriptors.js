@@ -28,7 +28,7 @@ const AGENT_DESCRIPTORS = Object.freeze([
     configPath: claude.DEFAULT_CONFIG_PATH,
     configMode: "file",
     autoInstall: true,
-    marker: "clawd-hook.js",
+    marker: "duck-hook.js",
     nested: true,
   }),
   Object.freeze({

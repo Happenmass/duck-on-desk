@@ -3,7 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const ISSUE_URL = "https://github.com/rullerzhou-afk/clawd-on-desk/issues/709";
+const ISSUE_URL = "https://github.com/rullerzhou-afk/duck-on-desk/issues/709";
 const VERIFY_COMMAND = "node scripts/verify-electron-install.js";
 const MAC_HELPER_APPS = Object.freeze([
   "Electron Helper.app",

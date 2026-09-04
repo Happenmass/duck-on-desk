@@ -8,10 +8,10 @@ const childProcess = require("child_process");
 const { asarUnpackedPath, writeJsonAtomic } = require("./json-utils");
 const { resolveNodeBin } = require("./server-config");
 
-const EXTENSION_DIR_NAME = "clawd-on-desk";
+const EXTENSION_DIR_NAME = "duck-on-desk";
 const EXTENSION_FILE = "index.ts";
 const CORE_FILE = "pi-extension-core.js";
-const MARKER_FILE = ".clawd-managed.json";
+const MARKER_FILE = ".duck-on-desk-managed.json";
 const DEFAULT_PARENT_DIR = path.join(os.homedir(), ".pi", "agent");
 const DEFAULT_EXTENSIONS_DIR = path.join(DEFAULT_PARENT_DIR, "extensions");
 const DEFAULT_EXTENSION_DIR = path.join(DEFAULT_EXTENSIONS_DIR, EXTENSION_DIR_NAME);
@@ -62,7 +62,7 @@ function readJsonIfPresent(filePath, fsImpl = fs) {
 function isManagedMarker(value) {
   return !!(
     value
-    && value.app === "clawd-on-desk"
+    && value.app === "duck-on-desk"
     && value.integration === "pi"
     && value.managed === true
   );
@@ -70,7 +70,7 @@ function isManagedMarker(value) {
 
 function buildMarker() {
   return {
-    app: "clawd-on-desk",
+    app: "duck-on-desk",
     integration: "pi",
     managed: true,
     version: 1,
@@ -160,7 +160,7 @@ function registerPiExtension(options = {}) {
   const parentExists = dirExists(parentDir, fsImpl);
   if (!parentExists && !hasPiCommand(options)) {
     if (!options.silent) {
-      console.log("Clawd: Pi not found - skipping Pi extension registration");
+      console.log("Duck: Pi not found - skipping Pi extension registration");
     }
     return { installed: false, skipped: true, updated: false, reason: "pi-not-found", extensionDir };
   }
@@ -168,7 +168,7 @@ function registerPiExtension(options = {}) {
   const extensionExists = dirExists(extensionDir, fsImpl);
   if (extensionExists && !isManagedMarker(readJsonIfPresent(markerPath, fsImpl))) {
     if (!options.silent) {
-      console.log(`Clawd: ${extensionDir} exists but is not Clawd-managed - skipping`);
+      console.log(`Duck: ${extensionDir} exists but is not Duck-managed - skipping`);
     }
     return { installed: false, skipped: true, updated: false, reason: "unmanaged-existing-extension", extensionDir };
   }
@@ -184,7 +184,7 @@ function registerPiExtension(options = {}) {
   writeJsonAtomic(markerPath, buildMarker());
 
   if (!options.silent) {
-    console.log(`Clawd Pi extension -> ${extensionDir}`);
+    console.log(`Duck Pi extension -> ${extensionDir}`);
     console.log(updated ? "  Installed or updated" : "  Already up to date");
   }
 
@@ -197,15 +197,15 @@ function unregisterPiExtension(options = {}) {
   const markerPath = path.join(extensionDir, MARKER_FILE);
   const marker = readJsonIfPresent(markerPath, fsImpl);
   if (!dirExists(extensionDir, fsImpl)) {
-    if (!options.silent) console.log("Clawd: Pi extension is not installed");
+    if (!options.silent) console.log("Duck: Pi extension is not installed");
     return { removed: false, skipped: true, reason: "missing", extensionDir };
   }
   if (!isManagedMarker(marker)) {
-    if (!options.silent) console.log(`Clawd: ${extensionDir} is not Clawd-managed - skipping uninstall`);
+    if (!options.silent) console.log(`Duck: ${extensionDir} is not Duck-managed - skipping uninstall`);
     return { removed: false, skipped: true, reason: "unmanaged-existing-extension", extensionDir };
   }
   fsImpl.rmSync(extensionDir, { recursive: true, force: true });
-  if (!options.silent) console.log(`Clawd: removed Pi extension from ${extensionDir}`);
+  if (!options.silent) console.log(`Duck: removed Pi extension from ${extensionDir}`);
   return { removed: true, skipped: false, extensionDir };
 }
 

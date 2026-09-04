@@ -7,12 +7,12 @@ example the bottom-right quarter of the screen, or a strip above the dock.
 ## Choose an area in Settings
 
 Open **Settings → General → Behavior & position → Free roam**, expand the
-section, then choose **Activity area → Choose area…**. Clawd opens an overlay
+section, then choose **Activity area → Choose area…**. Duck opens an overlay
 on the display where the pet currently sits. Drag a rectangle and confirm it;
-the change applies without restarting Clawd.
+the change applies without restarting Duck.
 
 The picker verifies that the entire pet window fits inside the selected
-rectangle on the current display. On a multi-display setup, Clawd stores the
+rectangle on the current display. On a multi-display setup, Duck stores the
 rectangle as proportions and applies the same proportions to each display's
 work area. Display shapes and proportional pet scaling can differ, so a very
 narrow area that works on one display may pause roaming on another until the
@@ -23,7 +23,7 @@ normal user workflow; direct file editing remains available for automation.
 
 ## The file
 
-Create `~/.clawd/roam-area.json`:
+Create `~/.duck-on-desk/roam-area.json`:
 
 ```json
 {

@@ -338,8 +338,8 @@ describe("createRuntimeAgentGate", () => {
   });
 
   it("keeps a real malformed-prefs recovery non-authoritative until restart", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-agent-gate-recovered-"));
-    const prefsPath = path.join(dir, "clawd-prefs.json");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-agent-gate-recovered-"));
+    const prefsPath = path.join(dir, "duck-prefs.json");
     try {
       fs.writeFileSync(prefsPath, '{"version":15,"agents":', "utf8");
       const loaded = prefs.load(prefsPath);

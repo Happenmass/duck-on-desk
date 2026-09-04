@@ -223,7 +223,7 @@ function createRoamFencePicker(options = {}) {
       settle({ status: "cancel" });
       return;
     }
-    const context = activeWindow.__clawdRoamFenceContext;
+    const context = activeWindow.__duckRoamFenceContext;
     const fence = context && selectionToFence(payload.selection, context.workArea, context.minimumSize);
     if (!fence) {
       settle({ status: "error", message: "selected area is too small or outside the work area" });
@@ -305,7 +305,7 @@ function createRoamFencePicker(options = {}) {
       skipTaskbar: true,
       alwaysOnTop: true,
       focusable: true,
-      title: "Choose Clawd activity area",
+      title: "Choose Duck activity area",
       webPreferences: {
         preload: preloadPath,
         nodeIntegration: false,
@@ -322,7 +322,7 @@ function createRoamFencePicker(options = {}) {
     activeWindow = win;
     activeContext = context;
     attachDisplayListeners();
-    win.__clawdRoamFenceContext = context;
+    win.__duckRoamFenceContext = context;
     pageLoaded = false;
     rendererReady = false;
     rendererApplied = false;

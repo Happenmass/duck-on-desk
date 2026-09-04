@@ -24,7 +24,7 @@ describe("bubble-renderer MCP labeling (issue #445)", () => {
   it("imports the display-only MCP parser from bubble-format", () => {
     assert.match(
       RENDERER_SRC,
-      /const \{[^}]*\bparseMcpToolName\b[^}]*\} = window\.ClawdBubbleFormat;/
+      /const \{[^}]*\bparseMcpToolName\b[^}]*\} = window\.DuckBubbleFormat;/
     );
   });
 

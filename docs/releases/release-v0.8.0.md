@@ -3,8 +3,8 @@
 ### New Features
 
 - **Telegram remote approval** - Approve Claude Code / CodeBuddy / Codex / Pi permission requests from your phone via a Telegram bot. New Settings → Remote Approval tab covers bot token entry, recipient pairing, sidecar status, and a manual test send. Local approval bubbles remain the primary surface; Telegram is an opt-in remote channel that falls back gracefully when offline, disabled, or under Do Not Disturb. Full guide at `docs/guides/telegram-approval.md`.
-- **Pinned sidecar binary distribution** - The Telegram approval sidecar (`cc-connect-clawd`) is now fetched from a pinned GitHub release tag with sha256 checksum verification. Both source launches (`npm start`) and packaged builds use the same pinned per-platform binaries. Windows x64, Windows arm64, macOS x64, macOS arm64, and Linux x64 are covered.
-- **Refreshed Clawd thinking animation** - New thinking bubble (v25) with softer edge-flow pixels and a regenerated GIF preview.
+- **Pinned sidecar binary distribution** - The Telegram approval sidecar (`cc-connect-duck`) is now fetched from a pinned GitHub release tag with sha256 checksum verification. Both source launches (`npm start`) and packaged builds use the same pinned per-platform binaries. Windows x64, Windows arm64, macOS x64, macOS arm64, and Linux x64 are covered.
+- **Refreshed Duck thinking animation** - New thinking bubble (v25) with softer edge-flow pixels and a regenerated GIF preview.
 - **Normalized agent icons** - All twelve agent icons (`claude-code`, `codex`, `copilot-cli`, `cursor-agent`, `gemini-cli`, `hermes`, `kimi-cli`, `codebuddy`, `opencode`, `openclaw`, `pi`, `kiro-cli`) are now exported at a consistent 64×64 PNG runtime spec with sources tracked under `assets/source/agent-icons/` and a stable manifest hash.
 
 ### Bug Fixes
@@ -14,7 +14,7 @@
 - **Mini-mode multi-monitor seam clipping** (#294, by @Rladmsrl) - Pet no longer bleeds across display seams during entry, reload, or hover hit-window. Subsequent follow-ups hardened the clip for startup and reload phases and aligned mini seam hover after clipping.
 - **Settings dashboard positioning** (#287, by @YOIMIYA66) - Dashboard now anchors correctly within Settings bounds (top edge, bottom edge, parent offset, floating bounds, source forwarding all re-aligned).
 - **Agent icon source hash stability** (#285, by @YOIMIYA66) - Icon exporter now writes the manifest atomically and uses stable source hashes so subsequent exports don't drift.
-- **Claude hook lifecycle hardening** - Tightened managed Claude hook marker matching, avoided blocking on clawd-only hook repair, and preserved third-party hooks when `settings.json` suddenly shrinks (#286, by @taehwanis).
+- **Claude hook lifecycle hardening** - Tightened managed Claude hook marker matching, avoided blocking on duck-only hook repair, and preserved third-party hooks when `settings.json` suddenly shrinks (#286, by @taehwanis).
 - **Cold-start Claude watcher seeding** (#286, by @taehwanis) - Addressed review feedback for snapshot seeding so the suspicious-shrink heuristic doesn't false-positive on a fresh boot.
 - **Windows uninstall Claude hook cleanup** - NSIS uninstaller now runs a PowerShell script that removes managed Claude hook entries from `~/.claude/settings.json`, with a write-once backup.
 - **Telegram approval Settings repaint race** - Fixed status badge flicker on the Telegram tab; tokenInfo and status refreshes are now sequence-guarded.
@@ -24,7 +24,7 @@
 
 - **Pinned sidecar fetch workflow** - New `npm run fetch:sidecars` and `npm run verify:sidecars` flows; `prebuild*` scripts now run the verifier before every electron-builder invocation.
 - **Tag-gated draft releases** - GitHub Actions release workflow only fires on `v*` tags, creates GitHub releases as drafts, and marks hyphenated tags (e.g. `v0.8.0-rc1`) as prereleases. Release notes are pulled from `docs/releases/release-<tag>.md`.
-- **Per-platform packaging resources** - `package.json` `extraResources` ships the full `bin/cc-connect-clawd/` tree into the app bundle; Windows NSIS x64/arm64 artifacts remain architecture-specific.
+- **Per-platform packaging resources** - `package.json` `extraResources` ships the full `bin/cc-connect-duck/` tree into the app bundle; Windows NSIS x64/arm64 artifacts remain architecture-specific.
 - **Sidecar upstream update policy** - New `docs/project/release-process.md` documents how to bump the pinned sidecar release tag and refresh checksums.
 
 ### Docs & Contributors

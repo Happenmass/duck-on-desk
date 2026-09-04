@@ -186,7 +186,7 @@ test("shortcut runtime broadcasts persistent registration failures and clears th
 
   assert.deepStrictEqual(runtime.getFailures(), { togglePet: "system conflict" });
   assert.deepStrictEqual(warnings, [
-    "Clawd: failed to register shortcut togglePet: CommandOrControl+Shift+Alt+C",
+    "Duck: failed to register shortcut togglePet: CommandOrControl+Shift+Alt+C",
   ]);
   assert.deepStrictEqual(settingsWindow.webContents.sent, [[
     "shortcut-failures-changed",

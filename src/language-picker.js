@@ -577,7 +577,7 @@
     };
   }
 
-  root.ClawdLanguagePicker = {
+  root.DuckLanguagePicker = {
     createLanguagePicker,
     createSettingsSelect: createLanguagePicker,
   };

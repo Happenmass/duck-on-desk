@@ -41,14 +41,14 @@ const spawns = [];
 cp.execFileSync = function recordingExecFileSync(file) {
   spawns.push(String(file));
   throw Object.assign(
-    new Error("#681 probe: a spawn was attempted while Clawd is offline"),
-    { code: "ECLAWDPROBE" }
+    new Error("#681 probe: a spawn was attempted while Duck is offline"),
+    { code: "EDUCKPROBE" }
   );
 };
 
 // ── 3. Report ────────────────────────────────────────────────────────────────
 process.on("exit", () => {
-  const out = process.env.CLAWD_PROBE_OUT;
+  const out = process.env.DUCK_PROBE_OUT;
   if (!out) return;
   try { fs.writeFileSync(out, JSON.stringify(spawns), "utf8"); } catch { /* best effort */ }
 });

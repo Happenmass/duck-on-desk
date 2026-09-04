@@ -37,10 +37,10 @@ function createClock() {
 
 function requestInput(deliver, overrides = {}) {
   return {
-    themeId: "clawd",
+    themeId: "duck",
     logicalState: "idle",
     displayState: "idle",
-    file: "clawd-idle-follow.svg",
+    file: "duck-idle-follow.svg",
     hitBox: { x: 2, y: 4, w: 11, h: 11 },
     source: "state",
     deliver,
@@ -83,11 +83,11 @@ describe("displayed visual projection", () => {
       JSON.parse(JSON.stringify(projection.getSnapshot().committed)),
       {
         displayState: "idle",
-        file: "clawd-idle-follow.svg",
+        file: "duck-idle-follow.svg",
         hitBox: { x: 2, y: 4, w: 11, h: 11 },
         source: "state",
         visualGeneration: request.visualGeneration,
-        themeId: "clawd",
+        themeId: "duck",
         logicalState: "idle",
       }
     );
@@ -114,7 +114,7 @@ describe("displayed visual projection", () => {
 
   it("projects a verified different-file fallback and never pairs it with the requested hitbox", () => {
     const projection = createDisplayedVisualProjection({
-      projectActualFile: ({ actualFile }) => actualFile === "clawd-idle-static.png"
+      projectActualFile: ({ actualFile }) => actualFile === "duck-idle-static.png"
         ? { displayState: "idle", hitBox: { x: 1, y: 3, w: 13, h: 10 } }
         : null,
     });
@@ -122,10 +122,10 @@ describe("displayed visual projection", () => {
     const result = projection.settle(ackFor(request, {
       outcome: "fallback",
       channel: "img",
-      actualFile: "clawd-idle-static.png",
+      actualFile: "duck-idle-static.png",
     }));
     assert.strictEqual(result.status, "committed");
-    assert.strictEqual(result.committed.file, "clawd-idle-static.png");
+    assert.strictEqual(result.committed.file, "duck-idle-static.png");
     assert.deepStrictEqual(result.committed.hitBox, { x: 1, y: 3, w: 13, h: 10 });
   });
 
@@ -135,14 +135,14 @@ describe("displayed visual projection", () => {
     projection.settle(ackFor(initial));
     const committed = projection.getSnapshot().committed;
 
-    const unverified = projection.request(requestInput(() => true, { file: "clawd-happy.svg" }));
+    const unverified = projection.request(requestInput(() => true, { file: "duck-happy.svg" }));
     assert.strictEqual(
-      projection.settle(ackFor(unverified, { verified: false, actualFile: "clawd-happy.svg" })).status,
+      projection.settle(ackFor(unverified, { verified: false, actualFile: "duck-happy.svg" })).status,
       "failed"
     );
     assert.strictEqual(projection.getSnapshot().committed, committed);
 
-    const fallback = projection.request(requestInput(() => true, { file: "clawd-happy.svg" }));
+    const fallback = projection.request(requestInput(() => true, { file: "duck-happy.svg" }));
     assert.strictEqual(
       projection.settle(ackFor(fallback, {
         outcome: "fallback",
@@ -173,7 +173,7 @@ describe("displayed visual projection", () => {
     assert.strictEqual(delivered.length, 2, "retry budget is keyed to the logical visual");
     assert.strictEqual(reloads.length, 1);
 
-    projection.request(requestInput((payload) => delivered.push(payload), { file: "clawd-happy.svg" }));
+    projection.request(requestInput((payload) => delivered.push(payload), { file: "duck-happy.svg" }));
     clock.advance(2 * policy.VISUAL_SETTLEMENT_DEADLINE_MS);
     assert.strictEqual(reloads.length, 1, "renderer reload budget is session-wide");
   });
@@ -191,7 +191,7 @@ describe("displayed visual projection", () => {
       (payload) => delivered.push(payload),
       {
         source: "reaction",
-        file: "clawd-react-left.svg",
+        file: "duck-react-left.svg",
         onLogicalSettlement: (result) => settlements.push(result),
       }
     ));
@@ -216,14 +216,14 @@ describe("displayed visual projection", () => {
 
     projection.request(requestInput(() => true, {
       source: "reaction",
-      file: "clawd-react-left.svg",
+      file: "duck-react-left.svg",
     }));
     clock.advance(policy.VISUAL_SETTLEMENT_DEADLINE_MS);
     projection.request(requestInput(() => true, {
       source: "reaction",
       logicalState: "working",
       displayState: "working",
-      file: "clawd-react-right.svg",
+      file: "duck-react-right.svg",
     }));
     clock.advance(policy.VISUAL_SETTLEMENT_DEADLINE_MS);
 
@@ -263,12 +263,12 @@ describe("displayed visual projection", () => {
     projection.settle(ackFor(first));
     const committed = projection.getSnapshot().committed;
     const pending = projection.request(requestInput(() => true, {
-      file: "clawd-happy.svg",
+      file: "duck-happy.svg",
       onLogicalSettlement: (result) => settlements.push(result),
     }));
 
     projection.reset({
-      themeId: "clawd",
+      themeId: "duck",
       logicalState: "idle",
       detail: "renderer-process-gone",
       preserveCommitted: true,
@@ -290,19 +290,19 @@ describe("displayed visual projection", () => {
     const pending = projection.request(requestInput(
       (payload) => delivered.push(payload),
       {
-        file: "clawd-happy.svg",
+        file: "duck-happy.svg",
         onLogicalSettlement: (result) => {
           settlements.push(result);
           replacement = projection.request(requestInput(
             (payload) => delivered.push(payload),
-            { file: "clawd-idle-follow.svg" }
+            { file: "duck-idle-follow.svg" }
           ));
         },
       }
     ));
 
     projection.reset({
-      themeId: "clawd",
+      themeId: "duck",
       logicalState: "idle",
       detail: "renderer-process-gone",
       preserveCommitted: true,
@@ -339,14 +339,14 @@ describe("displayed visual projection", () => {
     const projection = createDisplayedVisualProjection();
     const first = projection.request(requestInput(() => true));
     projection.settle(ackFor(first));
-    const pending = projection.request(requestInput(() => true, { file: "clawd-happy.svg" }));
+    const pending = projection.request(requestInput(() => true, { file: "duck-happy.svg" }));
 
     projection.refreshHitBoxes((file) => ({ x: file.length, y: 1, w: 2, h: 3 }));
     const snapshot = projection.getSnapshot();
     assert.strictEqual(snapshot.committed.visualGeneration, first.visualGeneration);
     assert.strictEqual(snapshot.requested.visualGeneration, pending.visualGeneration);
-    assert.deepStrictEqual(snapshot.committed.hitBox, { x: 21, y: 1, w: 2, h: 3 });
-    assert.deepStrictEqual(snapshot.requested.hitBox, { x: 15, y: 1, w: 2, h: 3 });
+    assert.deepStrictEqual(snapshot.committed.hitBox, { x: 20, y: 1, w: 2, h: 3 });
+    assert.deepStrictEqual(snapshot.requested.hitBox, { x: 14, y: 1, w: 2, h: 3 });
     assert.deepStrictEqual(snapshot.requested.recoveryInput.hitBox, snapshot.requested.hitBox);
   });
 

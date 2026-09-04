@@ -139,8 +139,8 @@ describe("opencode-family plugin factory", () => {
 
     // Port cache: live getter/setter into the closure, isolated per instance.
     assert.strictEqual(oc.__test._cachedPort, null);
-    oc.__test._cachedPort = 23334;
-    assert.strictEqual(oc.__test._cachedPort, 23334); // getter reads live state
+    oc.__test._cachedPort = 24334;
+    assert.strictEqual(oc.__test._cachedPort, 24334); // getter reads live state
     assert.strictEqual(mc.__test._cachedPort, null);   // not shared
     oc.__test._cachedPort = null;
 
@@ -414,16 +414,16 @@ describe("opencode-family registry", () => {
     // migration (plan §3.2).
     const { resolvePluginDir } = require("../hooks/opencode-install");
     if (process.platform === "win32") {
-      assert.strictEqual(resolvePluginDir("D:/app/clawd/hooks"), "D:/app/clawd/hooks/opencode-plugin");
+      assert.strictEqual(resolvePluginDir("D:/app/duck/hooks"), "D:/app/duck/hooks/opencode-plugin");
       assert.strictEqual(
-        resolvePluginDir("D:/app/Clawd/resources/app.asar/hooks"),
-        "D:/app/Clawd/resources/app.asar.unpacked/hooks/opencode-plugin"
+        resolvePluginDir("D:/app/Duck/resources/app.asar/hooks"),
+        "D:/app/Duck/resources/app.asar.unpacked/hooks/opencode-plugin"
       );
     } else {
-      assert.strictEqual(resolvePluginDir("/app/clawd/hooks"), "/app/clawd/hooks/opencode-plugin");
+      assert.strictEqual(resolvePluginDir("/app/duck/hooks"), "/app/duck/hooks/opencode-plugin");
       assert.strictEqual(
-        resolvePluginDir("/Applications/Clawd.app/Contents/Resources/app.asar/hooks"),
-        "/Applications/Clawd.app/Contents/Resources/app.asar.unpacked/hooks/opencode-plugin"
+        resolvePluginDir("/Applications/Duck.app/Contents/Resources/app.asar/hooks"),
+        "/Applications/Duck.app/Contents/Resources/app.asar.unpacked/hooks/opencode-plugin"
       );
     }
     // The shared core dir must never leak into the registered string.

@@ -8,7 +8,7 @@ const { rotatedAppend, DEFAULT_MAX_BYTES } = require("../src/log-rotate");
 const tempDirs = [];
 
 function makeTmp() {
-  const d = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-log-rotate-"));
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), "duck-log-rotate-"));
   tempDirs.push(d);
   return path.join(d, "test.log");
 }

@@ -209,14 +209,14 @@ describe("repository asset audit", () => {
     const report = analyzeAudit({
       trackedFiles: [
         tracked("assets/LICENSE", 5),
-        tracked("themes/clawd/theme.json", 5),
+        tracked("themes/duck/theme.json", 5),
       ],
       manifest: manifest([]),
       policy: basePolicy(),
     });
     const missing = report.findings.find((finding) => finding.rule === "policy-required-file-packaged");
     assert.strictEqual(missing.level, "error");
-    assert.strictEqual(missing.path, "themes/clawd/theme.json");
+    assert.strictEqual(missing.path, "themes/duck/theme.json");
   });
 
   it("reports duplicate packaged payloads as warnings and budgets independently", () => {
@@ -377,7 +377,7 @@ describe("repository asset audit", () => {
   it("hard-fails a foreign architecture inside an extensionless fat Mach-O", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "asset-audit-fat-macho-"));
     try {
-      const executable = path.join(root, "Clawd");
+      const executable = path.join(root, "Duck");
       const fatMacho = fatMachoBuffer({
         magic: 0xcafebabe,
         endian: "be",
@@ -393,7 +393,7 @@ describe("repository asset audit", () => {
         packageRoot: root,
       });
       assert.deepStrictEqual(report.package.foreignNativeFiles, [{
-        packagePath: "Clawd",
+        packagePath: "Duck",
         detectedTargets: ["darwin-arm64", "darwin-x64"],
         expectedTarget: "darwin-x64",
       }]);

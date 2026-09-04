@@ -8,7 +8,7 @@ const serverConfig = require("../hooks/server-config");
 const tempDirs = [];
 
 function makeTempHome() {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-server-config-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-server-config-"));
   tempDirs.push(tmpDir);
   return tmpDir;
 }
@@ -21,7 +21,7 @@ afterEach(() => {
 
 describe("Codex auto-start gate", () => {
   function gatePath() {
-    return path.join(makeTempHome(), ".clawd", "codex-auto-start.json");
+    return path.join(makeTempHome(), ".duck-on-desk", "codex-auto-start.json");
   }
 
   it("round-trips explicit enabled and disabled values", () => {
@@ -40,8 +40,8 @@ describe("Codex auto-start gate", () => {
     for (const value of [
       "{not json",
       JSON.stringify({ app: "other", version: 1, enabled: true }),
-      JSON.stringify({ app: "clawd-on-desk", version: 2, enabled: true }),
-      JSON.stringify({ app: "clawd-on-desk", version: 1, enabled: "true" }),
+      JSON.stringify({ app: "duck-on-desk", version: 2, enabled: true }),
+      JSON.stringify({ app: "duck-on-desk", version: 1, enabled: "true" }),
     ]) {
       fs.writeFileSync(file, value, "utf8");
       assert.strictEqual(serverConfig.readCodexAutoStartGate({ gatePath: file }), false);
@@ -107,7 +107,7 @@ describe("native WSL detection", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // Every case injects runtimeConfigPath — nothing here may touch the real
-// ~/.clawd/runtime.json, whose contents depend on whether Clawd is running.
+// ~/.duck-on-desk/runtime.json, whose contents depend on whether Duck is running.
 
 describe("runtime.json identity (#681)", () => {
   function writeRuntime(contents) {
@@ -120,9 +120,9 @@ describe("runtime.json identity (#681)", () => {
 
   describe("readRuntimeIdentity — the strict resolver gate", () => {
     it("ok for a well-formed file with app + port + ownerPid", () => {
-      const file = writeRuntime({ app: "clawd-on-desk", port: 23334, ownerPid: 4242 });
+      const file = writeRuntime({ app: "duck-on-desk", port: 24334, ownerPid: 4242 });
       assert.deepStrictEqual(serverConfig.readRuntimeIdentity({ runtimeConfigPath: file }), {
-        ok: true, reason: null, port: 23334, ownerPid: 4242,
+        ok: true, reason: null, port: 24334, ownerPid: 4242,
       });
     });
 
@@ -139,16 +139,16 @@ describe("runtime.json identity (#681)", () => {
       assert.strictEqual(r.reason, "runtime-missing");
     });
 
-    it("rejects a foreign app — another tool's runtime.json is not Clawd's", () => {
-      const file = writeRuntime({ app: "some-other-app", port: 23333, ownerPid: 4242 });
+    it("rejects a foreign app — another tool's runtime.json is not Duck's", () => {
+      const file = writeRuntime({ app: "some-other-app", port: 24333, ownerPid: 4242 });
       const r = serverConfig.readRuntimeIdentity({ runtimeConfigPath: file });
       assert.strictEqual(r.ok, false);
       assert.strictEqual(r.reason, "runtime-app-mismatch");
     });
 
     it("rejects a port outside the bindable range", () => {
-      for (const port of [0, 80, 23332, 23338, null, undefined, "nope", {}]) {
-        const file = writeRuntime({ app: "clawd-on-desk", port, ownerPid: 4242 });
+      for (const port of [0, 80, 23332, 24338, null, undefined, "nope", {}]) {
+        const file = writeRuntime({ app: "duck-on-desk", port, ownerPid: 4242 });
         const r = serverConfig.readRuntimeIdentity({ runtimeConfigPath: file });
         assert.strictEqual(r.ok, false, `port ${JSON.stringify(port)} must be rejected`);
         assert.strictEqual(r.reason, "runtime-port-invalid");
@@ -156,23 +156,23 @@ describe("runtime.json identity (#681)", () => {
     });
 
     it("accepts a numeric-string port — normalizePort has always coerced, and the writer is ours", () => {
-      const file = writeRuntime({ app: "clawd-on-desk", port: "23333", ownerPid: 4242 });
+      const file = writeRuntime({ app: "duck-on-desk", port: "24333", ownerPid: 4242 });
       const r = serverConfig.readRuntimeIdentity({ runtimeConfigPath: file });
       assert.strictEqual(r.ok, true, "documenting existing normalizePort behavior, not endorsing new writers");
-      assert.strictEqual(r.port, 23333, "and it is normalized to a number");
+      assert.strictEqual(r.port, 24333, "and it is normalized to a number");
     });
 
     it("fail-closes on a legacy file with no ownerPid (pre-#681 shape)", () => {
-      const file = writeRuntime({ app: "clawd-on-desk", port: 23333 });
+      const file = writeRuntime({ app: "duck-on-desk", port: 24333 });
       const r = serverConfig.readRuntimeIdentity({ runtimeConfigPath: file });
       assert.strictEqual(r.ok, false);
       assert.strictEqual(r.reason, "runtime-owner-invalid");
-      assert.strictEqual(r.port, 23333, "the port is still reported — only the gate fails closed");
+      assert.strictEqual(r.port, 24333, "the port is still reported — only the gate fails closed");
     });
 
     it("rejects a non-positive / non-integer ownerPid", () => {
       for (const ownerPid of [0, -1, 1.5, "4242", null, {}]) {
-        const file = writeRuntime({ app: "clawd-on-desk", port: 23333, ownerPid });
+        const file = writeRuntime({ app: "duck-on-desk", port: 24333, ownerPid });
         const r = serverConfig.readRuntimeIdentity({ runtimeConfigPath: file });
         assert.strictEqual(r.ok, false, `ownerPid ${JSON.stringify(ownerPid)} must be rejected`);
         assert.strictEqual(r.reason, "runtime-owner-invalid");
@@ -181,8 +181,8 @@ describe("runtime.json identity (#681)", () => {
 
     it("parses a versioned per-agent Windows process-chain capability", () => {
       const file = writeRuntime({
-        app: "clawd-on-desk",
-        port: 23335,
+        app: "duck-on-desk",
+        port: 24335,
         ownerPid: 4242,
         windowsProcessChain: {
           version: 1,
@@ -203,7 +203,7 @@ describe("runtime.json identity (#681)", () => {
       assert.deepStrictEqual(serverConfig.readWindowsProcessChainObservation("codex", {
         runtimeConfigPath: file,
       }), {
-        port: 23335,
+        port: 24335,
         ownerPid: 4242,
         version: 1,
         instanceGeneration: "instance_abc-123",
@@ -219,7 +219,7 @@ describe("runtime.json identity (#681)", () => {
         { version: 1, instanceGeneration: "bad value", agents: { codex: "shadow" } },
       ]) {
         const file = writeRuntime({
-          app: "clawd-on-desk", port: 23333, ownerPid: 4242,
+          app: "duck-on-desk", port: 24333, ownerPid: 4242,
           ...(capability ? { windowsProcessChain: capability } : {}),
         });
         assert.strictEqual(
@@ -232,18 +232,18 @@ describe("runtime.json identity (#681)", () => {
 
   describe("readRuntimePort — stays permissive so POSTs keep routing", () => {
     it("returns the port for a legacy file with no ownerPid", () => {
-      const file = writeRuntime({ app: "clawd-on-desk", port: 23336 });
-      assert.strictEqual(serverConfig.readRuntimePort({ runtimeConfigPath: file }), 23336,
+      const file = writeRuntime({ app: "duck-on-desk", port: 24336 });
+      assert.strictEqual(serverConfig.readRuntimePort({ runtimeConfigPath: file }), 24336,
         "a legacy runtime must keep routing state/permission POSTs even though the gate fail-closes");
     });
 
     it("returns the port when ownerPid is present", () => {
-      const file = writeRuntime({ app: "clawd-on-desk", port: 23337, ownerPid: 999 });
-      assert.strictEqual(serverConfig.readRuntimePort({ runtimeConfigPath: file }), 23337);
+      const file = writeRuntime({ app: "duck-on-desk", port: 24337, ownerPid: 999 });
+      assert.strictEqual(serverConfig.readRuntimePort({ runtimeConfigPath: file }), 24337);
     });
 
-    it("now requires a matching app (every Clawd that wrote this file stamped one)", () => {
-      const file = writeRuntime({ app: "not-clawd", port: 23333, ownerPid: 1 });
+    it("now requires a matching app (every Duck that wrote this file stamped one)", () => {
+      const file = writeRuntime({ app: "not-duck", port: 24333, ownerPid: 1 });
       assert.strictEqual(serverConfig.readRuntimePort({ runtimeConfigPath: file }), null);
     });
 
@@ -255,31 +255,31 @@ describe("runtime.json identity (#681)", () => {
   describe("writeRuntimeConfig — boolean contract, never throws (#681)", () => {
     it("writes app + port + ownerPid and round-trips through readRuntimeIdentity", () => {
       const file = path.join(makeTempHome(), "nested", "runtime.json");
-      assert.strictEqual(serverConfig.writeRuntimeConfig(23335, { runtimeConfigPath: file, ownerPid: 777 }), true);
+      assert.strictEqual(serverConfig.writeRuntimeConfig(24335, { runtimeConfigPath: file, ownerPid: 777 }), true);
 
       assert.deepStrictEqual(JSON.parse(fs.readFileSync(file, "utf8")), {
-        app: "clawd-on-desk", port: 23335, ownerPid: 777,
+        app: "duck-on-desk", port: 24335, ownerPid: 777,
       });
       assert.deepStrictEqual(serverConfig.readRuntimeIdentity({ runtimeConfigPath: file }), {
-        ok: true, reason: null, port: 23335, ownerPid: 777,
+        ok: true, reason: null, port: 24335, ownerPid: 777,
       });
     });
 
     it("defaults ownerPid to the writing process", () => {
       const file = path.join(makeTempHome(), "runtime.json");
-      serverConfig.writeRuntimeConfig(23333, { runtimeConfigPath: file });
+      serverConfig.writeRuntimeConfig(24333, { runtimeConfigPath: file });
       assert.strictEqual(JSON.parse(fs.readFileSync(file, "utf8")).ownerPid, process.pid);
     });
 
     it("writes an owner-only runtime identity on POSIX", { skip: process.platform === "win32" }, () => {
       const file = path.join(makeTempHome(), "runtime.json");
-      assert.strictEqual(serverConfig.writeRuntimeConfig(23333, { runtimeConfigPath: file }), true);
+      assert.strictEqual(serverConfig.writeRuntimeConfig(24333, { runtimeConfigPath: file }), true);
       assert.strictEqual(fs.statSync(file).mode & 0o777, 0o600);
     });
 
     it("round-trips a valid Windows process-chain capability and drops an invalid one", () => {
       const validFile = path.join(makeTempHome(), "valid", "runtime.json");
-      assert.strictEqual(serverConfig.writeRuntimeConfig(23333, {
+      assert.strictEqual(serverConfig.writeRuntimeConfig(24333, {
         runtimeConfigPath: validFile,
         ownerPid: 777,
         windowsProcessChain: {
@@ -294,7 +294,7 @@ describe("runtime.json identity (#681)", () => {
       );
 
       const invalidFile = path.join(makeTempHome(), "invalid", "runtime.json");
-      assert.strictEqual(serverConfig.writeRuntimeConfig(23333, {
+      assert.strictEqual(serverConfig.writeRuntimeConfig(24333, {
         runtimeConfigPath: invalidFile,
         windowsProcessChain: { version: 1, instanceGeneration: "", agents: {} },
       }), true);
@@ -305,14 +305,14 @@ describe("runtime.json identity (#681)", () => {
     });
 
     // The regression this exists for: mkdirSync used to sit OUTSIDE the try, so
-    // an EACCES on ~/.clawd escaped as an exception instead of returning false —
+    // an EACCES on ~/.duck escaped as an exception instead of returning false —
     // and src/server.js's 'listening' handler called this BEFORE settle(), so
     // the throw stranded startHttpServer's promise forever.
     it("returns false (not throws) when mkdirSync fails with EACCES", () => {
       const eacces = Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
       let result;
       assert.doesNotThrow(() => {
-        result = serverConfig.writeRuntimeConfig(23333, {
+        result = serverConfig.writeRuntimeConfig(24333, {
           runtimeConfigPath: path.join(makeTempHome(), "runtime.json"),
           fs: {
             mkdirSync: () => { throw eacces; },
@@ -328,7 +328,7 @@ describe("runtime.json identity (#681)", () => {
     it("returns false and best-effort removes the temp file when the rename fails", () => {
       const unlinked = [];
       const written = [];
-      const result = serverConfig.writeRuntimeConfig(23333, {
+      const result = serverConfig.writeRuntimeConfig(24333, {
         runtimeConfigPath: path.join(makeTempHome(), "runtime.json"),
         fs: {
           mkdirSync: () => {},
@@ -345,7 +345,7 @@ describe("runtime.json identity (#681)", () => {
     it("does not throw even when the temp cleanup itself fails", () => {
       let result;
       assert.doesNotThrow(() => {
-        result = serverConfig.writeRuntimeConfig(23333, {
+        result = serverConfig.writeRuntimeConfig(24333, {
           runtimeConfigPath: path.join(makeTempHome(), "runtime.json"),
           fs: {
             mkdirSync: () => {},
@@ -371,7 +371,7 @@ describe("runtime.json identity (#681)", () => {
 describe("server-config helpers", () => {
   it("adds B1a headers only for an explicit local Windows observation port", () => {
     const observation = {
-      port: 23334,
+      port: 24334,
       ownerPid: 1,
       version: 1,
       instanceGeneration: "generation-1",
@@ -385,19 +385,19 @@ describe("server-config helpers", () => {
       runtimeObservation: observation,
       legacyCacheSource: "fresh",
     };
-    assert.deepStrictEqual(serverConfig.buildWindowsProcessChainHeaders(23334, {
+    assert.deepStrictEqual(serverConfig.buildWindowsProcessChainHeaders(24334, {
       platform: "win32",
       remote: false,
       windowsProcessChain: request,
     }), {
-      "X-Clawd-Hook-Pid": "4242",
-      "X-Clawd-Process-Instance": "generation-1",
-      "X-Clawd-Legacy-Process-Cache": "fresh",
+      "X-Duck-Hook-Pid": "4242",
+      "X-Duck-Process-Instance": "generation-1",
+      "X-Duck-Legacy-Process-Cache": "fresh",
     });
     for (const options of [
-      { platform: "win32", remote: false, windowsProcessChain: request, port: 23335 },
-      { platform: "linux", remote: false, windowsProcessChain: request, port: 23334 },
-      { platform: "win32", remote: true, windowsProcessChain: request, port: 23334 },
+      { platform: "win32", remote: false, windowsProcessChain: request, port: 24335 },
+      { platform: "linux", remote: false, windowsProcessChain: request, port: 24334 },
+      { platform: "win32", remote: true, windowsProcessChain: request, port: 24334 },
       { platform: "win32", remote: false },
     ]) {
       assert.deepStrictEqual(
@@ -410,16 +410,16 @@ describe("server-config helpers", () => {
 
   it("keeps remote hook mode on the runtime.json + port-range discovery path", () => {
     // Remote hooks reach the desktop over an ordinary SSH port forward now, so
-    // CLAWD_REMOTE must never narrow discovery: runtime.json first, then the
+    // DUCK_REMOTE must never narrow discovery: runtime.json first, then the
     // whole managed port range.
     assert.deepStrictEqual(serverConfig.getPortCandidates(undefined, {
-      env: { CLAWD_REMOTE: "1" },
+      env: { DUCK_REMOTE: "1" },
       existsSync: () => false,
       runtimePort: null,
     }), serverConfig.SERVER_PORTS, "ordinary WSL/remote timeout mode remains legacy-compatible");
 
     assert.deepStrictEqual(serverConfig.getPortCandidates(undefined, {
-      env: { CLAWD_REMOTE: "1" },
+      env: { DUCK_REMOTE: "1" },
       existsSync: () => false,
       runtimePort: serverConfig.SERVER_PORTS[2],
     })[0], serverConfig.SERVER_PORTS[2], "runtime.json still wins the first probe");
@@ -427,20 +427,20 @@ describe("server-config helpers", () => {
 
   it("clearRuntimeConfig removes runtime.json when present", () => {
     const tmpHome = makeTempHome();
-    const runtimeDir = path.join(tmpHome, ".clawd");
+    const runtimeDir = path.join(tmpHome, ".duck-on-desk");
     fs.mkdirSync(runtimeDir, { recursive: true });
     const runtimePath = path.join(runtimeDir, "runtime.json");
-    fs.writeFileSync(runtimePath, JSON.stringify({ app: "clawd-on-desk", port: 23333 }));
+    fs.writeFileSync(runtimePath, JSON.stringify({ app: "duck-on-desk", port: 24333 }));
 
     assert.strictEqual(serverConfig.clearRuntimeConfig(runtimePath), true);
     assert.strictEqual(fs.existsSync(runtimePath), false);
   });
 
   it("clearRuntimeConfig removes a file this process owns", () => {
-    const runtimeDir = path.join(makeTempHome(), ".clawd");
+    const runtimeDir = path.join(makeTempHome(), ".duck-on-desk");
     fs.mkdirSync(runtimeDir, { recursive: true });
     const runtimePath = path.join(runtimeDir, "runtime.json");
-    fs.writeFileSync(runtimePath, JSON.stringify({ app: "clawd-on-desk", port: 23333, ownerPid: process.pid }));
+    fs.writeFileSync(runtimePath, JSON.stringify({ app: "duck-on-desk", port: 24333, ownerPid: process.pid }));
 
     assert.strictEqual(serverConfig.clearRuntimeConfig(runtimePath), true);
     assert.strictEqual(fs.existsSync(runtimePath), false);
@@ -453,17 +453,17 @@ describe("server-config helpers", () => {
     // deleting them would blind every Windows hook until the survivor restarts.
     // The guard keys on pid inequality alone (no liveness check), so any
     // foreign pid must be refused, dead or alive.
-    const runtimeDir = path.join(makeTempHome(), ".clawd");
+    const runtimeDir = path.join(makeTempHome(), ".duck-on-desk");
     fs.mkdirSync(runtimeDir, { recursive: true });
     const runtimePath = path.join(runtimeDir, "runtime.json");
-    fs.writeFileSync(runtimePath, JSON.stringify({ app: "clawd-on-desk", port: 23334, ownerPid: process.pid + 1 }));
+    fs.writeFileSync(runtimePath, JSON.stringify({ app: "duck-on-desk", port: 24334, ownerPid: process.pid + 1 }));
 
     assert.strictEqual(serverConfig.clearRuntimeConfig(runtimePath), false);
     assert.strictEqual(fs.existsSync(runtimePath), true, "the survivor's identity must stay on disk");
   });
 
   it("clearRuntimeConfig still removes a corrupt runtime.json (residue, not identity)", () => {
-    const runtimeDir = path.join(makeTempHome(), ".clawd");
+    const runtimeDir = path.join(makeTempHome(), ".duck-on-desk");
     fs.mkdirSync(runtimeDir, { recursive: true });
     const runtimePath = path.join(runtimeDir, "runtime.json");
     fs.writeFileSync(runtimePath, "not-json{");
@@ -473,14 +473,14 @@ describe("server-config helpers", () => {
   });
 
   it("splitPortCandidates prioritizes preferred and runtime ports", () => {
-    const result = serverConfig.splitPortCandidates(23335, { runtimePort: 23334 });
-    assert.deepStrictEqual(result.direct, [23335, 23334]);
-    assert.ok(result.fallback.includes(23333));
-    assert.ok(!result.fallback.includes(23334));
-    assert.ok(!result.fallback.includes(23335));
+    const result = serverConfig.splitPortCandidates(24335, { runtimePort: 24334 });
+    assert.deepStrictEqual(result.direct, [24335, 24334]);
+    assert.ok(result.fallback.includes(24333));
+    assert.ok(!result.fallback.includes(24334));
+    assert.ok(!result.fallback.includes(24335));
   });
 
-  it("probePort recognizes signed Clawd responses", async () => {
+  it("probePort recognizes signed Duck responses", async () => {
     await new Promise((resolve, reject) => {
       const req = {
         on(event, handler) {
@@ -489,7 +489,7 @@ describe("server-config helpers", () => {
         destroy() {},
       };
 
-      serverConfig.probePort(23337, 100, (ok) => {
+      serverConfig.probePort(24337, 100, (ok) => {
         try {
           assert.strictEqual(ok, true);
           resolve();
@@ -499,7 +499,7 @@ describe("server-config helpers", () => {
       }, {
         httpGet(_options, onResponse) {
           const res = {
-            headers: { "x-clawd-server": "clawd-on-desk" },
+            headers: { "x-duck-server": "duck-on-desk" },
             setEncoding() {},
             on(event, handler) {
               if (event === "data") handler("");
@@ -536,12 +536,12 @@ describe("server-config helpers", () => {
       assert.strictEqual(result, "C:\\Program Files\\nodejs\\node.exe");
     });
 
-    it("rejects the packaged Clawd Electron host as execPath", () => {
+    it("rejects the packaged Duck Electron host as execPath", () => {
       const wherePath = "C:\\Program Files\\nodejs\\node.exe";
       const result = serverConfig.resolveNodeBin({
         platform: "win32",
         env: WIN_ENV,
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         accessSync(candidate) {
           if (candidate === wherePath) return;
           throw new Error("ENOENT");
@@ -557,7 +557,7 @@ describe("server-config helpers", () => {
       const result = serverConfig.resolveNodeBin({
         platform: "win32",
         env: WIN_ENV,
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         accessSync(candidate) {
           if (candidate === realNode) return;
           throw new Error("ENOENT");
@@ -572,7 +572,7 @@ describe("server-config helpers", () => {
       const result = serverConfig.resolveNodeBin({
         platform: "win32",
         env: WIN_ENV,
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         accessSync(candidate) {
           probed.push(candidate);
           if (candidate === "C:\\Program Files\\nodejs\\node.exe") return;
@@ -589,7 +589,7 @@ describe("server-config helpers", () => {
       const result = serverConfig.resolveNodeBin({
         platform: "win32",
         env: WIN_ENV,
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         accessSync(candidate) {
           if (candidate === realScoop) return;
           throw new Error("ENOENT");
@@ -599,16 +599,16 @@ describe("server-config helpers", () => {
       assert.strictEqual(result, realScoop);
     });
 
-    it("rejects Clawd on Desk.exe even when accessSync says it exists", () => {
-      // accessSync only succeeds for the Clawd.exe path so validator rejection
+    it("rejects Duck on Desk.exe even when accessSync says it exists", () => {
+      // accessSync only succeeds for the Duck.exe path so validator rejection
       // is the only thing standing between us and a wrong return value.
-      const clawdExe = "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe";
+      const duckExe = "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe";
       const result = serverConfig.resolveNodeBin({
         platform: "win32",
         env: WIN_ENV,
-        execPath: clawdExe,
+        execPath: duckExe,
         accessSync(candidate) {
-          if (candidate === clawdExe) return;
+          if (candidate === duckExe) return;
           throw new Error("ENOENT");
         },
         execFileSync() { return ""; },
@@ -621,7 +621,7 @@ describe("server-config helpers", () => {
       serverConfig.resolveNodeBin({
         platform: "win32",
         env: WIN_ENV,
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         accessSync() { throw new Error("ENOENT"); },
         execFileSync(cmd, args) {
           calls.push({ cmd, args });
@@ -636,17 +636,17 @@ describe("server-config helpers", () => {
       const result = serverConfig.resolveNodeBin({
         platform: "win32",
         env: WIN_ENV,
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         accessSync() { throw new Error("ENOENT"); },
         execFileSync() { throw new Error("where failed"); },
       });
       assert.strictEqual(result, null);
     });
 
-    it("validateWindowsNodeCandidate rejects Clawd, Electron, scoop shims, and non-node basenames", () => {
+    it("validateWindowsNodeCandidate rejects Duck, Electron, scoop shims, and non-node basenames", () => {
       const v = serverConfig.validateWindowsNodeCandidate;
       assert.strictEqual(v("C:\\Program Files\\nodejs\\node.exe"), "C:\\Program Files\\nodejs\\node.exe");
-      assert.strictEqual(v("C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe"), null);
+      assert.strictEqual(v("C:\\Program Files\\Duck on Desk\\Duck on Desk.exe"), null);
       assert.strictEqual(v("C:\\Windows\\System32\\Electron.exe"), null);
       assert.strictEqual(v("C:\\Users\\tester\\scoop\\shims\\node.exe"), null);
       assert.strictEqual(v("C:\\Users\\TESTER\\Scoop\\Shims\\node.exe"), null);
@@ -673,7 +673,7 @@ describe("server-config helpers", () => {
       const result = serverConfig.resolveNodeBin({
         platform: "win32",
         env: { ProgramFiles: "C:\\Program Files" },
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         execFileSync() { throw new Error("where failed"); },
         accessSync(candidate) {
           assert.ok(candidate.includes("\\"), `expected backslash in ${candidate}`);
@@ -704,7 +704,7 @@ describe("server-config helpers", () => {
       const fromWhere = await serverConfig.resolveNodeBinAsync({
         platform: "win32",
         env: WIN_ENV,
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         async access(candidate) {
           if (candidate === realNode) return;
           throw new Error("ENOENT");
@@ -716,7 +716,7 @@ describe("server-config helpers", () => {
       const fromCommon = await serverConfig.resolveNodeBinAsync({
         platform: "win32",
         env: WIN_ENV,
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         async access(candidate) {
           if (candidate === realNode) return;
           throw new Error("ENOENT");
@@ -728,7 +728,7 @@ describe("server-config helpers", () => {
       const none = await serverConfig.resolveNodeBinAsync({
         platform: "win32",
         env: WIN_ENV,
-        execPath: "C:\\Program Files\\Clawd on Desk\\Clawd on Desk.exe",
+        execPath: "C:\\Program Files\\Duck on Desk\\Duck on Desk.exe",
         async access() { throw new Error("ENOENT"); },
         async execFile() { throw new Error("where failed"); },
       });
@@ -1011,23 +1011,23 @@ describe("server-config helpers", () => {
         JSON.stringify({ state: "idle" }),
         {
           timeoutMs: 50,
-          preferredPort: 23335,
-          runtimePort: 23334,
+          preferredPort: 24335,
+          runtimePort: 24334,
           probePort(port, _timeoutMs, cb) {
             probes.push(port);
-            cb(port === 23336);
+            cb(port === 24336);
           },
           postStateToPort(port, _payload, _timeoutMs, cb) {
             posts.push(port);
-            cb(port === 23336, port);
+            cb(port === 24336, port);
           },
         },
         (ok, port) => {
           try {
             assert.strictEqual(ok, true);
-            assert.strictEqual(port, 23336);
-            assert.deepStrictEqual(posts, [23335, 23334, 23336]);
-            assert.deepStrictEqual(probes, [23333, 23336]);
+            assert.strictEqual(port, 24336);
+            assert.deepStrictEqual(posts, [24335, 24334, 24336]);
+            assert.deepStrictEqual(probes, [24333, 24336]);
             resolve();
           } catch (err) {
             reject(err);
@@ -1037,7 +1037,7 @@ describe("server-config helpers", () => {
     });
   });
 
-  it("postStateToRunningServer raises short timeouts in CLAWD_REMOTE mode", async () => {
+  it("postStateToRunningServer raises short timeouts in DUCK_REMOTE mode", async () => {
     const timeouts = [];
 
     await new Promise((resolve, reject) => {
@@ -1045,8 +1045,8 @@ describe("server-config helpers", () => {
         JSON.stringify({ state: "thinking" }),
         {
           timeoutMs: 100,
-          preferredPort: 23333,
-          env: { CLAWD_REMOTE: "1" },
+          preferredPort: 24333,
+          env: { DUCK_REMOTE: "1" },
           postStateToPort(port, _payload, timeoutMs, cb) {
             timeouts.push(timeoutMs);
             cb(true, port);
@@ -1055,7 +1055,7 @@ describe("server-config helpers", () => {
         (ok, port) => {
           try {
             assert.strictEqual(ok, true);
-            assert.strictEqual(port, 23333);
+            assert.strictEqual(port, 24333);
             assert.deepStrictEqual(timeouts, [serverConfig.REMOTE_HOOK_HTTP_TIMEOUT_MS]);
             resolve();
           } catch (err) {
@@ -1074,7 +1074,7 @@ describe("server-config helpers", () => {
         JSON.stringify({ state: "working" }),
         {
           timeoutMs: 100,
-          preferredPort: 23333,
+          preferredPort: 24333,
           remote: true,
           postStateToPort(port, _payload, timeoutMs, cb) {
             timeouts.push(timeoutMs);
@@ -1084,7 +1084,7 @@ describe("server-config helpers", () => {
         (ok, port) => {
           try {
             assert.strictEqual(ok, true);
-            assert.strictEqual(port, 23333);
+            assert.strictEqual(port, 24333);
             assert.deepStrictEqual(timeouts, [serverConfig.REMOTE_HOOK_HTTP_TIMEOUT_MS]);
             resolve();
           } catch (err) {
@@ -1095,7 +1095,7 @@ describe("server-config helpers", () => {
     });
   });
 
-  it("postStateToRunningServer lets remote false override CLAWD_REMOTE env", async () => {
+  it("postStateToRunningServer lets remote false override DUCK_REMOTE env", async () => {
     const timeouts = [];
 
     await new Promise((resolve, reject) => {
@@ -1103,9 +1103,9 @@ describe("server-config helpers", () => {
         JSON.stringify({ state: "working" }),
         {
           timeoutMs: 100,
-          preferredPort: 23333,
+          preferredPort: 24333,
           remote: false,
-          env: { CLAWD_REMOTE: "1" },
+          env: { DUCK_REMOTE: "1" },
           postStateToPort(port, _payload, timeoutMs, cb) {
             timeouts.push(timeoutMs);
             cb(true, port);
@@ -1114,7 +1114,7 @@ describe("server-config helpers", () => {
         (ok, port) => {
           try {
             assert.strictEqual(ok, true);
-            assert.strictEqual(port, 23333);
+            assert.strictEqual(port, 24333);
             assert.deepStrictEqual(timeouts, [100]);
             resolve();
           } catch (err) {
@@ -1125,7 +1125,7 @@ describe("server-config helpers", () => {
     });
   });
 
-  it("postPermissionToRunningServer raises discovery timeout in CLAWD_REMOTE mode", async () => {
+  it("postPermissionToRunningServer raises discovery timeout in DUCK_REMOTE mode", async () => {
     let capturedTimeout = null;
 
     await new Promise((resolve, reject) => {
@@ -1133,8 +1133,8 @@ describe("server-config helpers", () => {
         JSON.stringify({ tool_name: "bash" }),
         {
           probeTimeoutMs: 100,
-          env: { CLAWD_REMOTE: "1" },
-          discoverClawdPort(options, cb) {
+          env: { DUCK_REMOTE: "1" },
+          discoverDuckPort(options, cb) {
             capturedTimeout = options.timeoutMs;
             cb(null);
           },
@@ -1162,12 +1162,12 @@ describe("server-config helpers", () => {
         JSON.stringify({ tool_name: "bash" }),
         {
           probeTimeoutMs: 100,
-          preferredPort: 23335,
+          preferredPort: 24335,
           remote: true,
-          discoverClawdPort(options, cb) {
+          discoverDuckPort(options, cb) {
             capturedTimeout = options.timeoutMs;
             capturedPreferredPort = options.preferredPort;
-            cb(23335);
+            cb(24335);
           },
           postPermissionToPort(port, _payload, _timeoutMs, cb) {
             cb(true, port, "{}", 200);
@@ -1176,8 +1176,8 @@ describe("server-config helpers", () => {
         (ok, port) => {
           try {
             assert.strictEqual(ok, true);
-            assert.strictEqual(port, 23335);
-            assert.strictEqual(capturedPreferredPort, 23335);
+            assert.strictEqual(port, 24335);
+            assert.strictEqual(capturedPreferredPort, 24335);
             assert.strictEqual(capturedTimeout, serverConfig.REMOTE_HOOK_HTTP_TIMEOUT_MS);
             resolve();
           } catch (err) {

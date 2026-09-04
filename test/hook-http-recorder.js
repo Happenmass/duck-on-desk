@@ -1,6 +1,6 @@
 // Test preloader: records every outbound http GET/POST the hook attempts as
-// JSON lines in CLAWD_HOOK_HTTP_RECORD, and answers every request as a
-// healthy Clawd server (x-clawd-server header), so the probe+post pipeline in
+// JSON lines in DUCK_HOOK_HTTP_RECORD, and answers every request as a
+// healthy Duck server (x-duck-server header), so the probe+post pipeline in
 // postStateToRunningServer completes with no real server and no open ports.
 // Sibling of hook-http-blocker.js — that one fails everything, this one
 // succeeds and keeps the receipts for body assertions.
@@ -8,7 +8,7 @@ const http = require("http");
 const { EventEmitter } = require("events");
 const fs = require("fs");
 
-const recordPath = process.env.CLAWD_HOOK_HTTP_RECORD;
+const recordPath = process.env.DUCK_HOOK_HTTP_RECORD;
 
 function record(entry) {
   if (!recordPath) return;
@@ -20,7 +20,7 @@ function record(entry) {
 function fakeResponse(callback) {
   const res = new EventEmitter();
   res.statusCode = 200;
-  res.headers = { "x-clawd-server": "clawd-on-desk" };
+  res.headers = { "x-duck-server": "duck-on-desk" };
   res.setEncoding = () => res;
   res.resume = () => res;
   if (callback) {

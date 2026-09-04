@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Probes whether the Windows-side Clawd HTTP server is reachable from this
+// Probes whether the Windows-side Duck HTTP server is reachable from this
 // environment. Prints "REACHABLE <port>" and exits 0, or "UNREACHABLE" and
 // exits 1.
 //
@@ -11,7 +11,7 @@
 // actionable warning. Verified on a real NAT-mode Windows 11 + WSL2 machine.
 
 const http = require("http");
-const { CLAWD_SERVER_HEADER, CLAWD_SERVER_ID, SERVER_PORTS } = require("./server-config");
+const { DUCK_SERVER_HEADER, DUCK_SERVER_ID, SERVER_PORTS } = require("./server-config");
 
 const TIMEOUT_MS = 1500;
 let remaining = SERVER_PORTS.length;
@@ -29,7 +29,7 @@ for (const port of SERVER_PORTS) {
     { host: "127.0.0.1", port, path: "/state", timeout: TIMEOUT_MS },
     (res) => {
       res.resume();
-      if (res.headers[CLAWD_SERVER_HEADER] === CLAWD_SERVER_ID) {
+      if (res.headers[DUCK_SERVER_HEADER] === DUCK_SERVER_ID) {
         finish(true, port);
         return;
       }

@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 function makeTempDir() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-codex-pet-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-codex-pet-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -642,13 +642,13 @@ describe("codex-pet-adapter wrapper generation and materialization", () => {
     assert.match(svg, /viewBox="0 0 192 208" width="192" height="208"/);
     assert.match(svg, /<image class="atlas"[^>]+width="1536" height="1872"/);
     assert.strictEqual((svg.match(/<image\b/g) || []).length, 1);
-    assert.match(svg, /data-clawd-codex-pet-visuals="v1"/);
-    assert.match(svg, /data-clawd-codex-pet-visual="drag-directional"/);
-    assert.match(svg, /data-clawd-drag-directional="v1"/);
-    assert.match(svg, /data-clawd-drag-direction="right"/);
+    assert.match(svg, /data-duck-codex-pet-visuals="v1"/);
+    assert.match(svg, /data-duck-codex-pet-visual="drag-directional"/);
+    assert.match(svg, /data-duck-drag-directional="v1"/);
+    assert.match(svg, /data-duck-drag-direction="right"/);
     assert.match(svg, /<g class="visual-row" transform="translate\(0,-208\)">/);
-    assert.match(svg, /\[data-clawd-codex-pet-visual=drag-directional\] \.visual-row \{\s+transform: translate\(0px, -208px\)/);
-    assert.match(svg, /\[data-clawd-codex-pet-visual=drag-directional\]\[data-clawd-drag-direction=left\] \.visual-row \{\s+transform: translate\(0px, -416px\)/);
+    assert.match(svg, /\[data-duck-codex-pet-visual=drag-directional\] \.visual-row \{\s+transform: translate\(0px, -208px\)/);
+    assert.match(svg, /\[data-duck-codex-pet-visual=drag-directional\]\[data-duck-drag-direction=left\] \.visual-row \{\s+transform: translate\(0px, -416px\)/);
     const keyframeBlocks = [...svg.matchAll(/@keyframes [^{]+\{([\s\S]*?)\n\s*\}/g)].map((match) => match[1]);
     assert.ok(keyframeBlocks.length > 0);
     assert.ok(keyframeBlocks.every((block) => !/translate\([^,]+,\s*-(?:208|416)px\)/.test(block)));
@@ -658,12 +658,12 @@ describe("codex-pet-adapter wrapper generation and materialization", () => {
     const sanitized = sanitizeSvg(svg);
     const sanitizedStyle = decodeXmlText((sanitized.match(/<style>([\s\S]*?)<\/style>/) || [])[1]);
     assert.strictEqual((sanitized.match(/<image\b/g) || []).length, 1);
-    assert.match(sanitized, /data-clawd-codex-pet-visuals="v1"/);
-    assert.match(sanitized, /data-clawd-codex-pet-visual="drag-directional"/);
-    assert.match(sanitized, /data-clawd-drag-directional="v1"/);
-    assert.match(sanitized, /data-clawd-drag-direction="right"/);
-    assert.match(sanitizedStyle, /\[data-clawd-codex-pet-visual=(?:drag-directional|"drag-directional")\]/);
-    assert.match(sanitizedStyle, /\[data-clawd-drag-direction=(?:left|"left")\] \.visual-row/);
+    assert.match(sanitized, /data-duck-codex-pet-visuals="v1"/);
+    assert.match(sanitized, /data-duck-codex-pet-visual="drag-directional"/);
+    assert.match(sanitized, /data-duck-drag-directional="v1"/);
+    assert.match(sanitized, /data-duck-drag-direction="right"/);
+    assert.match(sanitizedStyle, /\[data-duck-codex-pet-visual=(?:drag-directional|"drag-directional")\]/);
+    assert.match(sanitizedStyle, /\[data-duck-drag-direction=(?:left|"left")\] \.visual-row/);
     assert.match(sanitized, /transform="translate\(0,-208\)"/);
     assert.match(sanitizedStyle, /animation-name: codex-pet-visual-drag-directional/);
 
@@ -671,7 +671,7 @@ describe("codex-pet-adapter wrapper generation and materialization", () => {
       initialFilename: "codex-pet-idle-loop.svg",
       spritesheetHref: "spritesheet.png",
     });
-    assert.match(idleSvg, /data-clawd-codex-pet-visual="idle-loop"/);
+    assert.match(idleSvg, /data-duck-codex-pet-visual="idle-loop"/);
     assert.match(idleSvg, /<g class="visual-row" transform="translate\(0,-0\)">/);
     assert.match(idleSvg, /animation-name: codex-pet-visual-waving-once/);
     assert.match(idleSvg, /animation-iteration-count: 1/);
@@ -691,7 +691,7 @@ describe("codex-pet-adapter wrapper generation and materialization", () => {
     assert.match(v2Svg, /<image class="atlas"[^>]+width="1536" height="2288"/);
   });
 
-  it("materializes a managed Clawd theme that strict-loads through theme-loader", () => {
+  it("materializes a managed Duck theme that strict-loads through theme-loader", () => {
     const root = makeTempDir();
     const packageDir = copyFixturePackage(path.join(root, "pets"));
     const validation = adapter.validateCodexPetPackage(packageDir);
@@ -710,16 +710,16 @@ describe("codex-pet-adapter wrapper generation and materialization", () => {
 
     for (const spec of adapter.WRAPPER_SPECS) {
       const wrapper = fs.readFileSync(path.join(materialized.themeDir, "assets", spec.filename), "utf8");
-      assert.match(wrapper, /data-clawd-codex-pet-visuals="v1"/);
-      assert.match(wrapper, new RegExp(`data-clawd-codex-pet-visual="${spec.visual}"`));
+      assert.match(wrapper, /data-duck-codex-pet-visuals="v1"/);
+      assert.match(wrapper, new RegExp(`data-duck-codex-pet-visual="${spec.visual}"`));
       assert.strictEqual((wrapper.match(/<image\b/g) || []).length, 1);
       const sanitizedWrapper = sanitizeSvg(wrapper);
       const sanitizedWrapperStyle = decodeXmlText(
         (sanitizedWrapper.match(/<style>([\s\S]*?)<\/style>/) || [])[1]
       );
-      assert.match(sanitizedWrapper, /data-clawd-codex-pet-visuals="v1"/);
-      assert.match(sanitizedWrapperStyle, /data-clawd-codex-pet-visual=/);
-      assert.match(sanitizedWrapperStyle, /data-clawd-drag-direction=/);
+      assert.match(sanitizedWrapper, /data-duck-codex-pet-visuals="v1"/);
+      assert.match(sanitizedWrapperStyle, /data-duck-codex-pet-visual=/);
+      assert.match(sanitizedWrapperStyle, /data-duck-drag-direction=/);
     }
 
     const themeJson = readJson(path.join(materialized.themeDir, "theme.json"));

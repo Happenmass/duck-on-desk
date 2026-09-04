@@ -180,13 +180,13 @@ test("geometry consumes the delivered canonical payload instead of re-resolving 
 });
 
 test("holiday geometry rejection retries without resending an unchanged renderer payload", () => {
-  const theme = { _id: "clawd", _builtin: true, _capabilities: { accessories: true } };
+  const theme = { _id: "duck", _builtin: true, _capabilities: { accessories: true } };
   let sends = 0;
   let applies = 0;
   const runtime = createHolidayAccessoryRuntime({
     getSettingsSnapshot: () => ({
-      petAccessory: { clawd: "wizard-hat" },
-      holidayAccessoryEnabled: { clawd: true },
+      petAccessory: { duck: "wizard-hat" },
+      holidayAccessoryEnabled: { duck: true },
     }),
     getActiveTheme: () => theme,
     sendToRenderer: () => { sends += 1; },
@@ -207,14 +207,14 @@ test("holiday geometry rejection retries without resending an unchanged renderer
 });
 
 test("a deferred hit-window sync retries silently instead of reporting failure", () => {
-  const theme = { _id: "clawd", _builtin: true, _capabilities: { accessories: true } };
+  const theme = { _id: "duck", _builtin: true, _capabilities: { accessories: true } };
   let sends = 0;
   let applies = 0;
   const warnings = [];
   const runtime = createHolidayAccessoryRuntime({
     getSettingsSnapshot: () => ({
-      petAccessory: { clawd: "wizard-hat" },
-      holidayAccessoryEnabled: { clawd: true },
+      petAccessory: { duck: "wizard-hat" },
+      holidayAccessoryEnabled: { duck: true },
     }),
     getActiveTheme: () => theme,
     sendToRenderer: () => { sends += 1; },

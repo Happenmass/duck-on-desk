@@ -1,5 +1,5 @@
 // opencode agent configuration
-// Perception via opencode Plugin SDK: event hook → HTTP POST to Clawd
+// Perception via opencode Plugin SDK: event hook → HTTP POST to Duck
 // Plugin registered in ~/.config/opencode/opencode.json "plugin" array (global scope)
 //
 // eventMap/capabilities are the shared opencode-family contract — identical

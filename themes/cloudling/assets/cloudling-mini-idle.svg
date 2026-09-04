@@ -129,7 +129,7 @@ function scheduleLoop() {
   if (!lowPowerPaused && !rafId) rafId = requestAnimationFrame(tick);
 }
 
-window.__clawdSetLowPowerPaused = paused => {
+window.__duckSetLowPowerPaused = paused => {
   const next = !!paused;
   if (lowPowerPaused === next) return;
   lowPowerPaused = next;

@@ -211,7 +211,7 @@ describe("built-in Cloudling theme", () => {
       const sourceCopy = fs.readFileSync(path.join(__dirname, "..", source), "utf8");
 
       for (const content of [asset, sourceCopy]) {
-        assert.ok(content.includes("window.__clawdSetLowPowerPaused = paused =>"), `${file} should expose a low-power pause API`);
+        assert.ok(content.includes("window.__duckSetLowPowerPaused = paused =>"), `${file} should expose a low-power pause API`);
         assert.ok(content.includes("cancelAnimationFrame(rafId)"), `${file} should cancel its RAF while paused`);
         assert.ok(content.includes("function scheduleLoop()"), `${file} should restart RAF explicitly on resume`);
       }
@@ -264,7 +264,7 @@ describe("built-in Cloudling theme", () => {
       "utf8"
     );
 
-    assert.ok(asset.includes("window.__clawdSetGlyphFlipCompensation = enabled =>"));
+    assert.ok(asset.includes("window.__duckSetGlyphFlipCompensation = enabled =>"));
     assert.ok(asset.includes("const x0 = glyphFlipCompensation ? w / 2 : -w / 2;"));
   });
 });

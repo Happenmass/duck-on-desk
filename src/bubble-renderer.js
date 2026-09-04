@@ -1,4 +1,4 @@
-const { formatDetail, truncate, parseMcpToolName, detectIrreversible } = window.ClawdBubbleFormat;
+const { formatDetail, truncate, parseMcpToolName, detectIrreversible } = window.DuckBubbleFormat;
 const card = document.getElementById("card");
 const toolPill = document.getElementById("toolPill");
 const toolPillText = document.getElementById("toolPillText");

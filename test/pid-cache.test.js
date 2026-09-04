@@ -343,7 +343,7 @@ describe("pid-cache sweepStalePidCaches() — age floor + injected liveness (§4
 
   it("ignores files outside our prefix", () => {
     const dir = ISO_DIR; // the sweep/cache scan this isolated dir, not the real temp dir
-    const foreignFile = path.join(dir, `not-clawd-${process.pid}-${seq++}.json`);
+    const foreignFile = path.join(dir, `not-duck-${process.pid}-${seq++}.json`);
     fs.writeFileSync(foreignFile, "{}");
     const old = new Date(Date.now() - (pc.SWEEP_AGE_MS + 60_000));
     fs.utimesSync(foreignFile, old, old);
@@ -416,7 +416,7 @@ describe("pid-cache v2 — path + key (§5.2)", () => {
   it("v1 and v2 prefixes are mutually exclusive under startsWith (clean sweep classification)", () => {
     assert.strictEqual(pc.CACHE_PREFIX_V2.startsWith(pc.CACHE_PREFIX), false);
     assert.strictEqual(pc.CACHE_PREFIX.startsWith(pc.CACHE_PREFIX_V2), false);
-    assert.strictEqual(pc.CACHE_PREFIX_V2, "clawd-pidcache2-");
+    assert.strictEqual(pc.CACHE_PREFIX_V2, "duck-pidcache2-");
     assert.strictEqual(pc.CACHE_VERSION_V2, 2);
   });
 
@@ -426,7 +426,7 @@ describe("pid-cache v2 — path + key (§5.2)", () => {
     assert.strictEqual(pc.cacheFilePathV2(NS, "sid", ""), null);
   });
 
-  it("v2 path uses the clawd-pidcache2- prefix and is stable per (namespace, sid, cwd)", () => {
+  it("v2 path uses the duck-pidcache2- prefix and is stable per (namespace, sid, cwd)", () => {
     const a = pc.cacheFilePathV2(NS, "sid-A", CWD);
     const a2 = pc.cacheFilePathV2(NS, "sid-A", CWD);
     assert.strictEqual(a, a2);

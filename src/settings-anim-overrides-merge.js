@@ -168,5 +168,5 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = settingsAnimOverridesMergeExports;
 }
 if (typeof globalThis !== "undefined") {
-  globalThis.ClawdSettingsAnimOverridesMerge = settingsAnimOverridesMergeExports;
+  globalThis.DuckSettingsAnimOverridesMerge = settingsAnimOverridesMergeExports;
 }

@@ -87,7 +87,7 @@
     note.textContent = t("animMapSemanticsNote");
     parent.appendChild(note);
 
-    const themeId = (state.snapshot && state.snapshot.theme) || "clawd";
+    const themeId = (state.snapshot && state.snapshot.theme) || "duck";
     const rows = ANIM_MAP_ROWS.map((spec) => buildAnimMapRow(spec, themeId));
     parent.appendChild(helpers.buildSection("", rows));
 
@@ -153,5 +153,5 @@
 
   // The map is no longer a top-level tab — the Animation & Sound Overrides tab
   // renders it as its "on / off" subtab via these two entry points.
-  root.ClawdSettingsTabAnimMap = { init, renderMapSubtab, patchMapInPlace };
+  root.DuckSettingsTabAnimMap = { init, renderMapSubtab, patchMapInPlace };
 })(globalThis);

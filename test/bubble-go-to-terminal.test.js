@@ -120,7 +120,7 @@ function createHarness(options = {}) {
   };
   const context = {
     window: {
-      ClawdBubbleFormat: {
+      DuckBubbleFormat: {
         formatDetail: () => "detail",
         truncate: (value) => String(value),
         parseMcpToolName: () => null,

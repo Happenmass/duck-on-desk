@@ -15,7 +15,7 @@ function loadIcons() {
   context.globalThis = context;
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(SETTINGS_ICONS, "utf8"), context);
-  return context.ClawdSettingsIcons;
+  return context.DuckSettingsIcons;
 }
 
 // The sidebar tab ids declared in settings-renderer.js — every one of
@@ -32,7 +32,7 @@ const SIDEBAR_TAB_IDS = [
 describe("settings-icons", () => {
   it("exposes a getIcon helper on globalThis", () => {
     const icons = loadIcons();
-    assert.ok(icons, "ClawdSettingsIcons should be defined");
+    assert.ok(icons, "DuckSettingsIcons should be defined");
     assert.strictEqual(typeof icons.getIcon, "function");
   });
 
