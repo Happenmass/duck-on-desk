@@ -16,7 +16,6 @@ PLAN.md
 PLAN-*.md
 codex-*.md
 CHANGELOG-draft.md
-docs/**
 !docs/guides/
 !docs/guides/copilot-setup.md
 !docs/guides/copilot-setup.zh-CN.md
@@ -100,7 +99,6 @@ tools/check_dark.py
 logs/
 
 # GIF recording tools (not part of main project)
-scripts/*
 # Deterministic source-backed macOS tray asset generator
 !scripts/generate-mac-tray-icons.js
 !scripts/manual/
