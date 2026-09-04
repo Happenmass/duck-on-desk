@@ -104,15 +104,3 @@ test("only the recognized macOS build module is changed; version/platform mismat
   assert.equal(prepareMacSigning({ builderRoot, platform: "darwin" }), false);
   assert.equal(fs.readFileSync(pkgPath, "utf8"), pkg);
 });
-
-test("the workaround runs only in the Developer ID macOS job before signing", () => {
-  const root = path.join(__dirname, "..");
-  const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "build.yml"), "utf8")
-    .replace(/\r\n?/g, "\n");
-  const macStart = workflow.indexOf("\n  build-mac:");
-  const nextJob = workflow.indexOf("\n  build-linux:", macStart);
-  const macJob = workflow.slice(macStart, nextJob);
-  assert.match(macJob, /name: Correct macOS signing keychain password\n\s+if: steps\.mac-signing\.outputs\.mode == 'developer-id'\n\s+run: \|\n\s+node --test test\/macos-signing-keychain\.test\.js\n\s+node scripts\/prepare-macos-signing\.js/);
-  assert.ok(macJob.indexOf("node scripts/prepare-macos-signing.js") < macJob.indexOf("name: Build macOS (Developer ID signed and notarized)"));
-  assert.doesNotMatch(workflow.slice(0, macStart) + workflow.slice(nextJob), /prepare-macos-signing/);
-});

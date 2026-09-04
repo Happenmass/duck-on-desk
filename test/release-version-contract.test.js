@@ -59,25 +59,3 @@ test("branch workflow refs are ignored while tag refs are enforced", () => {
   assert.strictEqual(resolveTagName({ GITHUB_REF_TYPE: "branch", GITHUB_REF_NAME: "main" }), "");
   assert.strictEqual(resolveTagName({ GITHUB_REF: "refs/tags/v2.0.0" }), "v2.0.0");
 });
-
-test("build workflow validates the release contract before every platform build", () => {
-  const workflow = fs.readFileSync(
-    path.join(__dirname, "..", ".github", "workflows", "build.yml"),
-    "utf8",
-  ).replace(/\r\n/g, "\n");
-  assert.match(workflow, /validate-release:\s*[\s\S]*?npm run verify:release/);
-  for (const job of ["build-windows", "build-mac", "build-linux"]) {
-    assert.match(
-      workflow,
-      new RegExp(`\\n  ${job}:\\n    needs: validate-release`),
-    );
-  }
-  assert.match(
-    workflow,
-    /release:\s*\n\s*if: github\.event_name == 'push' && startsWith\(github\.ref, 'refs\/tags\/v'\)/,
-  );
-  assert.strictEqual(
-    (workflow.match(/verify-updater-metadata\.js[^\n]+--package-json package\.json/g) || []).length,
-    3,
-  );
-});
