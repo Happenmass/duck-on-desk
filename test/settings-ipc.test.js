@@ -789,13 +789,6 @@ test("settings IPC delegates controller and size preview handlers", async () => 
   }), { status: "ok" });
   for (const action of [
     "feishuApproval.commitResolvedApprover",
-    "remoteSsh.applyInstallationIdentity",
-    "remoteSsh.beginIdentityRotation",
-    "remoteSsh.updateIdentityStep",
-    "remoteSsh.commitIdentityRotation",
-    "remoteSsh.forceRevoke",
-    "remoteSsh.markDeployed",
-    "remoteSsh.markRemoteNode",
   ]) {
     assert.deepStrictEqual(
       await ipcMain.invoke("settings:command", { action, payload: { forged: true } }),

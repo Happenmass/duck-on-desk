@@ -5,11 +5,84 @@ const { promisify } = require("util");
 const { platform, homedir } = require("os");
 const path = require("path");
 const fs = require("fs");
-const {
-  quoteForCmd,
-  quoteForPosixShellArg,
-  escapeAppleScriptString,
-} = require("./remote-ssh-quote");
+
+// ── Platform quoting helpers ──
+//
+// Pure functions for safely embedding arguments into terminal command strings
+// on three platforms. Used when Duck spawns a system terminal instead of
+// running the binary as a child process — those code paths must hand a single
+// string to the OS terminal, which re-interprets it.
+//
+// Don't pull in shell-quote — it only covers POSIX shell and would mask the gap
+// on the cmd / AppleScript layers.
+
+// Windows cmd.exe quoting for command strings passed to `cmd.exe /k`.
+// This is a two-stage escape:
+//   1. Quote for the child process argv parser (backslashes before `"`).
+//   2. Caret-escape cmd.exe's own parser chars, including `%` expansion.
+// Callers should run cmd.exe with `/v:off`; `!` is still caret-escaped here
+// so it stays literal when delayed expansion is disabled.
+function quoteForCmd(arg) {
+  if (typeof arg !== "string") {
+    throw new TypeError("quoteForCmd: arg must be a string");
+  }
+  let out = "";
+  let backslashes = 0;
+  for (const ch of arg) {
+    if (ch === "\\") {
+      backslashes++;
+      out += ch;
+      continue;
+    }
+    if (ch === '"') {
+      // Per CommandLineToArgvW, each backslash before a `"` doubles, plus one to escape `"`.
+      out += "\\".repeat(backslashes) + "\\\"";
+      backslashes = 0;
+      continue;
+    }
+    backslashes = 0;
+    out += ch;
+  }
+  // Closing quote sees `backslashes` trailing backslashes; double them.
+  const quoted = '"' + out + "\\".repeat(backslashes) + '"';
+  let escaped = "";
+  for (const ch of quoted) {
+    if (ch === '"') {
+      escaped += '^"';
+    } else if (ch === "^" || ch === "%" || ch === "!" || ch === "&" || ch === "|" || ch === "<" || ch === ">") {
+      escaped += "^" + ch;
+    } else {
+      escaped += ch;
+    }
+  }
+  return escaped;
+}
+
+// POSIX shell single-quote quoting: '...''...'...' style.
+// Single quotes are absolute in POSIX sh — only `'` itself can't appear
+// inside, so we close-quote, escape with `\'`, re-open. Always wraps
+// even safe args; predictable beats clever.
+function quoteForPosixShellArg(arg) {
+  if (typeof arg !== "string") {
+    throw new TypeError("quoteForPosixShellArg: arg must be a string");
+  }
+  if (arg === "") return "''";
+  return "'" + arg.replace(/'/g, "'\\''") + "'";
+}
+
+// AppleScript double-quoted string escape.
+// AppleScript strings only need `\` and `"` escaped; everything else is
+// literal. The result must be embedded inside `"..."` by the caller.
+//
+// Why a separate helper from POSIX quoting: AppleScript runs the resulting
+// string through its own parser before handing it to a shell (`do script`
+// execs in Terminal.app's login shell), so the macOS path is two-layer.
+function escapeAppleScriptString(str) {
+  if (typeof str !== "string") {
+    throw new TypeError("escapeAppleScriptString: str must be a string");
+  }
+  return str.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
 
 const SAFE_CLAUDE_SESSION_ID = /^[A-Za-z0-9_-]+$/;
 
@@ -20,8 +93,7 @@ const SAFE_CLAUDE_SESSION_ID = /^[A-Za-z0-9_-]+$/;
 // no `$`, backtick, `;`, `&`, `()` or `$()` interpolation happens. That means a
 // user-supplied sessionId can't break out of the string or inject commands.
 // The result must be embedded inside a `& <quoted> <quoted> ...` invocation by
-// the caller. We keep this local rather than in remote-ssh-quote.js because no
-// remote-ssh code path uses PowerShell.
+// the caller.
 function quoteForPowerShell(arg) {
   if (typeof arg !== "string") {
     throw new TypeError("quoteForPowerShell: arg must be a string");
@@ -61,8 +133,7 @@ function normalizeClaudeSessionId(sessionId) {
 // the *terminal* launched — the terminal is detached with stdio ignored, so we
 // can't see whether `claude` inside it succeeded. Resolving claude's real path
 // up front (findClaudeCmd) is what guards the inner command; terminal-level
-// fallback is purely about terminal availability. Same contract as
-// remote-ssh-ipc's tryLaunch.
+// fallback is purely about terminal availability.
 function tryLaunch(bin, args, opts) {
   return new Promise((resolve) => {
     let child;

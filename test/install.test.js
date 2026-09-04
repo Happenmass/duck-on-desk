@@ -46,22 +46,6 @@ delete process.env.WSL_DISTRO_NAME;
 
 const tempDirs = [];
 
-function secureRemoteIdentity(overrides = {}) {
-  return {
-    ok: true,
-    version: 2,
-    layoutVersion: 1,
-    runtimeKey: "profile-a",
-    profileId: "profile-a",
-    installId: "a".repeat(64),
-    remotePort: 23334,
-    routingNonce: "b".repeat(64),
-    deployedAt: 1,
-    filePath: "/home/test/.claude/hooks/clawd-remote.json",
-    ...overrides,
-  };
-}
-
 function makeTempSettings(initialSettings = {}) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-install-"));
   const settingsPath = path.join(tmpDir, "settings.json");
@@ -617,20 +601,18 @@ describe("Hook installer version compatibility", () => {
     assert.ok(stopHooks[0].command.endsWith('" Stop'), stopHooks[0].command);
   });
 
-  it("keeps remote hooks bash-compatible while pinning secure identity", () => {
+  it("keeps remote hooks bash-compatible even when the platform is win32", () => {
     const hook = __test.buildCommandHookSpec("node", "/tmp/clawd-hook.js", "Stop", {
       platform: "win32",
       remote: true,
-      sshRemote: true,
     });
 
     assert.strictEqual(hook.type, "command");
-    assert.match(hook.command, /^CLAWD_REMOTE=1 CLAWD_SSH_REMOTE=1 /);
-    assert.match(hook.command, /CLAWD_REMOTE_IDENTITY_PATH=/);
+    assert.match(hook.command, /^CLAWD_REMOTE=1 /);
     assert.match(hook.command, /"node" "\/tmp\/clawd-hook\.js" Stop$/);
   });
 
-  it("keeps legacy WSL --remote on CLAWD_REMOTE without opting into SSH secure transport", () => {
+  it("keeps WSL --remote on a bare CLAWD_REMOTE prefix", () => {
     const hook = __test.buildCommandHookSpec(
       "/usr/bin/node",
       "/home/u/.claude/hooks/clawd-hook.js",
@@ -674,8 +656,6 @@ describe("Hook installer version compatibility", () => {
       silent: true,
       settingsPath,
       remote: true,
-      sshRemote: true,
-      remoteIdentity: secureRemoteIdentity(),
       nodeBin: "/usr/bin/node",
       claudeVersionInfo: { version: "2.1.78", source: "test", status: "known" },
     });
@@ -683,8 +663,7 @@ describe("Hook installer version compatibility", () => {
     const settings = readSettings(settingsPath);
     const stopHooks = getCommandHookEntries(settings, "Stop", "clawd-hook.js");
     assert.strictEqual(stopHooks.length, 1);
-    assert.ok(stopHooks[0].command.startsWith("CLAWD_REMOTE=1 CLAWD_SSH_REMOTE=1 "), stopHooks[0].command);
-    assert.ok(stopHooks[0].command.includes("CLAWD_REMOTE_IDENTITY_PATH='/home/test/.claude/hooks/clawd-remote.json'"), stopHooks[0].command);
+    assert.ok(stopHooks[0].command.startsWith("CLAWD_REMOTE=1 "), stopHooks[0].command);
     assert.strictEqual(stopHooks[0].async, true);
     assert.strictEqual(stopHooks[0].timeout, 10);
     assert.ok(!Object.prototype.hasOwnProperty.call(stopHooks[0], "shell"));
@@ -1255,29 +1234,26 @@ describe("Claude permission hook ownership", () => {
     assert.strictEqual(isClawdPermissionUrl("http://127.0.0.1/permission"), false);
   });
 
-  it("remote query transport pins the nonce and native fallback removes managed permission hooks", () => {
-    const identity = secureRemoteIdentity();
+  it("remote native transport removes managed permission hooks that query keeps", () => {
     const settingsPath = makeTempSettings({});
     registerHooks({
       silent: true,
       settingsPath,
+      port: SERVER_PORTS[0],
       remote: true,
-      sshRemote: true,
-      remoteIdentity: identity,
       remotePermissionTransport: "query",
       nodeBin: "/usr/bin/node",
       claudeVersionInfo: { version: "2.1.78", source: "test", status: "known" },
     });
     assert.deepStrictEqual(getHttpUrls(readSettings(settingsPath), "PermissionRequest"), [
-      buildPermissionUrl(identity.remotePort, identity.routingNonce, "query"),
+      buildPermissionUrl(SERVER_PORTS[0], "", "query"),
     ]);
 
     registerHooks({
       silent: true,
       settingsPath,
+      port: SERVER_PORTS[0],
       remote: true,
-      sshRemote: true,
-      remoteIdentity: identity,
       remotePermissionTransport: "native",
       nodeBin: "/usr/bin/node",
       claudeVersionInfo: { version: "2.1.78", source: "test", status: "known" },
@@ -2621,8 +2597,6 @@ describe("Claude Code statusline installer", () => {
       silent: true,
       settingsPath,
       remote: true,
-      sshRemote: true,
-      remoteIdentity: secureRemoteIdentity(),
       platform: "linux",
       nodeBin: "/usr/bin/node",
     });
@@ -2630,7 +2604,7 @@ describe("Claude Code statusline installer", () => {
     assert.strictEqual(result.installed, true);
     assert.strictEqual(result.changed, true);
     const command = readSettings(settingsPath).statusLine.command;
-    assert.ok(command.startsWith("CLAWD_REMOTE=1 CLAWD_SSH_REMOTE=1 "), command);
+    assert.ok(command.startsWith("CLAWD_REMOTE=1 "), command);
     assert.ok(command.includes(STATUSLINE_MARKER));
 
     // Re-register (deploy repair) must be idempotent on the remote form too.
@@ -2638,8 +2612,6 @@ describe("Claude Code statusline installer", () => {
       silent: true,
       settingsPath,
       remote: true,
-      sshRemote: true,
-      remoteIdentity: secureRemoteIdentity(),
       platform: "linux",
       nodeBin: "/usr/bin/node",
     });
@@ -2655,8 +2627,6 @@ describe("Claude Code statusline installer", () => {
       silent: true,
       settingsPath,
       remote: true,
-      sshRemote: true,
-      remoteIdentity: secureRemoteIdentity(),
       platform: "linux",
       nodeBin: "/usr/bin/node",
     });
@@ -2690,8 +2660,6 @@ describe("Claude Code statusline installer", () => {
       settingsPath,
       chainSidecarPath,
       remote: true,
-      sshRemote: true,
-      remoteIdentity: secureRemoteIdentity(),
       chainExisting: true,
       platform: "linux",
       nodeBin: "/usr/bin/node",
@@ -2700,7 +2668,7 @@ describe("Claude Code statusline installer", () => {
     assert.strictEqual(result.skippedExisting, false);
     assert.strictEqual(result.chained, true);
     const command = readSettings(settingsPath).statusLine.command;
-    assert.ok(command.startsWith("CLAWD_REMOTE=1 CLAWD_SSH_REMOTE=1 "), command);
+    assert.ok(command.startsWith("CLAWD_REMOTE=1 "), command);
     assert.ok(command.includes(STATUSLINE_MARKER));
     assert.ok(command.endsWith(" --chain"), command);
     // The user's original survives byte-for-byte in the sidecar.
@@ -2718,8 +2686,6 @@ describe("Claude Code statusline installer", () => {
       settingsPath,
       chainSidecarPath,
       remote: true,
-      sshRemote: true,
-      remoteIdentity: secureRemoteIdentity(),
       chainExisting: true,
       platform: "linux",
       nodeBin: "/usr/bin/node",
@@ -2745,8 +2711,6 @@ describe("Claude Code statusline installer", () => {
       settingsPath,
       chainSidecarPath,
       remote: true,
-      sshRemote: true,
-      remoteIdentity: secureRemoteIdentity(),
       platform: "linux",
       nodeBin: "/usr/bin/node",
     };
@@ -2770,8 +2734,6 @@ describe("Claude Code statusline installer", () => {
       settingsPath,
       chainSidecarPath,
       remote: true,
-      sshRemote: true,
-      remoteIdentity: secureRemoteIdentity(),
       chainExisting: true,
       platform: "linux",
       nodeBin: "/usr/bin/node",

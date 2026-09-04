@@ -5,8 +5,8 @@
 // port — is BELOW that call. writeRuntimeConfig's mkdirSync used to sit outside
 // its own try, so an EACCES on ~/.clawd escaped as an exception, the handler
 // unwound before settle(), and the promise never resolved. Every caller that
-// awaits the bound port (remote-ssh connect-on-launch builds its reverse tunnel
-// off it) waits forever, for a failure that should have been a warning.
+// awaits the bound port waits forever, for a failure that should have been a
+// warning.
 //
 // Two independent guards, so neither alone is load-bearing:
 //   1. writeRuntimeConfig honors its boolean contract (test/server-config.test.js).

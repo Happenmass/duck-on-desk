@@ -311,7 +311,6 @@ const SIZES = {
 // `_settingsController.applyUpdate()`, which auto-persists.
 const prefsModule = require("./prefs");
 const { createSettingsController } = require("./settings-controller");
-const { loadOrCreateInstallationIdentity } = require("./remote-ssh-identity");
 const { createTranslator, i18n, SUPPORTED_LANGS } = require("./i18n");
 const {
   getBubblePolicy,
@@ -459,7 +458,6 @@ let lastDiscordPresenceVisual = null;
 let displayedVisualProjection = null;
 let lastAppliedVisualGeneration = 0;
 let suppressTelegramMigrationReconcile = 0;
-let _remoteSshTransportCoordinator = null;
 let feishuApprovalClient = null;
 const feishuApprovalCloseDrains = new Set();
 let feishuApprovalSyncPromise = Promise.resolve();
@@ -567,19 +565,6 @@ const _settingsController = createSettingsController({
     clearShortcutFailure: (actionId) => {
       if (shortcutRuntime) shortcutRuntime.clearFailure(actionId);
     },
-    isRemoteSshTransportBusy: (profileId) => {
-      if (_remoteSshTransportCoordinator) {
-        const snapshot = _remoteSshTransportCoordinator.snapshotForProfile(profileId);
-        if (snapshot.transportPhase !== "idle") return true;
-      }
-      if (_remoteSshRuntime) {
-        const status = _remoteSshRuntime.getProfileStatus(profileId);
-        return status.status === "connecting"
-          || status.status === "connected"
-          || status.status === "reconnecting";
-      }
-      return false;
-    },
   },
 });
 _settingsController.subscribeKey("agents", (_agents, snapshot) => {
@@ -594,58 +579,6 @@ _settingsController.subscribeKey("autoStartWithCodex", (_enabled, snapshot) => {
   if (_settingsController.isLocked()) return;
   _syncCodexAutoStartGate(snapshot, "settings");
 });
-let _remoteSshInstallationIdentity = null;
-let _remoteSshInstallationIdentityPromise = null;
-
-async function initializeRemoteSshInstallationIdentity() {
-  const remoteSsh = _settingsController.get("remoteSsh") || {};
-  const persistedAuthorityPresent = Array.isArray(remoteSsh.profiles)
-    && remoteSsh.profiles.some((profile) => profile && (
-      typeof profile.routingNonce === "string"
-      || typeof profile.previousNonce === "string"
-      || !!profile.identityTxn
-      || profile.isolatedActive === true
-      || !!profile.isolatedRuntime
-      || (Array.isArray(profile.managedDeployTargets) && profile.managedDeployTargets.length > 0)
-      || (Number.isFinite(profile.lastDeployedAt) && profile.lastDeployedAt > 0)
-    ));
-  const identity = loadOrCreateInstallationIdentity({
-    userDataDir: app.getPath("userData"),
-    expectedInstallId: remoteSsh.installId,
-    persistedAuthorityPresent,
-    safeStorage,
-  });
-  const result = await _settingsController.applyCommand("remoteSsh.applyInstallationIdentity", {
-    installId: identity.installId,
-    cloneRecoveryRequired: identity.cloneRecoveryRequired === true,
-  });
-  if (!result || result.status !== "ok") {
-    throw new Error((result && result.message) || "failed to bind Remote SSH installation identity");
-  }
-  _remoteSshInstallationIdentity = Object.freeze(identity);
-  if (identity.cloneRecoveryRequired) {
-    console.warn("Clawd remote-ssh: local installation identity changed; remote profiles require redeploy");
-  }
-  if (!identity.strongStorage) {
-    console.warn(`Clawd remote-ssh: installation binding uses weak storage backend (${identity.storageBackend})`);
-  }
-  return identity;
-}
-
-function ensureRemoteSshInstallationIdentity() {
-  if (_remoteSshInstallationIdentity) {
-    return Promise.resolve(_remoteSshInstallationIdentity);
-  }
-  if (_remoteSshInstallationIdentityPromise) {
-    return _remoteSshInstallationIdentityPromise;
-  }
-  _remoteSshInstallationIdentityPromise = initializeRemoteSshInstallationIdentity()
-    .finally(() => {
-      _remoteSshInstallationIdentityPromise = null;
-    });
-  return _remoteSshInstallationIdentityPromise;
-}
-
 // Mirror of `_settingsController.get("lang")` so existing sync read sites in
 // menu.js / state.js / etc. don't have to round-trip through the controller.
 // Updated by the settings-effect-router subscriber below; never
@@ -3263,18 +3196,12 @@ function settleDrainWithin(drain, timeoutMs) {
   });
 }
 
-function drainRemoteSshAndFeishuBeforeQuit() {
+function drainFeishuBeforeQuit() {
   const drains = [];
   try {
     settingsIpcRuntime.dispose();
   } catch (err) {
     console.error("settings IPC shutdown failed:", err && err.message);
-  }
-  if (_remoteSshRuntime && typeof _remoteSshRuntime.shutdown === "function") {
-    drains.push(
-      Promise.resolve(_remoteSshRuntime.shutdown({ timeoutMs: 5000 }))
-        .catch((err) => console.error("remote-ssh shutdown drain failed:", err && err.message))
-    );
   }
   stopFeishuApprovalClient();
   drains.push(...Array.from(
@@ -4516,7 +4443,6 @@ try {
 
 // ── Doctor tab IPC ──
 const { registerDoctorIpc } = require("./doctor-ipc");
-let _remoteSshRuntime = null;
 registerDoctorIpc({
   ipcMain,
   app,
@@ -4530,40 +4456,6 @@ registerDoctorIpc({
   getDoNotDisturb: () => doNotDisturb,
   getLocale: () => _settingsController.get("lang") || "en",
   resolveAgentDisplayName: _resolveAgentDisplayName,
-  getRemoteSshStatuses: () => _remoteSshRuntime
-    ? _remoteSshRuntime.listStatuses()
-    : [],
-});
-
-// ── Remote SSH (Phase 2) ──
-//
-// Runtime owner of background SSH tunnels. Profile CRUD goes through
-// settings-controller (commands "remoteSsh.add" / .update / .delete);
-// runtime state (Connect / Disconnect / Deploy / Authenticate / Open
-// Terminal) goes through `remote-ssh-ipc.js`. Cleanup on app quit kills
-// any spawned ssh / scp children.
-const { createRemoteSshRuntime } = require("./remote-ssh-runtime");
-const { registerRemoteSshIpc } = require("./remote-ssh-ipc");
-const { inspectEffectiveTransport } = require("./remote-ssh-transport");
-const { createRemoteSshTransportCoordinator } = require("./remote-ssh-transport-coordinator");
-_remoteSshTransportCoordinator = createRemoteSshTransportCoordinator({
-  inspectEffectiveTransport: (profile) => inspectEffectiveTransport(profile),
-});
-_remoteSshRuntime = createRemoteSshRuntime({
-  getHookServerPort: () => getHookServerPort(),
-  createProfileIngress: (options) => _server.openRemoteSshIngress(options),
-  transportCoordinator: _remoteSshTransportCoordinator,
-  log: (...args) => console.warn("Clawd remote-ssh:", ...args),
-});
-const _remoteSshIpc = registerRemoteSshIpc({
-  ipcMain,
-  settingsController: _settingsController,
-  remoteSshRuntime: _remoteSshRuntime,
-  transportCoordinator: _remoteSshTransportCoordinator,
-  BrowserWindow,
-  isPackaged: app.isPackaged,
-  getInstallationIdentity: ensureRemoteSshInstallationIdentity,
-  enableProfileIsolation: process.env.CLAWD_ENABLE_EXPERIMENTAL_REMOTE_ISOLATION === "1",
 });
 
 // ── Settings panel window ──
@@ -4926,9 +4818,6 @@ function createWindow() {
       }
       sessionLog(`startup recovery restored sessions=${restoredSessionIds.join(",")}`);
     }
-    void _remoteSshIpc.connectOnLaunchProfiles().catch((err) => {
-      console.warn("Clawd remote-ssh: connect-on-launch failed:", err && err.message);
-    });
   }).catch(() => {});
   if (_settingsController.get("mobilePreviewEnabled") === true) {
     void startMobilePreviewServerSafely(_lanWss, {
@@ -5414,11 +5303,6 @@ if (!gotTheLock) {
     // First-run only: seed UI language from the device locale, before createWindow
     // so the very first menu/tray render is already in the user's language.
     hydrateFreshInstallLanguage();
-    // Remote SSH installation identity is intentionally lazy. Loading it uses
-    // macOS Keychain through safeStorage, so ordinary Clawd startup must not
-    // request credential access when no Remote SSH action is being performed.
-    // Explicit Remote SSH status/actions and connect-on-launch profiles load it
-    // through the single-flight provider injected into remote-ssh-ipc above.
     permDebugLog = path.join(app.getPath("userData"), "permission-debug.log");
     updateDebugLog = path.join(app.getPath("userData"), "update-debug.log");
     sessionDebugLog = path.join(app.getPath("userData"), "session-debug.log");
@@ -5547,7 +5431,7 @@ if (!gotTheLock) {
       event.preventDefault();
       if (!appQuitDrainStarted) {
         appQuitDrainStarted = true;
-        void drainRemoteSshAndFeishuBeforeQuit()
+        void drainFeishuBeforeQuit()
           .finally(() => {
             appQuitDrainReady = true;
             app.quit();
@@ -5591,10 +5475,6 @@ if (!gotTheLock) {
     themeRuntime.cleanup();
     _focus.cleanup();
     if (animationOverridesMain) animationOverridesMain.cleanup();
-    try { _remoteSshIpc.dispose(); } catch {}
-    if (!_remoteSshRuntime || typeof _remoteSshRuntime.shutdown !== "function") {
-      try { _remoteSshRuntime.cleanup(); } catch {}
-    }
     if (hitWin && !hitWin.isDestroyed()) hitWin.destroy();
   });
 

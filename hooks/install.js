@@ -13,9 +13,6 @@ const {
   isManagedPermissionUrl,
   PERMISSION_PATH,
   readRuntimePort,
-  readRemoteIdentity,
-  resolveRemoteIdentityPath,
-  resolveSshSecureMarkerPath,
   REMOTE_HOOK_HTTP_TIMEOUT_MS,
   resolveNodeBin,
   resolveNodeBinAsync,
@@ -535,7 +532,7 @@ function buildCommandHookSpec(nodeBin, scriptPath, args = "", options = {}) {
   if (options.remote) {
     return withHookOptions({
       type: "command",
-      command: `${buildRemoteHookEnvPrefix(options)} ${shellQuotedCommand}`,
+      command: `${buildRemoteHookEnvPrefix()} ${shellQuotedCommand}`,
     });
   }
 
@@ -567,50 +564,8 @@ function buildCommandHookSpec(nodeBin, scriptPath, args = "", options = {}) {
   });
 }
 
-function quotePosixEnvValue(value) {
-  return `'${String(value).replace(/'/g, `'\\''`)}'`;
-}
-
-function isSshSecureRemoteInstall(options = {}) {
-  const env = options.env || process.env;
-  return options.remote === true
-    && (options.sshRemote === true || env.CLAWD_SSH_REMOTE === "1");
-}
-
-function buildRemoteHookEnvPrefix(options = {}) {
-  if (!isSshSecureRemoteInstall(options)) return "CLAWD_REMOTE=1";
-  const identityPath = resolveRemoteIdentityPath(options);
-  const markerPath = resolveSshSecureMarkerPath(options);
-  const hostPrefixPath = options.hostPrefixPath
-    || (options.env || process.env).CLAWD_HOST_PREFIX_PATH
-    || path.join(path.dirname(identityPath), "clawd-host-prefix");
-  const remoteLastLogPath = options.remoteLastLogPath
-    || (options.env || process.env).CLAWD_REMOTE_LAST_LOG_PATH
-    || path.join(path.dirname(identityPath), "clawd-remote-last-error.log");
-  const statuslineSidecarPath = options.statuslineSidecarPath
-    || (options.env || process.env).CLAWD_STATUSLINE_SIDECAR_PATH
-    || path.join(path.dirname(identityPath), "clawd-statusline-chain.json");
-  return [
-    "CLAWD_REMOTE=1",
-    "CLAWD_SSH_REMOTE=1",
-    `CLAWD_REMOTE_IDENTITY_PATH=${quotePosixEnvValue(identityPath)}`,
-    `CLAWD_SSH_SECURE_MARKER_PATH=${quotePosixEnvValue(markerPath)}`,
-    `CLAWD_HOST_PREFIX_PATH=${quotePosixEnvValue(hostPrefixPath)}`,
-    `CLAWD_REMOTE_LAST_LOG_PATH=${quotePosixEnvValue(remoteLastLogPath)}`,
-    `CLAWD_STATUSLINE_SIDECAR_PATH=${quotePosixEnvValue(statuslineSidecarPath)}`,
-  ].join(" ");
-}
-
-function requireRemoteInstallIdentity(options = {}) {
-  if (!isSshSecureRemoteInstall(options)) return null;
-  const identity = options.remoteIdentity && options.remoteIdentity.ok !== undefined
-    ? options.remoteIdentity
-    : readRemoteIdentity(options);
-  if (!identity || identity.ok !== true) {
-    const reason = identity && identity.reason ? identity.reason : "identity-invalid";
-    throw new Error(`Secure Remote SSH identity is required before installing hooks (${reason})`);
-  }
-  return identity;
+function buildRemoteHookEnvPrefix() {
+  return "CLAWD_REMOTE=1";
 }
 
 function resolveRemotePermissionTransport(options = {}) {
@@ -1103,9 +1058,8 @@ function resolveConfiguredNodeBinSync(options, settings) {
 function registerHooks(options = {}) {
   const settingsPath = resolveClaudeSettingsPath(options);
   const writePath = resolveWritePath(settingsPath);
-  const remoteIdentity = requireRemoteInstallIdentity(options);
   const remotePermissionTransport = resolveRemotePermissionTransport(options);
-  const hookPort = remoteIdentity ? remoteIdentity.remotePort : getHookServerPort(options.port);
+  const hookPort = getHookServerPort(options.port);
   const hookScript = getClaudeHookScriptPath();
   const platform = options.platform || process.platform;
   const wslDistro = resolveInstallWslDistro(options);
@@ -1184,13 +1138,9 @@ function registerHooks(options = {}) {
     const desiredHook = buildCommandHookSpec(nodeBin, hookScript, event, {
       platform,
       remote: options.remote,
-      sshRemote: options.sshRemote,
       wslDistro,
       async: true,
       timeout: options.remote ? REMOTE_STATE_HOOK_TIMEOUT_SECONDS : STATE_HOOK_TIMEOUT_SECONDS,
-      remoteIdentityPath: options.remoteIdentityPath || (remoteIdentity && remoteIdentity.filePath),
-      secureMarkerPath: options.secureMarkerPath,
-      hostPrefixPath: options.hostPrefixPath,
     });
     const commandSync = foldManagedStateHooks(
       settings.hooks[event],
@@ -1302,11 +1252,7 @@ function registerHooks(options = {}) {
 
     const desiredHook = {
       ...hook,
-      url: buildPermissionUrl(
-        hookPort,
-        remoteIdentity && remoteIdentity.routingNonce,
-        remotePermissionTransport,
-      ),
+      url: buildPermissionUrl(hookPort, "", remotePermissionTransport),
     };
     const httpSync = syncHttpHook(settings.hooks[event], desiredHook.url);
     if (httpSync.found) {
@@ -1430,9 +1376,8 @@ async function resolveConfiguredNodeBinAsync(options, settings) {
 async function registerHooksAsync(options = {}) {
   const settingsPath = resolveClaudeSettingsPath(options);
   const writePath = resolveWritePath(settingsPath);
-  const remoteIdentity = requireRemoteInstallIdentity(options);
   const remotePermissionTransport = resolveRemotePermissionTransport(options);
-  const hookPort = remoteIdentity ? remoteIdentity.remotePort : getHookServerPort(options.port);
+  const hookPort = getHookServerPort(options.port);
   const hookScript = getClaudeHookScriptPath();
   const platform = options.platform || process.platform;
   const wslDistro = resolveInstallWslDistro(options);
@@ -1498,13 +1443,9 @@ async function registerHooksAsync(options = {}) {
     const desiredHook = buildCommandHookSpec(nodeBin, hookScript, event, {
       platform,
       remote: options.remote,
-      sshRemote: options.sshRemote,
       wslDistro,
       async: true,
       timeout: options.remote ? REMOTE_STATE_HOOK_TIMEOUT_SECONDS : STATE_HOOK_TIMEOUT_SECONDS,
-      remoteIdentityPath: options.remoteIdentityPath || (remoteIdentity && remoteIdentity.filePath),
-      secureMarkerPath: options.secureMarkerPath,
-      hostPrefixPath: options.hostPrefixPath,
     });
     const commandSync = foldManagedStateHooks(
       settings.hooks[event],
@@ -1607,11 +1548,7 @@ async function registerHooksAsync(options = {}) {
 
     const desiredHook = {
       ...hook,
-      url: buildPermissionUrl(
-        hookPort,
-        remoteIdentity && remoteIdentity.routingNonce,
-        remotePermissionTransport,
-      ),
+      url: buildPermissionUrl(hookPort, "", remotePermissionTransport),
     };
     const httpSync = syncHttpHook(settings.hooks[event], desiredHook.url);
     if (httpSync.found) {
@@ -1888,7 +1825,6 @@ function registerClaudeStatusline(options = {}) {
   const homeDir = options.homeDir || os.homedir();
   const settingsPath = resolveClaudeSettingsPath({ ...options, homeDir });
   const writePath = resolveWritePath(settingsPath);
-  const remoteIdentity = requireRemoteInstallIdentity(options);
 
   if (!options.settingsPath && !hasClaudeSettingsDir(homeDir, options)) {
     if (!options.silent) console.log("Clawd: Claude Code settings not found - skipping statusline registration");
@@ -1973,10 +1909,7 @@ function registerClaudeStatusline(options = {}) {
   // the remote's own node, so resolveNodeBin() IS the remote path.
   const portableCommand = buildPortableStatuslineCommand(nodeBin, scriptPath, { platform });
   const prefixed = options.remote === true
-    ? `${buildRemoteHookEnvPrefix({
-        ...options,
-        remoteIdentityPath: options.remoteIdentityPath || (remoteIdentity && remoteIdentity.filePath),
-      })} ${portableCommand}`
+    ? `${buildRemoteHookEnvPrefix()} ${portableCommand}`
     : portableCommand;
   const command = chainActive ? `${prefixed} ${STATUSLINE_CHAIN_FLAG}` : prefixed;
   const desired = { type: "command", command, padding: 0 };
@@ -2087,7 +2020,6 @@ module.exports = {
     shouldReconcileVersionedHooks,
     buildCommandHookSpec,
     buildRemoteHookEnvPrefix,
-    isSshSecureRemoteInstall,
     parseClaudeInstallCliOptions,
   },
 };

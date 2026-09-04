@@ -43,8 +43,6 @@ const discordDefaultAppIdPresent =
 const listeners = new Set();
 const shortcutFailureListeners = new Set();
 const shortcutRecordKeyListeners = new Set();
-const remoteSshStatusListeners = new Set();
-const remoteSshProgressListeners = new Set();
 const remoteApprovalStatusListeners = new Set();
 const textScaleContextListeners = new Set();
 const agentActivityListeners = new Set();
@@ -65,16 +63,6 @@ ipcRenderer.on("shortcut-failures-changed", (_event, payload) => {
 ipcRenderer.on("shortcut-record-key", (_event, payload) => {
   for (const cb of shortcutRecordKeyListeners) {
     try { cb(payload); } catch (err) { console.warn("shortcut record listener threw:", err); }
-  }
-});
-ipcRenderer.on("remoteSsh:status-changed", (_event, payload) => {
-  for (const cb of remoteSshStatusListeners) {
-    try { cb(payload); } catch (err) { console.warn("remoteSsh status listener threw:", err); }
-  }
-});
-ipcRenderer.on("remoteSsh:progress", (_event, payload) => {
-  for (const cb of remoteSshProgressListeners) {
-    try { cb(payload); } catch (err) { console.warn("remoteSsh progress listener threw:", err); }
   }
 });
 ipcRenderer.on("remoteApproval:status-changed", (_event, payload) => {
@@ -237,51 +225,3 @@ contextBridge.exposeInMainWorld("doctor", {
   codexHookHealth: () => ipcRenderer.invoke("doctor:codex-hook-health"),
 });
 
-// ── Remote SSH (Phase 2) ──
-//
-// Surface: window.remoteSsh
-//
-//   listStatuses()                 Promise<{ status, statuses: Array<state> }>
-//   status(profileId)              Promise<{ status, state }>
-//   connect(profileId)             Promise<{ status, state?, reason?, hint?, detail? }>
-//   disconnect(profileId)          Promise<{ status, state? }>
-//   deploy(profileId, options?)    Promise<{ status, message?, step? }>
-//   authenticate(profileId)        Promise<{ status, terminal?, message? }>
-//   openTerminal(profileId)        Promise<{ status, terminal?, message? }>
-//   onStatusChanged(cb)            cb({ profileId, status, ... })
-//   onProgress(cb)                 cb({ profileId, step, status, message? })
-//
-// Profile CRUD goes through the existing settingsAPI.command pathway
-// (action: "remoteSsh.add" | "remoteSsh.update" | "remoteSsh.delete") so all
-// writes flow through settings-controller as the single source of truth.
-contextBridge.exposeInMainWorld("remoteSsh", {
-  listStatuses: () => ipcRenderer.invoke("remoteSsh:list-statuses"),
-  status: (profileId) => ipcRenderer.invoke("remoteSsh:status", profileId),
-  connect: (profileId) => ipcRenderer.invoke("remoteSsh:connect", profileId),
-  disconnect: (profileId) => ipcRenderer.invoke("remoteSsh:disconnect", profileId),
-  cleanup: (profileId) => ipcRenderer.invoke("remoteSsh:cleanup", profileId),
-  deploy: (profileId, options = {}) => ipcRenderer.invoke("remoteSsh:deploy", {
-    profileId,
-    legacyMigrationConfirmed: options.legacyMigrationConfirmed === true,
-  }),
-  setRuntimeMode: (profileId, runtimeMode, confirmed) => ipcRenderer.invoke(
-    "remoteSsh:set-runtime-mode",
-    { profileId, runtimeMode, confirmed: confirmed === true }
-  ),
-  forceRevoke: (profileId, mode, confirmed) => ipcRenderer.invoke(
-    "remoteSsh:force-revoke",
-    { profileId, mode, confirmed: confirmed === true }
-  ),
-  authenticate: (profileId) => ipcRenderer.invoke("remoteSsh:authenticate", profileId),
-  openTerminal: (profileId) => ipcRenderer.invoke("remoteSsh:open-terminal", profileId),
-  onStatusChanged: (cb) => {
-    if (typeof cb !== "function") return () => {};
-    remoteSshStatusListeners.add(cb);
-    return () => remoteSshStatusListeners.delete(cb);
-  },
-  onProgress: (cb) => {
-    if (typeof cb !== "function") return () => {};
-    remoteSshProgressListeners.add(cb);
-    return () => remoteSshProgressListeners.delete(cb);
-  },
-});

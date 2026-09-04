@@ -713,20 +713,13 @@ describe("main Feishu/Lark approval platform wiring", () => {
     await result;
   });
 
-  it("app quit drain waits for both Remote SSH and Feishu card shutdown", async () => {
-    const remoteDrain = createDeferred();
+  it("app quit drain waits for Feishu card shutdown", async () => {
     const feishuDrain = createDeferred();
     const closeDrains = new Set();
     const calls = [];
-    const drainRemoteSshAndFeishuBeforeQuit = loadFn("drainRemoteSshAndFeishuBeforeQuit", {
+    const drainFeishuBeforeQuit = loadFn("drainFeishuBeforeQuit", {
       settingsIpcRuntime: {
         dispose: () => calls.push(["settings-ipc"]),
-      },
-      _remoteSshRuntime: {
-        shutdown: ({ timeoutMs }) => {
-          calls.push(["remote", timeoutMs]);
-          return remoteDrain.promise;
-        },
       },
       stopFeishuApprovalClient: () => {
         calls.push(["feishu"]);
@@ -741,17 +734,15 @@ describe("main Feishu/Lark approval platform wiring", () => {
       Promise,
     });
 
-    const result = drainRemoteSshAndFeishuBeforeQuit();
+    const result = drainFeishuBeforeQuit();
     let settled = false;
     result.then(() => { settled = true; });
     assert.deepEqual(calls, [
       ["settings-ipc"],
-      ["remote", 5000],
       ["feishu"],
       ["feishu-timeout", 5000],
     ]);
 
-    remoteDrain.resolve();
     await Promise.resolve();
     assert.equal(settled, false, "quit must still wait for the Feishu terminal patch");
 
@@ -777,16 +768,15 @@ describe("main Feishu/Lark approval platform wiring", () => {
     const priorStopResult = stopFeishuApprovalClient();
     assert.equal(priorStopResult, priorClientDrain.promise);
 
-    const drainRemoteSshAndFeishuBeforeQuit = loadFn("drainRemoteSshAndFeishuBeforeQuit", {
+    const drainFeishuBeforeQuit = loadFn("drainFeishuBeforeQuit", {
       settingsIpcRuntime: { dispose: () => {} },
-      _remoteSshRuntime: null,
       stopFeishuApprovalClient: () => undefined,
       settleDrainWithin: (drain) => drain,
       feishuApprovalCloseDrains: closeDrains,
       console: { error: () => {} },
       Promise,
     });
-    const quitDrain = drainRemoteSshAndFeishuBeforeQuit();
+    const quitDrain = drainFeishuBeforeQuit();
     let settled = false;
     quitDrain.then(() => { settled = true; });
     await Promise.resolve();

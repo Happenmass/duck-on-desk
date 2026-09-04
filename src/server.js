@@ -47,7 +47,6 @@ const {
   shouldBypassCodexBubble,
   shouldBypassFamilyBubble,
 } = require("./server-route-permission");
-const { createRemoteSshIngress } = require("./remote-ssh-ingress");
 const {
   getCodexOfficialTurnKey,
   resolveCodexOfficialHookState,
@@ -708,10 +707,10 @@ function stopClaudeSettingsWatcher() {
 }
 
 function routeHttpRequest(req, res, remoteProfile = null) {
-    // Secure Remote SSH traffic must terminate at its profile-bound ingress,
-    // never at the compatibility-oriented local main server. Rejecting the
-    // nonce header here makes stale manual RemoteForward/proxy rules fail
-    // closed instead of silently dropping trusted profile stamping.
+    // The routing-nonce header only ever belonged to a profile-bound ingress.
+    // That ingress is gone, so any request still carrying the header comes from
+    // a stale manual RemoteForward/proxy rule; reject it so those fail closed
+    // instead of being silently treated as trusted local traffic.
     if (!remoteProfile
       && req
       && req.headers
@@ -752,15 +751,6 @@ function routeHttpRequest(req, res, remoteProfile = null) {
     }
 }
 
-function openRemoteSshIngress({ remoteProfile, getAcceptedNonces, createServer } = {}) {
-  return createRemoteSshIngress({
-    remoteProfile,
-    getAcceptedNonces,
-    routeRequest: routeHttpRequest,
-    ...(createServer ? { createServer } : {}),
-  });
-}
-
 function startHttpServer() {
   httpServer = createHttpServer((req, res) => {
     routeHttpRequest(req, res, null);
@@ -771,9 +761,8 @@ function startHttpServer() {
   // Resolves with the bound port once the server is actually listening, or
   // null if every candidate port is occupied (or a non-EADDRINUSE bind error
   // fires before listening). Callers that read the port synchronously to wire
-  // downstream connections — e.g. remote-ssh connect-on-launch, whose
-  // runtime.connect() builds the SSH reverse tunnel off getHookServerPort() —
-  // MUST await this. listen() is async, so activeServerPort is still null when
+  // downstream connections off getHookServerPort() MUST await this.
+  // listen() is async, so activeServerPort is still null when
   // startHttpServer() returns; acting before the 'listening' event would read
   // a stale fallback port (readRuntimePort()/DEFAULT) and target the wrong
   // local port whenever the bind drifted off the first candidate.
@@ -875,7 +864,6 @@ function cleanup() {
 
 return {
   startHttpServer,
-  openRemoteSshIngress,
   getHookServerPort,
   getRuntimeStatus,
   getClaudeHookGuardStatus,

@@ -10,8 +10,8 @@ const initServer = require("../src/server");
 // real net.Server) unless the requested port is in `occupied`, in which case it
 // emits an async EADDRINUSE 'error'. This drives startHttpServer()'s
 // port-candidate retry loop so we can assert the returned Promise resolves with
-// the port that was ACTUALLY bound — the value remote-ssh connect-on-launch
-// reads (via getHookServerPort) to build its SSH reverse tunnel.
+// the port that was ACTUALLY bound — the value every downstream caller reads
+// through getHookServerPort().
 function makeFakeServerFactory({ occupied = [] } = {}) {
   const listenCalls = [];
   function createHttpServer() {

@@ -109,7 +109,6 @@ function createSettingsWindowRuntime(options = {}) {
     "shortcuts",
     "telegram-approval",
     "discord-presence",
-    "remote-ssh",
     "recap",
     "about",
   ]);

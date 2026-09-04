@@ -91,11 +91,6 @@ function normalizeOrcaPaneKey(value) {
 // report it as a success. Reject the key whenever an inner terminal advertises
 // itself.
 //
-// Orca's managed SSH PTY is different: upstream forwards ORCA_PANE_KEY but does
-// not forward TERM_PROGRAM. Accept that shape only under Clawd's secure Remote
-// SSH pair (CLAWD_REMOTE + CLAWD_SSH_REMOTE), never for a generic remote/manual
-// hook. The nested-terminal veto still applies on the remote host.
-//
 // The multiplexers are on the list because their server outlives the pane that
 // started it: re-attaching a session from another terminal would carry the stale
 // pane key. tmux >= 3.2 sets TERM_PROGRAM=tmux and is already excluded by the
@@ -119,8 +114,7 @@ const NESTED_TERMINAL_ENV = [
 
 function orcaPaneKeyFromEnv(env = process.env) {
   if (!env) return null;
-  const secureRemoteOrca = isRemoteHookMode({ env }) && env.CLAWD_SSH_REMOTE === "1";
-  if (env.TERM_PROGRAM !== "Orca" && !secureRemoteOrca) return null;
+  if (env.TERM_PROGRAM !== "Orca") return null;
   if (NESTED_TERMINAL_ENV.some((key) => env[key])) return null;
   return normalizeOrcaPaneKey(env.ORCA_PANE_KEY);
 }

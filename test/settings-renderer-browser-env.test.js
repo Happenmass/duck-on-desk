@@ -1179,125 +1179,6 @@ function createKeyboardEventForTest(key) {
   };
 }
 
-function loadRemoteSshTabForTest({
-  snapshot,
-  cleanup = () => Promise.resolve({ status: "ok", uninstalled: true }),
-  command = () => Promise.resolve({ status: "ok" }),
-  confirm = () => true,
-  listStatuses = null,
-} = {}) {
-  const body = new FakeElement("body");
-  const content = new FakeElement("main");
-  content.id = "content";
-  body.appendChild(content);
-
-  const document = {
-    body,
-    createElement: (tagName) => new FakeElement(tagName),
-    getElementById(id) {
-      if (id === "content") return content;
-      return null;
-    },
-  };
-  const statusListeners = [];
-  const progressListeners = [];
-  const cleanupCalls = [];
-  const commandCalls = [];
-  const remoteSsh = {
-    onStatusChanged(cb) {
-      statusListeners.push(cb);
-      return () => {};
-    },
-    onProgress(cb) {
-      progressListeners.push(cb);
-      return () => {};
-    },
-    cleanup(profileId) {
-      cleanupCalls.push(profileId);
-      return cleanup(profileId);
-    },
-    connect: () => Promise.resolve({ status: "ok" }),
-    disconnect: () => Promise.resolve({ status: "ok" }),
-    authenticate: () => Promise.resolve({ status: "ok" }),
-    openTerminal: () => Promise.resolve({ status: "ok" }),
-    deploy: () => Promise.resolve({ status: "ok" }),
-  };
-  if (typeof listStatuses === "function") remoteSsh.listStatuses = listStatuses;
-  const context = {
-    console,
-    navigator: { platform: "Win32" },
-    localStorage: {
-      getItem: () => null,
-      setItem: () => {},
-    },
-    document,
-    requestAnimationFrame: (cb) => {
-      cb();
-      return 1;
-    },
-    setTimeout,
-    confirm,
-    window: null,
-    globalThis: null,
-    remoteSsh,
-    settingsAPI: {
-      command(action, payload) {
-        commandCalls.push({ action, payload });
-        return command(action, payload);
-      },
-    },
-    ClawdSettingsSizeSlider: {
-      SIZE_UI_MIN: 1,
-      SIZE_UI_MAX: 100,
-      SIZE_TICK_VALUES: [25, 50, 75, 100],
-      SIZE_SLIDER_THUMB_DIAMETER: 18,
-      prefsSizeToUi: (value) => value,
-      clampSizeUi: (value) => value,
-      sizeUiToPct: (value) => value,
-      getSizeSliderAnchorPx: () => 0,
-      createSizeSliderController: () => ({}),
-    },
-    ClawdSettingsI18n: {
-      STRINGS: loadSettingsI18nForTest(),
-      CONTRIBUTORS: [],
-      MAINTAINERS: [],
-    },
-  };
-  context.window = context;
-  context.globalThis = context;
-  vm.createContext(context);
-  vm.runInContext(fs.readFileSync(LANGUAGE_PICKER_JS, "utf8"), context);
-  vm.runInContext(fs.readFileSync(SETTINGS_ANIM_OVERRIDES_MERGE, "utf8"), context);
-  vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-remote-ssh.js"), "utf8"), context);
-
-  const core = context.ClawdSettingsCore;
-  core.state.snapshot = snapshot || { lang: "en", remoteSsh: { profiles: [] } };
-  core.state.activeTab = "remote-ssh";
-  context.ClawdSettingsTabRemoteSsh.init(core);
-
-  function renderContent() {
-    core.ops.clearMountedControls();
-    content.innerHTML = "";
-    core.tabs["remote-ssh"].render(content, core);
-  }
-  core.ops.installRenderHooks({ content: renderContent });
-  renderContent();
-
-  return {
-    content,
-    cleanupCalls,
-    commandCalls,
-    renderContent,
-    emitStatus(payload) {
-      for (const listener of statusListeners) listener(payload);
-    },
-    emitProgress(payload) {
-      for (const listener of progressListeners) listener(payload);
-    },
-  };
-}
-
 function findAncestorByClass(el, className) {
   let current = el;
   while (current) {
@@ -3497,7 +3378,6 @@ describe("settings renderer browser environment", () => {
       "settings-tab-telegram-approval.js",
       "settings-tab-discord-presence.js",
       "settings-tab-about.js",
-      "settings-tab-remote-ssh.js",
       "settings-doctor-modal.js",
       "settings-icons.js",
       "settings-renderer.js",
@@ -3642,8 +3522,8 @@ describe("settings renderer browser environment", () => {
       document,
       requestAnimationFrame: raf.requestAnimationFrame,
     });
-    core.state.activeTab = "remote-ssh";
-    core.tabs["remote-ssh"] = {};
+    core.state.activeTab = "agents";
+    core.tabs.agents = {};
     core.tabs.theme = {};
     core.ops.installRenderHooks({
       sidebar: () => {},
@@ -3659,10 +3539,10 @@ describe("settings renderer browser environment", () => {
     raf.flush();
 
     content.scrollTop = 240;
-    core.ops.selectTab("remote-ssh");
+    core.ops.selectTab("agents");
     assert.equal(content.scrollTop, 1480, "the long source page restores its saved position");
 
-    // Switch again before the remote page's deferred restore runs. Its stale
+    // Switch again before the long page's deferred restore runs. Its stale
     // callback must not overwrite the newly active Theme page.
     core.ops.selectTab("theme");
     raf.flush();
@@ -3748,237 +3628,6 @@ describe("settings renderer browser environment", () => {
     second.tabs.recap = {};
     assert.equal(second.ops.restoreNavigationState(), true);
     assert.equal(second.state.activeTab, "theme");
-  });
-
-  it("waits for remote cleanup before deleting a profile and warns on incomplete uninstall", () => {
-    const source = fs.readFileSync(path.join(SRC_DIR, "settings-tab-remote-ssh.js"), "utf8");
-    const cleanupIndex = source.indexOf("await window.remoteSsh.cleanup(profile.id)");
-    const deleteIndex = source.indexOf('await callCommand("remoteSsh.delete", profile.id)');
-    assert.ok(cleanupIndex >= 0, "delete flow must await remote cleanup");
-    assert.ok(deleteIndex > cleanupIndex, "profile removal must happen after cleanup resolves");
-    assert.ok(source.includes('cleanup.uninstalled !== false'));
-    assert.ok(source.includes('remoteSshDeleteCleanupFailedConfirm'));
-  });
-
-  it("keeps remote profile deletion single-flight across runtime rerenders", async () => {
-    const cleanupDeferred = createDeferred();
-    let confirmCalls = 0;
-    const profile = {
-      id: "remote-1",
-      label: "Build host",
-      host: "builder.example.com",
-      remoteForwardPort: 23333,
-      lastDeployedAt: Date.now(),
-    };
-    const harness = loadRemoteSshTabForTest({
-      snapshot: { lang: "en", remoteSsh: { profiles: [profile] } },
-      cleanup: () => cleanupDeferred.promise,
-      confirm: () => {
-        confirmCalls++;
-        return true;
-      },
-    });
-
-    harness.content.querySelector(".remote-ssh-card").dispatchEvent({ type: "click" });
-    const originalDelete = harness.content.querySelector(".remote-ssh-btn-danger");
-    assert.ok(originalDelete);
-    assert.strictEqual(originalDelete.disabled, false);
-
-    originalDelete.dispatchEvent({ type: "click" });
-    assert.deepStrictEqual(harness.cleanupCalls, [profile.id]);
-    assert.strictEqual(confirmCalls, 1);
-
-    const pendingDelete = harness.content.querySelector(".remote-ssh-btn-danger");
-    assert.notStrictEqual(pendingDelete, originalDelete, "starting cleanup rebuilds the detail view");
-    assert.strictEqual(pendingDelete.disabled, true);
-
-    harness.emitStatus({ profileId: profile.id, status: "idle" });
-    const afterStatusRerender = harness.content.querySelector(".remote-ssh-btn-danger");
-    assert.notStrictEqual(afterStatusRerender, pendingDelete);
-    assert.strictEqual(afterStatusRerender.disabled, true, "runtime status repaint preserves pending state");
-
-    // FakeElement permits dispatching a disabled button, unlike the browser.
-    // The handler guard must still prevent duplicate destructive IPC work.
-    afterStatusRerender.dispatchEvent({ type: "click" });
-    assert.deepStrictEqual(harness.cleanupCalls, [profile.id]);
-    assert.strictEqual(confirmCalls, 1);
-
-    cleanupDeferred.resolve({ status: "ok", uninstalled: true });
-    await new Promise((resolve) => setImmediate(resolve));
-    assert.deepStrictEqual(harness.commandCalls, [{ action: "remoteSsh.delete", payload: profile.id }]);
-    assert.strictEqual(harness.content.querySelector(".remote-ssh-detail"), null);
-  });
-
-  it("re-enables remote profile deletion when incomplete cleanup is kept for retry", async () => {
-    const confirmations = [true, false];
-    const profile = {
-      id: "remote-retry",
-      label: "Retry host",
-      host: "retry.example.com",
-      remoteForwardPort: 23334,
-      lastDeployedAt: Date.now(),
-    };
-    const harness = loadRemoteSshTabForTest({
-      snapshot: { lang: "en", remoteSsh: { profiles: [profile] } },
-      cleanup: () => Promise.resolve({ status: "ok", uninstalled: false }),
-      confirm: () => confirmations.shift(),
-    });
-
-    harness.content.querySelector(".remote-ssh-card").dispatchEvent({ type: "click" });
-    harness.content.querySelector(".remote-ssh-btn-danger").dispatchEvent({ type: "click" });
-    await new Promise((resolve) => setImmediate(resolve));
-
-    assert.deepStrictEqual(harness.cleanupCalls, [profile.id]);
-    assert.deepStrictEqual(harness.commandCalls, [], "cancelled force-delete keeps the profile");
-    assert.ok(harness.content.querySelector(".remote-ssh-detail"));
-    assert.strictEqual(harness.content.querySelector(".remote-ssh-btn-danger").disabled, false);
-  });
-
-  it("disables a profile card and remote actions while another profile owns its serialized transport", () => {
-    const profiles = [
-      {
-        id: "codespace-owner",
-        label: "Codespace owner",
-        host: "owner-alias",
-        remoteForwardPort: 23333,
-        lastDeployedAt: Date.now(),
-      },
-      {
-        id: "codespace-conflict",
-        label: "Codespace conflict",
-        host: "conflict-alias",
-        remoteForwardPort: 23334,
-        lastDeployedAt: Date.now(),
-      },
-    ];
-    const harness = loadRemoteSshTabForTest({
-      snapshot: { lang: "en", remoteSsh: { profiles } },
-    });
-    harness.content.querySelectorAll(".remote-ssh-card")[1].dispatchEvent({ type: "click" });
-    harness.emitStatus({
-      profileId: profiles[1].id,
-      status: "idle",
-      transportPhase: "tunnel",
-      transportOwnerProfileId: profiles[0].id,
-      transportOperation: "connect",
-      conflictingProfileIds: [profiles[0].id],
-    });
-
-    const cards = harness.content.querySelectorAll(".remote-ssh-card");
-    const conflictConnect = cards[1].querySelectorAll("button")
-      .find((button) => button.textContent === "Connect");
-    assert.ok(conflictConnect);
-    assert.strictEqual(conflictConnect.disabled, true);
-    const detailButtons = harness.content.querySelector(".remote-ssh-detail").querySelectorAll("button");
-    for (const text of ["Edit", "Delete", "Authenticate", "Open Terminal", "Deploy / Repair Hooks"]) {
-      const button = detailButtons.find((candidate) => candidate.textContent === text);
-      assert.ok(button, `${text} button should exist`);
-      assert.strictEqual(button.disabled, true, `${text} must be disabled for a conflicting profile`);
-    }
-
-    harness.emitStatus({
-      profileId: profiles[1].id,
-      status: "idle",
-      transportPhase: "idle",
-      transportOwnerProfileId: null,
-      conflictingProfileIds: [],
-    });
-    const releasedConnect = harness.content.querySelectorAll(".remote-ssh-card")[1]
-      .querySelectorAll("button").find((button) => button.textContent === "Connect");
-    assert.strictEqual(releasedConnect.disabled, false);
-    const releasedDetailButtons = harness.content.querySelector(".remote-ssh-detail").querySelectorAll("button");
-    for (const text of ["Edit", "Delete", "Authenticate", "Open Terminal", "Deploy / Repair Hooks"]) {
-      const button = releasedDetailButtons.find((candidate) => candidate.textContent === text);
-      assert.strictEqual(button.disabled, false, `${text} must recover after release`);
-    }
-  });
-
-  it("does not let a stale initial Remote SSH list overwrite a newer busy event", async () => {
-    const listed = createDeferred();
-    const profile = {
-      id: "codespace-list-race",
-      label: "Codespace list race",
-      host: "list-race-alias",
-      remoteForwardPort: 23333,
-      lastDeployedAt: Date.now(),
-    };
-    const harness = loadRemoteSshTabForTest({
-      snapshot: { lang: "en", remoteSsh: { profiles: [profile] } },
-      listStatuses: () => listed.promise,
-    });
-    harness.emitStatus({
-      profileId: profile.id,
-      status: "idle",
-      transportPhase: "operation",
-      transportOwnerProfileId: "other-profile",
-      transportOperation: "deploy",
-      conflictingProfileIds: ["other-profile"],
-    });
-    listed.resolve({
-      status: "ok",
-      statuses: [{
-        profileId: profile.id,
-        status: "idle",
-        transportPhase: "idle",
-        transportOwnerProfileId: null,
-        conflictingProfileIds: [],
-      }],
-    });
-    await new Promise((resolve) => setImmediate(resolve));
-
-    const connect = harness.content.querySelector(".remote-ssh-card").querySelectorAll("button")
-      .find((button) => button.textContent === "Connect");
-    assert.ok(connect);
-    assert.strictEqual(connect.disabled, true);
-  });
-
-  it("keeps the Remote SSH port and option cards in the local draft until save", async () => {
-    const harness = loadRemoteSshTabForTest({
-      snapshot: { lang: "en", remoteSsh: { profiles: [] } },
-    });
-    const addButton = harness.content.querySelectorAll("button")
-      .find((button) => button.textContent === "+ Add profile");
-    assert.ok(addButton);
-    addButton.dispatchEvent({ type: "click" });
-
-    const transportPicker = harness.content.querySelectorAll(".settings-select")[0];
-    assert.equal(getSelectedPickerValue(transportPicker), "auto");
-    choosePickerOption(transportPicker, "serialized");
-    const portPicker = harness.content.querySelector(".remote-ssh-port-select");
-    assert.ok(portPicker, "remote forward port should use the shared Settings picker");
-    const portHint = portPicker.parentNode.querySelector(".remote-ssh-field-hint");
-    assert.ok(portHint, "remote forward port should explain its availability requirement");
-    assert.equal(portHint.textContent, "Listening port on the remote host. Choose a port that is not already in use.");
-    assert.equal(getSelectedPickerValue(portPicker), "23333");
-    choosePickerOption(portPicker, "23336");
-
-    const cards = harness.content.querySelectorAll(".remote-ssh-option-card");
-    assert.equal(cards.length, 3);
-    assert.deepStrictEqual(cards.map((card) => card.getAttribute("role")), ["switch", "switch", "switch"]);
-    assert.deepStrictEqual(cards.map((card) => card.getAttribute("aria-checked")), ["false", "false", "false"]);
-    cards[0].dispatchEvent({ type: "click" });
-    cards[2].dispatchEvent(createKeyboardEventForTest(" "));
-    // FakeElement does not synthesize a click from keyboard activation; the
-    // native button does so in Chromium. Dispatch the resulting click here.
-    cards[2].dispatchEvent({ type: "click" });
-    assert.deepStrictEqual(cards.map((card) => card.getAttribute("aria-checked")), ["true", "false", "true"]);
-    assert.deepStrictEqual(harness.commandCalls, [], "draft edits must not persist before Save");
-
-    const inputs = harness.content.querySelectorAll("input");
-    inputs[1].value = "builder.example.com";
-    inputs[1].dispatchEvent({ type: "input" });
-    const saveButton = harness.content.querySelectorAll("button")
-      .find((button) => button.textContent === "Save");
-    saveButton.dispatchEvent({ type: "click" });
-    await Promise.resolve();
-
-    const addCall = harness.commandCalls.find((call) => call.action === "remoteSsh.add");
-    assert.ok(addCall);
-    assert.equal(addCall.payload.remoteForwardPort, 23336);
-    assert.equal(addCall.payload.autoStartCodexMonitor, true);
-    assert.equal(addCall.payload.sshTransportMode, "serialized");
-    assert.equal(addCall.payload.chainStatusline, false);
-    assert.equal(addCall.payload.connectOnLaunch, true);
   });
 
   it("keeps About contributors visible and includes verified GitHub contributors", () => {

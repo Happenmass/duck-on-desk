@@ -155,11 +155,7 @@ describe("orcaPaneKeyFromEnv / applyOrcaPaneKey", () => {
     assert.strictEqual(orcaPaneKeyFromEnv({ TERM_PROGRAM: "tmux", ORCA_PANE_KEY: PANE_KEY }), null);
     assert.strictEqual(orcaPaneKeyFromEnv({ TERM_PROGRAM: "Orca", ORCA_PANE_KEY: "junk" }), null);
     assert.strictEqual(orcaPaneKeyFromEnv({ TERM_PROGRAM: "Orca" }), null);
-    assert.strictEqual(orcaPaneKeyFromEnv({
-      CLAWD_REMOTE: "1",
-      CLAWD_SSH_REMOTE: "1",
-      ORCA_PANE_KEY: PANE_KEY,
-    }), PANE_KEY);
+    // A remote hook is not a substitute for the TERM_PROGRAM confirmation.
     assert.strictEqual(orcaPaneKeyFromEnv({
       CLAWD_REMOTE: "1",
       ORCA_PANE_KEY: PANE_KEY,
@@ -186,8 +182,7 @@ describe("orcaPaneKeyFromEnv / applyOrcaPaneKey", () => {
     // TERM_PROGRAM check rejects on its own.
     assert.ok(NESTED_TERMINAL_ENV.includes("TMUX"));
     assert.strictEqual(orcaPaneKeyFromEnv({
-      CLAWD_REMOTE: "1",
-      CLAWD_SSH_REMOTE: "1",
+      TERM_PROGRAM: "Orca",
       ORCA_PANE_KEY: PANE_KEY,
       TMUX: "/tmp/tmux.sock,1,0",
     }), null);

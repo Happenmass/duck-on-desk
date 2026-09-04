@@ -136,8 +136,6 @@
       "permission-bubble-policy": "doctorCheckPermissionBubbles",
       "feishu-approval": "doctorCheckFeishuApproval",
       "theme-health": "doctorCheckTheme",
-      "remote-ssh-ingress": "doctorCheckRemoteSshIngress",
-      "remote-ssh-isolation": "doctorCheckRemoteSshIsolation",
     };
     return t(core, map[check.id] || "doctorCheckUnknown");
   }

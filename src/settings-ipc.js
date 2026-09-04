@@ -16,22 +16,11 @@ const SOUND_OVERRIDE_ASSET_EXTS = new Set([".mp3", ".wav", ".ogg", ".m4a", ".aac
 // #895: cleanup prompts must skip the default integrations, referencing the
 // prefs list rather than a second hardcoded copy of the ids.
 const CLEANUP_EXEMPT_AGENT_IDS = new Set(DEFAULT_INTEGRATION_INSTALLED_IDS);
-// These commands mutate trust material or persist facts learned from an SSH
-// transaction. They are main-process capabilities, not renderer commands.
-// Keeping the check at the IPC boundary means an injected/compromised Settings
-// renderer cannot mint a trusted install binding, advance a deployment
-// transaction, or claim that a remote profile was verified.
+// These commands mutate trust material. They are main-process capabilities,
+// not renderer commands. Keeping the check at the IPC boundary means an
+// injected/compromised Settings renderer cannot mint a trusted binding or
+// claim that an approver was verified.
 const INTERNAL_SETTINGS_COMMANDS = new Set([
-  "remoteSsh.applyInstallationIdentity",
-  "remoteSsh.beginIdentityRotation",
-  "remoteSsh.updateIdentityStep",
-  "remoteSsh.commitIdentityRotation",
-  "remoteSsh.forceRevoke",
-  "remoteSsh.beginRuntimeModeSwitch",
-  "remoteSsh.advanceRuntimeModeSwitch",
-  "remoteSsh.switchRuntimeMode",
-  "remoteSsh.markDeployed",
-  "remoteSsh.markRemoteNode",
   "feishuApproval.commitResolvedApprover",
 ]);
 const SOUND_OVERRIDE_DIALOG_STRINGS = {

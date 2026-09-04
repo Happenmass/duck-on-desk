@@ -12,28 +12,14 @@ const STATE_PATH = "/state";
 const PERMISSION_PATH = "/permission";
 const DEFAULT_HOOK_HTTP_TIMEOUT_MS = 100;
 const REMOTE_HOOK_HTTP_TIMEOUT_MS = 5000;
-const REMOTE_IDENTITY_FILENAME = "clawd-remote.json";
-const SSH_SECURE_MARKER_FILENAME = "clawd-ssh-secure-v1";
 const HOST_PREFIX_FILENAME = "clawd-host-prefix";
-const REMOTE_LAST_LOG_FILENAME = "clawd-remote-last-error.log";
 const CODEX_AUTO_START_GATE_FILENAME = "codex-auto-start.json";
 const CODEX_AUTO_START_GATE_VERSION = 1;
 const CODEX_WSL_INTEROP_ARG = "--clawd-wsl-interop";
 const CODEX_WINDOWS_STABLE_ARG = "--clawd-windows-stable";
 const APPIMAGE_HOOK_MARKER_FILE = ".clawd-appimage-path";
-const REMOTE_FAILURE_LOG_INTERVAL_MS = 5 * 60 * 1000;
 const ROUTING_NONCE_HEADER = "x-clawd-routing-nonce";
-const REMOTE_IDENTITY_VERSION = 2;
 const ROUTING_NONCE_RE = /^[a-f0-9]{32}$/;
-const INSTALL_ID_RE = /^[a-f0-9]{64}$/;
-const SAFE_ID_RE = /^[a-zA-Z0-9_-]{1,64}$/;
-const SECURE_TRANSPORT_FAILURE_REASONS = new Set([
-  "identity-unreadable",
-  "identity-invalid",
-  "state-delivery-failed",
-  "permission-discovery-failed",
-  "permission-delivery-failed",
-]);
 
 function normalizePort(value) {
   const port = Number(value);
@@ -95,62 +81,6 @@ function resolveCoLocatedPath(filename, options = {}, optionKey, envKey) {
   return path.join(__dirname, filename);
 }
 
-function resolveRemoteIdentityPath(options = {}) {
-  return resolveCoLocatedPath(
-    REMOTE_IDENTITY_FILENAME,
-    options,
-    "remoteIdentityPath",
-    "CLAWD_REMOTE_IDENTITY_PATH",
-  );
-}
-
-function resolveSshSecureMarkerPath(options = {}) {
-  return resolveCoLocatedPath(
-    SSH_SECURE_MARKER_FILENAME,
-    options,
-    "secureMarkerPath",
-    "CLAWD_SSH_SECURE_MARKER_PATH",
-  );
-}
-
-function resolveRemoteLastLogPath(options = {}) {
-  return resolveCoLocatedPath(
-    REMOTE_LAST_LOG_FILENAME,
-    options,
-    "remoteLastLogPath",
-    "CLAWD_REMOTE_LAST_LOG_PATH",
-  );
-}
-
-function recordSecureTransportFailure(reason, options = {}) {
-  const now = typeof options.now === "function" ? options.now() : Date.now();
-  const fsApi = options.fs || fs;
-  const filePath = resolveRemoteLastLogPath(options);
-  const safeReason = SECURE_TRANSPORT_FAILURE_REASONS.has(reason)
-    ? reason
-    : "transport-failed";
-  try {
-    const stat = fsApi.statSync(filePath);
-    if (Number.isFinite(stat.mtimeMs) && now - stat.mtimeMs < REMOTE_FAILURE_LOG_INTERVAL_MS) {
-      return false;
-    }
-  } catch {}
-  const tmpPath = `${filePath}.tmp-${process.pid}`;
-  try {
-    fsApi.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
-    fsApi.writeFileSync(tmpPath, `${new Date(now).toISOString()} ${safeReason}\n`, {
-      mode: 0o600,
-    });
-    try { fsApi.chmodSync(tmpPath, 0o600); } catch {}
-    fsApi.renameSync(tmpPath, filePath);
-    try { fsApi.chmodSync(filePath, 0o600); } catch {}
-    return true;
-  } catch {
-    try { fsApi.unlinkSync(tmpPath); } catch {}
-    return false;
-  }
-}
-
 function readHostPrefix(options = {}) {
   const hostPrefixPath = resolveCoLocatedPath(
     HOST_PREFIX_FILENAME,
@@ -165,81 +95,6 @@ function readHostPrefix(options = {}) {
 
 function envFlagEnabled(value) {
   return !!value && !/^(0|false)$/i.test(String(value));
-}
-
-function isSshSecureMode(options = {}) {
-  if (options.sshSecure === true) return true;
-  if (options.sshSecure === false) return false;
-  const env = options.env || process.env;
-  if (envFlagEnabled(env && env.CLAWD_SSH_REMOTE)) return true;
-  const existsSync = options.existsSync || fs.existsSync;
-  try {
-    if (existsSync(resolveSshSecureMarkerPath(options))) return true;
-  } catch {
-    // An unreadable marker path is still a reason to avoid legacy scanning
-    // when the explicit path was supplied by a managed remote registration.
-    if ((options.env || process.env).CLAWD_SSH_SECURE_MARKER_PATH) return true;
-  }
-  try {
-    if (existsSync(resolveRemoteIdentityPath(options))) return true;
-  } catch {
-    if ((options.env || process.env).CLAWD_REMOTE_IDENTITY_PATH) return true;
-  }
-  return false;
-}
-
-function readRemoteIdentity(options = {}) {
-  const readFileSync = options.readFileSync || fs.readFileSync;
-  const filePath = resolveRemoteIdentityPath(options);
-  let raw;
-  try {
-    raw = JSON.parse(readFileSync(filePath, "utf8"));
-  } catch {
-    return { ok: false, reason: "identity-unreadable", filePath };
-  }
-  const port = normalizePort(raw && raw.remotePort);
-  if (!raw
-    || typeof raw !== "object"
-    || Array.isArray(raw)
-    || raw.version !== REMOTE_IDENTITY_VERSION
-    || !Number.isInteger(raw.layoutVersion)
-    || raw.layoutVersion <= 0
-    || !SAFE_ID_RE.test(raw.runtimeKey || "")
-    || !SAFE_ID_RE.test(raw.profileId || "")
-    || !INSTALL_ID_RE.test(raw.installId || "")
-    || !port
-    || !ROUTING_NONCE_RE.test(raw.routingNonce || "")
-    || !Number.isFinite(raw.deployedAt)
-    || raw.deployedAt <= 0) {
-    return { ok: false, reason: "identity-invalid", filePath };
-  }
-  return {
-    ok: true,
-    reason: null,
-    filePath,
-    version: raw.version,
-    layoutVersion: raw.layoutVersion,
-    runtimeKey: raw.runtimeKey,
-    profileId: raw.profileId,
-    installId: raw.installId,
-    remotePort: port,
-    routingNonce: raw.routingNonce,
-    deployedAt: raw.deployedAt,
-  };
-}
-
-function resolveSecureTransport(options = {}) {
-  if (!isSshSecureMode(options)) return { secure: false, identity: null };
-  const identity = options.remoteIdentity && options.remoteIdentity.ok !== undefined
-    ? options.remoteIdentity
-    : readRemoteIdentity(options);
-  const result = {
-    secure: true,
-    identity: identity && identity.ok ? identity : null,
-    reason: identity && identity.reason ? identity.reason : "identity-invalid",
-  };
-  if (!result.identity) recordSecureTransportFailure(result.reason, options);
-  return result;
 }
 
 // WSL detection shared by all agent hooks. WSL_DISTRO_NAME is set by WSL
@@ -486,10 +341,6 @@ function clearRuntimeConfig(filePath, options = {}) {
 }
 
 function getPortCandidates(preferredPort, options = {}) {
-  const secureTransport = resolveSecureTransport(options);
-  if (secureTransport.secure) {
-    return secureTransport.identity ? [secureTransport.identity.remotePort] : [];
-  }
   const ports = [];
   const seen = new Set();
   const runtimePort = normalizePort(
@@ -512,11 +363,6 @@ function getPortCandidates(preferredPort, options = {}) {
 }
 
 function splitPortCandidates(preferredPort, options = {}) {
-  const secureTransport = resolveSecureTransport(options);
-  if (secureTransport.secure) {
-    const direct = secureTransport.identity ? [secureTransport.identity.remotePort] : [];
-    return { direct, fallback: [], all: direct.slice() };
-  }
   const runtimePort = normalizePort(
     Object.prototype.hasOwnProperty.call(options, "runtimePort")
       ? options.runtimePort
@@ -597,14 +443,6 @@ function isClawdResponse(res, body) {
   }
 }
 
-function secureRequestHeaders(options = {}) {
-  const secureTransport = resolveSecureTransport(options);
-  if (!secureTransport.secure || !secureTransport.identity) return {};
-  return {
-    [ROUTING_NONCE_HEADER]: secureTransport.identity.routingNonce,
-  };
-}
-
 function isRemoteHookMode(options = {}) {
   if (options.remote === true) return true;
   if (options.remote === false) return false;
@@ -617,7 +455,7 @@ function buildWindowsProcessChainHeaders(port, options = {}) {
   if (!request || typeof request !== "object" || Array.isArray(request)) return {};
   const platform = options.platform || request.platform || process.platform;
   if (platform !== "win32") return {};
-  if (isRemoteHookMode(options) || resolveSecureTransport(options).secure) return {};
+  if (isRemoteHookMode(options)) return {};
 
   const agentId = typeof request.agentId === "string" ? request.agentId : "";
   const observation = request.runtimeObservation;
@@ -671,11 +509,6 @@ function getPermissionProbeTimeoutMs(options = {}) {
 }
 
 function probePort(port, timeoutMs, callback, options = {}) {
-  const secureTransport = resolveSecureTransport(options);
-  if (secureTransport.secure && !secureTransport.identity) {
-    callback(false);
-    return;
-  }
   const httpGet = options.httpGet || http.get;
   const req = httpGet(
     {
@@ -683,10 +516,6 @@ function probePort(port, timeoutMs, callback, options = {}) {
       port,
       path: STATE_PATH,
       timeout: timeoutMs,
-      headers: secureRequestHeaders({
-        ...options,
-        remoteIdentity: secureTransport.identity || options.remoteIdentity,
-      }),
     },
     (res) => {
       let body = "";
@@ -706,11 +535,6 @@ function probePort(port, timeoutMs, callback, options = {}) {
 }
 
 function postStateToPort(port, payload, timeoutMs, callback, options = {}) {
-  const secureTransport = resolveSecureTransport(options);
-  if (secureTransport.secure && !secureTransport.identity) {
-    callback(false, port);
-    return;
-  }
   const httpRequest = options.httpRequest || http.request;
   const req = httpRequest(
     {
@@ -721,10 +545,6 @@ function postStateToPort(port, payload, timeoutMs, callback, options = {}) {
       headers: {
         "Content-Type": "application/json",
         "Content-Length": Buffer.byteLength(payload),
-        ...secureRequestHeaders({
-          ...options,
-          remoteIdentity: secureTransport.identity || options.remoteIdentity,
-        }),
         ...buildWindowsProcessChainHeaders(port, options),
       },
       timeout: timeoutMs,
@@ -789,9 +609,6 @@ function postStateToRunningServer(body, options, callback) {
 
   const tryFallback = () => {
     if (fallbackIndex >= fallback.length) {
-      if (resolveSecureTransport(options || {}).secure) {
-        recordSecureTransportFailure("state-delivery-failed", options || {});
-      }
       callback(false, null);
       return;
     }
@@ -832,11 +649,6 @@ function postStateToRunningServer(body, options, callback) {
 }
 
 function postPermissionToPort(port, payload, timeoutMs, callback, options = {}) {
-  const secureTransport = resolveSecureTransport(options);
-  if (secureTransport.secure && !secureTransport.identity) {
-    callback(false, port, "", 0);
-    return;
-  }
   const httpRequest = options.httpRequest || http.request;
   let settled = false;
   const finish = (ok, responseBody = "", statusCode = 0) => {
@@ -854,10 +666,6 @@ function postPermissionToPort(port, payload, timeoutMs, callback, options = {}) 
       headers: {
         "Content-Type": "application/json",
         "Content-Length": Buffer.byteLength(payload),
-        ...secureRequestHeaders({
-          ...options,
-          remoteIdentity: secureTransport.identity || options.remoteIdentity,
-        }),
         ...buildWindowsProcessChainHeaders(port, options),
       },
       timeout: timeoutMs,
@@ -891,16 +699,10 @@ function postPermissionToRunningServer(body, options, callback) {
 
   discover({ ...options, timeoutMs: probeTimeoutMs }, (port) => {
     if (!port) {
-      if (resolveSecureTransport(options || {}).secure) {
-        recordSecureTransportFailure("permission-discovery-failed", options || {});
-      }
       callback(false, null, "", 0);
       return;
     }
     post(port, payload, timeoutMs, (ok, confirmedPort, responseBody, statusCode) => {
-      if (!ok && resolveSecureTransport(options || {}).secure) {
-        recordSecureTransportFailure("permission-delivery-failed", options || {});
-      }
       callback(ok, confirmedPort, responseBody, statusCode);
     }, options);
   });
@@ -1373,17 +1175,11 @@ module.exports = {
   DEFAULT_HOOK_HTTP_TIMEOUT_MS,
   DEFAULT_SERVER_PORT,
   HOST_PREFIX_FILENAME,
-  REMOTE_LAST_LOG_FILENAME,
-  REMOTE_FAILURE_LOG_INTERVAL_MS,
-  INSTALL_ID_RE,
   PERMISSION_PATH,
   REMOTE_HOOK_HTTP_TIMEOUT_MS,
-  REMOTE_IDENTITY_FILENAME,
-  REMOTE_IDENTITY_VERSION,
   ROUTING_NONCE_HEADER,
   ROUTING_NONCE_RE,
   SERVER_PORTS,
-  SSH_SECURE_MARKER_FILENAME,
   STATE_PATH,
   CLAWD_HOOK_PID_HEADER,
   CLAWD_PROCESS_INSTANCE_HEADER,
@@ -1396,7 +1192,6 @@ module.exports = {
   defaultRuntimeConfigPath,
   isManagedPermissionUrl,
   isRemoteHookMode,
-  isSshSecureMode,
   discoverClawdPort,
   getPortCandidates,
   getPermissionProbeTimeoutMs,
@@ -1407,12 +1202,6 @@ module.exports = {
   probePort,
   readHostPrefix,
   readCodexAutoStartGate,
-  readRemoteIdentity,
-  resolveRemoteIdentityPath,
-  resolveRemoteLastLogPath,
-  recordSecureTransportFailure,
-  resolveSecureTransport,
-  resolveSshSecureMarkerPath,
   resolveWslDistro,
   applyWslSourceFields,
   readRuntimeConfig,

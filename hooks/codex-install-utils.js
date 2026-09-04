@@ -1271,30 +1271,10 @@ function registerCodexCommandHooks(options = {}) {
     || stableNodeBin
     || legacyNodeBin
     || "node";
-  const sshSecureRemote = options.remote === true
-    && (options.sshRemote === true || processEnv.CLAWD_SSH_REMOTE === "1");
-  const remoteSecureEnv = options.remote ? {
-    CLAWD_REMOTE: "1",
-    ...(sshSecureRemote ? {
-      CLAWD_SSH_REMOTE: "1",
-      ...(processEnv.CLAWD_REMOTE_IDENTITY_PATH
-        ? { CLAWD_REMOTE_IDENTITY_PATH: processEnv.CLAWD_REMOTE_IDENTITY_PATH }
-        : {}),
-      ...(processEnv.CLAWD_SSH_SECURE_MARKER_PATH
-        ? { CLAWD_SSH_SECURE_MARKER_PATH: processEnv.CLAWD_SSH_SECURE_MARKER_PATH }
-        : {}),
-      ...(processEnv.CLAWD_HOST_PREFIX_PATH
-        ? { CLAWD_HOST_PREFIX_PATH: processEnv.CLAWD_HOST_PREFIX_PATH }
-        : {}),
-      ...(processEnv.CLAWD_REMOTE_LAST_LOG_PATH
-        ? { CLAWD_REMOTE_LAST_LOG_PATH: processEnv.CLAWD_REMOTE_LAST_LOG_PATH }
-        : {}),
-      ...(processEnv.CODEX_HOME ? { CODEX_HOME: processEnv.CODEX_HOME } : {}),
-    } : {}),
-  } : {};
+  const remoteEnv = options.remote ? { CLAWD_REMOTE: "1" } : {};
   const commandEnv = {
     ...(options.env || {}),
-    ...remoteSecureEnv,
+    ...remoteEnv,
   };
   let stableLauncher = null;
   if (options.stableLauncher === true) {

@@ -66,7 +66,6 @@ function registerDoctorIpc({
   getDoNotDisturb,
   getLocale,
   resolveAgentDisplayName,
-  getRemoteSshStatuses,
 }) {
   let lastDoctorResult = null;
   let lastDoctorConnectionTest = null;
@@ -102,7 +101,6 @@ function registerDoctorIpc({
         && getPrefsRecoveryBackupFailed() === true,
       feishuApprovalSecrets,
       doNotDisturb: getDoNotDisturb(),
-      getRemoteSshStatuses,
     });
     return lastDoctorResult;
   }
