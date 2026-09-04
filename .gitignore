@@ -160,3 +160,6 @@ Microsoft/
 
 # Emoji export scratch
 duck-emoji-final/
+
+renderer-dist/
+renderer/models/

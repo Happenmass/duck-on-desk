@@ -1,0 +1,65 @@
+:root {
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: transparent;
+}
+
+* { box-sizing: border-box; }
+html, body, #pet-root { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+body { user-select: none; -webkit-user-select: none; }
+
+#stage { position: absolute; inset: 0; pointer-events: none; }
+#stage canvas { display: block; width: 100%; height: 100%; }
+
+#drag-target {
+  position: absolute;
+  left: 23%;
+  top: 12%;
+  width: 54%;
+  height: 76%;
+  cursor: grab;
+  border-radius: 45%;
+  pointer-events: auto;
+}
+
+#drag-target:active { cursor: grabbing; }
+
+#status, #help {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(17, 24, 39, 0.72);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+
+#status { top: 8px; font-size: 11px; }
+#help { bottom: 8px; font-size: 10px; }
+#pet-root:hover #status, #pet-root:hover #help, #status[data-booting="true"] { opacity: 1; }
+
+#sleep-bubble {
+  position: absolute;
+  right: 21%;
+  top: 15%;
+  color: #ff9a3d;
+  font-size: 28px;
+  font-weight: 800;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 240ms ease, transform 240ms ease;
+  pointer-events: none;
+}
+
+#sleep-bubble span { font-size: 16px; margin-left: 1px; }
+#pet-root[data-sleeping="true"] #sleep-bubble { opacity: 1; transform: translateY(0); }
+
+html:not([data-electron="true"]) body {
+  background: radial-gradient(circle at 50% 58%, #243047, #0c111c 72%);
+}

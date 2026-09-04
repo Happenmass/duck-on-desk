@@ -29,7 +29,13 @@
     "install:codex-hooks": "node hooks/codex-install.js",
     "uninstall:codex-hooks": "node hooks/codex-install.js --uninstall",
     "cleanup:integrations": "node hooks/cleanup-integrations.js --apply",
-    "register-protocol:dev": "node launch.js --register-protocol"
+    "register-protocol:dev": "node launch.js --register-protocol",
+    "setup:models": "node renderer/scripts/link-model-cache.mjs",
+    "build:renderer": "vite build --config renderer/vite.config.js",
+    "dev:renderer": "vite --config renderer/vite.config.js --host 127.0.0.1",
+    "prestart": "npm run build:renderer",
+    "prebuild:mac": "npm run build:renderer",
+    "prebuild:win:all": "npm run build:renderer"
   },
   "keywords": [
     "duck",
@@ -112,7 +118,8 @@
       "hooks/**/*",
       "extensions/**/*",
       "agents/**/*",
-      "themes/**/*"
+      "themes/**/*",
+      "renderer-dist/**/*"
     ],
     "asarUnpack": [
       "assets/svg/**/*",
@@ -142,8 +149,12 @@
   },
   "devDependencies": {
     "@electron/asar": "^3.4.1",
+    "@mujoco/mujoco": "^3.12.0",
     "electron": "^41.10.4",
-    "electron-builder": "^26.15.7"
+    "electron-builder": "^26.15.7",
+    "onnxruntime-web": "^1.29.0",
+    "three": "^0.164.1",
+    "vite": "^8.2.2"
   },
   "dependencies": {
     "electron-updater": "^6.8.3",

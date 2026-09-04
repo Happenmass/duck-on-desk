@@ -271,12 +271,14 @@ describe("package build config", () => {
         "prebuild",
         "prebuild:win:x64",
         "prebuild:win:arm64",
-        "prebuild:win:all",
-        "prebuild:mac",
         "prebuild:linux",
         "prebuild:all",
       ]) {
         assert.equal(pkg.scripts[key], undefined, key);
+      }
+      // The two surviving prebuild hooks only build the 3D renderer bundle -- they fetch nothing.
+      for (const key of ["prebuild:mac", "prebuild:win:all"]) {
+        assert.strictEqual(pkg.scripts[key], "npm run build:renderer", key);
       }
       for (const platform of ["win", "mac", "linux"]) {
         const entries = pkg.build[platform] && pkg.build[platform].extraResources;
