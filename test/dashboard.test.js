@@ -1145,13 +1145,7 @@ describe("dashboard window", () => {
     assert.match(rendererSource, /formatQuotaWindowLabel/);
     assert.match(rendererSource, /bucket && bucket\.windowMinutes/);
     assert.match(rendererSource, /source\.codexSparkQuota/);
-    assert.match(rendererSource, /refreshKimiQuotaFromDashboard/);
-    assert.match(rendererSource, /quota-refresh-button/);
-    assert.match(preloadSource, /dashboard:refresh-kimi-quota/);
     for (const key of [
-      "dashboardQuotaSectionAntigravity",
-      "dashboardQuotaGroupGemini",
-      "dashboardQuotaGroupThirdParty",
       "dashboardQuotaSectionClaudeCode",
       "dashboardQuotaSectionCodex",
       "dashboardQuotaSectionCodexSpark",

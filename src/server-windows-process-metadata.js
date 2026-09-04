@@ -13,48 +13,13 @@ const WINDOWS_PROCESS_CHAIN_VERSION = 1;
 const WINDOWS_PROCESS_CHAIN_MODES = new Set(["legacy", "shadow", "b1a-authoritative"]);
 const B1A_AGENT_IDS = Object.freeze([
   "codex",
-  "cursor-agent",
-  "kiro-cli",
-  "codebuddy",
-  "reasonix",
 ]);
 
 const BASE_CONFIG = getPlatformConfig({ platform: "win32" });
-const CURSOR_CONFIG = getPlatformConfig({ platform: "win32", extraTerminals: { win: ["cursor.exe"] } });
-const CODEBUDDY_CONFIG = getPlatformConfig({
-  platform: "win32",
-  extraTerminals: { win: ["codebuddy.exe"] },
-  extraEditors: { win: { "codebuddy.exe": "codebuddy" } },
-});
 
 const AGENT_CONFIGS = Object.freeze({
   codex: Object.freeze({
     agentNames: new Set(["codex.exe"]),
-    terminalNames: BASE_CONFIG.terminalNames,
-    systemBoundary: BASE_CONFIG.systemBoundary,
-    editorMap: BASE_CONFIG.editorMap,
-  }),
-  "cursor-agent": Object.freeze({
-    agentNames: new Set(["cursor.exe"]),
-    terminalNames: CURSOR_CONFIG.terminalNames,
-    systemBoundary: CURSOR_CONFIG.systemBoundary,
-    editorMap: CURSOR_CONFIG.editorMap,
-    editorFallback: "cursor",
-  }),
-  "kiro-cli": Object.freeze({
-    agentNames: new Set(["kiro-cli.exe"]),
-    terminalNames: BASE_CONFIG.terminalNames,
-    systemBoundary: BASE_CONFIG.systemBoundary,
-    editorMap: BASE_CONFIG.editorMap,
-  }),
-  codebuddy: Object.freeze({
-    agentNames: new Set(["codebuddy.exe"]),
-    terminalNames: CODEBUDDY_CONFIG.terminalNames,
-    systemBoundary: CODEBUDDY_CONFIG.systemBoundary,
-    editorMap: CODEBUDDY_CONFIG.editorMap,
-  }),
-  reasonix: Object.freeze({
-    agentNames: new Set(["reasonix.exe", "reasonix-desktop.exe", "reasonix-cli.exe"]),
     terminalNames: BASE_CONFIG.terminalNames,
     systemBoundary: BASE_CONFIG.systemBoundary,
     editorMap: BASE_CONFIG.editorMap,
@@ -256,7 +221,7 @@ function processMetadataForState(result) {
     agentPid: result.agentPid || null,
     pidChain: Array.isArray(result.pidChain) && result.pidChain.length ? result.pidChain.slice() : null,
     // Preserve the route's existing editor allowlist. The resolver may
-    // classify raw names such as CodeBuddy for shadow diagnostics, but B1a is
+    // classify raw names for shadow diagnostics, but B1a is
     // not an editor-schema expansion.
     editor: result.editor === "code" || result.editor === "cursor" ? result.editor : null,
   };

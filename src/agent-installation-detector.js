@@ -6,13 +6,6 @@ const path = require("path");
 
 const { getAgentDescriptors } = require("./doctor-detectors/agent-descriptors");
 const { normalizePathList } = require("./prefs");
-const copilot = require("../hooks/copilot-install");
-const hermes = require("../hooks/hermes-install");
-const reasonix = require("../hooks/reasonix-install");
-const dsh = require("../hooks/dsh-install");
-const zcode = require("../hooks/zcode-install");
-const codebuddy = require("../hooks/codebuddy-install");
-const openclaw = require("../hooks/openclaw-install");
 const { commandMatchesMarker } = require("../hooks/json-utils");
 const { identifyCustomApplication } = require("./custom-applications");
 
@@ -33,15 +26,6 @@ const { identifyCustomApplication } = require("./custom-applications");
 // directory remains real evidence.
 const DEFAULT_AUTO_SYNC_CREATED_PARENT_DIR_AGENT_IDS = new Set(["claude-code"]);
 const LOW_CONFIDENCE = "low";
-// Gemini CLI v0.55.1, commit 41327e407da58aa01c409ef6685b7b5d379f295e,
-// packages/core/src/config/storage.ts. Keep this closed: ~/.gemini is shared
-// with Antigravity and settings.json is a shared hook registry, so neither an
-// arbitrary child nor a settings key is product proof. Credential/token files
-// and read-only extension directories are deliberately excluded.
-const GEMINI_PRODUCT_ARTIFACT_FILES = Object.freeze([
-  "installation_id",
-  "projects.json",
-]);
 
 function dirExists(fsImpl, dirPath) {
   if (!dirPath) return false;
@@ -142,86 +126,10 @@ function finalizeAgentPaths(descriptor, paths, options) {
   };
 }
 
-function resolveOpenClawPaths(options) {
-  const env = options.env || process.env;
-  const stateDir = typeof env.OPENCLAW_STATE_DIR === "string" && env.OPENCLAW_STATE_DIR.trim()
-    ? env.OPENCLAW_STATE_DIR
-    : pathForHome(options.homeDir, ".openclaw");
-  const configPath = typeof env.OPENCLAW_CONFIG_PATH === "string" && env.OPENCLAW_CONFIG_PATH.trim()
-    ? env.OPENCLAW_CONFIG_PATH
-    : path.join(stateDir, "openclaw.json");
-  return { stateDir, configPath };
-}
-
-function hermesCommandPaths(hermesHome, platform, env = {}) {
-  if (platform === "win32") {
-    const paths = [path.join(hermesHome, "hermes-agent", "venv", "Scripts", "hermes.exe")];
-    if (typeof env.LOCALAPPDATA === "string" && env.LOCALAPPDATA.trim()) {
-      paths.push(path.join(env.LOCALAPPDATA, "hermes", "hermes-agent", "venv", "Scripts", "hermes.exe"));
-    }
-    return paths;
-  }
-  return [path.join(hermesHome, "hermes-agent", "venv", "bin", "hermes")];
-}
-
 function resolveAgentPaths(descriptor, options) {
   const homeDir = options.homeDir || os.homedir();
   const env = options.env || process.env;
   const platform = options.platform || process.platform;
-
-  if (descriptor.agentId === "copilot-cli") {
-    const parentDir = copilot.resolveCopilotHome({ homeDir, env });
-    return finalizeAgentPaths(descriptor, {
-      parentDir,
-      configPath: copilot.resolveCopilotHooksPath({ homeDir, env }),
-      settingsPath: copilot.resolveCopilotSettingsPath({ homeDir, env }),
-    }, options);
-  }
-
-  if (descriptor.agentId === "openclaw") {
-    const { stateDir, configPath } = resolveOpenClawPaths({ homeDir, env });
-    return finalizeAgentPaths(descriptor, {
-      parentDir: stateDir,
-      stateDir,
-      configPath,
-    }, options);
-  }
-
-  if (descriptor.agentId === "hermes") {
-    const hermesHome = hermes.resolveHermesHome({ homeDir, env, platform });
-    return finalizeAgentPaths(descriptor, {
-      parentDir: hermesHome,
-      hermesHome,
-      configPath: path.join(hermesHome, "plugins", hermes.PLUGIN_ID),
-      configFilePath: path.join(hermesHome, "config.yaml"),
-      commandPaths: hermesCommandPaths(hermesHome, platform, env),
-    }, options);
-  }
-
-  if (descriptor.agentId === "deepseek-harness") {
-    const dshHome = typeof env.DSH_HOME === "string" && env.DSH_HOME.trim()
-      ? path.resolve(env.DSH_HOME.trim())
-      : path.join(homeDir, ".dsh");
-    return finalizeAgentPaths(descriptor, {
-      parentDir: dshHome,
-      configPath: dsh.resolveDshProfileDir(dshHome),
-      commandPaths: dsh.dshCommandPathsSync({ fs: options.fs, env, platform }),
-    }, options);
-  }
-
-  if (descriptor.agentId === "reasonix") {
-    const configTargets = reasonix.resolveReasonixConfigTargets({
-      env,
-      platform,
-      userHomeDir: homeDir,
-    });
-    const primary = configTargets[0];
-    return finalizeAgentPaths(descriptor, {
-      parentDir: primary ? primary.parentDir : "",
-      configPath: primary ? primary.configPath : "",
-      configTargets,
-    }, options);
-  }
 
   const parentDir = rebaseHomePath(descriptor.parentDir, homeDir);
   const configPath = rebaseHomePath(descriptor.configPath, homeDir);
@@ -306,222 +214,14 @@ function parseExactJsonObject(fsImpl, configPath) {
   }
 }
 
-function hookTreeHasForeignEntry(value, isOwnedHook) {
-  if (!value || typeof value !== "object") return false;
-  if (Array.isArray(value)) return value.some((entry) => hookTreeHasForeignEntry(entry, isOwnedHook));
-  const owned = isOwnedHook(value);
-  if (!owned
-    && (typeof value.command === "string" || typeof value.url === "string" || typeof value.type === "string")) {
-    return true;
-  }
-  // Ownership subtracts this hook leaf, not the whole object. Keep traversing
-  // in case a malformed/shared wrapper also carries a foreign nested hook.
-  return Object.values(value).some((entry) => hookTreeHasForeignEntry(entry, isOwnedHook));
-}
-
-function isOwnedZcodeHook(entry) {
-  if (zcode.isClawdZcodeHook(entry)) return true;
-  if (zcode.isClaudeHookCommand(entry && entry.command)) return true;
-  // ZCode can import Claude process hooks with the marker in args rather than
-  // command. Those are still Clawd residue and must not become product proof.
-  try {
-    return hasClawdMarkerText(JSON.stringify(entry), zcode.CLAUDE_MARKER);
-  } catch {
-    return false;
-  }
-}
-
-function isOwnedQoderHook(entry, marker) {
-  return !!(entry && commandMatchesMarker(entry.command, marker));
-}
-
-function isOwnedCodeBuddyHook(entry, marker) {
-  if (entry && commandMatchesMarker(entry.command, marker)) return true;
-  return !!(entry && codebuddy.isManagedPermissionHook(entry));
-}
-
-function hookConfigHasProductContent(agentId, parsed, marker) {
-  if (Object.keys(parsed).some((key) => key !== "hooks")) return true;
-  if (!isObject(parsed.hooks)) return false;
-
-  if (agentId === "zcode") {
-    if (Object.keys(parsed.hooks).some((key) => key !== "enabled" && key !== "events")) return true;
-    return hookTreeHasForeignEntry(parsed.hooks.events, isOwnedZcodeHook);
-  }
-  if (agentId === "qoder") {
-    return hookTreeHasForeignEntry(parsed.hooks, (entry) => isOwnedQoderHook(entry, marker));
-  }
-  return hookTreeHasForeignEntry(parsed.hooks, (entry) => isOwnedCodeBuddyHook(entry, marker));
-}
-
-function detectOwnedHookConfigInstallation(descriptor, paths, options) {
-  const fsImpl = options.fs;
-  const parentInfo = lstatPath(fsImpl, paths.parentDir);
-  if (parentInfo.kind === "missing") return notFound();
-  if (parentInfo.kind !== "dir") {
-    return insufficient(`${paths.parentDir} exists but is not a regular directory`);
-  }
-
-  const classified = parseExactJsonObject(fsImpl, paths.configPath);
-  if (classified.status === "parsed"
-    && hookConfigHasProductContent(descriptor.agentId, classified.parsed, descriptor.marker)) {
-    return installationResult(true, "high", "config-file", `${paths.configPath} contains product configuration`);
-  }
-  return insufficient(`${paths.parentDir} exists without accepted ${descriptor.agentName} product evidence`);
-}
-
-function openClawConfigHasProductContent(parsed) {
-  if (Object.keys(parsed).some((key) => key !== "plugins")) return true;
-  if (!isObject(parsed.plugins)) return false;
-  if (Object.keys(parsed.plugins).some((key) => key !== "entries" && key !== "load")) return true;
-
-  const entries = parsed.plugins.entries;
-  if (isObject(entries) && Object.keys(entries).some((key) => key !== openclaw.PLUGIN_ID)) return true;
-
-  const load = parsed.plugins.load;
-  if (isObject(load) && Object.keys(load).some((key) => key !== "paths")) return true;
-  if (isObject(load) && Array.isArray(load.paths)) {
-    const pluginDir = openclaw.resolvePluginDir();
-    if (load.paths.some((entry) => !openclaw.isManagedPluginPath(entry, pluginDir))) return true;
-  }
-  return false;
-}
-
-function detectOpenClawInstallation(paths, options) {
-  const fsImpl = options.fs;
-  const env = options.env || {};
-  const hasExplicitConfig = typeof env.OPENCLAW_CONFIG_PATH === "string" && !!env.OPENCLAW_CONFIG_PATH.trim();
-  const stateInfo = lstatPath(fsImpl, paths.stateDir);
-
-  // A default config below a symlinked state root is not exact local evidence.
-  // An explicit config is terminal and is classified independently.
-  if (!hasExplicitConfig && stateInfo.kind === "symlink") {
-    return insufficient(`${paths.stateDir} is a symbolic link and was not followed for product detection`);
-  }
-
-  const classified = parseExactJsonObject(fsImpl, paths.configPath);
-  if (classified.status === "parsed" && openClawConfigHasProductContent(classified.parsed)) {
-    return installationResult(true, "high", "config-file", `${paths.configPath} contains OpenClaw configuration`);
-  }
-
-  if (classified.status === "missing" && stateInfo.kind === "missing") return notFound();
-  return insufficient(`${paths.stateDir} or ${paths.configPath} exists without accepted OpenClaw product evidence`);
-}
-
-function detectGeminiInstallation(_descriptor, paths, options) {
-  const fsImpl = options.fs;
-  const parentInfo = lstatPath(fsImpl, paths.parentDir);
-  if (parentInfo.kind === "missing") return notFound();
-  if (parentInfo.kind !== "dir") {
-    return insufficient(`${paths.parentDir} exists but is not a regular directory`);
-  }
-
-  for (const artifact of GEMINI_PRODUCT_ARTIFACT_FILES) {
-    const artifactPath = path.join(paths.parentDir, artifact);
-    const artifactInfo = lstatPath(fsImpl, artifactPath);
-    if (artifactInfo.kind === "file" && artifactInfo.size > 0) {
-      return installationResult(
-        true,
-        "high",
-        "product-artifact",
-        `${artifactPath} is a non-empty Gemini CLI product artifact`
-      );
-    }
-  }
-  return insufficient(`${paths.parentDir} exists without an accepted Gemini CLI product artifact`);
-}
-
-function detectHermesInstallation(paths, options) {
-  const fsImpl = options.fs;
-  if (fileExists(fsImpl, paths.configFilePath)) {
-    return installationResult(true, "high", "config-file", `${paths.configFilePath} exists`);
-  }
-  if ((paths.commandPaths || []).some((candidate) => fileExists(fsImpl, candidate))) {
-    return installationResult(true, "high", "cli-path", "Hermes CLI runtime was found");
-  }
-  if (dirExists(fsImpl, paths.hermesHome)) {
-    return installationResult(true, "low", "parent-dir", `${paths.hermesHome} exists`);
-  }
-  return notFound();
-}
-
 function detectInstallation(descriptor, paths, options) {
   const fsImpl = options.fs;
   const custom = detectCustomDiscoveryPath(paths.customDiscoveryPaths, options);
   if (custom) return custom;
   switch (descriptor.agentId) {
-    case "gemini-cli":
-      return detectGeminiInstallation(descriptor, paths, options);
-    case "antigravity-cli":
-      if (dirExists(fsImpl, paths.parentDir)) return installationResult(true, "medium", "parent-dir", `${paths.parentDir} exists`);
-      return notFound();
-    case "kimi-cli": {
-      // #563: two valid generations — ~/.kimi-code (Kimi Code) and ~/.kimi
-      // (legacy CLI). Either directory counts as installed; report which one
-      // matched so doctor/UI can tell the generations apart.
-      for (const target of paths.configTargets || []) {
-        if (dirExists(fsImpl, target.parentDir)) {
-          return installationResult(true, "high", "parent-dir", `${target.parentDir} exists`);
-        }
-      }
-      if (dirExists(fsImpl, paths.parentDir)) return installationResult(true, "high", "parent-dir", `${paths.parentDir} exists`);
-      return notFound();
-    }
-    case "workbuddy":
-      for (const target of paths.configTargets || []) {
-        const isLegacy = target.label === "legacy";
-        if ((!isLegacy && dirExists(fsImpl, target.parentDir)) || (isLegacy && fileExists(fsImpl, target.configPath))) {
-          return installationResult(true, "high", "parent-dir", `${target.parentDir} exists`);
-        }
-      }
-      if (dirExists(fsImpl, paths.parentDir)) return installationResult(true, "high", "parent-dir", `${paths.parentDir} exists`);
-      return notFound();
-    case "copilot-cli":
-    case "cursor-agent":
-    case "qwen-code":
-    case "codewhale":
     case "opencode":
-    case "mimocode":
-    case "qoderwork":
-    case "traecode":
-    case "qwenwork":
-      if (dirExists(fsImpl, paths.parentDir)) return installationResult(true, "high", "parent-dir", `${paths.parentDir} exists`);
-      return notFound();
-    case "zcode":
-    case "qoder":
-    case "codebuddy":
-      return detectOwnedHookConfigInstallation(descriptor, paths, options);
-    case "reasonix":
-      for (const target of paths.configTargets || []) {
-        if (dirExists(fsImpl, target.parentDir)) {
-          return installationResult(true, "medium", "parent-dir", `${target.parentDir} exists`);
-        }
-      }
-      return notFound();
-    case "kiro-cli":
-      if (dirExists(fsImpl, paths.parentDir)) return installationResult(true, "high", "parent-dir", `${paths.parentDir} exists`);
-      if (dirExists(fsImpl, paths.configPath)) return installationResult(true, "medium", "config-dir", `${paths.configPath} exists`);
-      return notFound();
     case "pi":
       if (dirExists(fsImpl, paths.parentDir)) return installationResult(true, "high", "parent-dir", `${paths.parentDir} exists`);
-      return notFound();
-    case "openclaw":
-      return detectOpenClawInstallation(paths, options);
-    case "hermes":
-      return detectHermesInstallation(paths, options);
-    case "deepseek-harness":
-      for (const commandPath of paths.commandPaths || []) {
-        if (fileExists(fsImpl, commandPath)) {
-          return installationResult(true, "high", "command-path", `${commandPath} exists`);
-        }
-      }
-      if (dirExists(fsImpl, paths.parentDir)) {
-        const home = paths.parentDir;
-        const isDshHome = ["profiles", "sessions", "storages"].some((name) => (
-          dirExists(fsImpl, path.join(home, name))
-        ));
-        if (isDshHome) return installationResult(true, "high", "parent-dir", `${home} exists`);
-      }
       return notFound();
     default:
       if (dirExists(fsImpl, paths.parentDir)) return installationResult(true, "medium", "parent-dir", `${paths.parentDir} exists`);
@@ -603,50 +303,19 @@ function markerInDirectoryFiles(fsImpl, dirPath, marker, options = {}) {
 
 function detectClawdIntegration(descriptor, paths, options) {
   const fsImpl = options.fs;
-  if (descriptor.agentId === "deepseek-harness") {
-    const health = dsh.inspectDeepSeekHarnessDiskSync({
-      fs: fsImpl,
-      dshHome: paths.parentDir,
-      dshInstallRoot: options.dshInstallRoot,
-      managedRoot: options.dshManagedRoot,
-      homeDir: options.homeDir,
-      env: options.env,
-      platform: options.platform,
-    });
-    return health.status === "healthy"
-      ? {
-        detected: true,
-        reason: "managed-plugin",
-        detail: `${health.profileDir} contains the verified Clawd bridge`,
-        paths: { profileDir: health.profileDir, pluginDir: health.resolved.packageDir },
-      }
-      : {
-        detected: false,
-        reason: health.status,
-        detail: `DeepSeek Harness bridge is ${health.status}`,
-        paths: { profileDir: health.profileDir },
-      };
-  }
   if (descriptor.agentId === "pi") {
     const markerPath = path.join(paths.configPath, descriptor.markerFile || ".clawd-managed.json");
     return fileExists(fsImpl, markerPath)
       ? { detected: true, reason: "marker-file", detail: `${markerPath} exists`, paths: { markerPath } }
       : { detected: false, reason: "not-found", detail: "No Clawd-managed Pi extension marker found" };
   }
-  if (descriptor.agentId === "hermes") {
-    const files = Array.isArray(descriptor.managedFiles) ? descriptor.managedFiles : [];
-    const found = files.some((file) => fileExists(fsImpl, path.join(paths.configPath, file)));
-    return found
-      ? { detected: true, reason: "managed-files", detail: `${paths.configPath} contains Clawd plugin files`, paths: { pluginDir: paths.configPath } }
-      : { detected: false, reason: "not-found", detail: "No Clawd-managed Hermes plugin files found" };
-  }
   if (descriptor.configMode === "dir") {
     return markerInDirectoryFiles(fsImpl, paths.configPath, descriptor.marker)
       ? { detected: true, reason: "marker-found", detail: `${paths.configPath} contains ${descriptor.marker}`, paths: { configPath: paths.configPath } }
       : { detected: false, reason: "not-found", detail: `No ${descriptor.marker} marker found` };
   }
-  // Multi-generation agents (#563: kimi legacy + kimi-code) may carry the
-  // marker in any generation's config; report the first hit.
+  // Multi-generation agents may carry the marker in any generation's config;
+  // report the first hit.
   if (Array.isArray(paths.configTargets)) {
     for (const target of paths.configTargets) {
       const targetText = readText(fsImpl, target.configPath);
@@ -753,43 +422,6 @@ function detectAgentInstallations(options = {}) {
 // fails (timeout, broken wsl.exe), the previous results survive.
 // Also batches dir-exists checks into one wsl.exe spawn per distro
 // instead of one per (distro × agent).
-const HERMES_WSL_HOME_SENTINEL = "CLAWD_HERMES_HOME_V1=";
-
-function quoteWslPath(value) {
-  return `'${String(value).replace(/'/g, "'\\''")}'`;
-}
-
-function parseHermesWslHome(stdout) {
-  const lines = (typeof stdout === "string" ? stdout : "")
-    .split(/\r?\n/)
-    .filter((line) => line.startsWith(HERMES_WSL_HOME_SENTINEL));
-  if (lines.length !== 1) return null;
-  const value = lines[0].slice(HERMES_WSL_HOME_SENTINEL.length);
-  if (!value.startsWith("/") || value.includes("\0") || value.includes("\r") || value.includes("\n") || value.includes("\\")) {
-    return null;
-  }
-  if (path.posix.normalize(value) !== value) return null;
-  return value;
-}
-
-async function resolveHermesWslHome(distro, wslHome, execInWsl, options = {}) {
-  // wsl.exe may add an outer shell around the requested login bash. Escape
-  // both dollars so HERMES_HOME/HOME are resolved by that login shell, after
-  // the user's profile has run, rather than by the outer launcher shell.
-  const command = "printf '" + HERMES_WSL_HOME_SENTINEL
-    + "%s\\n' \"\\${HERMES_HOME:-\\$HOME/.hermes}\"";
-  const result = await execInWsl(
-    distro,
-    command,
-    { ...options, shell: "bash", shellFlags: ["-l", "-i", "-c"], timeout: 15000 }
-  );
-  const resolved = result && result.code === 0 ? parseHermesWslHome(result.stdout) : null;
-  return {
-    path: resolved || `${wslHome.replace(/\/+$/, "")}/.hermes`,
-    customHomeUnknown: !resolved,
-  };
-}
-
 async function refreshWslDetection(options = {}) {
   if (process.platform !== "win32") {
     _cachedDetected = true;
@@ -827,16 +459,6 @@ async function refreshWslDetection(options = {}) {
         continue;
       }
 
-      const supportsHermes = descriptors.some((descriptor) =>
-        descriptor
-        && descriptor.agentId === "hermes"
-        && (!skipDefaultIntegrations || !DEFAULT_AUTO_SYNC_CREATED_PARENT_DIR_AGENT_IDS.has("hermes"))
-        && getAgentInstallScriptName("hermes")
-      );
-      const hermesWslHome = supportsHermes
-        ? await resolveHermesWslHome(distro.name, wslHome, execInWsl, options)
-        : null;
-
       // Collect all directories to check for this distro. Only agents that
       // WSL deploy actually supports get entries — the UI renders a Pair
       // button per entry, and a guaranteed-to-fail Pair is worse than none.
@@ -845,20 +467,13 @@ async function refreshWslDetection(options = {}) {
         if (!descriptor || typeof descriptor.agentId !== "string") continue;
         if (skipDefaultIntegrations && DEFAULT_AUTO_SYNC_CREATED_PARENT_DIR_AGENT_IDS.has(descriptor.agentId)) continue;
         if (!getAgentInstallScriptName(descriptor.agentId)) continue;
-        // Hermes' descriptor was resolved in the Windows process and can point
-        // at LOCALAPPDATA or a host-only HERMES_HOME. Never rebase that value
-        // into WSL; resolve the distro's own environment above.
-        const wslParentDir = descriptor.agentId === "hermes" && hermesWslHome
-          ? hermesWslHome.path
-          : rebaseHomePathPosix(descriptor.parentDir, wslHome, homeDir);
+        const wslParentDir = rebaseHomePathPosix(descriptor.parentDir, wslHome, homeDir);
         if (!wslParentDir) continue;
         checks.push({
           descriptor,
           wslParentDir,
-          integrationEvidence: descriptor.agentId === "hermes" ? "hermes-plugin-files" : null,
-          customHomeUnknown: descriptor.agentId === "hermes" && hermesWslHome
-            ? hermesWslHome.customHomeUnknown
-            : false,
+          integrationEvidence: null,
+          customHomeUnknown: false,
         });
       }
 
@@ -872,19 +487,6 @@ async function refreshWslDetection(options = {}) {
         const escaped = c.wslParentDir.replace(/'/g, "'\\''");
         return `test -d '${escaped}' && echo "OK ${i}" || echo "NO ${i}"`;
       });
-      for (let i = 0; i < checks.length; i++) {
-        const check = checks[i];
-        if (check.integrationEvidence !== "hermes-plugin-files") continue;
-        const primaryPlugin = `${check.wslParentDir.replace(/\/+$/, "")}/plugins/clawd-on-desk`;
-        const profilesDir = `${check.wslParentDir.replace(/\/+$/, "")}/profiles`;
-        batchLines.push(
-          `if { test -f ${quoteWslPath(`${primaryPlugin}/plugin.yaml`)} || `
-          + `test -f ${quoteWslPath(`${primaryPlugin}/__init__.py`)} || `
-          + `find ${quoteWslPath(profilesDir)} -mindepth 4 -maxdepth 4 -type f `
-          + `\\( -path '*/plugins/clawd-on-desk/plugin.yaml' -o -path '*/plugins/clawd-on-desk/__init__.py' \\) `
-          + `-print -quit 2>/dev/null | grep -q .; }; then echo "INTFILE ${i} 1"; else echo "INTFILE ${i} 0"; fi`
-        );
-      }
       // Two independent deployment signals, because they answer different
       // UI questions:
       //   DEPFILE — hook files exist in the distro. Pairing ANY agent copies
@@ -984,10 +586,6 @@ async function refreshWslDetection(options = {}) {
           hooksDeployed: hooksFilesPresent && hooksRegistered,
           hooksFilesPresent,
         };
-        if (integrationEvidence) {
-          entry.integrationFilesPresent = integrationStates.get(i) === true;
-          entry.hermesHomeResolutionUnknown = customHomeUnknown;
-        }
         wslAgents.push(entry);
       }
     }

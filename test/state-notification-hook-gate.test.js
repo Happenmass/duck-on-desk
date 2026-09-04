@@ -446,29 +446,4 @@ describe("updateSession: Notification hook gate", () => {
     assert.deepStrictEqual(ctx._soundsPlayed, [], "no bell when gate resolves agentId from session");
   });
 
-  it("does not break Kimi hold-release when the flag is off", () => {
-    // Regression guard: Kimi's permission hold is cleared by a subsequent
-    // `Notification` event (KIMI_HOLD_CLEAR_EVENTS in state.js). An earlier
-    // version of this gate early-returned at the top of updateSession, which
-    // skipped the Kimi cleanup and left the pet pinned on notification until
-    // the 10-minute safety timeout. The presentation-layer gate must run
-    // *after* the Kimi cleanup block so hold-release keeps working.
-    mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-    ctx = makeCtx({ notificationHookEnabled: false });
-    api = require("../src/state")(ctx);
-
-    // Open a Kimi permission hold — pet pins on notification.
-    api.updateSession("kimi-a", "notification", "PermissionRequest", { agentId: "kimi-cli" });
-    assert.strictEqual(api.resolveDisplayState(), "notification", "hold pins display");
-
-    // Kimi emits Notification with the toggle off. The bell must be muted
-    // *and* the hold must release so the pet returns to idle.
-    api.updateSession("kimi-a", "notification", "Notification", { agentId: "kimi-cli" });
-
-    assert.strictEqual(
-      api.resolveDisplayState(),
-      "idle",
-      "Kimi hold must release even when the Notification bell is muted"
-    );
-  });
 });

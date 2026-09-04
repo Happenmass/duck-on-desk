@@ -606,7 +606,7 @@ function getCompactPreview(data) {
     const first = questions[0];
     return first && first.question ? first.question : bubbleText(data.lang, "needsInput");
   }
-  return formatDetail(data.toolName, data.toolInput, { isAntigravity: !!data.isAntigravity })
+  return formatDetail(data.toolName, data.toolInput)
     || commandBlock.textContent
     || "";
 }
@@ -1439,7 +1439,7 @@ function show(data) {
   toolPill.setAttribute("data-tool", data.toolName || "");
 
   // Command block (textContent only — never innerHTML)
-  commandBlock.textContent = formatDetail(data.toolName, data.toolInput, { isAntigravity: !!data.isAntigravity });
+  commandBlock.textContent = formatDetail(data.toolName, data.toolInput);
 
   // Irreversible-action hint — display-only (like the MCP relabel above): routes the
   // human's attention to destructive decisions. Allow/Deny semantics, the

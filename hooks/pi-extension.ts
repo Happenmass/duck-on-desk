@@ -37,7 +37,7 @@ const TERMINAL_NAMES_WIN = [
   "windowsterminal.exe", "cmd.exe", "powershell.exe", "pwsh.exe",
   "code.exe", "alacritty.exe", "wezterm-gui.exe", "mintty.exe",
   "conemu64.exe", "conemu.exe", "hyper.exe", "tabby.exe",
-  "antigravity.exe", "warp.exe", "iterm.exe", "ghostty.exe",
+  "warp.exe", "iterm.exe", "ghostty.exe",
 ];
 const TERMINAL_NAMES_MAC = [
   "terminal", "iterm2", "alacritty", "wezterm-gui", "kitty",

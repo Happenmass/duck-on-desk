@@ -30,8 +30,6 @@ function registerSessionIpc(options = {}) {
     "clearSessionAutomationGrant"
   );
   const getDashboardWindow = requiredDependency(options.getDashboardWindow, "getDashboardWindow");
-  const getKimiQuotaStatus = requiredDependency(options.getKimiQuotaStatus, "getKimiQuotaStatus");
-  const refreshKimiQuota = requiredDependency(options.refreshKimiQuota, "refreshKimiQuota");
   const disposers = [];
 
   function handle(channel, listener) {
@@ -64,17 +62,6 @@ function registerSessionIpc(options = {}) {
 
   handle("dashboard:get-snapshot", () => getSessionSnapshot());
   handle("dashboard:get-i18n", () => getI18n());
-  // Dashboard gets a narrow, secret-free manual refresh capability. The API
-  // key remains inside kimiQuotaRuntime, and only the real local Dashboard
-  // main frame may ask for status or trigger the existing refresh path.
-  handle("dashboard:get-kimi-quota-status", (event) => {
-    const rejected = rejectUntrustedDashboardEvent(event);
-    return rejected || getKimiQuotaStatus();
-  });
-  handle("dashboard:refresh-kimi-quota", (event) => {
-    const rejected = rejectUntrustedDashboardEvent(event);
-    return rejected || refreshKimiQuota();
-  });
   on("dashboard:focus-session", (_event, sessionId) =>
     focusSession(sessionId, { requestSource: "dashboard" })
   );

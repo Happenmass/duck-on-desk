@@ -28,9 +28,9 @@ const DECISION_TOOL_KIND = Object.freeze({
   CLARIFY: "clarify",
 });
 
-// DSH's model-facing tool is snake_case (`ask_user_question`); the other
-// adapters use the camelCase/Tool-suffixed names. Normalize both spellings
-// before the basename suffix logic runs.
+// Some adapters spell the model-facing tool snake_case
+// (`ask_user_question`); others use the camelCase/Tool-suffixed names.
+// Normalize both spellings before the basename suffix logic runs.
 const DECISION_TOOL_ALIASES = new Map([
   ["ask_user_question", DECISION_TOOL_KIND.ASK_USER_QUESTION],
 ]);
@@ -39,11 +39,7 @@ const DECISION_TOOL_BASENAMES = new Set(Object.values(DECISION_TOOL_KIND));
 
 const KNOWN_PERMISSION_AGENTS = new Set([
   "claude-code",
-  "codebuddy",
   "codex",
-  "qwen-code",
-  "copilot-cli",
-  "hermes",
 ]);
 
 // Claude-compatible PermissionRequest is not a trustworthy "ordinary tool"
@@ -191,7 +187,7 @@ function isNamespacedMcpTool(toolName) {
 }
 
 function isTrustedClaudeCompatibleToolApproval(agentId, toolName) {
-  if (agentId !== "claude-code" && agentId !== "qwen-code") return true;
+  if (agentId !== "claude-code") return true;
   return CLAUDE_COMPATIBLE_TOOL_APPROVAL_NAMES.has(toolName.toLowerCase())
     || isNamespacedMcpTool(toolName);
 }
@@ -233,19 +229,9 @@ function classifyPermissionInteraction({
   // adapters may vary casing), so recognize only these reviewed aliases before
   // any generic tool/UNKNOWN compatibility path can automate them.
   const decisionToolKind = getDecisionToolKind(trustedToolName);
-  const isQuestion = decisionToolKind === DECISION_TOOL_KIND.ASK_USER_QUESTION
-    || (
-      decisionToolKind === DECISION_TOOL_KIND.CLARIFY
-      && trustedAgentId === "hermes"
-    );
+  const isQuestion = decisionToolKind === DECISION_TOOL_KIND.ASK_USER_QUESTION;
   if (isQuestion) {
-    const canAnswerQuestions = (
-      decisionToolKind === DECISION_TOOL_KIND.ASK_USER_QUESTION
-      && (trustedAgentId === "claude-code" || trustedAgentId === "hermes")
-    ) || (
-      decisionToolKind === DECISION_TOOL_KIND.CLARIFY
-      && trustedAgentId === "hermes"
-    );
+    const canAnswerQuestions = trustedAgentId === "claude-code";
     if (canAnswerQuestions) {
       return makeInteraction(INTERACTION_INTENT.HUMAN_QUESTION, {
         autoTools: true,
@@ -270,35 +256,10 @@ function classifyPermissionInteraction({
         nativeFallback: true,
       });
     }
-    if (trustedAgentId === "codebuddy") {
-      return makeInteraction(INTERACTION_INTENT.PLAN_REVIEW, {
-        nativeFallback: true,
-      });
-    }
     // No other adapter has a verified plan-review response contract. A name
     // collision must defer instead of inheriting Claude's UI/capabilities.
     return makeInteraction(INTERACTION_INTENT.UNKNOWN, {
       allowDeny: isOpencodeFamily(trustedAgentId),
-      nativeFallback: true,
-    });
-  }
-
-  // DeepSeek Harness and ZCode expose real blocking approval waterfalls, so
-  // an explicit human Allow/Deny is actionable. Their tool taxonomies and
-  // native-fallback semantics are not automation-audited: keep both global
-  // modes false. Session grants reuse this eligibility and therefore defer too.
-  if (trustedAgentId === "deepseek-harness" || trustedAgentId === "zcode") {
-    return makeInteraction(INTERACTION_INTENT.TOOL_APPROVAL, {
-      allowDeny: true,
-      nativeFallback: true,
-    });
-  }
-
-  if (trustedAgentId === "codebuddy") {
-    return makeInteraction(INTERACTION_INTENT.TOOL_APPROVAL, {
-      autoTools: true,
-      unattended: true,
-      allowDeny: true,
       nativeFallback: true,
     });
   }
@@ -321,7 +282,7 @@ function classifyPermissionInteraction({
   // cannot be mistaken for an ordinary tool. Unattended intentionally keeps
   // the legacy "handle every request" behavior after all known decision tools
   // above have been classified.
-  if (trustedAgentId === "claude-code" || trustedAgentId === "qwen-code") {
+  if (trustedAgentId === "claude-code") {
     return makeInteraction(INTERACTION_INTENT.UNKNOWN, {
       unattended: true,
       allowDeny: true,

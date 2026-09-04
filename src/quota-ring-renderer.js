@@ -16,28 +16,14 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
 const XLINK_NS = "http://www.w3.org/1999/xlink";
 const DEFAULT_QUOTA_STALE_AFTER_MS = 5 * 60 * 1000;
-const PROVIDER_STALE_AFTER_MS = Object.freeze({
-  kimiQuota: 7 * 60 * 1000,
-});
+const PROVIDER_STALE_AFTER_MS = Object.freeze({});
 const MAX_COINS = 4; // must match quota-ring-geometry RING_MAX_COINS
 
 // Mirrors RING_PROVIDERS in quota-ring-geometry.js (that file is CommonJS; this
-// runs in the browser and cannot require it). Antigravity reports two quota
-// families; each physical ring selects the most constrained candidate for its
-// timescale while the Dashboard keeps the full breakdown.
+// runs in the browser and cannot require it). Each physical ring selects the
+// most constrained candidate for its timescale while the Dashboard keeps the
+// full breakdown.
 const RING_PROVIDERS = [
-  {
-    key: "antigravityQuota",
-    label: "Antigravity",
-    outer: [
-      { field: "geminiFiveHour", fallback: "5h", familyKey: "dashboardQuotaGroupGemini", shortFamily: "G" },
-      { field: "thirdPartyFiveHour", fallback: "5h", familyKey: "dashboardQuotaGroupThirdParty", shortFamily: "C/G" },
-    ],
-    inner: [
-      { field: "geminiWeekly", fallback: "7d", familyKey: "dashboardQuotaGroupGemini", shortFamily: "G" },
-      { field: "thirdPartyWeekly", fallback: "7d", familyKey: "dashboardQuotaGroupThirdParty", shortFamily: "C/G" },
-    ],
-  },
   {
     key: "claudeQuota",
     label: "Claude",
@@ -49,12 +35,6 @@ const RING_PROVIDERS = [
     label: "Codex",
     outer: [{ field: "codexFiveHour", fallback: "5h" }],
     inner: [{ field: "codexWeekly", fallback: "7d" }],
-  },
-  {
-    key: "kimiQuota",
-    label: "Kimi",
-    outer: [{ field: "kimiFiveHour", fallback: "5h" }],
-    inner: [{ field: "kimiWeekly", fallback: "7d" }],
   },
 ];
 
@@ -97,10 +77,8 @@ const GLYPH_ZOOM = 1.35;
 // hole — 40 / 0.9 = 44.4 — which still pushes the plate past the clip (the
 // frame stays gone) without crowding the strokes.
 const GLYPH_ZOOM_BY_PROVIDER = {
-  antigravityQuota: 64 / 56,
   claudeQuota: 64 / 56,
   codexQuota: 64 / 44.4,
-  kimiQuota: 64 / 56,
 };
 let coinClipSeq = 0;
 
@@ -194,8 +172,7 @@ function providerHasDrawableQuota(source, def) {
 
 // Select one candidate for a physical ring. A live bucket always beats a reset
 // bucket; among equally live candidates the highest used percentage is the
-// most constrained. This keeps Antigravity to one coin while never silently
-// dropping its Claude/GPT quota family.
+// most constrained, so a multi-family provider never silently drops a family.
 function selectRingWindow(group, candidates, now, ring, providerSeenAtValue, providerKey) {
   let selected = null;
   for (const candidate of candidates) {

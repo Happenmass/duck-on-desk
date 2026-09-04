@@ -86,8 +86,13 @@ describe("server-windows-process-metadata", () => {
   });
 
   it("fails closed when the expected adapter executable is missing", () => {
-    const resolve = createServerWindowsProcessMetadataResolver({ queryProcess: queryFrom(codexGraph()) });
-    const result = resolve({ agentId: "kiro-cli", hookPid: 100 });
+    const graph = new Map([
+      [100, { parentPid: 90, name: "node.exe", creationTime: time(100) }],
+      [90, { parentPid: 80, name: "pwsh.exe", creationTime: time(90) }],
+      [80, { parentPid: 4, name: "explorer.exe", creationTime: time(80) }],
+    ]);
+    const resolve = createServerWindowsProcessMetadataResolver({ queryProcess: queryFrom(graph) });
+    const result = resolve({ agentId: "codex", hookPid: 100 });
     assert.strictEqual(result.status, "unavailable");
     assert.strictEqual(result.reason, "expected-agent-missing");
     assert.strictEqual(result.sourcePid, null);
@@ -119,32 +124,6 @@ describe("server-windows-process-metadata", () => {
     assert.strictEqual(result.comparisonClass, "unavailable-before-agent");
     assert.strictEqual(result.agentSeenBeforeFailure, false);
     assert.strictEqual(result.failureStage, "ancestor");
-  });
-
-  it("keeps Cursor's adapter-level editor fallback separate from raw walk editor", () => {
-    const graph = new Map([
-      [100, { parentPid: 90, name: "node.exe", creationTime: time(100) }],
-      [90, { parentPid: 1, name: "cursor.exe", creationTime: time(90) }],
-    ]);
-    const resolve = createServerWindowsProcessMetadataResolver({ queryProcess: queryFrom(graph) });
-    const result = resolve({ agentId: "cursor-agent", hookPid: 100 });
-    assert.strictEqual(result.status, "ok");
-    assert.strictEqual(result.rawEditor, "cursor");
-    assert.strictEqual(result.editor, "cursor");
-  });
-
-  it("keeps CodeBuddy raw editor diagnostics outside the effective route allowlist", () => {
-    const query = queryFrom(new Map([
-      [100, { parentPid: 90, name: "node.exe", creationTime: time(100) }],
-      [90, { parentPid: 80, name: "codebuddy.exe", creationTime: time(90) }],
-      [80, { parentPid: 1, name: "pwsh.exe", creationTime: time(80) }],
-    ]));
-    const resolver = createServerWindowsProcessMetadataResolver({ queryProcess: query, now: () => 10 });
-    const result = resolver({ agentId: "codebuddy", hookPid: 100 });
-    assert.strictEqual(result.status, "ok");
-    assert.strictEqual(result.rawEditor, "codebuddy");
-    assert.strictEqual(result.editor, "codebuddy");
-    assert.strictEqual(processMetadataForState(result).editor, null);
   });
 
   it("validates hook PID, generation, and per-agent modes", () => {

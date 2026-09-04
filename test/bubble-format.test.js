@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const { formatDetail, formatAntigravityDetail, truncate, firstStringValue, parseMcpToolName } = require("../src/bubble-format");
+const { formatDetail, truncate, firstStringValue, parseMcpToolName } = require("../src/bubble-format");
 
 describe("bubble-format truncate", () => {
   it("returns input unchanged when within max", () => {
@@ -124,45 +124,6 @@ describe("bubble-format formatDetail antigravity gating", () => {
   it("falls back to generic path when isAntigravity is true but tool is unknown", () => {
     const detail = formatDetail("totally_unknown_tool", { whatever: "x" }, { isAntigravity: true });
     assert.strictEqual(detail, "x");
-  });
-});
-
-describe("bubble-format formatAntigravityDetail tool coverage", () => {
-  it("formats run_command/bash/shell from CommandLine/command", () => {
-    assert.strictEqual(formatAntigravityDetail("run_command", { CommandLine: "ls" }), "ls");
-    assert.strictEqual(formatAntigravityDetail("bash", { command: "echo hi" }), "echo hi");
-    assert.strictEqual(formatAntigravityDetail("shell", { Command: "pwd" }), "pwd");
-  });
-
-  it("formats write_to_file with TargetFile and Description", () => {
-    assert.strictEqual(
-      formatAntigravityDetail("write_to_file", { TargetFile: "/repo/a.txt", Description: "create" }),
-      "/repo/a.txt: create"
-    );
-  });
-
-  it("formats view_file/read with AbsolutePath", () => {
-    assert.strictEqual(formatAntigravityDetail("view_file", { AbsolutePath: "/repo/a.txt" }), "/repo/a.txt");
-    assert.strictEqual(formatAntigravityDetail("READ", { AbsolutePath: "/repo/a.txt" }), "/repo/a.txt");
-  });
-
-  it("formats grep_search with SearchPath and Query", () => {
-    assert.strictEqual(
-      formatAntigravityDetail("grep_search", { SearchPath: "/repo", Query: "TODO" }),
-      "/repo: TODO"
-    );
-  });
-
-  it("formats ask_permission with Target and Reason", () => {
-    assert.strictEqual(
-      formatAntigravityDetail("ask_permission", { Target: "command(rm)", Reason: "cleanup" }),
-      "command(rm): cleanup"
-    );
-  });
-
-  it("returns empty string for empty / unknown tool name", () => {
-    assert.strictEqual(formatAntigravityDetail("", {}), "");
-    assert.strictEqual(formatAntigravityDetail("unknown_tool_x", {}), "");
   });
 });
 

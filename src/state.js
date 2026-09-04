@@ -40,7 +40,6 @@ const { resolveSessionIdentity } = require("./session-key");
 const { normalizeTranscriptPath } = require("./transcript-path");
 const { createAccountQuotaStore } = require("./state-account-quota");
 const { normalizeQuotaGroup } = require("../hooks/quota-bucket");
-const { ANTIGRAVITY_QUOTA_FIELDS } = require("../hooks/antigravity-context-usage");
 const { CLAUDE_QUOTA_FIELDS } = require("../hooks/claude-rate-limits");
 const { getClaudeStopDisposition } = require("../hooks/claude-stop-disposition");
 const { getStartupRecoveryProcessNames } = require("../agents/registry");
@@ -121,9 +120,6 @@ const accountQuota = createAccountQuotaStore({
 // snapshot while preserving Remote SSH and every non-Claude provider.
 if (ctx.claudeQuotaCollectionEnabled === false) {
   clearLocalClaudeQuota({ broadcast: false });
-}
-if (ctx.kimiQuotaCollectionEnabled === false) {
-  clearLocalKimiQuota({ broadcast: false });
 }
 const MAX_SESSIONS = 20;
 const ASSISTANT_OUTPUT_MAX = 2400;
@@ -224,115 +220,12 @@ function isWakePollState(state) {
   return state === "dozing" || state === "collapsing" || state === "sleeping";
 }
 
-// ── Kimi CLI permission hold ──
-// Keeps the pet in notification state while Kimi is waiting for user approval.
-const kimiPermissionHolds = new Map();
-// Fail-safe ceiling: only triggers if every Kimi clear-event hook is missed
-// AND the agent process keeps running. Real users frequently linger on the
-// TUI for tens of seconds (phone, lunch, deciding) so we keep this very
-// generous — the precise number isn't load bearing, the per-session cleanup
-// path (cleanStaleSessions / SessionEnd / Kimi event remap) is what should
-// release the hold in practice. Override with CLAWD_KIMI_PERMISSION_MAX_MS.
-function parseKimiHoldMaxMs() {
-  const raw = process.env.CLAWD_KIMI_PERMISSION_MAX_MS;
-  const n = Number.parseInt(raw, 10);
-  // 0 disables the timer entirely (hold stays until an event or stale-cleanup).
-  if (Number.isFinite(n) && n >= 0 && n <= 24 * 60 * 60 * 1000) return n;
-  return 10 * 60 * 1000; // 10 min default
-}
-// Throttle for the renderer-pulse that re-arms the notification animation
-// when other agent events arrive during a hold. Without throttling the GIF
-// looks like it keeps restarting from frame 0.
-const KIMI_PULSE_MIN_GAP_MS = 3000;
-let _lastKimiPulseAt = 0;
-
-// Kimi CLI does not expose a "this PreToolUse requires approval" flag in its
-// hook payload, and its approval UI is a TUI (not an HTTP round trip).
-// We therefore use a short delay-then-promote heuristic:
-//   1. PreToolUse on a permission-gated tool arrives with permission_suspect=true
-//   2. We keep the pet at `working` and start a suspect timer (default 800ms)
-//   3. If PostToolUse / PostToolUseFailure / Stop / SessionEnd arrives first,
-//      the tool was auto-approved (previously granted) — cancel the timer,
-//      never flash notification
-//   4. If the timer fires, Kimi is probably still blocked on the TUI waiting
-//      for the user — promote to a real permission hold (notification state)
-const kimiPermissionSuspectTimers = new Map();
-
-// ── Kimi CLI permission gate ledger ──
-// Legacy kimi-cli fires the PreToolUse for EVERY queued tool call up front
-// (two calls in one assistant message arrive ~0.1s apart), then blocks on the
-// approval TUI one tool at a time. The hold/suspect slots above are
-// per-session booleans, so without extra bookkeeping only the FIRST approval
-// ever gets a cue — the second prompt sits invisible in the terminal.
-// The ledger tracks outstanding permission-gated tool calls per session:
-//   sessionId -> Array<{ id: string|null, detail: object|null }>
-// insertion-ordered (index 0 = oldest = what the terminal blocks on next).
-// Opened by gated PreToolUse / synthesized PermissionRequest (hook marks them
-// permission_gate_open), closed by gated PostToolUse/PostToolUseFailure —
-// exact match when a tool_call_id is present, FIFO across anonymous entries
-// otherwise. Native Kimi Code PermissionRequests carry no gate markers and
-// never touch the ledger.
-const kimiPermissionGateLedgers = new Map();
-
-function buildKimiGateDetail(toolName, permissionAction, permissionCommand, permissionToolInput) {
-  if (!toolName && !permissionAction && !permissionCommand && !permissionToolInput) return null;
-  return { toolName, permissionAction, permissionCommand, permissionToolInput };
-}
-
-function openKimiPermissionGate(sessionId, gateId, detail) {
-  if (!sessionId) return;
-  let gates = kimiPermissionGateLedgers.get(sessionId);
-  if (!gates) {
-    gates = [];
-    kimiPermissionGateLedgers.set(sessionId, gates);
-  }
-  const id = typeof gateId === "string" && gateId ? gateId : null;
-  if (id) {
-    // Idempotent refresh: a re-sent PreToolUse for the same call replaces its
-    // own entry instead of inflating the queue.
-    const dup = gates.findIndex((gate) => gate.id === id);
-    if (dup !== -1) gates.splice(dup, 1);
-  }
-  gates.push({ id, detail: detail || null });
-}
-
-function closeKimiPermissionGate(sessionId, gateId) {
-  const gates = kimiPermissionGateLedgers.get(sessionId);
-  if (!gates || !gates.length) return false;
-  const id = typeof gateId === "string" && gateId ? gateId : null;
-  let idx = -1;
-  if (id) {
-    // Exact pairing only. An unknown id is a no-op on purpose: a duplicate or
-    // out-of-order Post must not eat an anonymous entry it doesn't own.
-    idx = gates.findIndex((gate) => gate.id === id);
-  } else {
-    // Anonymous close (old hook / payload without tool_call_id): FIFO —
-    // settle the oldest anonymous gate.
-    idx = gates.findIndex((gate) => gate.id === null);
-  }
-  if (idx === -1) return false;
-  gates.splice(idx, 1);
-  if (!gates.length) kimiPermissionGateLedgers.delete(sessionId);
-  return true;
-}
-
-function parseSuspectDelay() {
-  const raw = process.env.CLAWD_KIMI_PERMISSION_SUSPECT_MS;
-  const n = Number.parseInt(raw, 10);
-  if (Number.isFinite(n) && n >= 0 && n <= 10000) return n;
-  return 800;
-}
-
 function hasPermissionAnimationLock() {
-  // Kimi-only lock: do not alter Claude/Codex/opencode permission behavior.
-  return kimiPermissionHolds.size > 0;
+  return false;
 }
 
 function hasConfirmedPermissionAnimationLock() {
-  // Native PermissionRequest is authoritative and may pin other one-shot
-  // visuals. The legacy timing heuristic is only a passive cue: a slow but
-  // pre-authorized Kimi tool must not swallow another agent's Stop/error.
-  return [...kimiPermissionHolds.values()].some((hold) => hold && hold.source === "confirmed");
+  return false;
 }
 
 // Later events legitimately omit the pane key, so it has to be sticky — but a
@@ -343,15 +236,9 @@ function hasConfirmedPermissionAnimationLock() {
 // wt_hwnd, raise Orca instead of the terminal the agent actually moved to.
 //
 // Producers spell the session start three ways: most post "SessionStart",
-// copilot-hook.js posts its raw argv name "sessionStart", and kiro-hook.js posts
-// "agentSpawn". Kiro is the one that matters most — its stdin carries no session
-// id, so it merges every session into "default" and a pane key stored there would
-// otherwise never be cleared.
-//
-// antigravity-hook.js has no session-start event at all, so the event name alone
-// can never clear one of its keys. Its id normalizes payload.conversationId
-// (falling back to the transcript directory), so resuming the same conversation
-// from a different terminal lands back on the same entry — which is why the
+// others post their raw argv name "sessionStart" or "agentSpawn". An agent
+// whose stdin carries no session id merges every session into "default", and a
+// pane key stored there would otherwise never be cleared — which is why the
 // identity check below exists rather than a longer list of event names.
 const SESSION_START_EVENTS = new Set(["SessionStart", "sessionStart", "agentSpawn"]);
 
@@ -435,48 +322,6 @@ function shouldMuteMiniPostCompletionNotification(state, event, session) {
     && session
     && session.awaitingInputSinceStop === true
     && !hasPermissionAnimationLock();
-}
-
-function shouldDropAntigravityPostStopToolUse(existing, state, event, agentId) {
-  return agentId === "antigravity-cli"
-    && event === "PostToolUse"
-    && state === "working"
-    && existing
-    && existing.awaitingInputSinceStop === true
-    && Number.isFinite(existing.lastStopAt);
-}
-
-// ── Qwen Code self-submit filter ──
-// qwen 0.16.1 fires a synthetic UserPromptSubmit ~900-1000ms after
-// PostToolUse to feed the tool result back to the model. Without filtering,
-// the mascot flashes "thinking" (typing animation) between working and idle.
-// Measured twice in dogfood: 908ms (non-interactive) and 945ms (interactive).
-// 2000ms window covers the agentic loop with ~2x headroom while still letting
-// real human input through after the loop settles. See
-// project_qwen_0_16_1_event_semantics for the canary.
-//
-// Two timestamps split: `lastToolBoundaryAt` tracks PostToolUse /
-// PostToolUseFailure (where the agentic loop may still self-submit), and
-// `lastStopAt` tracks end-of-turn. Filter only fires when a recent tool
-// boundary has NOT yet been followed by Stop — once Stop arrives, any
-// further UserPromptSubmit is real user input even if the tool boundary
-// is still inside the window. This avoids eating a real "继续" typed
-// within 2s of the happy end animation.
-const QWEN_SELF_SUBMIT_WINDOW_DEFAULT_MS = 2000;
-const QWEN_SELF_SUBMIT_WINDOW_MAX_MS = 10000;
-function getQwenSelfSubmitWindowMs() {
-  const raw = process.env.CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS;
-  if (typeof raw !== "string" || !raw.trim()) return QWEN_SELF_SUBMIT_WINDOW_DEFAULT_MS;
-  const n = Number.parseInt(raw.trim(), 10);
-  if (!Number.isFinite(n) || n < 0 || n > QWEN_SELF_SUBMIT_WINDOW_MAX_MS) {
-    return QWEN_SELF_SUBMIT_WINDOW_DEFAULT_MS;
-  }
-  return n;
-}
-function isQwenSelfSubmitFilterEnabled() {
-  // Default on. Kill switch for users to disable if qwen ≥0.17 changes the
-  // self-submit behavior in a way that breaks this filter.
-  return process.env.CLAWD_QWEN_SELF_SUBMIT_FILTER !== "0";
 }
 
 // ── Stale cleanup ──
@@ -577,7 +422,7 @@ function setState(newState, svgOverride, options = {}) {
   const sameState = newState === currentState;
   const sameSvg = !svgOverride || svgOverride === currentSvg;
   if (sameState && sameSvg) {
-    // Kimi CLI permission hold: re-arm the auto-return timer so the
+    // Permission animation hold: re-arm the auto-return timer so the
     // notification animation keeps cycling while the user is reviewing
     // the permission prompt.
     if (hasPermissionAnimationLock() && newState === "notification" && AUTO_RETURN_MS[newState]) {
@@ -647,17 +492,6 @@ function resolveVisualBinding(state) {
 function applyResolvedDisplayState() {
   const resolved = resolveDisplayState();
   applyState(resolved, getSvgOverride(resolved), resolveSoundOptionsForState(resolved));
-  // Kimi CLI permission hold: while notification is pinned, re-trigger the
-  // renderer animation so non-looping GIF/APNG assets replay instead of
-  // freezing on their last frame. Throttled so concurrent agents flooding
-  // events don't make the GIF visibly restart every tick.
-  if (hasPermissionAnimationLock() && resolved === "notification") {
-    const now = Date.now();
-    if (now - _lastKimiPulseAt >= KIMI_PULSE_MIN_GAP_MS) {
-      _lastKimiPulseAt = now;
-      ctx.sendToRenderer("kimi-permission-pulse");
-    }
-  }
 }
 
 function playWakeTransitionOrResolve() {
@@ -1314,7 +1148,7 @@ function evictOldestSessionIfNeeded(sessionId) {
 
 // Sets / clears `requiresCompletionAck` based on the current event.
 // Called from updateSession's `finally` block so every early-return path
-// (PermissionRequest on disabled Kimi, SessionEnd, SubagentStop on missing
+// (PermissionRequest on a disabled agent, SessionEnd, SubagentStop on missing
 // session, etc.) still gets its flag reconciled — placing this in the
 // dispatch body would miss those paths.
 //
@@ -1386,7 +1220,7 @@ function normalizeContextUsage(value) {
   if (Number.isFinite(limit) && limit > 0) out.limit = limit;
   const percent = Number(value.percent);
   if (Number.isFinite(percent)) out.percent = Math.max(0, Math.min(100, Math.round(percent)));
-  if (value.source === "claude" || value.source === "codex" || value.source === "antigravity" || value.source === "opencode") out.source = value.source;
+  if (value.source === "claude" || value.source === "codex" || value.source === "opencode") out.source = value.source;
   return out;
 }
 
@@ -1579,26 +1413,6 @@ function clearLocalClaudeQuota(options = {}) {
   return cleared;
 }
 
-// Kimi quota is collected only by the local, explicit API-key runtime. Its
-// durable commit seam reports persistence separately so the credentialId
-// binding journal can never claim a quota snapshot reached disk when it did
-// not. Existing generic/Claude callers keep their historical boolean/numeric
-// contracts above.
-function commitLocalKimiQuota(kimiQuota) {
-  const result = accountQuota.updateDetailed(null, { kimiQuota });
-  if (!result.accepted) return { accepted: false, persisted: false };
-  const persisted = accountQuota.flush();
-  if (result.changed) emitSessionSnapshot();
-  return { accepted: true, persisted: persisted === true };
-}
-
-function clearLocalKimiQuota(options = {}) {
-  const cleared = accountQuota.clearProvider("kimiQuota", (sourceKey) => sourceKey === "");
-  const persisted = cleared ? accountQuota.flush() === true : true;
-  if (cleared && options.broadcast !== false) emitSessionSnapshot();
-  return { cleared: cleared > 0, persisted };
-}
-
 // Distinct reporting sources that currently carry quota (this machine + WSL /
 // SSH remotes), UNmerged. The settings UI hides the "merge across machines"
 // switch when there is only one source, since merging is then a no-op.
@@ -1750,7 +1564,7 @@ function scheduleClaudeTranscriptCompletionProbe(sessionId, transcriptPath) {
 // Replay the real Stop the gate withheld: append a Stop event (so the badge →
 // "done" and the Telegram completion fires exactly once, re-asserting a Stop
 // tail over any Notification that landed during the window), settle to idle,
-// and only now flip awaitingInputSinceStop. Then celebrate, unless a Kimi
+// and only now flip awaitingInputSinceStop. Then celebrate, unless a
 // permission lock is holding the pet.
 function promoteCompletion(sessionId, completionPayload = undefined) {
   const session = sessions.get(sessionId);
@@ -1875,17 +1689,8 @@ function mergeSessionProcessMetadata(existing, incoming = {}, options = {}) {
   };
 }
 
-// Trae stores the session title server-side, so Clawd derives it from the
-// first prompt line. The first title that reaches the server wins — a title
-// whose POST fails is not permanently claimed, and follow-up prompts never
-// overwrite the first one (matching Trae's constant session title).
-const FIRST_WINS_TITLE_AGENT_IDS = new Set(["traecode"]);
-
 function resolveIncomingSessionTitle(existing, agentId, incomingTitle) {
   const normalized = normalizeTitle(incomingTitle);
-  if (FIRST_WINS_TITLE_AGENT_IDS.has(agentId)) {
-    return (existing && existing.sessionTitle) || normalized || null;
-  }
   return normalized || (existing && existing.sessionTitle) || null;
 }
 
@@ -1994,10 +1799,9 @@ function updateSession(sessionId, state, event, opts = {}) {
     if (shouldStorePermissionAutomationIdentity) {
       sessionForPerm.sessionAutomationIdentity = normalizedSessionAutomationIdentity;
     }
-    // Observation is independent from the permission-bubble preference. A
-    // legacy Kimi PreToolUse may arrive here as PermissionRequest with a
-    // closed tool-call provenance marker; disabling that UI must not erase
-    // the underlying accepted activity from recap.
+    // Observation is independent from the permission-bubble preference:
+    // disabling that UI must not erase the underlying accepted activity
+    // from recap.
     recapPendingInput = {
       occurredAt: recapOccurredAt,
       sessionId,
@@ -2018,18 +1822,6 @@ function updateSession(sessionId, state, event, opts = {}) {
       subagentType,
       completionCandidate: false,
     };
-    // Kimi-only gate: startKimiPermissionPoll suppresses the passive bubble
-    // when the user disabled Kimi permissions in Settings, but the setState
-    // ran first and flashed notification anyway — leaving a silent animation
-    // with no follow-up UI. setState already early-returns under DND so we
-    // don't need a second DND check here. CC / opencode keep the
-    // unconditional setState — their bubble flow gates DND upstream.
-    if (
-      event === "PermissionRequest"
-      && permAgentId === "kimi-cli"
-      && typeof ctx.isAgentPermissionsEnabled === "function"
-      && !ctx.isAgentPermissionsEnabled("kimi-cli")
-    ) return;
     const hasCodexPermissionMetadata = !!(
       sourcePid || wtHwnd || agentPid || (pidChain && pidChain.length) || cwd || host || wslDistro ||
       model || provider || codexOriginator || codexSource || platform || ghosttyTerminalId ||
@@ -2135,34 +1927,6 @@ function updateSession(sessionId, state, event, opts = {}) {
       });
     }
     setState("notification", undefined, { muteNotificationSound: muteNotificationSound === true });
-    if (event === "PermissionRequest" && permAgentId === "kimi-cli") {
-      // Synthesized PermissionRequest (rewritten gated PreToolUse) carries a
-      // gate marker — record it so the Post that settles it can re-arm the
-      // cue for the next queued approval. Native Kimi Code PermissionRequests
-      // have no marker and skip the ledger.
-      if (permissionGateOpen === true) {
-        openKimiPermissionGate(
-          sessionId,
-          permissionGateId,
-          buildKimiGateDetail(toolName, permissionAction, permissionCommand, permissionToolInput)
-        );
-        // Same invariant as the suspect path: the cue must describe what the
-        // terminal actually blocks on — the OLDEST outstanding gate. Batched
-        // synthesized requests all land up front, so refreshing the card with
-        // the newest arrival would show a tool whose prompt hasn't appeared
-        // yet.
-        const gates = kimiPermissionGateLedgers.get(sessionId);
-        const headDetail = gates && gates.length
-          ? gates[0].detail
-          : buildKimiGateDetail(toolName, permissionAction, permissionCommand, permissionToolInput);
-        startKimiPermissionPoll(sessionId, headDetail);
-      } else {
-        // Native Kimi Code: a PermissionRequest fires when its prompt really
-        // is on screen, so the newest request IS what the terminal blocks on —
-        // refresh-to-newest stays correct here.
-        startKimiPermissionPoll(sessionId, { toolName, permissionAction, permissionCommand, permissionToolInput });
-      }
-    }
     if (
       shouldStorePermissionAutomationIdentity
       || (shouldPersistCodexPermissionFocus && normalizedSessionAutomationIdentity)
@@ -2342,37 +2106,6 @@ function updateSession(sessionId, state, event, opts = {}) {
     // debounceMs <= 0 && !hardLiveWork → keep "attention" (immediate celebration).
   }
 
-  // Qwen Code 0.16.1 self-submit guard. qwen's agentic loop fires a synthetic
-  // UserPromptSubmit ~900-1000ms after PostToolUse to feed the tool result
-  // back to the model. Dropping it here (before pushRecentEvent / setState)
-  // prevents the mascot from flashing "thinking" between working and idle.
-  // Falls through to normal handling when:
-  //   - No existing session / no tool boundary (cannot prove self-submit)
-  //   - Outside the window (real human input)
-  //   - Stop has fired AFTER the most recent tool boundary (end-of-turn
-  //     reached — any UserPromptSubmit now is real user input)
-  //   - Kill switch CLAWD_QWEN_SELF_SUBMIT_FILTER="0"
-  if (
-    event === "UserPromptSubmit"
-    && srcAgentId === "qwen-code"
-    && existing
-    && Number.isFinite(existing.lastToolBoundaryAt)
-    && (Date.now() - existing.lastToolBoundaryAt) < getQwenSelfSubmitWindowMs()
-    && !(Number.isFinite(existing.lastStopAt) && existing.lastStopAt >= existing.lastToolBoundaryAt)
-    && isQwenSelfSubmitFilterEnabled()
-  ) {
-    debugSession(`qwen self-submit drop sid=${sessionId} elapsed=${Date.now() - existing.lastToolBoundaryAt}ms`);
-    return;
-  }
-
-  // Antigravity 1.0.6 can emit a trailing PostToolUse about a second after a
-  // fully-idle Stop for the same conversation. Treat it as stale so it does not
-  // resurrect the completed session into a permanent typing/working state.
-  if (shouldDropAntigravityPostStopToolUse(existing, state, event, srcAgentId)) {
-    debugSession(`antigravity trailing PostToolUse drop sid=${sessionId}`);
-    return;
-  }
-
   debugSession(`event ${describeSession(sessionId, existing)} -> incoming=${state}/${event || "-"} hint=${displayHint || "-"} source=${hookSource || "-"}${formatStdinDiag(stdinDiag)}`);
 
   const pidReachable = resolvePidReachable(
@@ -2417,15 +2150,10 @@ function updateSession(sessionId, state, event, opts = {}) {
     existing
     && existing.requiresCompletionAck === true
     && isAckPreservingHousekeepingEvent(srcAgentId, srcHost, event);
-  // Agent-loop boundary timestamps for the qwen self-submit filter. Two
-  // split fields: `lastToolBoundaryAt` (PostToolUse / PostToolUseFailure)
-  // marks where a synthetic UserPromptSubmit may still follow within the
-  // ~1s window; `lastStopAt` (Stop) marks end-of-turn after which any
-  // UserPromptSubmit is real user input. PostToolUseFailure is a generic
-  // defensive boundary — qwen 0.16.1 does not emit it, but other agents
-  // sharing this state.js do (claude-code, codex), and a future qwen
-  // version may. Propagated through `base` so every sessions.set path
-  // keeps both values until the next bump.
+  // Agent-loop boundary timestamps. Two split fields: `lastToolBoundaryAt`
+  // (PostToolUse / PostToolUseFailure) marks the last tool boundary and
+  // `lastStopAt` (Stop) marks end-of-turn. Propagated through `base` so every
+  // sessions.set path keeps both values until the next bump.
   const isToolBoundary = event === "PostToolUse" || event === "PostToolUseFailure";
   const isStopBoundary = event === "Stop";
   const srcLastToolBoundaryAt = isToolBoundary
@@ -2602,7 +2330,6 @@ function updateSession(sessionId, state, event, opts = {}) {
     deleteSessionWithCompletionCleanup(sessionId, "session-end");
     debugSession(`session-end delete ${describeSession(sessionId, endingSession)}`);
     cleanStaleSessions();
-    if (srcAgentId === "kimi-cli") disposeKimiPermissionSession(sessionId);
     if (!endingSession || !endingSession.headless) {
       // /clear sends sweeping — play it even if other sessions are active
       // (sweeping is ONESHOT and auto-returns, so it won't interfere)
@@ -2712,97 +2439,6 @@ function updateSession(sessionId, state, event, opts = {}) {
   ) {
     scheduleClaudeTranscriptCompletionProbe(sessionId, srcTranscriptPath);
   }
-  // Any Kimi event other than the PreToolUse that originally opened the hold
-  // means the user already answered (Approve / Reject / Reject-and-tell-model)
-  // and the agent loop has moved on. We must NOT keep the pet stuck on the
-  // notification animation past that point, even if PostToolUse is delayed
-  // (e.g. user approved `sleep 30`).
-  const KIMI_HOLD_CLEAR_EVENTS = new Set([
-    "PostToolUse",
-    "PostToolUseFailure",
-    "Stop",
-    "StopFailure",
-    "UserPromptSubmit",
-    "SubagentStart",
-    "SubagentStop",
-    "PreCompact",
-    "PostCompact",
-    "Notification",
-    // Kimi Code native events (#563). PermissionResult is the definitive
-    // "approval answered" signal (decision: approved/rejected). On the
-    // rejected path upstream fires PostToolUseFailure BEFORE
-    // PermissionResult — both clear, so ordering does not matter here.
-    // Interrupt is the user's Esc: any pending approval UI is gone with it.
-    "PermissionResult",
-    "Interrupt",
-  ]);
-  if (srcAgentId === "kimi-cli" && KIMI_HOLD_CLEAR_EVENTS.has(event)) {
-    if (event === "PostToolUse" || event === "PostToolUseFailure") {
-      // A gated Post settles its ledger entry first (exact tool_call_id
-      // match, FIFO for anonymous entries). Non-gated Posts leave the
-      // ledger alone.
-      if (permissionGated === true) closeKimiPermissionGate(sessionId, permissionGateId);
-      // Cue-level clear only — the ledger survives. The user answered THIS
-      // tool, so the pet must leave notification now (sleep-30 rule above);
-      // but if the same assistant message queued more gated calls, re-arm
-      // the suspect window so the NEXT pending approval re-surfaces its own
-      // cue ~800ms later. Like any suspect it is cancelled if the next
-      // PostToolUse lands sooner (auto-approved chain → no flash). This also
-      // covers a non-gated tool finishing between two gated ones: its Post
-      // clears the cue, and the re-arm brings the pending approval back.
-      stopKimiPermissionPoll(sessionId);
-      const pendingGates = kimiPermissionGateLedgers.get(sessionId);
-      if (pendingGates && pendingGates.length) {
-        schedulePermissionSuspect(sessionId, pendingGates[0].detail);
-      }
-    } else {
-      // Turn-level / terminal events (Stop, UserPromptSubmit, PermissionResult,
-      // Interrupt, …): the whole approval context is gone — drop the ledger
-      // together with the cue.
-      disposeKimiPermissionSession(sessionId);
-    }
-  }
-
-  // A brand-new PreToolUse normally starts a fresh approval gate. Preserve an
-  // existing cue, however, when the legacy hook batches a gated Pre followed
-  // by a non-gated Pre: the first tool is still blocked in the terminal and
-  // its ledger/timer remains authoritative until its matching Post arrives.
-  if (event === "PreToolUse" && srcAgentId === "kimi-cli") {
-    const pendingGates = kimiPermissionGateLedgers.get(sessionId);
-    const preservePendingGateCue = permissionGateOpen !== true && pendingGates && pendingGates.length > 0;
-    if (!preservePendingGateCue) {
-      if (kimiPermissionHolds.has(sessionId)) stopKimiPermissionPoll(sessionId);
-      else cancelPermissionSuspect(sessionId);
-    }
-  }
-
-  // Kimi permission heuristic: hook reports permission_suspect=true on
-  // PreToolUse for gated tools. We defer the notification switch; if the
-  // tool was auto-approved a PostToolUse will cancel us before the timer
-  // fires, which is how we avoid flashing notification for auto-approved
-  // commands.
-  if (
-    permissionSuspect === true
-    && srcAgentId === "kimi-cli"
-    && event === "PreToolUse"
-  ) {
-    if (permissionGateOpen === true) {
-      openKimiPermissionGate(
-        sessionId,
-        permissionGateId,
-        buildKimiGateDetail(toolName, permissionAction, permissionCommand, permissionToolInput)
-      );
-    }
-    // The cue must describe what the terminal actually blocks on — the OLDEST
-    // outstanding gate — not the PreToolUse that happened to arrive last
-    // (batched Pres land back-to-back and each reschedules this timer).
-    const gates = kimiPermissionGateLedgers.get(sessionId);
-    const headDetail = gates && gates.length
-      ? gates[0].detail
-      : buildKimiGateDetail(toolName, permissionAction, permissionCommand, permissionToolInput);
-    schedulePermissionSuspect(sessionId, headDetail);
-  }
-
   const suppressDuplicateCompletionVisual =
     duplicateCompletionVisualAtEntry || shouldSuppressDuplicateCompletionVisual(existing, state, event);
 
@@ -2826,8 +2462,8 @@ function updateSession(sessionId, state, event, opts = {}) {
       return;
     }
     // Per-agent Notification-hook mute: presentation-layer only. By this
-    // point session bookkeeping, recentEvents, and Kimi hold-release cleanup
-    // have already run — matching the Animation Map "events still fire"
+    // point session bookkeeping and recentEvents have already run —
+    // matching the Animation Map "events still fire"
     // contract. We only skip the bell + animation for agents whose
     // wait-for-input alerts toggle is off.
     if (
@@ -2855,8 +2491,8 @@ function updateSession(sessionId, state, event, opts = {}) {
   } finally {
     try {
       // Reconcile the ack flag from the LATEST entry view, not the closure
-      // copies taken at the top — early-return paths (state.js Kimi
-      // PermissionRequest gate, SessionEnd, SubagentStop on missing
+      // copies taken at the top — early-return paths (SessionEnd,
+      // SubagentStop on missing
       // session) bail out before the resolved srcAgentId/srcHost block
       // runs. The Object.assign(existing, base) ONESHOT branch can also
       // rebuild the entry midway. Re-fetch + fall back to raw opts so we
@@ -2919,7 +2555,6 @@ function restoreSessionFromLease(lease) {
     sessionTitle: typeof lease.title === "string" ? lease.title : null,
     contextUsage: null,
     contextUsageOrigin: null,
-    antigravityQuota: null,
     claudeQuota: null,
     metadataUpdatedAt: null,
     assistantLastOutput: null,
@@ -2972,7 +2607,6 @@ function cleanStaleSessions() {
       const badgeSuffix = decision.reason === "detached-ended" ? ` badge=${decision.badge}` : "";
       debugSession(`stale-delete ${decision.reason} ${describeSession(id, s)}${badgeSuffix}`);
       if (s && s.agentId === "codex") cancelCodexExitProbe(id, `stale-delete-${decision.reason}`);
-      if (s && s.agentId === "kimi-cli") disposeKimiSessionState(id, "kimi-session-disposed");
       if (s && s.agentId && typeof ctx.onSessionAutomationLifecycleEnd === "function") {
         ctx.onSessionAutomationLifecycleEnd({
           agentId: s.agentId,
@@ -3013,22 +2647,6 @@ function cleanStaleSessions() {
   }
 }
 
-// Session removal helpers. Kimi has extra animation/bubble bookkeeping because
-// its approval prompt is terminal-driven rather than an HTTP permission roundtrip.
-function disposeKimiSessionState(id, reason) {
-  kimiPermissionGateLedgers.delete(id);
-  const hadSuspect = cancelPermissionSuspect(id);
-  const hold = kimiPermissionHolds.get(id);
-  if (hold) {
-    if (hold.timer) clearTimeout(hold.timer);
-    kimiPermissionHolds.delete(id);
-  }
-  if ((hold || hadSuspect) && typeof ctx.clearKimiNotifyBubbles === "function") {
-    ctx.clearKimiNotifyBubbles(id, reason || "kimi-session-disposed");
-  }
-  return !!(hold || hadSuspect);
-}
-
 function dismissSession(sessionId) {
   const id = typeof sessionId === "string" ? sessionId : "";
   if (!id) return false;
@@ -3036,7 +2654,6 @@ function dismissSession(sessionId) {
   if (!session) return false;
   if (session.agentId === "codex") cancelCodexExitProbe(id, "session-hidden");
   deleteSessionWithCompletionCleanup(id, "session-hidden");
-  if (session.agentId === "kimi-cli") disposeKimiSessionState(id, "kimi-session-hidden");
   const resolved = resolveDisplayState();
   setState(resolved, getSvgOverride(resolved));
   emitSessionSnapshot({ force: true });
@@ -3101,40 +2718,8 @@ function clearSessionsByAgent(agentId) {
     if (s && s.agentId === agentId) {
       if (agentId === "codex") cancelCodexExitProbe(id, "clear-sessions");
       deleteSessionWithCompletionCleanup(id, "clear-sessions");
-      if (agentId === "kimi-cli") disposeKimiSessionState(id, "kimi-clear-sessions");
       removed++;
     }
-  }
-  // Kimi's PermissionRequest event takes the early-return path in
-  // updateSession() and never creates a `sessions` entry — only a
-  // `kimiPermissionHolds` entry. Sweep those orphans here so disabling Kimi
-  // in settings (or any direct caller) doesn't leave a stuck animation lock
-  // and "Check Kimi terminal" bubble behind.
-  if (agentId === "kimi-cli") {
-    const orphanHolds = [...kimiPermissionHolds.keys()];
-    for (const id of orphanHolds) {
-      const hold = kimiPermissionHolds.get(id);
-      if (hold && hold.timer) clearTimeout(hold.timer);
-      kimiPermissionHolds.delete(id);
-      cancelPermissionSuspect(id);
-      if (typeof ctx.clearKimiNotifyBubbles === "function") {
-        ctx.clearKimiNotifyBubbles(id, "kimi-orphan-hold-cleared");
-      }
-      removed++;
-    }
-    const orphanSuspects = [...kimiPermissionSuspectTimers.keys()];
-    for (const id of orphanSuspects) {
-      cancelPermissionSuspect(id);
-      if (typeof ctx.clearKimiNotifyBubbles === "function") {
-        ctx.clearKimiNotifyBubbles(id, "kimi-orphan-suspect-cleared");
-      }
-    }
-    // Gate ledgers can hold the same orphans (immediate-mode sessions never
-    // enter the `sessions` Map either). Today's callers pair this function
-    // with dismissPermissionsByAgent → disposeAllKimiPermissionState, which
-    // would clear them anyway — but this function must not depend on that
-    // pairing to keep the ledger from re-arming a cue for a dead session.
-    kimiPermissionGateLedgers.clear();
   }
   if (removed > 0) {
     const resolved = resolveDisplayState();
@@ -3162,19 +2747,12 @@ function detectRunningAgentProcesses(callback) {
   // Preserve node-shaped CLI detection only as a weak keep-awake fallback.
   // A match here never creates a session or publishes a task-level state.
   // An optional `processName` overrides the default `node.exe` host for an
-  // entry — used by agents whose Windows runtime is a different binary (e.g.
-  // ZCode reuses the desktop executable to run `zcode.cjs`). On POSIX the
-  // same marker is matched with pgrep -f, covering current macOS builds without
-  // treating the always-running GUI shell as active work.
+  // entry — used by agents whose Windows runtime is a different binary. On
+  // POSIX the same marker is matched with pgrep -f, covering current macOS
+  // builds without treating the always-running GUI shell as active work.
   const commandLineNeedles = [
     { agentId: "claude-code", needle: "claude-code" },
     { agentId: "codex", needle: "codex" },
-    { agentId: "copilot-cli", needle: "copilot" },
-    { agentId: "codebuddy", needle: "codebuddy" },
-    { agentId: "kimi-cli", needle: "kimi-code" },
-    // Current ZCode runtimes use resources/glm/zcode.cjs app-server; only the
-    // cmdline token disambiguates the working process from the GUI shell.
-    { agentId: "zcode", needle: "zcode.cjs", processName: "zcode.exe" },
   ].filter((entry) => isEnabled(entry.agentId));
   const platformCommandLineNeedles = process.platform === "win32" || !isEnabled("pi")
     ? commandLineNeedles
@@ -3239,145 +2817,6 @@ function stopStaleCleanup() {
   if (staleCleanupTimer) { clearInterval(staleCleanupTimer); staleCleanupTimer = null; }
 }
 
-function startKimiPermissionPoll(sessionId, permissionDetail = null, source = "confirmed") {
-  if (!sessionId) return;
-  // DND / agent permissions-off both suppress the passive bubble at creation
-  // time (see shouldSuppressKimiNotifyBubble in permission.js). Skipping the
-  // hold here keeps the animation lock in sync: without it, turning DND off
-  // or flipping permissions back on would pin a stale `notification` with
-  // nothing actionable for the user. hideBubbles intentionally does NOT
-  // short-circuit here — that flag means "hide the UI, keep the animation
-  // cue" (mirrors the Codex working-state behavior).
-  if (ctx.doNotDisturb) return;
-  if (
-    typeof ctx.isAgentPermissionsEnabled === "function"
-    && !ctx.isAgentPermissionsEnabled("kimi-cli")
-  ) return;
-  cancelPermissionSuspect(sessionId);
-  const existing = kimiPermissionHolds.get(sessionId);
-  if (existing && existing.timer) clearTimeout(existing.timer);
-  const maxMs = parseKimiHoldMaxMs();
-  let timer = null;
-  if (maxMs > 0) {
-    // Last-resort safety cap. The primary release path is event-driven
-    // (PostToolUse / Stop / UserPromptSubmit / new PreToolUse / SessionEnd /
-    // cleanStaleSessions when the Kimi PID dies). The timer just prevents
-    // permanent stuck state if every other signal is somehow lost — and in
-    // that lost-signal world the gate ledger is stale too, so drop it whole.
-    timer = setTimeout(() => {
-      disposeKimiPermissionSession(sessionId);
-    }, maxMs);
-  }
-  kimiPermissionHolds.set(sessionId, {
-    timer,
-    until: maxMs > 0 ? Date.now() + maxMs : null,
-    source: source === "heuristic" ? "heuristic" : "confirmed",
-  });
-  // Refreshing the hold must still forward fresh detail: with the rich cue,
-  // showing request #1's command while the terminal blocks on request #2
-  // would be authoritatively wrong. showKimiNotifyBubble dedupes per session
-  // and refreshes the existing card in place (codex idiom), so no bubble
-  // stacking. Suspect promotions carry no detail object and skip the
-  // refresh — a heuristic re-affirmation must not downgrade a rich card.
-  if (typeof ctx.showKimiNotifyBubble === "function" && (!existing || permissionDetail)) {
-    // #563: Kimi Code native PermissionRequest carries what actually needs
-    // approval; the bubble shows the real command instead of generic copy.
-    // Legacy synthesized requests pass null detail and keep the old text.
-    ctx.showKimiNotifyBubble({
-      sessionId,
-      toolName: permissionDetail && permissionDetail.toolName ? permissionDetail.toolName : null,
-      permissionAction: permissionDetail && permissionDetail.permissionAction ? permissionDetail.permissionAction : null,
-      permissionCommand: permissionDetail && permissionDetail.permissionCommand ? permissionDetail.permissionCommand : null,
-      permissionToolInput: permissionDetail && permissionDetail.permissionToolInput ? permissionDetail.permissionToolInput : null,
-    });
-  }
-}
-
-function cancelPermissionSuspect(sessionId) {
-  if (!sessionId) return false;
-  const existing = kimiPermissionSuspectTimers.get(sessionId);
-  if (!existing) return false;
-  clearTimeout(existing.timer);
-  kimiPermissionSuspectTimers.delete(sessionId);
-  return true;
-}
-
-function schedulePermissionSuspect(sessionId, permissionDetail = null) {
-  if (!sessionId) return;
-  const delay = parseSuspectDelay();
-  // A zero delay disables the heuristic entirely (caller shouldn't reach
-  // this path in that case, but handle defensively).
-  if (delay <= 0) return;
-  cancelPermissionSuspect(sessionId);
-  const timer = setTimeout(() => {
-    kimiPermissionSuspectTimers.delete(sessionId);
-    // Only promote if the session still exists and no terminal event has
-    // flipped it elsewhere (PostToolUse etc. would have cancelled us).
-    if (!sessions.has(sessionId) && !kimiPermissionHolds.has(sessionId)) return;
-    // Mirror startKimiPermissionPoll's gates here: if DND / Kimi permissions
-    // are off, don't even flash notification — startKimiPermissionPoll would
-    // skip the hold and the setState("notification") below would either be
-    // swallowed by DND or briefly leak a lock-less flash. Keeping the two
-    // paths in sync avoids subtle visual noise.
-    if (ctx.doNotDisturb) return;
-    if (
-      typeof ctx.isAgentPermissionsEnabled === "function"
-      && !ctx.isAgentPermissionsEnabled("kimi-cli")
-    ) return;
-    // permissionDetail (queue head of the gate ledger, or null for a plain
-    // legacy suspect) makes the promoted cue name the tool that actually
-    // blocks the terminal; null degrades to the generic copy.
-    startKimiPermissionPoll(sessionId, permissionDetail, "heuristic");
-    setState("notification");
-  }, delay);
-  kimiPermissionSuspectTimers.set(sessionId, { timer, scheduledAt: Date.now() });
-}
-
-// Cue-level clear: hold + suspect timer + visible card. The gate ledger is
-// deliberately PRESERVED — a Post that settles one of several batched
-// approvals must clear the current cue without forgetting the queued rest.
-// Full teardown (turn-level events, session disposal, safety cap) goes
-// through disposeKimiPermissionSession instead. The no-arg variant is the
-// global stop-everything path and drops the ledgers too.
-function stopKimiPermissionPoll(sessionId) {
-  if (!sessionId) {
-    kimiPermissionGateLedgers.clear();
-    const hadHold = kimiPermissionHolds.size > 0;
-    const hadSuspect = kimiPermissionSuspectTimers.size > 0;
-    if (!hadHold && !hadSuspect) return;
-    for (const { timer } of kimiPermissionHolds.values()) {
-      if (timer) clearTimeout(timer);
-    }
-    kimiPermissionHolds.clear();
-    for (const { timer } of kimiPermissionSuspectTimers.values()) clearTimeout(timer);
-    kimiPermissionSuspectTimers.clear();
-    if (typeof ctx.clearKimiNotifyBubbles === "function") ctx.clearKimiNotifyBubbles(undefined, "kimi-stop-all");
-    applyResolvedDisplayState();
-    return;
-  }
-  const cancelled = cancelPermissionSuspect(sessionId);
-  const existing = kimiPermissionHolds.get(sessionId);
-  if (existing) {
-    if (existing.timer) clearTimeout(existing.timer);
-    kimiPermissionHolds.delete(sessionId);
-    if (typeof ctx.clearKimiNotifyBubbles === "function") ctx.clearKimiNotifyBubbles(sessionId, "kimi-stop-session");
-    applyResolvedDisplayState();
-  } else if (cancelled) {
-    if (typeof ctx.clearKimiNotifyBubbles === "function") ctx.clearKimiNotifyBubbles(sessionId, "kimi-stop-suspect");
-    applyResolvedDisplayState();
-  }
-}
-
-// Full per-session teardown: cue + gate ledger. Used by turn-level events
-// (Stop/UserPromptSubmit/PermissionResult/Interrupt/…), SessionEnd, the
-// safety-cap timer, and session disposal — every path where the approval
-// context as a whole is gone and queued gates must not re-arm a cue later.
-function disposeKimiPermissionSession(sessionId) {
-  if (!sessionId) return;
-  kimiPermissionGateLedgers.delete(sessionId);
-  stopKimiPermissionPoll(sessionId);
-}
-
 function resolveDisplayState() {
   return resolveDisplayStateFromSessions(sessions, {
     statePriority: STATE_PRIORITY,
@@ -3426,30 +2865,6 @@ function formatElapsed(ms) {
 }
 
 // ── Do Not Disturb ──
-// Drops every Kimi hold + suspect timer WITHOUT triggering a state resolve.
-// Used by two "channel is no longer available" paths:
-//   1. enableDoNotDisturb — the DND permission dismiss helper has already
-//      dropped matching bubbles without answering for the user, but without
-//      this the lock would pin notification the moment DND is disabled.
-//   2. dismissPermissionsByAgent("kimi-cli") — when the user toggles off
-//      Kimi's permission UI from settings; symmetric to (1).
-// Intentionally does NOT call applyResolvedDisplayState — the callers are
-// mid-transition and will resolve the visible state themselves. Returns
-// `true` if anything was cleared so callers can trigger their own resolve.
-function disposeAllKimiPermissionState() {
-  kimiPermissionGateLedgers.clear();
-  const hadHold = kimiPermissionHolds.size > 0;
-  const hadSuspect = kimiPermissionSuspectTimers.size > 0;
-  if (!hadHold && !hadSuspect) return false;
-  for (const { timer } of kimiPermissionHolds.values()) {
-    if (timer) clearTimeout(timer);
-  }
-  kimiPermissionHolds.clear();
-  for (const { timer } of kimiPermissionSuspectTimers.values()) clearTimeout(timer);
-  kimiPermissionSuspectTimers.clear();
-  return true;
-}
-
 function enableDoNotDisturb() {
   if (ctx.doNotDisturb) return;
   ctx.doNotDisturb = true;
@@ -3458,7 +2873,6 @@ function enableDoNotDisturb() {
   if (typeof ctx.dismissPermissionsForDnd === "function") {
     ctx.dismissPermissionsForDnd();
   }
-  disposeAllKimiPermissionState();
   if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; pendingState = null; }
   if (autoReturnTimer) { clearTimeout(autoReturnTimer); autoReturnTimer = null; }
   // DND suppresses presentation, not observation. Pending completion
@@ -3521,13 +2935,6 @@ function cleanup() {
   if (eyeResendTimer) clearTimeout(eyeResendTimer);
   if (startupRecoveryTimer) clearTimeout(startupRecoveryTimer);
   stopWakePoll();
-  for (const { timer } of kimiPermissionHolds.values()) {
-    if (timer) clearTimeout(timer);
-  }
-  kimiPermissionHolds.clear();
-  for (const { timer } of kimiPermissionSuspectTimers.values()) clearTimeout(timer);
-  kimiPermissionSuspectTimers.clear();
-  kimiPermissionGateLedgers.clear();
   for (const id of [...codexExitProbes.keys()]) clearCodexExitProbe(id);
   stopStaleCleanup();
 }
@@ -3549,14 +2956,11 @@ return {
   clearClaudeStatuslineAuthority,
   updateAccountQuota,
   clearLocalClaudeQuota,
-  commitLocalKimiQuota,
-  clearLocalKimiQuota,
   getQuotaSourceCount,
   clearPermissionNotification,
   promoteCompletion,
   ackSessionCompletion,
   clearSessionsByAgent,
-  disposeAllKimiPermissionState,
   deriveSessionBadge,
   getCurrentState, getCurrentSvg, getCurrentHitBox, resolveHitBoxForSvg, getStartupRecoveryActive,
   sessions, STATE_PRIORITY, ONESHOT_STATES, SLEEP_SEQUENCE,

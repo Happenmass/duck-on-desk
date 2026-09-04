@@ -44,17 +44,8 @@ const TOOL_MATCH_ARRAY_MAX = 16;
 const TOOL_MATCH_OBJECT_KEYS_MAX = 32;
 const TOOL_MATCH_DEPTH_MAX = 6;
 const ASSISTANT_OUTPUT_CONTROL_RE = /[\u0000-\u0008\u000b\u000c\u000e-\u001F\u007F-\u009F]+/g;
-const CURSOR_VERSION_MAX = 128;
-
-function resolveReportingAgentId(payload) {
-  const cursorVersion = payload && typeof payload.cursor_version === "string"
-    ? payload.cursor_version.trim()
-    : "";
-  const isCursorCompatibilityHook =
-    cursorVersion.length > 0
-    && cursorVersion.length <= CURSOR_VERSION_MAX
-    && !/[\0\r\n]/.test(cursorVersion);
-  return isCursorCompatibilityHook ? "cursor-agent" : "claude-code";
+function resolveReportingAgentId() {
+  return "claude-code";
 }
 
 function normalizeTitle(value) {

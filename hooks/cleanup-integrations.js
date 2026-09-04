@@ -5,87 +5,27 @@ const os = require("os");
 const path = require("path");
 
 const { unregisterHooks: unregisterClaudeHooks, unregisterClaudeStatusline } = require("./install");
-const { unregisterGeminiHooks } = require("./gemini-install");
-const { unregisterAntigravityHooks, unregisterAntigravityStatusline } = require("./antigravity-install");
-const { unregisterCursorHooks } = require("./cursor-install");
-const { unregisterCopilotHooks } = require("./copilot-install");
-const { unregisterCodeBuddyHooks } = require("./codebuddy-install");
-const { unregisterKiroHooks } = require("./kiro-install");
-const { unregisterKimiHooks } = require("./kimi-install");
-const { unregisterQwenCodeHooks } = require("./qwen-code-install");
-const { unregisterZcodeHooks } = require("./zcode-install");
-const { unregisterCodewhaleHooks } = require("./codewhale-install");
 const {
   removeStableCodexHookLauncher,
   unregisterCodexCommandHooks,
 } = require("./codex-install-utils");
 const { unregisterOpencodePlugin } = require("./opencode-install");
-const { unregisterMimocodePlugin } = require("./mimocode-install");
 const { unregisterPiExtension } = require("./pi-install");
-const { unregisterOpenClawPlugin } = require("./openclaw-install");
-const { resolveHermesHome, unregisterHermesPlugin } = require("./hermes-install");
-const { unregisterQoderHooks } = require("./qoder-install");
-const { resolveReasonixConfigTargets, unregisterReasonixHooks } = require("./reasonix-install");
-const { unregisterQoderWorkHooks } = require("./qoderwork-install");
-const { unregisterQwenWorkHooks } = require("./qwenwork-install");
-const { unregisterWorkBuddyHooks } = require("./workbuddy-install");
-const { unregisterTraeCodeHooks } = require("./traecode-install");
-const { unregisterDeepSeekHarness } = require("./dsh-install");
 
 const CODEX_MARKERS = ["codex-hook.js", "codex-debug-hook.js"];
 
 const MANAGED_AGENT_IDS = Object.freeze([
   "claude-code",
-  "deepseek-harness",
-  "gemini-cli",
-  "antigravity-cli",
-  "cursor-agent",
-  "copilot-cli",
-  "codebuddy",
-  "kiro-cli",
-  "kimi-cli",
-  "qwen-code",
-  "zcode",
-  "codewhale",
   "codex",
   "opencode",
-  "mimocode",
   "pi",
-  "openclaw",
-  "hermes",
-  "qoder",
-  "reasonix",
-  "qoderwork",
-  "qwenwork",
-  "workbuddy",
-  "traecode",
 ]);
 
 const AGENT_DISPLAY_NAMES = Object.freeze({
   "claude-code": "Claude Code",
-  "deepseek-harness": "DeepSeek Harness",
-  "gemini-cli": "Gemini CLI",
-  "antigravity-cli": "Antigravity CLI",
-  "cursor-agent": "Cursor Agent",
-  "copilot-cli": "GitHub Copilot CLI",
-  codebuddy: "CodeBuddy",
-  workbuddy: "WorkBuddy",
-  "kiro-cli": "Kiro CLI",
-  "kimi-cli": "Kimi Code",
-  "qwen-code": "Qwen Code",
-  zcode: "ZCode",
-  codewhale: "CodeWhale",
   codex: "Codex CLI",
   opencode: "opencode",
-  mimocode: "MiMo Code",
   pi: "Pi",
-  openclaw: "OpenClaw",
-  hermes: "Hermes Agent",
-  qoder: "Qoder",
-  reasonix: "Reasonix",
-  qoderwork: "QoderWork",
-  traecode: "TraeCode",
-  qwenwork: "QwenWork",
 });
 
 function normalizeHomeDir(value) {
@@ -97,21 +37,6 @@ function buildTargetEnv(homeDir, options = {}) {
   const env = { ...((options.env && typeof options.env === "object") ? options.env : process.env) };
   env.HOME = homeDir;
   env.USERPROFILE = homeDir;
-  if (typeof options.hermesHome === "string" && options.hermesHome.trim()) {
-    env.HERMES_HOME = path.resolve(options.hermesHome);
-  } else if (options.ignoreInheritedHermesHome) {
-    delete env.HERMES_HOME;
-  }
-  if (typeof options.reasonixHome === "string" && options.reasonixHome.trim()) {
-    env.REASONIX_HOME = path.resolve(options.reasonixHome);
-  } else if (options.ignoreInheritedReasonixHome) {
-    delete env.REASONIX_HOME;
-  }
-  if (typeof options.dshHome === "string" && options.dshHome.trim()) {
-    env.DSH_HOME = path.resolve(options.dshHome);
-  } else if (options.ignoreInheritedDshHome) {
-    delete env.DSH_HOME;
-  }
   if ((options.platform || process.platform) === "win32") {
     env.LOCALAPPDATA = options.localAppData || path.join(homeDir, "AppData", "Local");
     env.APPDATA = options.appData || path.join(homeDir, "AppData", "Roaming");
@@ -119,31 +44,10 @@ function buildTargetEnv(homeDir, options = {}) {
   return env;
 }
 
-function resolveCopilotHomeForCleanup(homeDir, env, options = {}) {
-  if (typeof options.copilotHome === "string" && options.copilotHome.trim()) {
-    return options.copilotHome.trim();
-  }
-  if (env && typeof env.COPILOT_HOME === "string" && env.COPILOT_HOME.trim()) {
-    return env.COPILOT_HOME.trim();
-  }
-  return path.join(homeDir, ".copilot");
-}
-
 function buildCleanupOptionsForHome(homeDirInput, options = {}) {
   const explicitHomeDir = Boolean(homeDirInput || options.homeDir || options.userHome);
   const homeDir = normalizeHomeDir(homeDirInput || options.homeDir || options.userHome);
-  const explicitDshHome = typeof options.dshHome === "string" && options.dshHome.trim()
-    ? options.dshHome.trim()
-    : (options.env && typeof options.env.DSH_HOME === "string" && options.env.DSH_HOME.trim()
-      ? options.env.DSH_HOME.trim()
-      : null);
-  const env = buildTargetEnv(homeDir, {
-    ...options,
-    dshHome: explicitDshHome,
-    ignoreInheritedHermesHome: explicitHomeDir && !options.hermesHome,
-    ignoreInheritedReasonixHome: explicitHomeDir && !options.reasonixHome,
-    ignoreInheritedDshHome: explicitHomeDir && !explicitDshHome,
-  });
+  const env = buildTargetEnv(homeDir, options);
   const backup = options.backup !== false;
   const silent = options.silent !== false;
   const common = { backup, silent };
@@ -160,15 +64,6 @@ function buildCleanupOptionsForHome(homeDirInput, options = {}) {
     ? env.CODEX_HOME.trim()
     : null;
   const codexDir = explicitCodexHome || inheritedCodexHome || path.join(homeDir, ".codex");
-  const copilotHome = resolveCopilotHomeForCleanup(homeDir, env, options);
-  const openClawStateDir = options.openClawStateDir
-    || env.OPENCLAW_STATE_DIR
-    || path.join(homeDir, ".openclaw");
-  const openClawConfigPath = options.openClawConfigPath
-    || env.OPENCLAW_CONFIG_PATH
-    || path.join(openClawStateDir, "openclaw.json");
-  const hermesHome = options.hermesHome
-    || resolveHermesHome({ homeDir, env, platform: options.platform || process.platform });
 
   return {
     homeDir,
@@ -178,59 +73,6 @@ function buildCleanupOptionsForHome(homeDirInput, options = {}) {
       "claude-code": {
         ...common,
         settingsPath: path.join(homeDir, ".claude", "settings.json"),
-      },
-      "deepseek-harness": {
-        ...common,
-        homeDir,
-        env,
-        dshHome: env.DSH_HOME || path.join(homeDir, ".dsh"),
-      },
-      "gemini-cli": {
-        ...common,
-        settingsPath: path.join(homeDir, ".gemini", "settings.json"),
-      },
-      "antigravity-cli": {
-        ...common,
-        configPath: path.join(homeDir, ".gemini", "config", "hooks.json"),
-        settingsPath: path.join(homeDir, ".gemini", "antigravity-cli", "settings.json"),
-      },
-      "cursor-agent": {
-        ...common,
-        hooksPath: path.join(homeDir, ".cursor", "hooks.json"),
-      },
-      "copilot-cli": {
-        ...common,
-        copilotHome,
-        env,
-        hooksPath: path.join(copilotHome, "hooks", "hooks.json"),
-      },
-      codebuddy: {
-        ...common,
-        settingsPath: path.join(homeDir, ".codebuddy", "settings.json"),
-      },
-      "kiro-cli": {
-        ...common,
-        agentsDir: path.join(homeDir, ".kiro", "agents"),
-      },
-      "kimi-cli": {
-        ...common,
-        // #563: clean both generations — legacy Kimi CLI and Kimi Code.
-        settingsPaths: [
-          path.join(homeDir, ".kimi", "config.toml"),
-          path.join(homeDir, ".kimi-code", "config.toml"),
-        ],
-      },
-      "qwen-code": {
-        ...common,
-        settingsPath: path.join(homeDir, ".qwen", "settings.json"),
-      },
-      zcode: {
-        ...common,
-        settingsPath: path.join(homeDir, ".zcode", "cli", "config.json"),
-      },
-      codewhale: {
-        ...common,
-        configPath: path.join(homeDir, ".codewhale", "config.toml"),
       },
       codex: {
         ...common,
@@ -243,74 +85,11 @@ function buildCleanupOptionsForHome(homeDirInput, options = {}) {
         ...common,
         configPath: path.join(homeDir, ".config", "opencode", "opencode.json"),
       },
-      mimocode: {
-        ...common,
-        configPath: path.join(homeDir, ".config", "mimocode", "mimocode.jsonc"),
-      },
       pi: {
         ...common,
         parentDir: path.join(homeDir, ".pi", "agent"),
       },
-      openclaw: {
-        ...common,
-        env,
-        stateDir: openClawStateDir,
-        configPath: openClawConfigPath,
-        useCliFallback: false,
-      },
-      hermes: {
-        ...common,
-        env,
-        homeDir,
-        hermesHome,
-        hermesCommand: options.hermesCommand,
-      },
-      qoder: {
-        ...common,
-        settingsPath: path.join(homeDir, ".qoder", "settings.json"),
-      },
-      reasonix: {
-        ...common,
-        settingsPaths: resolveReasonixConfigTargets({
-          env,
-          platform: options.platform || process.platform,
-          userHomeDir: homeDir,
-        }).map((target) => target.configPath),
-      },
-      qoderwork: {
-        ...common,
-        settingsPath: path.join(homeDir, ".qoderwork", "settings.json"),
-      },
-      // QwenWork's user-data home is ~/.QwenWorkCN (case-preserving on disk),
-      // NOT the ~/.qwenwork path its hooks docs mention.
-      qwenwork: {
-        ...common,
-        settingsPath: path.join(homeDir, ".QwenWorkCN", "settings.json"),
-      },
-      workbuddy: {
-        ...common,
-        settingsPaths: [
-          path.join(homeDir, ".workbuddy-ai", "settings.json"),
-          path.join(homeDir, ".workbuddy", "settings.json"),
-        ],
-      },
-      traecode: {
-        ...common,
-        hooksPath: path.join(homeDir, ".trae-cn", "hooks.json"),
-      },
     },
-  };
-}
-
-function unregisterAntigravityIntegration(options = {}) {
-  const hooks = unregisterAntigravityHooks(options);
-  const statusline = unregisterAntigravityStatusline(options);
-  return {
-    removed: removedCountFromResult(hooks) + removedCountFromResult(statusline),
-    changed: changedFromResult(hooks) || changedFromResult(statusline),
-    backupPaths: [...backupPathsFromResult(hooks), ...backupPathsFromResult(statusline)],
-    hooks,
-    statusline,
   };
 }
 
@@ -338,29 +117,9 @@ function unregisterCodexIntegration(options = {}) {
 
 const AGENT_CLEANERS = Object.freeze({
   "claude-code": unregisterClaudeIntegration,
-  "deepseek-harness": unregisterDeepSeekHarness,
-  "gemini-cli": unregisterGeminiHooks,
-  "antigravity-cli": unregisterAntigravityIntegration,
-  "cursor-agent": unregisterCursorHooks,
-  "copilot-cli": unregisterCopilotHooks,
-  codebuddy: unregisterCodeBuddyHooks,
-  "kiro-cli": unregisterKiroHooks,
-  "kimi-cli": unregisterKimiHooks,
-  "qwen-code": unregisterQwenCodeHooks,
-  zcode: unregisterZcodeHooks,
-  codewhale: unregisterCodewhaleHooks,
   codex: unregisterCodexIntegration,
   opencode: unregisterOpencodePlugin,
-  mimocode: unregisterMimocodePlugin,
   pi: unregisterPiExtension,
-  openclaw: unregisterOpenClawPlugin,
-  hermes: unregisterHermesPlugin,
-  qoder: unregisterQoderHooks,
-  reasonix: unregisterReasonixHooks,
-  qoderwork: unregisterQoderWorkHooks,
-  qwenwork: unregisterQwenWorkHooks,
-  workbuddy: unregisterWorkBuddyHooks,
-  traecode: unregisterTraeCodeHooks,
 });
 
 function removedCountFromResult(result) {
@@ -395,11 +154,7 @@ function warningsFromResult(agentId, result) {
 }
 
 function notesFromResult(agentId, result) {
-  const notes = [];
-  if (agentId === "kiro-cli" && result && result.retainedClawdAgent) {
-    notes.push("Kiro clawd.json was retained; only Clawd hook entries were removed.");
-  }
-  return notes;
+  return [];
 }
 
 async function cleanupIntegrations(options = {}) {

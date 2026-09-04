@@ -39,7 +39,7 @@ describe("pet-attached quota ring", () => {
     );
     // RING_PROVIDERS keys are "<name>Quota"; the CSS classes are pv-<key>.
     const providerKeys = [...quotaRingRenderer.matchAll(/key:\s*"(\w+Quota)"/g)].map((m) => m[1]);
-    assert.ok(providerKeys.length >= 3, `expected the ring providers, got ${providerKeys}`);
+    assert.ok(providerKeys.length >= 2, `expected the ring providers, got ${providerKeys}`);
     const valueOf = (name, slot) =>
       (quotaRingHtml.match(new RegExp(`--id-${name}-${slot}\\s*:\\s*(#[0-9a-fA-F]{3,8})`)) || [])[1];
     for (const key of providerKeys) {
@@ -273,7 +273,7 @@ describe("quota ring glyph zoom follows the exporter's artwork ratio", () => {
     assert.ok(block, "could not locate the quotaAgentIcons block");
     const mapping = [...block[0].matchAll(/(\w+Quota):\s*iconFor\("([\w-]+)"\)/g)]
       .map((m) => ({ providerKey: m[1], agentId: m[2] }));
-    assert.ok(mapping.length >= 3, `expected the ring providers, got ${JSON.stringify(mapping)}`);
+    assert.ok(mapping.length >= 2, `expected the ring providers, got ${JSON.stringify(mapping)}`);
 
     const zoomBlock = quotaRingRenderer.match(/GLYPH_ZOOM_BY_PROVIDER = \{[\s\S]*?\}/);
     assert.ok(zoomBlock, "no GLYPH_ZOOM_BY_PROVIDER");
@@ -310,19 +310,6 @@ describe("quota ring glyph zoom follows the exporter's artwork ratio", () => {
           `${providerKey} (${agentId}) is not contrast-tiled, so its glyph fills 56 of 64`
         );
       }
-    }
-  });
-});
-
-describe("Kimi quota freshness policy mirrors across browser renderers", () => {
-  const dashboardRenderer = fs.readFileSync(
-    path.join(__dirname, "..", "src", "dashboard-renderer.js"), "utf8"
-  );
-
-  it("keeps Kimi at seven minutes and every other provider at five", () => {
-    for (const source of [quotaRingRenderer, dashboardRenderer]) {
-      assert.match(source, /DEFAULT_QUOTA_STALE_AFTER_MS\s*=\s*5\s*\*\s*60\s*\*\s*1000/);
-      assert.match(source, /PROVIDER_STALE_AFTER_MS\s*=\s*Object\.freeze\(\{[\s\S]*?kimiQuota:\s*7\s*\*\s*60\s*\*\s*1000/);
     }
   });
 });

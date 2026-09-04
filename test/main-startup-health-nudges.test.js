@@ -38,14 +38,3 @@ test("prefs read-failure startup notice keeps the fail-closed condition and open
   assert.match(body, /"prefsRecoveryBackupFailedNudgeBody"/);
   assert.match(body, /settingsWindowRuntime\.open\(\)/);
 });
-
-test("Kimi quota reconciliation starts only after visible UI and stays non-blocking", () => {
-  const readyStart = mainSource.indexOf("app.whenReady().then(async () => {");
-  const beforeQuit = mainSource.indexOf('app.on("before-quit"', readyStart);
-  const startup = mainSource.slice(readyStart, beforeQuit);
-  const createIndex = startup.indexOf("createWindow();");
-  const initializeIndex = startup.indexOf("void _kimiQuotaRuntime.initialize().catch");
-  assert.ok(createIndex >= 0, "startup should create its visible window");
-  assert.ok(initializeIndex > createIndex, "Kimi reconciliation must start after createWindow");
-  assert.doesNotMatch(startup.slice(0, createIndex), /await _kimiQuotaRuntime\.initialize\(\)/);
-});

@@ -188,24 +188,6 @@
     lines.push(`${label}: ${value}`);
   }
 
-  function formatKiroScan(scan) {
-    if (!scan || typeof scan !== "object") return null;
-    const parts = [];
-    if (Array.isArray(scan.fullyValidFiles) && scan.fullyValidFiles.length) {
-      parts.push(`valid=${scan.fullyValidFiles.join(", ")}`);
-    }
-    if (Array.isArray(scan.brokenFiles) && scan.brokenFiles.length) {
-      parts.push(`broken=${scan.brokenFiles.join(", ")}`);
-    }
-    if (Array.isArray(scan.corruptFiles) && scan.corruptFiles.length) {
-      parts.push(`corrupt=${scan.corruptFiles.join(", ")}`);
-    }
-    if (Array.isArray(scan.noMarkerFiles) && scan.noMarkerFiles.length) {
-      parts.push(`no-marker=${scan.noMarkerFiles.length}`);
-    }
-    return parts.length ? parts.join("; ") : null;
-  }
-
   function agentDetailText(detail) {
     if (!detail || typeof detail !== "object") return "";
     const lines = [];
@@ -223,9 +205,8 @@
       const suffix = detail.codexHookTrust.detail ? ` (${detail.codexHookTrust.detail})` : "";
       lines.push(`${key}=${value}${suffix}`);
     }
-    pushIfValue(lines, "kiro", formatKiroScan(detail.kiroScan));
     pushIfValue(lines, "hook issue", detail.hookCommandIssue);
-    // Agent-neutral labels: mimocode shares these fields (R9 F3).
+    // Agent-neutral labels.
     pushIfValue(lines, "plugin issue", detail.opencodeEntryIssue);
     pushIfValue(lines, "plugin entry", detail.opencodeEntry);
     return lines.filter(Boolean).join("; ");

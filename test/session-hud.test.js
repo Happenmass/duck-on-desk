@@ -374,21 +374,6 @@ describe("session HUD layout", () => {
     assert.strictEqual(countQuotaCoins(snapshot, false), 0, "hudShowQuota off hides the ring");
   });
 
-  it("counts Antigravity third-party-only buckets for ring eligibility", () => {
-    const snapshot = {
-      sessions: [],
-      accountQuota: [{
-        host: "remote",
-        antigravityQuota: {
-          group: { thirdPartyWeekly: { usedPercent: 52, resetAt: Date.now() + 3600000 } },
-          updatedAt: 1,
-        },
-      }],
-    };
-    assert.strictEqual(countQuotaCoins(snapshot, true), 1);
-    assert.strictEqual(evaluateBaseEligible({ snapshot, showQuota: true }), true);
-  });
-
   it("does not make the Orbit eligible for Dashboard-only Spark quota", () => {
     const snapshot = {
       sessions: [],

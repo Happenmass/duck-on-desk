@@ -265,20 +265,9 @@ function createAgentRuntimeMain(options = {}) {
 
   function dismissPermissionsByAgent(agentId, options) {
     const perm = getPermissionRuntime();
-    const state = getStateRuntime();
-    const removed = perm && typeof perm.dismissPermissionsByAgent === "function"
+    return perm && typeof perm.dismissPermissionsByAgent === "function"
       ? perm.dismissPermissionsByAgent(agentId, options)
       : 0;
-    // Kimi keeps a state-side permission hold for passive notifications; when
-    // an agent is disabled, dismissing the bubble must release that hold too.
-    if (agentId === "kimi-cli" && state && typeof state.disposeAllKimiPermissionState === "function") {
-      const disposed = state.disposeAllKimiPermissionState();
-      if (disposed && typeof state.resolveDisplayState === "function" && typeof state.setState === "function") {
-        const resolved = state.resolveDisplayState();
-        state.setState(resolved, state.getSvgOverride ? state.getSvgOverride(resolved) : undefined);
-      }
-    }
-    return removed;
   }
 
   function startCodexLogMonitor() {

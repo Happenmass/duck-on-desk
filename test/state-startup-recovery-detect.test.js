@@ -76,66 +76,20 @@ describe("detectRunningAgentProcesses() agent coverage", () => {
 
     assert.strictEqual(found, true);
     assert.strictEqual(seenFile, "powershell.exe");
-    assert.match(seenScript, /'agy\.exe'/);
-    assert.match(seenScript, /'kimi\.exe'/);
-    assert.match(seenScript, /'codewhale\.exe'/);
-    assert.match(seenScript, /'qwen\.exe'/);
-    assert.match(seenScript, /'mimo\.exe'/);
+    assert.match(seenScript, /'claude\.exe'/);
+    assert.match(seenScript, /'codex\.exe'/);
+    assert.match(seenScript, /'opencode\.exe'/);
     assert.match(seenScript, /'pi\.exe'/);
-    assert.match(seenScript, /'qodercli\.exe'/);
-    assert.match(seenScript, /'qoder-cli\.exe'/);
-    // Conservative: only the Qoder CLI counts as active agent work. The IDE
-    // process (qoder.exe) must NOT trigger startup recovery.
-    assert.doesNotMatch(seenScript, /'qoder\.exe'/);
-    assert.doesNotMatch(seenScript, /'cursor\.exe'/);
-    assert.doesNotMatch(seenScript, /'qoderwork\.exe'/);
-    assert.doesNotMatch(seenScript, /'workbuddy\.exe'/);
     assert.match(seenScript, /Get-CimInstance Win32_Process/);
     assert.match(seenScript, /-Filter/);
     assert.doesNotMatch(seenScript, /Win32_Process \| Where-Object/);
     assert.match(
       seenScript,
-      /\$nodeNeedles = @\('claude-code','codex','copilot','codebuddy','kimi-code','zcode\.cjs'\)/
+      /\$nodeNeedles = @\('claude-code','codex'\)/
     );
-    // zcode.cjs is matched against the ZCode.exe desktop shell (not node.exe),
-    // so the per-needle host-name array carries zcode.exe in the same position.
     assert.match(
       seenScript,
-      /\$nodeNeedleNames = @\('node\.exe','node\.exe','node\.exe','node\.exe','node\.exe','zcode\.exe'\)/
-    );
-  });
-
-  it("emits a name+cmdline joint filter for the ZCode Windows shell", async () => {
-    // ZCode's Windows runtime is the desktop shell ZCode.exe running zcode.cjs;
-    // only the cmdline token disambiguates it. The WQL must pair the two, not
-    // match the bare shell (which would mis-credit the always-running app).
-    api.cleanup();
-    api = require("../src/state")(makeCtx({
-      hasAnyEnabledAgent: () => true,
-      isAgentEnabled: (agentId) => agentId === "zcode",
-    }));
-    let seenScript = "";
-    childProcess.execFile = (file, args, opts, cb) => {
-      seenScript = args[args.length - 1];
-      cb(null, "12345");
-    };
-    Object.defineProperty(process, "platform", { value: "win32" });
-
-    const found = await new Promise((resolve) => {
-      api.detectRunningAgentProcesses((result) => resolve(result));
-    });
-
-    assert.strictEqual(found, true);
-    // No pure-name entry (startupRecoveryProcessNames.win is []), so $names is
-    // empty and the only filter is the joint clause built from these arrays.
-    assert.match(seenScript, /\$names = @\(\)/);
-    assert.match(seenScript, /\$nodeNeedles = @\('zcode\.cjs'\)/);
-    assert.match(seenScript, /\$nodeNeedleNames = @\('zcode\.exe'\)/);
-    // The filter generator pairs each needle with its host name (here zcode.exe,
-    // NOT the default node.exe) via a per-index loop.
-    assert.match(
-      seenScript,
-      /\$nodeFilters = for \(\$i = 0; \$i -lt \$nodeNeedles\.Length; \$i\+\+\) \{ "\(Name='\$\(\$nodeNeedleNames\[\$i\]\)' AND CommandLine LIKE '%\$\(\$nodeNeedles\[\$i\]\)%'\)" \}/
+      /\$nodeNeedleNames = @\('node\.exe','node\.exe'\)/
     );
   });
 
@@ -152,25 +106,19 @@ describe("detectRunningAgentProcesses() agent coverage", () => {
     });
 
     assert.strictEqual(found, true);
-    assert.match(seenCommand, /claude-code\|codex\|copilot\|codebuddy\|kimi-code\|zcode\\\.cjs/);
-    assert.match(seenCommand, /pgrep -x 'agy'/);
-    assert.match(seenCommand, /pgrep -x 'codewhale'/);
-    assert.match(seenCommand, /pgrep -x 'qwen'/);
-    assert.match(seenCommand, /pgrep -x 'mimo'/);
+    assert.match(seenCommand, /claude-code\|codex/);
+    assert.match(seenCommand, /pgrep -x 'claude'/);
+    assert.match(seenCommand, /pgrep -x 'codex'/);
+    assert.match(seenCommand, /pgrep -x 'opencode'/);
     assert.match(seenCommand, /pi-coding-agent/);
-    assert.match(seenCommand, /pgrep -x 'qodercli'/);
-    assert.match(seenCommand, /pgrep -x 'qoder-cli'/);
     assert.doesNotMatch(seenCommand, /pgrep -x 'pi'/);
-    assert.doesNotMatch(seenCommand, /pgrep -x '[Cc]ursor'/);
-    assert.doesNotMatch(seenCommand, /pgrep -x 'QoderWork'/);
-    assert.doesNotMatch(seenCommand, /WorkBuddy/);
   });
 
   it("filters the process query to enabled agents", async () => {
     api.cleanup();
     api = require("../src/state")(makeCtx({
       hasAnyEnabledAgent: () => true,
-      isAgentEnabled: (agentId) => agentId === "qoder",
+      isAgentEnabled: (agentId) => agentId === "opencode",
     }));
     let seenScript = "";
     childProcess.execFile = (file, args, opts, cb) => {
@@ -184,9 +132,7 @@ describe("detectRunningAgentProcesses() agent coverage", () => {
     });
 
     assert.strictEqual(found, true);
-    assert.match(seenScript, /'qodercli\.exe'/);
-    assert.match(seenScript, /'qoder-cli\.exe'/);
-    assert.doesNotMatch(seenScript, /'qoder\.exe'/);
+    assert.match(seenScript, /'opencode\.exe'/);
     assert.doesNotMatch(seenScript, /'claude\.exe'/);
     assert.match(seenScript, /\$nodeNeedles = @\(\)/);
   });

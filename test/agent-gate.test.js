@@ -77,7 +77,7 @@ describe("isAgentIntegrationInstalled", () => {
     const snap = prefs.getDefaults();
     assert.strictEqual(isAgentIntegrationInstalled(snap, "claude-code"), true);
     assert.strictEqual(isAgentIntegrationInstalled(snap, "codex"), true);
-    assert.strictEqual(isAgentIntegrationInstalled(snap, "copilot-cli"), false);
+    assert.strictEqual(isAgentIntegrationInstalled(snap, "opencode"), false);
   });
 
   it("combines installed intent and enabled for startup sync", () => {

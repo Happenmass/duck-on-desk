@@ -293,7 +293,7 @@ test("known agent colors match the approved palette and fallbacks are determinis
   const color = context.ClawdSettingsTabRecap.__test.agentColorToken;
   assert.equal(color("claude-code"), "var(--recap-agent-claude)");
   assert.equal(color("codex"), "var(--recap-agent-codex)");
-  assert.equal(color("gemini-cli"), "var(--recap-agent-gemini)");
-  assert.equal(color("reasonix"), color("reasonix"));
-  assert.match(color("reasonix"), /^var\(--recap-agent-fallback-\d+\)$/);
+  assert.equal(color("opencode"), "var(--recap-agent-opencode)");
+  assert.equal(color("unknown-agent"), color("unknown-agent"));
+  assert.match(color("unknown-agent"), /^var\(--recap-agent-fallback-\d+\)$/);
 });

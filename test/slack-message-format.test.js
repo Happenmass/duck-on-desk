@@ -141,27 +141,6 @@ test("the completion fallback text carries no raw folder either", () => {
   assert.ok(msg.text.includes("&lt;!channel&gt;"));
 });
 
-test("a real snapshot entry suppresses an internal workspace id end to end", () => {
-  const opaqueId = "mqgw60jiigjsjcid";
-  const snapshot = buildSessionSnapshot(new Map([["qwenwork:abc123", {
-    state: "idle",
-    updatedAt: 1,
-    recentEvents: [],
-    cwd: `/Users/me/.QwenWorkCN/workspace/${opaqueId}`,
-    agentId: "qwenwork",
-  }]]));
-  const entry = {
-    ...snapshot.sessions[0],
-    badge: "done",
-  };
-  assert.equal(entry.displayFolder, "", "snapshot owns the suppression rule");
-
-  const msg = fmt.buildCompletionMessage(entry, { lang: "en" });
-
-  assert.ok(!JSON.stringify(msg).includes(opaqueId),
-    "empty displayFolder must not fall back to raw cwd");
-});
-
 test("completion uses the snapshot display tag instead of raw or canonical id prefixes", () => {
   const msg = fmt.buildCompletionMessage(
     {

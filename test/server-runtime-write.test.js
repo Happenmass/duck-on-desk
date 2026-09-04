@@ -89,9 +89,6 @@ describe("#681 — startHttpServer always settles, however the runtime write goe
       assert.strictEqual(capability.version, 1);
       assert.match(capability.instanceGeneration, /^[A-Za-z0-9_-]+$/);
       assert.strictEqual(capability.agents.codex, "b1a-authoritative");
-      for (const agentId of ["cursor-agent", "kiro-cli", "codebuddy", "reasonix"]) {
-        assert.strictEqual(capability.agents[agentId], "legacy");
-      }
     } finally { h.restore(); }
   });
 
@@ -99,15 +96,13 @@ describe("#681 — startHttpServer always settles, however the runtime write goe
     const unavailableResolver = () => ({ status: "unavailable", reason: "ffi-unavailable" });
     unavailableResolver.available = false;
     const h = makeServer({
-      windowsProcessChainModes: { codex: "b1a-authoritative", reasonix: "shadow" },
+      windowsProcessChainModes: { codex: "b1a-authoritative" },
       windowsProcessMetadataResolver: unavailableResolver,
     });
     try {
       await h.api.startHttpServer();
       const modes = h.runtimeWrites[0][1].windowsProcessChain.agents;
       assert.strictEqual(modes.codex, "legacy");
-      assert.strictEqual(modes.reasonix, "legacy");
-      assert.strictEqual(modes["cursor-agent"], "legacy");
     } finally { h.restore(); }
   });
 

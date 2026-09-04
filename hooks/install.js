@@ -1883,7 +1883,7 @@ function readChainSidecarStatusLine(sidecarPath) {
 // time. We only ever take that slot when it is empty or already ours, and
 // unregister only clears it when the command still carries our marker. A
 // user's own (or a third-party) statusline script is never touched. Mirrors
-// hooks/antigravity-install.js registerAntigravityStatusline.
+// the same statusline-slot contract every installer follows.
 function registerClaudeStatusline(options = {}) {
   const homeDir = options.homeDir || os.homedir();
   const settingsPath = resolveClaudeSettingsPath({ ...options, homeDir });

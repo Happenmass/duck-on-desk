@@ -36,22 +36,6 @@ function isLocalCodexDesktopIdleSession(session) {
     && isCodexDesktopOriginator(session.codexOriginator);
 }
 
-function isLocalZcodeDesktopIdleSession(session) {
-  return !!session
-    && session.agentId === "zcode"
-    && !session.host
-    && !session.headless
-    && session.state === "idle";
-}
-
-function isLocalTraeDesktopIdleSession(session) {
-  return !!session
-    && session.agentId === "traecode"
-    && !session.host
-    && !session.headless
-    && session.state === "idle";
-}
-
 function getStaleSessionDecision(session, options = {}) {
   const now = options.now;
   const config = options.staleConfig || {};
@@ -115,30 +99,6 @@ function getStaleSessionDecision(session, options = {}) {
     && isLocalCodexDesktopIdleSession(session)
   ) {
     return { action: "delete", reason: "codex-desktop-idle-timeout" };
-  }
-
-  // ZCode desktop conversations have no SessionEnd event and can share the
-  // app's long-lived app-server PID. Once source_pid is correctly anchored to
-  // ZCode.exe, process liveness alone cannot retire an individual closed
-  // conversation, so apply the same configured idle cutoff as Codex Desktop.
-  if (
-    sessionStaleMs > 0
-    && age > sessionStaleMs
-    && isLocalZcodeDesktopIdleSession(session)
-  ) {
-    return { action: "delete", reason: "zcode-desktop-idle-timeout" };
-  }
-
-  // TraeCode conversations have no SessionEnd event and share the IDE's
-  // long-lived process. A live IDE process therefore cannot keep an individual
-  // closed conversation alive forever — apply the same configured idle cutoff
-  // used for Codex Desktop and ZCode.
-  if (
-    sessionStaleMs > 0
-    && age > sessionStaleMs
-    && isLocalTraeDesktopIdleSession(session)
-  ) {
-    return { action: "delete", reason: "traecode-desktop-idle-timeout" };
   }
 
   // NOTE: requiresCompletionAck does NOT hold a session out of stale cleanup.
@@ -205,7 +165,5 @@ module.exports = {
   isWorkingLikeState,
   isLocalCodexWorkingLikeSession,
   isLocalOpencodeWorkingLikeSession,
-  isLocalZcodeDesktopIdleSession,
-  isLocalTraeDesktopIdleSession,
   getStaleSessionDecision,
 };

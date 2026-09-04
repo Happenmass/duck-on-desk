@@ -1,7 +1,0 @@
-# Clawd discovers the active localhost port from ~/.clawd/runtime.json and
-# verifies the server identity. No fixed port or remote URL is configurable.
-
-- insert:
-    - id: clawd-bridge
-      name: '@dsh-external/dsh-clawd-bridge'
-      config: {}

@@ -80,18 +80,6 @@ describe("quota ring display mode persistence", () => {
   });
 });
 
-describe("Kimi quota collection opt-in", () => {
-  it("persists only through its command path", async () => {
-    const prefsPath = makeTempPath();
-    const ctrl = createSettingsController({ prefsPath });
-    const enabled = await ctrl.applyCommand("setKimiQuotaCollectionEnabled", { enabled: true });
-    assert.strictEqual(enabled.status, "ok");
-    assert.strictEqual(ctrl.get("kimiQuotaCollectionEnabled"), true);
-    const relaunched = createSettingsController({ prefsPath });
-    assert.strictEqual(relaunched.get("kimiQuotaCollectionEnabled"), true);
-  });
-});
-
 describe("permission automation safe startup persistence", () => {
   it("keeps off across a relaunch", async () => {
     const p = makeTempPath();
@@ -193,7 +181,6 @@ describe("permission automation safe startup persistence", () => {
       ctrl.applyBulk({ permissionAutomationAutoToolsWarningDismissed: true }),
       ctrl.hydrate({ permissionAutomationUnattendedWarningDismissed: true }),
       ctrl.applyUpdate("autoApproveAllPermissions", true),
-      ctrl.applyUpdate("kimiQuotaCollectionEnabled", true),
     ];
     for (const result of cases) {
       assert.strictEqual((await result).status, "error");
@@ -209,7 +196,6 @@ describe("permission automation safe startup persistence", () => {
       false
     );
     assert.strictEqual(ctrl.get("autoApproveAllPermissions"), false);
-    assert.strictEqual(ctrl.get("kimiQuotaCollectionEnabled"), false);
   });
 });
 
@@ -1499,7 +1485,7 @@ describe("unreadable prefs safe mode", () => {
       version: prefs.CURRENT_VERSION,
       lang: "en",
       agents: {
-        "qwen-code": {
+        opencode: {
           integrationInstalled: false,
           enabled: false,
         },
@@ -1533,7 +1519,7 @@ describe("unreadable prefs safe mode", () => {
     assert.strictEqual(bulk.code, "prefs-read-failure");
 
     const command = await ctrl.applyCommand("installAgentIntegration", {
-      agentId: "qwen-code",
+      agentId: "opencode",
     });
     assert.strictEqual(command.status, "error");
     assert.strictEqual(command.code, "prefs-read-failure");
@@ -1541,7 +1527,7 @@ describe("unreadable prefs safe mode", () => {
     assert.deepStrictEqual(calls, [], "safe mode must stop external effects before they start");
     assert.strictEqual(ctrl.get("lang"), "en");
     assert.strictEqual(ctrl.get("openAtLogin"), false);
-    assert.strictEqual(ctrl.get("agents")["qwen-code"].integrationInstalled, false);
+    assert.strictEqual(ctrl.get("agents").opencode.integrationInstalled, false);
     assert.strictEqual(fs.readFileSync(p, "utf8"), original);
   });
 

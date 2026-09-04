@@ -63,7 +63,6 @@ const REMOTE_IDENTITY_STEP_NAMES = Object.freeze([
   "hookFiles",
   "installClaude",
   "installCodex",
-  "installCopilot",
   "claudePermission",
   "codexMonitor",
 ]);
@@ -247,7 +246,7 @@ function sanitizeIsolatedRuntime(raw) {
     return null;
   }
   const capabilities = {};
-  for (const name of ["claude", "codex", "copilot"]) {
+  for (const name of ["claude", "codex"]) {
     const entry = raw.capabilities[name];
     if (!entry || typeof entry !== "object") return null;
     const clean = {

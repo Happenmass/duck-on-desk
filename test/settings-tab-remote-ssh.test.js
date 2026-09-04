@@ -59,7 +59,6 @@ test("settings-i18n.js: all language packs include remote-ssh keys", () => {
     "remoteSshStatus_connecting",
     "remoteSshStatus_connected",
     "remoteSshStatus_failed",
-    "remoteSshStep_install-copilot",
     "remoteSshErrForwardRetrying",
     "remoteSshErrForwardFailed",
     "remoteSshErrSecureIdentityMissing",

@@ -20,8 +20,8 @@
 //   { profileId, step, status: "start"|"ok"|"fail", message? }
 //
 // Steps in order: verify → remote-shell → mkdir → check-node → scp →
-// host-prefix → install-claude → install-codex → install-copilot
-// (last three are best-effort — failures don't abort).
+// host-prefix → install-claude → install-codex
+// (last two are best-effort — failures don't abort).
 //
 // remote-shell aborts the deploy when the remote default shell is cmd.exe:
 // every later step would fail anyway (`mkdir -p`, `~/...` expansion, the
@@ -60,7 +60,6 @@ const HOOK_FILES = [
   "shared-process.js",
   "pid-cache.js",
   "context-usage.js",
-  "antigravity-context-usage.js",
   "claude-rate-limits.js",
   "claude-statusline.js",
   "codex-rate-limits.js",
@@ -80,15 +79,12 @@ const HOOK_FILES = [
   "codex-remote-monitor.js",
   "codex-session-index.js",
   "codex-subagent-fields.js",
-  "copilot-hook.js",
-  "copilot-install.js",
 ];
 const ISOLATED_CLI_MINIMUMS = Object.freeze({
-  // Claude has a reviewed baseline in plan v8. Codex/Copilot stay fail-closed
+  // Claude has a reviewed baseline in plan v8. Codex stays fail-closed
   // until the real CLI matrix establishes supported minimums.
   claude: Object.freeze({ major: 2, minor: 1, patch: 211 }),
   codex: null,
-  copilot: null,
 });
 const WRAPPER_EVIDENCE_VERSION = "clawd-wrapper-evidence-v1";
 
@@ -466,22 +462,6 @@ async function legacyDeploy({ profile, runtime, deps = {} }) {
     }
   }
 
-  // 7. ~/.claude/hooks/copilot-install.js --remote — Copilot CLI hook registration.
-  // Best-effort: silently degrades when Copilot CLI is not installed remotely
-  // (the installer skips and exits 0 when ~/.copilot/ is missing).
-  progress("install-copilot", "start");
-  {
-    const args = buildSshArgs(profile).concat([
-      buildRemoteHookNodeCommand(remoteNode, "copilot-install.js", ["--remote"]),
-    ]);
-    const r = await spawnAndWait(spawn, "ssh", args, { timeoutMs: 60000, runtime });
-    if (r.code !== 0) {
-      progress("install-copilot", "fail", summarizeStderr(r.stderr) || `non-zero exit ${formatExit(r)}`);
-    } else {
-      progress("install-copilot", "ok");
-    }
-  }
-
   return { ok: true, remoteNode: remoteNodeInfo };
 }
 
@@ -651,15 +631,12 @@ function buildOwnershipPreflightScript({ profile, layout, installId }) {
   const configTracePaths = [
     layout.claudeSettingsFile,
     path.posix.join(layout.codexHome, "hooks.json"),
-    path.posix.join(layout.copilotHome, "hooks", "hooks.json"),
-    path.posix.join(layout.copilotHome, "settings.json"),
   ];
   const managedConfigMarkers = [
     "clawd-hook.js",
     "auto-start.js",
     "claude-statusline.js",
     "codex-hook.js",
-    "copilot-hook.js",
   ];
   return [
     "const fs=require('fs');",
@@ -681,7 +658,7 @@ function buildOwnershipPreflightScript({ profile, layout, installId }) {
       + (layout.legacyMonitorPidFile
         ? `fs.existsSync(${JSON.stringify(layout.legacyMonitorPidFile)})`
         : "false")
-      + ",claudePresent:fs.existsSync(" + JSON.stringify(layout.claudeConfigDir) + "),codexPresent:fs.existsSync(" + JSON.stringify(layout.codexHome) + "),copilotPresent:fs.existsSync(" + JSON.stringify(layout.copilotHome) + ")}));",
+      + ",claudePresent:fs.existsSync(" + JSON.stringify(layout.claudeConfigDir) + "),codexPresent:fs.existsSync(" + JSON.stringify(layout.codexHome) + ")}));",
   ].join("");
 }
 
@@ -785,7 +762,6 @@ function buildRemoteInstallerEnv(layout, remotePermissionTransport = "path") {
   return [
     `CLAUDE_CONFIG_DIR=${quoteForPosixShellArg(layout.claudeConfigDir)}`,
     `CODEX_HOME=${quoteForPosixShellArg(layout.codexHome)}`,
-    `COPILOT_HOME=${quoteForPosixShellArg(layout.copilotHome)}`,
     "CLAWD_REMOTE=1",
     "CLAWD_SSH_REMOTE=1",
     `CLAWD_REMOTE_IDENTITY_PATH=${quoteForPosixShellArg(layout.identityFile)}`,
@@ -818,15 +794,6 @@ function buildInstallerVerificationCommand(txnStep, layout, remoteNode) {
         "codex-hook.js",
         layout.identityFile,
         layout.codexHome,
-      ],
-    },
-    installCopilot: {
-      file: path.posix.join(layout.copilotHome, "hooks", "hooks.json"),
-      commandFields: ["bash"],
-      commandMarkers: [
-        "copilot-hook.js",
-        layout.identityFile,
-        layout.copilotHome,
       ],
     },
   };
@@ -909,11 +876,10 @@ async function probeRemoteCliCapabilities({
 }) {
   const script = [
     "const cp=require('child_process'),fs=require('fs'),p=require('path');",
-    "const names=['claude','codex','copilot'];",
+    "const names=['claude','codex'];",
     `const roots=${JSON.stringify({
       claude: ["CLAUDE_CONFIG_DIR", layout.claudeConfigDir],
       codex: ["CODEX_HOME", layout.codexHome],
-      copilot: ["COPILOT_HOME", layout.copilotHome],
     })};`,
     `const wrapperBin=${JSON.stringify(layout.binDir)};`,
     "const real=x=>{try{return fs.realpathSync(x)}catch{return p.resolve(x)}};",
@@ -944,7 +910,7 @@ async function probeRemoteCliCapabilities({
     return { ok: false, reason: "cli_probe_invalid", stderr: "Remote CLI probe returned invalid data" };
   }
   const capabilities = {};
-  for (const name of ["claude", "codex", "copilot"]) {
+  for (const name of ["claude", "codex"]) {
     const entry = raw && raw[name];
     const validPath = entry && entry.present === true
       && typeof entry.path === "string"
@@ -1004,7 +970,6 @@ async function writeIsolatedWrappers({
   const specs = [
     ["claude", layout.claudeWrapperFile, "CLAUDE_CONFIG_DIR", layout.claudeConfigDir, layout.claudeWrapperEvidenceFile],
     ["codex", layout.codexWrapperFile, "CODEX_HOME", layout.codexHome, layout.codexWrapperEvidenceFile],
-    ["copilot", layout.copilotWrapperFile, "COPILOT_HOME", layout.copilotHome, layout.copilotWrapperEvidenceFile],
   ];
   const files = {};
   for (const [name, wrapperPath, envName, envValue, evidenceFile] of specs) {
@@ -1077,25 +1042,13 @@ async function verifyIsolatedArtifacts({
             )
           : null,
       },
-      copilot: {
-        root: layout.copilotHome,
-        evidence: layout.copilotWrapperEvidenceFile,
-        expectedEvidence: capabilities.copilot && capabilities.copilot.present
-          ? buildWrapperEvidence(
-              capabilities.copilot.executablePath,
-              "COPILOT_HOME",
-              layout.copilotHome,
-            )
-          : null,
-      },
     })};`,
     "const exists=x=>{try{return fs.existsSync(x)}catch{return false}};",
     "const anySession=root=>{const todo=[p.join(root,'sessions')];while(todo.length){const d=todo.pop();let entries;try{entries=fs.readdirSync(d,{withFileTypes:true})}catch{continue}for(const e of entries){if(e.isFile())return true;if(e.isDirectory())todo.push(p.join(d,e.name))}}return false};",
     "const evidenceMatches=x=>{try{return typeof x.expectedEvidence==='string'&&fs.readFileSync(x.evidence,'utf8')===x.expectedEvidence}catch{return false}};",
     "const out={",
     " claude:{artifact:exists(p.join(roots.claude.root,'.claude.json'))||exists(p.join(roots.claude.root,'history.jsonl'))||exists(p.join(roots.claude.root,'projects')),wrapper:evidenceMatches(roots.claude)},",
-    " codex:{artifact:exists(p.join(roots.codex.root,'auth.json'))||anySession(roots.codex.root),wrapper:evidenceMatches(roots.codex)},",
-    " copilot:{artifact:exists(p.join(roots.copilot.root,'config.json'))||exists(p.join(roots.copilot.root,'session-state'))||exists(p.join(roots.copilot.root,'permissions.json')),wrapper:evidenceMatches(roots.copilot)}",
+    " codex:{artifact:exists(p.join(roots.codex.root,'auth.json'))||anySession(roots.codex.root),wrapper:evidenceMatches(roots.codex)}",
     "};console.log(JSON.stringify(out));",
   ].join("");
   const result = await spawnAndWait(
@@ -1108,7 +1061,7 @@ async function verifyIsolatedArtifacts({
   );
   let artifactMap = {};
   try { artifactMap = JSON.parse(String(result.stdout || "").trim().split(/\r?\n/).at(-1)); } catch {}
-  for (const name of ["claude", "codex", "copilot"]) {
+  for (const name of ["claude", "codex"]) {
     if (capabilities[name]) {
       capabilities[name].artifactVerified = artifactMap[name] && artifactMap[name].artifact === true;
       capabilities[name].wrapperInvoked = artifactMap[name] && artifactMap[name].wrapper === true;
@@ -1295,13 +1248,11 @@ async function secureDeploy({
       isolatedCapabilities = cliProbe.capabilities;
       componentPresence.claudePresent = isolatedCapabilities.claude.present;
       componentPresence.codexPresent = isolatedCapabilities.codex.present;
-      componentPresence.copilotPresent = isolatedCapabilities.copilot.present;
     }
 
     const mkdirs = [
       layout.claudeHooksDir,
       layout.codexHome,
-      layout.copilotHome,
       layout.clawdStateDir,
       ...(layout.binDir ? [layout.binDir] : []),
       ...(layout.wrapperEvidenceDir ? [layout.wrapperEvidenceDir] : []),
@@ -1460,7 +1411,6 @@ async function secureDeploy({
     const installers = [
       ["installClaude", "install-claude", "install.js", profile.chainStatusline ? ["--remote", "--chain-existing"] : ["--remote"], componentPresence.claudePresent],
       ["installCodex", "install-codex", "codex-install.js", ["--remote"], componentPresence.codexPresent],
-      ["installCopilot", "install-copilot", "copilot-install.js", ["--remote"], componentPresence.copilotPresent],
     ];
     for (const [txnStep, progressStep, script, argv, present] of installers) {
       progress(progressStep, "start");
@@ -1727,7 +1677,6 @@ async function bootstrapIsolatedRuntime({
       isolatedLayout.runtimeRoot,
       isolatedLayout.claudeConfigDir,
       isolatedLayout.codexHome,
-      isolatedLayout.copilotHome,
       isolatedLayout.clawdStateDir,
       isolatedLayout.binDir,
       isolatedLayout.wrapperEvidenceDir,
@@ -2104,7 +2053,6 @@ async function secureUninstallRemoteIntegrations({
         secureMonitorStopCommand(layout),
         optionalInstaller("uninstall.js", []),
         optionalInstaller("codex-install.js", ["--uninstall"]),
-        optionalInstaller("copilot-install.js", ["--uninstall"]),
         `rm -f ${[
           layout.hostPrefixFile,
           layout.statuslineSidecarFile,

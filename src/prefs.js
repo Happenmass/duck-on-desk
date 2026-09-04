@@ -211,10 +211,6 @@ const SCHEMA = {
   // statusline metadata stream. Keep it opt-in so a fresh Clawd install never
   // changes the user's terminal UI without an explicit choice.
   claudeQuotaCollectionEnabled: { type: "boolean", default: false },
-  // Kimi quota uses a separately encrypted API Key owned by the main process.
-  // This boolean is only the durable collection opt-in; the secret is never a
-  // preference and never enters a settings snapshot.
-  kimiQuotaCollectionEnabled: { type: "boolean", default: false },
   quotaMergeSources: { type: "boolean", default: false },
   sessionHudCleanupDetached: { type: "boolean", default: true },
   sessionHudPinned: { type: "boolean", default: false },
@@ -400,49 +396,9 @@ const SCHEMA = {
       // fired inside a Task subagent. Only claude-code carries the flag —
       // normalizeAgents drops it for agents whose default entry lacks it.
       "claude-code": { integrationInstalled: true, enabled: true, permissionsEnabled: true, subagentPermissionsEnabled: true, notificationHookEnabled: true },
-      "deepseek-harness": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
       "codex": { integrationInstalled: true, enabled: true, permissionsEnabled: true, notificationHookEnabled: true, permissionMode: "intercept", nativeNotificationSoundEnabled: false },
-      "copilot-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
-      "cursor-agent": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
-      "gemini-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
-      // Antigravity is state-only post-D2 — Clawd never surfaces a permission
-      // bubble for agy regardless of this flag (see server-route-permission.js
-      // antigravity branch). Default kept as false so legacy reads don't see a
-      // stale "true" implying bubbles are enabled.
-      "antigravity-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: false },
-      "codebuddy": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true, customPermissionUrl: "" },
-      // WorkBuddy shares CodeBuddy's Claude-Code-compatible hook protocol but
-      // uses a distinct data dir (~/.workbuddy-ai; legacy: ~/.workbuddy). Opt-in like every other
-      // non-default agent — agent-gate.js fail-opens missing entries, so this
-      // default MUST exist or startup sync would auto-install for any user who
-      // merely has a WorkBuddy data directory. State + Notification only: the
-      // desktop app owns its permission loop natively, so permission bubbles
-      // default off (like qoderwork).
-      "workbuddy": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
-      // TraeCode is state-only: hook protocol is Claude Code-compatible but it
-      // has no PermissionRequest event, so permission bubbles default off.
-      "traecode": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
-      "kiro-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
-      "kimi-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
-      "qwen-code": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
-      // ZCode (智谱/Z.ai desktop ADE) supports blocking PermissionRequest
-      // hooks since Phase 2, so permission bubbles default on like qwen. Its
-      // ~/.zcode/cli/config.json schema is distinct: config-file hooks live
-      // under hooks.events.* and use timeoutMs.
-      "zcode": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
-      "codewhale": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
       "opencode": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
-      "mimocode": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
       "pi": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
-      "openclaw": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
-      "hermes": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
-      // Qoder is state-only (Phase 1) — permission bubbles default off.
-      "qoder": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
-      "reasonix": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
-      // QoderWork is state-only (Phase 1) — permission bubbles default off.
-      "qoderwork": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
-      // QwenWork (千问办公) is state-only (Phase 1) — permission bubbles default off.
-      "qwenwork": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
     }),
     normalize: normalizeAgents,
   },
@@ -668,8 +624,7 @@ function normalizeStaleTriple(out) {
 // v0 → v1: add `version`, `agents`, `themeOverrides` fields. Existing fields
 //   stay as-is and get re-validated downstream. Pre-existing prefs files have
 //   no `version` key — that's the v0 marker.
-// v1 → v2: historical Pi permission-subgate backfill. Version 2 is also the
-//   first schema version that includes Hermes in the built-in agent defaults.
+// v1 → v2: historical Pi permission-subgate backfill.
 // v2 → v3: raise passive notification bubble default from 3s to 6s. Users
 //   who explicitly chose 3s in v2 are indistinguishable from defaulted-3 and
 //   are migrated too; other non-default values are preserved.
@@ -862,21 +817,8 @@ function migrate(raw) {
   if (out.version < 14) {
     out.version = 14;
   }
-  // v14 -> v15: ZCode Phase 2 permission bubbles. Phase 1 persisted
-  // permissionsEnabled:false while the Settings switch was never rendered
-  // (capabilities.permissionApproval was false), so no user intent exists
-  // behind that stored false — flip it to the new on-default. A false set on
-  // v15 or later is a real user choice and never migrates again.
+  // v14 -> v15: retired agent-specific permission-bubble migration.
   if (out.version < 15) {
-    if (
-      out.agents
-      && typeof out.agents === "object"
-      && out.agents.zcode
-      && typeof out.agents.zcode === "object"
-      && out.agents.zcode.permissionsEnabled === false
-    ) {
-      out.agents.zcode.permissionsEnabled = true;
-    }
     out.version = 15;
   }
   // v15 -> v16: `Control` used to be an accepted alias for

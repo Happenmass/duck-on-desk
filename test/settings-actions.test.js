@@ -249,21 +249,6 @@ describe("updateRegistry pure-data validators", () => {
     assert.strictEqual(entry.effect(false, {}).status, "error");
   });
 
-  it("Kimi usage collection is command-only", () => {
-    const entry = updateRegistry.kimiQuotaCollectionEnabled;
-    assert.strictEqual(entry.validate(true).status, "ok");
-    assert.strictEqual(entry.validate("yes").status, "error");
-    assert.strictEqual(entry.commandOnly, true);
-    assert.deepStrictEqual(
-      commandRegistry.setKimiQuotaCollectionEnabled({ enabled: true }),
-      { status: "ok", commit: { kimiQuotaCollectionEnabled: true } }
-    );
-    assert.strictEqual(
-      commandRegistry.setKimiQuotaCollectionEnabled({ enabled: "yes" }).status,
-      "error"
-    );
-  });
-
   it("bubble auto-close seconds require integers in range", () => {
     const deps = { snapshot: baseSnapshot };
     for (const key of [
@@ -1935,11 +1920,11 @@ describe("hook commands", () => {
   it("cleanupIntegrations disables all managed agents before running cleanup", async () => {
     const calls = [];
     const snapshot = prefs.getDefaults();
-    snapshot.dismissedAgentInstallHints = { hermes: true };
-    snapshot.dismissedAgentCleanupHints = { "qwen-code": true, hermes: true };
+    snapshot.dismissedAgentInstallHints = { opencode: true };
+    snapshot.dismissedAgentCleanupHints = { codex: true, opencode: true };
     assert.ok(
-      MANAGED_CLEANUP_AGENT_IDS.includes("reasonix"),
-      "bulk cleanup should include Reasonix hooks"
+      MANAGED_CLEANUP_AGENT_IDS.includes("opencode"),
+      "bulk cleanup should include the opencode plugin"
     );
     const result = await commandRegistry.cleanupIntegrations(null, {
       snapshot,
@@ -2006,12 +1991,12 @@ describe("doctor repair commands", () => {
     assert.deepStrictEqual(calls, [{ agentId: "codex", options: { forceCodexHooksFeature: true } }]);
   });
 
-  it("accepts Copilot CLI through the standard auto-repair path", async () => {
+  it("accepts opencode through the standard auto-repair path", async () => {
     const calls = [];
     const snapshot = prefs.getDefaults();
-    snapshot.agents["copilot-cli"].integrationInstalled = true;
-    snapshot.agents["copilot-cli"].enabled = true;
-    const r = await commandRegistry.repairAgentIntegration({ agentId: "copilot-cli" }, {
+    snapshot.agents.opencode.integrationInstalled = true;
+    snapshot.agents.opencode.enabled = true;
+    const r = await commandRegistry.repairAgentIntegration({ agentId: "opencode" }, {
       snapshot,
       repairIntegrationForAgent: (agentId) => {
         calls.push(agentId);
@@ -2020,7 +2005,7 @@ describe("doctor repair commands", () => {
     });
 
     assert.strictEqual(r.status, "ok");
-    assert.deepStrictEqual(calls, ["copilot-cli"]);
+    assert.deepStrictEqual(calls, ["opencode"]);
   });
 
   it("does not repair disabled agents", async () => {
@@ -2122,19 +2107,6 @@ describe("setSessionAlias command", () => {
     assert.strictEqual(r.status, "ok");
     assert.deepStrictEqual(r.commit.sessionAliases, {
       "local|codex|s1": { title: "Codex main", updatedAt: 1000 },
-    });
-  });
-
-  it("stores Kiro default-session aliases under a cwd-scoped key", () => {
-    const snapshot = { ...prefs.getDefaults(), sessionAliases: {} };
-    const r = commandRegistry.setSessionAlias(
-      { host: null, agentId: "kiro-cli", sessionId: "default", cwd: "/repo/a", alias: "Kiro A" },
-      { snapshot, now: 1000, getActiveSessionAliasKeys: () => new Set(["local|kiro-cli|default|cwd:%2Frepo%2Fa"]) }
-    );
-
-    assert.strictEqual(r.status, "ok");
-    assert.deepStrictEqual(r.commit.sessionAliases, {
-      "local|kiro-cli|default|cwd:%2Frepo%2Fa": { title: "Kiro A", updatedAt: 1000 },
     });
   });
 

@@ -308,7 +308,7 @@ const RUNTIME_REASON_PORT_INVALID = "runtime-port-invalid";
 const RUNTIME_REASON_OWNER_INVALID = "runtime-owner-invalid";
 const WINDOWS_PROCESS_CHAIN_VERSION = 1;
 const WINDOWS_PROCESS_CHAIN_AGENT_IDS = new Set([
-  "codex", "cursor-agent", "kiro-cli", "codebuddy", "reasonix",
+  "codex",
 ]);
 const WINDOWS_PROCESS_CHAIN_MODES = new Set(["legacy", "shadow", "b1a-authoritative"]);
 const PROCESS_INSTANCE_RE = /^[A-Za-z0-9_-]{1,128}$/;

@@ -58,21 +58,6 @@ describe("session alias helpers", () => {
     assert.strictEqual(b, "profile:profile-b|shared-host|codex|same-raw");
   });
 
-  it("adds cwd scope for Kiro's reusable default session id", () => {
-    assert.strictEqual(
-      sessionAliasKey(null, "kiro-cli", "default", { cwd: "/repo/a" }),
-      "local|kiro-cli|default|cwd:%2Frepo%2Fa"
-    );
-    assert.notStrictEqual(
-      sessionAliasKey(null, "kiro-cli", "default", { cwd: "/repo/a" }),
-      sessionAliasKey(null, "kiro-cli", "default", { cwd: "/repo/b" })
-    );
-    assert.strictEqual(
-      sessionAliasKey(null, "codex", "default", { cwd: "/repo/a" }),
-      "local|codex|default"
-    );
-  });
-
   it("returns null when session id cannot form a stable key", () => {
     assert.strictEqual(sessionAliasKey(null, "codex", ""), null);
     assert.strictEqual(sessionAliasKey(null, "codex", null), null);

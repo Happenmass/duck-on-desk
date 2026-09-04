@@ -202,40 +202,4 @@ describe("go-to-terminal wire semantics (issue #689)", () => {
     });
   }
 
-  it("forwards isHermes in the bubble payload so the renderer suppresses the action", () => {
-    const ctx = makeCtx();
-    const perm = initPermission(ctx);
-
-    const hermesPayload = perm.buildPermissionBubblePayload(
-      makePermEntry(createMockResponse(), { isHermes: true })
-    );
-    assert.strictEqual(hermesPayload.isHermes, true);
-
-    const defaultPayload = perm.buildPermissionBubblePayload(
-      makePermEntry(createMockResponse())
-    );
-    assert.strictEqual(defaultPayload.isHermes, false);
-  });
-
-  it("Hermes defensive branch: deny-and-focus still answers no-decision, never deny", () => {
-    const ctx = makeCtx();
-    const perm = initPermission(ctx);
-    const { pendingPermissions, handleDecide } = perm;
-
-    const res = createMockResponse();
-    const bubble = makeFakeBubble();
-    const permEntry = makePermEntry(res, { bubble, isHermes: true });
-    pendingPermissions.push(permEntry);
-
-    // No UI offers this on Hermes cards anymore; if it ever arrives anyway
-    // (legacy renderer, future regression), the answer must stay a bodyless
-    // no-decision — a deny here would decide on the user's behalf.
-    handleDecide(makeEventFor(bubble), "deny-and-focus");
-
-    assert.strictEqual(res.captured.statusCode, 204, "must answer 204 no-decision");
-    const body = res.captured.body || "";
-    assert.ok(!body.includes("deny"), "must not carry a deny decision");
-    assert.strictEqual(pendingPermissions.indexOf(permEntry), -1, "entry must be removed");
-    assert.strictEqual(ctx.focusTerminalCalls.length, 1, "terminal still gets focus");
-  });
 });

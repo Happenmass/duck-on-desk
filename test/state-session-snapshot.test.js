@@ -326,32 +326,6 @@ describe("sessionDisplayTitle cwd fallback", () => {
     }
   });
 
-  it("skips QoderWork internal workspace cwds so the HUD never shows a raw workspace id", () => {
-    assert.strictEqual(
-      sessionDisplayTitle("qoderwork:abc123", session("working", { agentId: "qoderwork", cwd: "/Users/me/.qoderwork/workspace/mqgw60jiigjsjcid" })),
-      "abc123"
-    );
-    assert.strictEqual(
-      sessionDisplayTitle("qoderwork:abc123", session("working", { agentId: "qoderwork", cwd: "C:\\Users\\me\\.qoderwork\\workspace\\abc123" })),
-      "abc123"
-    );
-    assert.strictEqual(
-      sessionDisplayFolder("qoderwork:abc123", session("working", { agentId: "qoderwork", cwd: "/Users/me/.qoderwork/workspace/mqgw60jiigjsjcid" })),
-      ""
-    );
-  });
-
-  it("skips QoderWork internal workspace cwds with trailing separators", () => {
-    assert.strictEqual(
-      sessionDisplayTitle("qoderwork:abc123", session("working", { agentId: "qoderwork", cwd: "/Users/me/.qoderwork/workspace/opaque-id///" })),
-      "abc123"
-    );
-    assert.strictEqual(
-      sessionDisplayTitle("qoderwork:abc123", session("working", { agentId: "qoderwork", cwd: "C:\\Users\\me\\.qoderwork\\workspace\\opaque-id\\" })),
-      "abc123"
-    );
-  });
-
   it("keeps the cwd basename for non-QoderWork agents even inside a QoderWork workspace dir", () => {
     assert.strictEqual(
       sessionDisplayTitle("claude:xyz789", session("working", { agentId: "claude-code", cwd: "/Users/me/.qoderwork/workspace/mqgw60jiigjsjcid" })),
@@ -364,163 +338,6 @@ describe("sessionDisplayTitle cwd fallback", () => {
   // server-side basename fallback below is what actually reaches the HUD /
   // Dashboard / session menu — and it only knew about ~/.qoderwork/workspace,
   // so ~/.QwenWorkCN/workspace/<id> still surfaced as "mqgw60jiigjsjcid".
-  describe("QwenWork internal workspace (#843)", () => {
-    const qwen = (overrides) => session("working", { agentId: "qwenwork", ...overrides });
-
-    it("skips the basename for macOS/POSIX workspace cwds", () => {
-      assert.strictEqual(
-        sessionDisplayTitle("qwenwork:abc123", qwen({ cwd: "/Users/me/.QwenWorkCN/workspace/mqgw60jiigjsjcid" })),
-        "abc123"
-      );
-      assert.strictEqual(
-        sessionDisplayFolder("qwenwork:abc123", qwen({ cwd: "/Users/me/.QwenWorkCN/workspace/mqgw60jiigjsjcid" })),
-        ""
-      );
-    });
-
-    it("skips the basename for Windows backslash workspace cwds", () => {
-      assert.strictEqual(
-        sessionDisplayTitle("qwenwork:abc123", qwen({ cwd: "C:\\Users\\me\\.QwenWorkCN\\workspace\\mqgw60jiigjsjcid" })),
-        "abc123"
-      );
-    });
-
-    it("matches .QwenWorkCN case-insensitively", () => {
-      // macOS and Windows are both case-insensitive, so the reported cwd can
-      // arrive in any spelling of the case-preserving on-disk directory.
-      for (const dir of [".QwenWorkCN", ".qwenworkcn", ".QWENWORKCN", ".QwenWorkCn"]) {
-        assert.strictEqual(
-          sessionDisplayTitle("qwenwork:abc123", qwen({ cwd: `/Users/me/${dir}/workspace/mqgw60jiigjsjcid` })),
-          "abc123",
-          dir
-        );
-      }
-    });
-
-    it("skips the basename when only the session id is namespaced (agentId missing)", () => {
-      // Older persisted sessions and menu callers can reach here with the
-      // namespaced id but no agentId, so the prefix is the fallback signal.
-      const withoutAgentId = {
-        state: "working",
-        updatedAt: 1000,
-        recentEvents: [],
-        cwd: "/Users/me/.QwenWorkCN/workspace/mqgw60jiigjsjcid",
-      };
-      assert.strictEqual(sessionDisplayTitle("qwenwork:abc123", withoutAgentId), "abc123");
-    });
-
-    it("strips the namespace before shortening so concurrent fallback titles remain distinct", () => {
-      const cwd = "/Users/me/.QwenWorkCN/workspace/mqgw60jiigjsjcid";
-      const first = sessionDisplayTitle("canonical-a", qwen({ rawSessionId: "qwenwork:abc123456789", cwd }));
-      const second = sessionDisplayTitle("canonical-b", qwen({ rawSessionId: "qwenwork:xyz999456789", cwd }));
-
-      assert.strictEqual(first, "abc123..");
-      assert.strictEqual(second, "xyz999..");
-      assert.notStrictEqual(first, second);
-    });
-
-    it("keeps a readable namespace fallback when the raw session id is only the prefix", () => {
-      const cwd = "/Users/me/.QwenWorkCN/workspace/mqgw60jiigjsjcid";
-      assert.strictEqual(
-        sessionDisplayTitle("canonical", qwen({ rawSessionId: "qwenwork:", cwd })),
-        "qwenwo.."
-      );
-      assert.strictEqual(
-        sessionDisplayTitle("canonical", qwen({ rawSessionId: "qwenwork:   ", cwd })),
-        "qwenwo.."
-      );
-    });
-
-    it("suppresses workspace ids when cwd has trailing POSIX or Windows separators", () => {
-      assert.strictEqual(
-        sessionDisplayTitle("qwenwork:abc123", qwen({ cwd: "/Users/me/.QwenWorkCN/workspace/opaque-id///" })),
-        "abc123"
-      );
-      assert.strictEqual(
-        sessionDisplayTitle("qwenwork:abc123", qwen({ cwd: "C:\\Users\\me\\.QwenWorkCN\\workspace\\opaque-id\\" })),
-        "abc123"
-      );
-    });
-
-    it("lets an explicit agentId beat a contradictory session-id prefix", () => {
-      // Tightening vs the previous QoderWork-only check, which OR'd the two
-      // signals: a session that says it belongs to another agent is not
-      // silently reclassified by its id string.
-      assert.strictEqual(
-        sessionDisplayTitle(
-          "qwenwork:abc123",
-          session("working", { agentId: "claude-code", cwd: "/Users/me/.QwenWorkCN/workspace/mqgw60jiigjsjcid" })
-        ),
-        "mqgw60jiigjsjcid"
-      );
-      assert.strictEqual(
-        sessionDisplayTitle(
-          "qwenwork:abc123",
-          session("working", { agentId: "claude-code", cwd: "" })
-        ),
-        "qwenwo..",
-        "the namespace is only stripped when it agrees with the explicit agent"
-      );
-    });
-
-    it("keeps the basename for other agents inside the same directory", () => {
-      // The suppression is an agent↔path pairing: for any other agent that
-      // directory is just a cwd the user chose, so its name is real information.
-      assert.strictEqual(
-        sessionDisplayTitle(
-          "claude:xyz789",
-          session("working", { agentId: "claude-code", cwd: "/Users/me/.QwenWorkCN/workspace/mqgw60jiigjsjcid" })
-        ),
-        "mqgw60jiigjsjcid"
-      );
-      assert.strictEqual(
-        sessionDisplayTitle(
-          "qoderwork:xyz789",
-          session("working", { agentId: "qoderwork", cwd: "/Users/me/.QwenWorkCN/workspace/mqgw60jiigjsjcid" })
-        ),
-        "mqgw60jiigjsjcid",
-        "QoderWork must not inherit QwenWork's path rule"
-      );
-    });
-
-    it("still shows the basename for ordinary QwenWork project cwds", () => {
-      assert.strictEqual(
-        sessionDisplayTitle("qwenwork:abc123", qwen({ cwd: "/Users/me/projects/myapp" })),
-        "myapp"
-      );
-      // A path that merely lives under .QwenWorkCN but is not a workspace leaf.
-      assert.strictEqual(
-        sessionDisplayTitle("qwenwork:abc123", qwen({ cwd: "/Users/me/.QwenWorkCN/workspace/abc/src" })),
-        "src"
-      );
-      assert.strictEqual(
-        sessionDisplayTitle("qwenwork:abc123", qwen({ cwd: "C:\\Users\\me\\qwenwork-notes" })),
-        "qwenwork-notes"
-      );
-    });
-
-    it("still prefers a real session title over the id shortening", () => {
-      assert.strictEqual(
-        sessionDisplayTitle("qwenwork:abc123", qwen({
-          cwd: "/Users/me/.QwenWorkCN/workspace/mqgw60jiigjsjcid",
-          sessionTitle: "Refactor auth module",
-        })),
-        "Refactor auth module"
-      );
-    });
-  });
-
-  it("declares the internal-workspace suppression as an explicit agent/path pairing", () => {
-    assert.deepStrictEqual(
-      INTERNAL_WORKSPACE_AGENTS.map((entry) => entry.agentId).sort(),
-      ["qoderwork", "qwenwork"]
-    );
-    for (const entry of INTERNAL_WORKSPACE_AGENTS) {
-      assert.strictEqual(entry.sessionPrefix, `${entry.agentId}:`);
-      assert.ok(entry.cwdPattern instanceof RegExp);
-      assert.strictEqual(entry.cwdPattern.global, false, "a global regex would carry lastIndex between calls");
-    }
-  });
 });
 
 describe("state-session-snapshot badges", () => {
@@ -843,10 +660,9 @@ describe("state-session-snapshot builder", () => {
     assert.strictEqual(snapshot.sessions.find((entry) => entry.id === "hidden").hiddenFromHud, true);
   });
 
-  it("applies aliases, Codex thread names, and Kiro cwd-scoped alias keys", () => {
+  it("applies aliases and Codex thread names", () => {
     const claudeId = makeSessionKey({ profileId: "local", rawSessionId: "claude-local" });
     const codexId = makeSessionKey({ profileId: "local", rawSessionId: "codex:abc" });
-    const kiroId = makeSessionKey({ profileId: "local", rawSessionId: "default" });
     const sessions = new Map([
       [claudeId, session("working", {
         updatedAt: 3000,
@@ -864,21 +680,12 @@ describe("state-session-snapshot builder", () => {
         rawSessionId: "codex:abc",
         sessionTitle: "Auto Summary",
       })],
-      [kiroId, session("working", {
-        updatedAt: 1000,
-        cwd: "/repo/c",
-        agentId: "kiro-cli",
-        profileId: "local",
-        rawSessionId: "default",
-      })],
     ]);
 
     const snapshot = buildSessionSnapshot(sessions, {
       statePriority: STATE_PRIORITY,
       sessionAliases: {
         "local|claude-code|claude-local": { title: "Claude review", updatedAt: 100 },
-        "local|kiro-cli|default": { title: "Legacy Kiro", updatedAt: 100 },
-        "local|kiro-cli|default|cwd:%2Frepo%2Fc": { title: "Kiro repo C", updatedAt: 200 },
       },
       readCodexThreadName: (id) => id === "codex:abc" ? "Thread name" : null,
     });
@@ -887,14 +694,12 @@ describe("state-session-snapshot builder", () => {
     const codex = snapshot.sessions.find((entry) => entry.id === codexId);
     assert.strictEqual(codex.sessionTitle, "Thread name");
     assert.strictEqual(codex.displayTitle, "Thread name");
-    assert.strictEqual(snapshot.sessions.find((entry) => entry.id === kiroId).displayTitle, "Kiro repo C");
 
     assert.deepStrictEqual(
       [...getActiveSessionAliasKeys(sessions)].sort(),
       [
         "local|claude-code|claude-local",
         "local|codex|codex:abc",
-        "local|kiro-cli|default|cwd:%2Frepo%2Fc",
       ].sort()
     );
   });
@@ -1036,25 +841,6 @@ describe("state-session-snapshot builder", () => {
     assert.strictEqual(sessionSnapshotSignature(original), sessionSnapshotSignature(stampOnly));
     assert.notStrictEqual(sessionSnapshotSignature(original), sessionSnapshotSignature(changedValue));
     assert.notStrictEqual(sessionSnapshotSignature(original), sessionSnapshotSignature(changedSeen));
-  });
-
-  it("snapshot signature tracks Kimi group and lastSeenAt changes", () => {
-    const base = { statePriority: STATE_PRIORITY, getAgentIconUrl: () => null };
-    const build = (usedPercent, updatedAt, lastSeenAt) => buildSessionSnapshot(new Map(), {
-      ...base,
-      accountQuota: [{
-        host: null,
-        kimiQuota: {
-          group: { kimiWeekly: { usedPercent, windowMinutes: 10080 } },
-          updatedAt,
-          lastSeenAt,
-        },
-      }],
-    });
-    const original = build(0, 1, 60000);
-    assert.strictEqual(sessionSnapshotSignature(original), sessionSnapshotSignature(build(0, 2, 60000)));
-    assert.notStrictEqual(sessionSnapshotSignature(original), sessionSnapshotSignature(build(1, 2, 60000)));
-    assert.notStrictEqual(sessionSnapshotSignature(original), sessionSnapshotSignature(build(0, 1, 120000)));
   });
 
   it("marks detached ended idle sessions hidden from HUD only when cleanup is enabled and pid is dead", () => {

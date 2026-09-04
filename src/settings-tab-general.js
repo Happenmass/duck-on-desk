@@ -840,11 +840,8 @@
   // not a child of it: its switches are never gated by the HUD master, so the
   // ring can be used with the Session HUD turned off (and vice versa).
   //
-  // This group answers ONE question: what does the ring look like. It used to
-  // also carry "collect local Claude usage", which is a different question —
-  // whether to read a provider at all — and having the two side by side is why
-  // per-provider collection ended up split across two tabs, Claude here and
-  // Kimi on its agent card. Collection now lives on each provider's own card
+  // This group answers ONE question: what does the ring look like. Collection
+  // ("should this provider be read at all") lives on each provider's own card
   // under Agents, so "which providers am I reading" has one place to look.
   // Keep it that way: a new provider's collection switch goes on its card.
   function buildQuotaRingGroup() {

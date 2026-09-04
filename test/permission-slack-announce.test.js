@@ -276,13 +276,13 @@ describe("slack permission announce: only for requests a human must answer", () 
     assert.deepEqual(ctx.announced, []);
   });
 
-  it("announces rendered opencode, MiMo, and Copilot Allow/Deny bubbles", () => {
-    for (const agentId of ["opencode", "mimocode", "copilot-cli"]) {
+  it("announces rendered opencode Allow/Deny bubbles", () => {
+    for (const agentId of ["opencode"]) {
       const ctx = makeCtx();
       const perm = initPermission(ctx);
       const entry = makePermEntry({
         agentId,
-        res: agentId === "copilot-cli" ? makeCapturingRes() : null,
+        res: null,
         toolInput: { description: `review ${agentId}` },
       });
       perm.addPendingPermission(entry, "added");

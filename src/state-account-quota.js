@@ -32,17 +32,13 @@ const os = require("os");
 
 const { readJsonFile } = require("../hooks/json-utils");
 const { normalizeQuotaGroup } = require("../hooks/quota-bucket");
-const { ANTIGRAVITY_QUOTA_FIELDS } = require("../hooks/antigravity-context-usage");
 const { CLAUDE_QUOTA_FIELDS } = require("../hooks/claude-rate-limits");
 const { CODEX_QUOTA_FIELDS } = require("../hooks/codex-rate-limits");
-const { KIMI_QUOTA_FIELDS } = require("./kimi-quota-normalizer");
 
 const QUOTA_PROVIDER_FIELDS = {
-  antigravityQuota: ANTIGRAVITY_QUOTA_FIELDS,
   claudeQuota: CLAUDE_QUOTA_FIELDS,
   codexQuota: CODEX_QUOTA_FIELDS,
   codexSparkQuota: CODEX_QUOTA_FIELDS,
-  kimiQuota: KIMI_QUOTA_FIELDS,
 };
 const QUOTA_PROVIDER_KEYS = Object.keys(QUOTA_PROVIDER_FIELDS);
 
@@ -78,7 +74,7 @@ const MAX_RESET_AHEAD_MS = 45 * 24 * 60 * 60 * 1000;
 const EXPIRED_BUCKET_DROP_AFTER_MS = 48 * 60 * 60 * 1000;
 
 // A provider record nothing has confirmed for this long is retired outright
-// — covers buckets that carry no resetAt (e.g. some Antigravity windows)
+// — covers buckets that carry no resetAt (e.g. some provider windows)
 // and would otherwise never age out.
 const PROVIDER_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
 

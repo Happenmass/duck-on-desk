@@ -1,5 +1,5 @@
 // JSONC editor for opencode-family members whose host config is JSONC
-// (registry entries with jsonc: true — today only mimocode).
+// (registry entries with jsonc: true).
 //
 // The JSON path in opencode-family-install.js round-trips through
 // JSON.parse/JSON.stringify, which would DESTROY user comments and trailing

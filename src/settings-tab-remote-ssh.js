@@ -549,7 +549,7 @@
         section.appendChild(root);
         const wrappers = document.createElement("div");
         wrappers.className = "remote-ssh-actions";
-        for (const name of ["claude", "codex", "copilot"]) {
+        for (const name of ["claude", "codex"]) {
           const capability = isolatedRuntime.capabilities && isolatedRuntime.capabilities[name];
           if (!capability || !capability.present || !capability.wrapperPath) continue;
           const copy = document.createElement("button");

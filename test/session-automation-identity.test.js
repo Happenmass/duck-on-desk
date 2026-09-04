@@ -106,8 +106,8 @@ describe("session automation identity", () => {
     }
   });
 
-  it("keeps opencode and MiMo independently closed for non-authoritative permission association", () => {
-    for (const agentId of ["opencode", "mimocode"]) {
+  it("keeps opencode closed for non-authoritative permission association", () => {
+    for (const agentId of ["opencode"]) {
       assert.deepStrictEqual(
         assess(agentId, `${agentId}:ses-real-looking`),
         {

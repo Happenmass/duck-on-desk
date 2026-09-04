@@ -12,7 +12,7 @@ const MAX_SUBAGENT_ID_LENGTH = 256;
 const MAX_SUBAGENT_TYPE_LENGTH = 128;
 
 // Hook scripts / plugins stamp their own registry id into `agent_id`
-// (codebuddy-hook.js, hermes plugin, codex-hook.js, ...). Claude Code ≥ 2.1.x
+// (codex-hook.js, the opencode plugin, ...). Claude Code ≥ 2.1.x
 // reuses the same field name in its common hook input for something else: a
 // per-instance subagent uuid, present only when the hook fired from inside a
 // Task subagent (absent on the main thread, even in --agent sessions). Only
@@ -22,13 +22,8 @@ const MAX_SUBAGENT_TYPE_LENGTH = 128;
 const KNOWN_HOOK_AGENT_IDS = new Set(getAllAgents().map((agent) => agent.id));
 
 const HOOK_SOURCE_AGENT_IDS = new Map([
-  ["antigravity-hook", "antigravity-cli"],
   ["codex-official", "codex"],
-  ["copilot-hook", "copilot-cli"],
   ["opencode-plugin", "opencode"],
-  ["mimocode-plugin", "mimocode"],
-  ["openclaw-plugin", "openclaw"],
-  ["codewhale-hook", "codewhale"],
   ["pi-extension", "pi"],
 ]);
 

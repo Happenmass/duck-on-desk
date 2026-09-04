@@ -163,19 +163,6 @@ describe("recap accepted ingress", () => {
     }
   });
 
-  it("keeps permission provenance as activity but not a QwenWork tool", () => {
-    const { api, sink } = makeRuntime();
-    try {
-      send(api, "PreToolUse", "working", {
-        agentId: "qwenwork",
-        recapBoundary: "permission",
-      });
-      assert.deepStrictEqual(sink.snapshot()[0].metrics, ["activity"]);
-    } finally {
-      api.cleanup();
-    }
-  });
-
   it("does not emit for disabled agents or untrusted remote Codex JSONL", () => {
     const disabled = makeRuntime({ isAgentEnabled: () => false });
     try {
@@ -233,58 +220,11 @@ describe("recap accepted ingress", () => {
     const { api, sink } = makeRuntime();
     try {
       send(api, "Stop", "attention", {
-        agentId: "deepseek-harness",
+        agentId: "claude-code",
         recapIsSubagent: true,
+        subagentId: "child-1",
       });
       assert.deepStrictEqual(sink.snapshot().map((event) => event.metrics), [["activity"]]);
-    } finally {
-      api.cleanup();
-    }
-  });
-
-  it("counts a remapped Kimi PreToolUse exactly as a tool call", () => {
-    const sink = createMemoryRecapSink({ captureEphemeralIdentity: true });
-    const { api } = makeRuntime({ sink });
-    try {
-      send(api, "PermissionRequest", "notification", {
-        agentId: "kimi-cli",
-        recapBoundary: "tool-call",
-        toolUseId: "kimi-call-1",
-      });
-      assert.deepStrictEqual(sink.snapshot()[0].metrics, ["activity", "tool-call"]);
-      assert.strictEqual(sink.identitySnapshot()[0].dedupeId, "tool-call:kimi-call-1");
-    } finally {
-      api.cleanup();
-    }
-  });
-
-  it("keeps Kimi tool observation independent from its permission bubble", () => {
-    const sink = createMemoryRecapSink({ captureEphemeralIdentity: true });
-    const { api, effects } = makeRuntime({
-      sink,
-      isAgentPermissionsEnabled: () => false,
-    });
-    try {
-      send(api, "PermissionRequest", "notification", {
-        agentId: "kimi-cli",
-        sessionId: "kimi-remapped",
-        recapBoundary: "tool-call",
-        toolUseId: "kimi-call-off",
-      });
-      assert.deepStrictEqual(sink.snapshot()[0].metrics, ["activity", "tool-call"]);
-      assert.strictEqual(sink.identitySnapshot()[0].dedupeId, "tool-call:kimi-call-off");
-      assert.strictEqual(api.sessions.has("kimi-remapped"), false);
-      assert.deepStrictEqual(effects.renderer, []);
-      assert.deepStrictEqual(effects.sounds, []);
-
-      sink.clear();
-      send(api, "PermissionRequest", "notification", {
-        agentId: "kimi-cli",
-        sessionId: "kimi-native",
-        toolUseId: "native-permission-id",
-      });
-      assert.deepStrictEqual(sink.snapshot()[0].metrics, ["activity"]);
-      assert.strictEqual(sink.identitySnapshot()[0].dedupeId, undefined);
     } finally {
       api.cleanup();
     }
@@ -295,7 +235,7 @@ describe("recap accepted ingress", () => {
     const wsl = makeRuntime({ sink: wslSink });
     try {
       send(wsl.api, "PreToolUse", "working", {
-        agentId: "qwen-code",
+        agentId: "opencode",
         profileId: "local",
         host: "wsl:Ubuntu",
         wslDistro: "Ubuntu",
@@ -330,7 +270,7 @@ describe("recap accepted ingress", () => {
     const remote = makeRuntime({ sink: remoteSink });
     try {
       send(remote.api, "PreToolUse", "working", {
-        agentId: "qwen-code",
+        agentId: "opencode",
         profileId: "profile-a",
         host: "shared-host",
       });

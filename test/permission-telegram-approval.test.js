@@ -486,42 +486,6 @@ describe("permission telegram remote approval", () => {
     });
   });
 
-  it("routes Hermes elicitation go-to-terminal to the native no-decision fallback", async () => {
-    let resolveElicitation;
-    const focusCalls = [];
-    const feishuClient = {
-      isEnabled: () => true,
-      requestApproval: () => {
-        throw new Error("normal approval should not be used for elicitation");
-      },
-      requestElicitation: () => new Promise((resolve) => { resolveElicitation = resolve; }),
-    };
-    const perm = initPermission(makeCtx({
-      getRemoteApprovalClients: () => [{ name: "feishu", client: feishuClient }],
-      focusTerminalForSession: (sessionId) => focusCalls.push(sessionId),
-    }));
-    const entry = makePermEntry({
-      isElicitation: true,
-      isHermes: true,
-      agentId: "hermes",
-      toolName: "clarify",
-      toolInput: { questions: [{ question: "Which environment?" }] },
-    });
-    perm.pendingPermissions.push(entry);
-
-    assert.equal(perm.maybeStartRemoteApproval(entry), true);
-    resolveElicitation("terminal");
-    await flush();
-    await flush();
-
-    // Hermes must get a 204 (fall back to its native terminal prompt), not an
-    // explicit deny, which it treats as "clarification cancelled".
-    assert.equal(perm.pendingPermissions.length, 0);
-    assert.equal(entry.res.captured.statusCode, 204);
-    assert.equal(entry.res.captured.body, "");
-    assert.deepEqual(focusCalls, ["sid"]);
-  });
-
   it("keeps deny semantics for Claude elicitation go-to-terminal", async () => {
     let resolveElicitation;
     const feishuClient = {

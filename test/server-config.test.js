@@ -188,8 +188,7 @@ describe("runtime.json identity (#681)", () => {
           version: 1,
           instanceGeneration: "instance_abc-123",
           agents: {
-            codex: "shadow",
-            "cursor-agent": "b1a-authoritative",
+            codex: "b1a-authoritative",
           },
         },
       });
@@ -198,21 +197,17 @@ describe("runtime.json identity (#681)", () => {
         version: 1,
         instanceGeneration: "instance_abc-123",
         agents: {
-          codex: "shadow",
-          "cursor-agent": "b1a-authoritative",
-          "kiro-cli": "legacy",
-          codebuddy: "legacy",
-          reasonix: "legacy",
+          codex: "b1a-authoritative",
         },
       });
-      assert.deepStrictEqual(serverConfig.readWindowsProcessChainObservation("cursor-agent", {
+      assert.deepStrictEqual(serverConfig.readWindowsProcessChainObservation("codex", {
         runtimeConfigPath: file,
       }), {
         port: 23335,
         ownerPid: 4242,
         version: 1,
         instanceGeneration: "instance_abc-123",
-        agentId: "cursor-agent",
+        agentId: "codex",
         agentMode: "b1a-authoritative",
       });
     });

@@ -5,7 +5,7 @@
 // global config "plugin" array. Parameterized by the family registry
 // (agents/opencode-family.js) so register/unregister/idempotency/stale-path
 // behavior stays identical across members — a fix here fixes every member.
-// Per-agent wrappers (opencode-install.js, mimocode-install.js) preserve the
+// Per-agent wrappers (opencode-install.js) preserve the
 // legacy named exports, return shapes (incl. reason strings), and CLI entry.
 //
 // Why the global config and not plugins/ directory scanning:
@@ -32,7 +32,7 @@ function entryIsExactManagedPlugin(entry, pluginDir) {
 // JSONC members lazily load the family JSONC editor so the JSON-only path
 // never touches (or ships) the jsonc-parser dependency — hooks/json-utils.js
 // is deployed to remote SSH hosts without node_modules and must stay dep-free
-// (plan §4.1). The editor module lands with the mimocode PR.
+// (plan §4.1).
 function getJsoncEditor() {
   // eslint-disable-next-line global-require
   return require("./opencode-family-jsonc");

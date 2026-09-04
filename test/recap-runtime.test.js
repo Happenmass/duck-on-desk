@@ -974,7 +974,7 @@ test("journal-frozen metric support survives a real restart rebuild", async (t) 
   const journal = createRecapJournal({ store, getTimeZone: () => "UTC" });
   const historical = journal.buildRecord({
     occurredAt: Date.UTC(2026, 7, 29, 8),
-    agentId: "antigravity-cli",
+    agentId: "opencode",
     scope: "local",
     metrics: ["activity", "tool-call"],
   });

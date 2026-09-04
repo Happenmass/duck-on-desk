@@ -12,8 +12,6 @@
     "claude-code": "var(--recap-agent-claude)",
     codex: "var(--recap-agent-codex)",
     opencode: "var(--recap-agent-opencode)",
-    "gemini-cli": "var(--recap-agent-gemini)",
-    codewhale: "var(--recap-agent-whale)",
   });
   const FALLBACK_COLOR_COUNT = 12;
   const view = {

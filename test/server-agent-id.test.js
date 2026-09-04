@@ -16,7 +16,7 @@ const SUBAGENT_UUID = "0199f2c5-1bb8-7892-9e3b-1d6f4a1c2b3d";
 
 describe("resolveHookAgentId", () => {
   it("treats registry agent ids as explicit identities", () => {
-    for (const id of ["claude-code", "codebuddy", "hermes", "codex", "qwen-code"]) {
+    for (const id of ["claude-code", "codex", "opencode", "pi"]) {
       assert.deepStrictEqual(resolveHookAgentId({ agent_id: id }), {
         agentId: id,
         source: "explicit",
@@ -26,7 +26,7 @@ describe("resolveHookAgentId", () => {
   });
 
   it("trims whitespace around explicit ids", () => {
-    assert.strictEqual(resolveHookAgentId({ agent_id: "  codebuddy  " }).agentId, "codebuddy");
+    assert.strictEqual(resolveHookAgentId({ agent_id: "  opencode  " }).agentId, "opencode");
   });
 
   it("maps hook_source when agent_id is missing", () => {
@@ -74,7 +74,7 @@ describe("resolveHookAgentId", () => {
   it("rejects malformed custom namespace ids before hook_source fallback", () => {
     const resolved = resolveHookAgentId({
       agent_id: "custom-BROKEN",
-      hook_source: "copilot-hook",
+      hook_source: "opencode-plugin",
     });
     assert.deepStrictEqual(resolved, {
       agentId: null,
@@ -86,7 +86,7 @@ describe("resolveHookAgentId", () => {
 
   it("rejects ASCII case variants of the reserved custom namespace", () => {
     for (const agentId of ["CUSTOM-nova-ai-0123456789ab", "Custom-BROKEN"]) {
-      const resolved = resolveHookAgentId({ agent_id: agentId, hook_source: "copilot-hook" });
+      const resolved = resolveHookAgentId({ agent_id: agentId, hook_source: "opencode-plugin" });
       assert.strictEqual(resolved.rejected, true);
       assert.strictEqual(resolved.source, "rejected-custom");
       assert.strictEqual(resolved.rawAgentId, agentId);
@@ -132,8 +132,8 @@ describe("resolveHookAgentId", () => {
   it("prefers hook_source routing over an unknown agent_id", () => {
     // A non-CC hook body that ever carries a stray non-registry agent_id must
     // keep routing by its hook_source stamp, not become a CC subagent.
-    const resolved = resolveHookAgentId({ agent_id: SUBAGENT_UUID, hook_source: "copilot-hook" });
-    assert.strictEqual(resolved.agentId, "copilot-cli");
+    const resolved = resolveHookAgentId({ agent_id: SUBAGENT_UUID, hook_source: "opencode-plugin" });
+    assert.strictEqual(resolved.agentId, "opencode");
     assert.strictEqual(resolved.source, "hook-source");
     assert.strictEqual(resolved.subagentId, undefined);
   });
@@ -150,7 +150,7 @@ describe("resolveHookAgentId", () => {
 
   it("exposes the registry-known id set", () => {
     assert.ok(KNOWN_HOOK_AGENT_IDS.has("claude-code"));
-    assert.ok(KNOWN_HOOK_AGENT_IDS.has("qoder"));
+    assert.ok(KNOWN_HOOK_AGENT_IDS.has("codex"));
     assert.ok(!KNOWN_HOOK_AGENT_IDS.has(SUBAGENT_UUID));
   });
 });

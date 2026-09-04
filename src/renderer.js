@@ -2212,8 +2212,7 @@ function renderStateFile(requestOrState, legacySvg) {
   const svg = visualRequest ? visualRequest.file : legacySvg;
   // Main process state change → cancel any active click reaction
   cancelReaction();
-  // Track the latest state name so the Kimi permission pulse can re-trigger
-  // swapToFile() with the matching state for eye-tracking decisions.
+  // Track the latest state name for eye-tracking decisions.
   currentState = state;
   const requestedSvg = svg;
   const lowPowerStaticImageOverride = resolveLowPowerStaticImageOverride(state, requestedSvg);
@@ -2322,18 +2321,6 @@ function renderStateFile(requestOrState, legacySvg) {
 // --- State change → switch animation (preload + instant swap) ---
 window.electronAPI.onStateChange((requestOrState, legacySvg) => {
   renderStateFile(requestOrState, legacySvg);
-});
-
-// Kimi CLI permission hold: re-trigger the current animation so it loops
-// while the user is reviewing the permission prompt.
-window.electronAPI.onKimiPermissionPulse(() => {
-  // applyResolvedDisplayState() sends the notification visual immediately
-  // before this pulse. Its pending media already owns a fresh animation
-  // timeline; replacing it here would terminally fail that generation.
-  if (pendingNext) return;
-  if (clawdEl && clawdEl.isConnected && currentDisplayedSvg) {
-    swapToFile(currentDisplayedSvg, currentState);
-  }
 });
 
 // --- Eye tracking (idle state only) ---

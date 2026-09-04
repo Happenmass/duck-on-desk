@@ -36,10 +36,8 @@ const {
 const { resolveCodexOfficialHookState } = require("./server-codex-official-turns");
 const { normalizeTranscriptPath } = require("./transcript-path");
 const { normalizeQuotaGroup } = require("../hooks/quota-bucket");
-const { ANTIGRAVITY_QUOTA_FIELDS } = require("../hooks/antigravity-context-usage");
 const { CLAUDE_QUOTA_FIELDS } = require("../hooks/claude-rate-limits");
 const { CODEX_QUOTA_FIELDS } = require("../hooks/codex-rate-limits");
-const { extractPermissionToolInput } = require("../hooks/kimi-hook");
 const { normalizeCodexUserInputWire } = require("../hooks/codex-user-input");
 const { sanitizeShadowRecord } = require("./windows-process-chain-shadow-log");
 
@@ -53,11 +51,6 @@ const { sanitizeShadowRecord } = require("./windows-process-chain-shadow-log");
 // not an Internet DoS concern.
 const MAX_STATE_BODY_BYTES = 16 * 1024;
 const ASSISTANT_LAST_OUTPUT_MAX = 2400;
-const RECAP_PERMISSION_BOUNDARY_AGENT_IDS = new Set([
-  "qoder",
-  "qoderwork",
-  "qwenwork",
-]);
 // Transport recognition and metadata acceptance are distinct wire facts.
 // A recognized 204 may still mean "unknown session" or another designed
 // metadata drop; only this header allows a metadata sender to advance its
@@ -126,14 +119,14 @@ function normalizeContextUsage(value) {
     out.percent = Math.max(0, Math.min(100, Math.round((used / out.limit) * 100)));
   }
 
-  if (value.source === "claude" || value.source === "codex" || value.source === "antigravity" || value.source === "opencode") out.source = value.source;
+  if (value.source === "claude" || value.source === "codex" || value.source === "opencode") out.source = value.source;
   return out;
 }
 
 // Context-usage provenance for metadata_only POSTs (statusline / plugin
 // quota path). Only sources whose posts are a live telemetry stream get an
 // origin; everything else reports plain usage without provenance.
-const OPENCODE_FAMILY_AGENT_IDS = new Set(["opencode", "mimocode"]);
+const OPENCODE_FAMILY_AGENT_IDS = new Set(["opencode"]);
 
 function resolveMetadataContextUsageOrigin(agentId, contextUsage) {
   if (!contextUsage || typeof contextUsage !== "object") return null;
@@ -154,12 +147,7 @@ function resolveStateContextUsageOrigin(agentId, contextUsage) {
 }
 
 // Account-wide rate-limit quota. Re-validated here rather than trusted from
-// the hook, matching normalizeContextUsage. Two independent sources - see
-// hooks/antigravity-context-usage.js and hooks/claude-rate-limits.js.
-function normalizeAntigravityQuota(value) {
-  return normalizeQuotaGroup(value, ANTIGRAVITY_QUOTA_FIELDS);
-}
-
+// the hook, matching normalizeContextUsage.
 function normalizeClaudeQuota(value) {
   return normalizeQuotaGroup(value, CLAUDE_QUOTA_FIELDS);
 }
@@ -183,7 +171,6 @@ function handleStatePost(req, res, options) {
     createRequestHookRecorder,
     shouldDropForDnd,
     codexOfficialTurns,
-    dshStateSequenceFence = null,
     pathApi = path,
     // #627 residual: injectable so unit tests never load the real koffi FFI.
     // Defaults to the real host OS check / a probe that never samples.
@@ -325,18 +312,8 @@ function handleStatePost(req, res, options) {
       ) ? data.session_start_source : null;
       // Closed provenance used only by recap metric mapping. Never forward a
       // free-form upstream event name into state, snapshots or future storage.
-      const recapBoundary = data.recap_boundary === "permission"
-        && RECAP_PERMISSION_BOUNDARY_AGENT_IDS.has(agentId)
-        ? "permission"
-        : (data.recap_boundary === "tool-call"
-            && agentId === "kimi-cli"
-            && event === "PermissionRequest"
-            && data.permission_gate_open === true
-          ? "tool-call"
-          : null);
-      const recapIsSubagent = data.recap_is_subagent === true
-        && agentId === "deepseek-harness"
-        && data.hook_source === "dsh-plugin";
+      const recapBoundary = null;
+      const recapIsSubagent = false;
       // #583: hook-reported stdin diagnostics, attached only when the hook's
       // stdin payload carried no session_id. Normalized here so state.js can
       // log it without trusting hook-side shapes.
@@ -362,39 +339,15 @@ function handleStatePost(req, res, options) {
       const rawTitle = typeof data.session_title === "string" ? data.session_title.trim() : "";
       const sessionTitle = rawTitle || null;
       const contextUsage = normalizeContextUsage(data.context_usage);
-      const antigravityQuota = normalizeAntigravityQuota(data.antigravity_quota);
       const claudeQuota = normalizeClaudeQuota(data.claude_quota);
       const codexQuota = normalizeCodexQuota(data.codex_quota);
       const codexSparkQuota = normalizeCodexQuota(data.codex_spark_quota);
       const assistantLastOutput = normalizeAssistantLastOutput(data.assistant_last_output);
       const assistantLastOutputTruncated = data.assistant_last_output_truncated === true;
       const transcriptPath = normalizeTranscriptPath(data.transcript_path);
-      const permissionSuspect = data.permission_suspect === true;
-      // #563: Kimi Code native PermissionRequest carries a human-readable
-      // action ("Running: echo hi") and the real command; the passive bubble
-      // shows them instead of the generic "check the terminal" line.
-      const permissionAction = typeof data.permission_action === "string" && data.permission_action.trim()
-        ? data.permission_action.trim().slice(0, 300)
-        : null;
-      const permissionCommand = typeof data.permission_command === "string" && data.permission_command.trim()
-        ? data.permission_command.trim().slice(0, 500)
-        : null;
-      // Whitelisted tool_input subset from a Kimi Code native
-      // PermissionRequest. Same validator the hook runs before POSTing —
-      // re-run here at the trust boundary rather than trusted from the hook,
-      // matching normalizeContextUsage.
-      const permissionToolInput = extractPermissionToolInput(data.permission_tool_input);
-      // Kimi legacy gate-ledger markers (batched-approvals fix). Booleans plus
-      // a clamped opaque tool_call_id, re-validated at the trust boundary like
-      // permission_suspect above — the hook's word alone is not enough.
-      const permissionGateOpen = data.permission_gate_open === true;
-      const permissionGated = data.permission_gated === true;
-      const permissionGateId = typeof data.permission_gate_id === "string" && data.permission_gate_id.trim()
-        ? data.permission_gate_id.trim().slice(0, 100)
-        : null;
       const preserveState = data.preserve_state === true;
       const testResult = (
-        (agentId === "claude-code" || agentId === "cursor-agent")
+        agentId === "claude-code"
         && (event === "PostToolUse" || event === "PostToolUseFailure")
         && (data.test_result === "pass" || data.test_result === "fail")
       ) ? data.test_result : null;
@@ -427,26 +380,6 @@ function handleStatePost(req, res, options) {
         res.end();
         return;
       }
-      if (agentId === "deepseek-harness") {
-        const sequenceResult = dshStateSequenceFence
-          && typeof dshStateSequenceFence.accept === "function"
-          ? dshStateSequenceFence.accept({
-              // The fence is upstream-protocol scoped. Keep it on DSH's raw
-              // canonical id; the local/remote profile key is a separate
-              // Clawd storage concern applied by resolveSessionIdentity.
-              sessionId: sessionIdentity.rawSessionId,
-              event,
-              eventSeq: data.event_seq,
-              sessionSeq: data.session_seq,
-            })
-          : { accepted: false, reason: "sequence-fence-unavailable" };
-        if (!sequenceResult.accepted) {
-          recordRequestHookEvent.droppedUnsupported();
-          res.writeHead(204, { [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID });
-          res.end();
-          return;
-        }
-      }
       // The persisted preference authorizes statusline telemetry only for the
       // local profile. Remote SSH profiles have their own deployed lifecycle
       // and must keep reporting even when this machine's local statusline is
@@ -466,10 +399,9 @@ function handleStatePost(req, res, options) {
       // deployed Clawd hooks to. The store shape-sanitizes the label.
       const acceptedClaudeQuota = localClaudeStatuslineMetadataAllowed ? claudeQuota : null;
       if (typeof ctx.updateAccountQuota === "function"
-        && (antigravityQuota || acceptedClaudeQuota || codexQuota || codexSparkQuota)) {
+        && (acceptedClaudeQuota || codexQuota || codexSparkQuota)) {
         const quotaSource = trustedProfileId === "local" ? host : `remote:${trustedProfileId}`;
         ctx.updateAccountQuota(quotaSource, {
-          antigravityQuota,
           claudeQuota: acceptedClaudeQuota,
           codexQuota,
           ...(codexSparkQuota ? { codexSparkQuota } : {}),
@@ -641,15 +573,6 @@ function handleStatePost(req, res, options) {
           editor,
         };
         const authoritativeProcessMetadata = processMetadataForState(processChainResult);
-        if (
-          processChainAssessment.mode === "b1a-authoritative"
-          && agentId === "cursor-agent"
-          && !authoritativeProcessMetadata.editor
-        ) {
-          // Cursor's editor label is an adapter-owned constant, not ancestry
-          // output. Preserve it even when the authoritative walk fails.
-          authoritativeProcessMetadata.editor = "cursor";
-        }
         const replaceProcessMetadata = processChainAssessment.eligible
           && processChainAssessment.mode === "b1a-authoritative";
         const effectiveProcessMetadata = replaceProcessMetadata
@@ -768,16 +691,9 @@ function handleStatePost(req, res, options) {
         const pendingForSource = () => pendingForSessionAgent().filter(
           (perm) => (perm.subagentId || null) === subagentId
         );
-        // Native-fallback adapters (qwen-code, zcode, deepseek-harness) answer
-        // their hook with "{}"/no-decision when Clawd has no real user
-        // decision, and the agent falls back to its own permission UI. For
-        // them, a /state lifecycle sweep must NEVER fabricate a deny — the
-        // user merely answered in the agent's native terminal. CC/CodeBuddy
-        // keep the explicit deny: their hook transport treats the missing
-        // answer as a denial of that tool call.
-        const stateSweepBehaviorFor = (perm) => (
-          perm.isQwenCode || perm.isZcode || perm.isDsh ? "no-decision" : "deny"
-        );
+        // Claude Code keeps the explicit deny: its hook transport treats the
+        // missing answer as a denial of that tool call.
+        const stateSweepBehaviorFor = () => "deny";
         const resolveOnlyUnambiguous = (candidates, behaviorFor, message) => {
           if (candidates.length !== 1) {
             if (candidates.length > 1 && typeof ctx.permLog === "function") {
@@ -901,13 +817,6 @@ function handleStatePost(req, res, options) {
             toolName,
             ...(toolUseId ? { toolUseId } : {}),
             transcriptPath,
-            permissionSuspect,
-            permissionAction,
-            permissionCommand,
-            permissionToolInput,
-            permissionGateOpen,
-            permissionGated,
-            permissionGateId,
             preserveState,
             hookSource,
             ...(codexHookState.turnId ? { turnId: codexHookState.turnId } : {}),

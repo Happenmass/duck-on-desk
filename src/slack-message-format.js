@@ -236,11 +236,6 @@ function identifierFallbackTitleCandidates(entry) {
     const raw = safeText(value);
     if (!raw) continue;
     candidates.add(shortenedIdentifierCandidate(raw));
-    for (const prefix of ["qoderwork:", "qwenwork:"]) {
-      if (raw.startsWith(prefix)) {
-        candidates.add(shortenedIdentifierCandidate(raw.slice(prefix.length) || raw));
-      }
-    }
   }
   return candidates;
 }

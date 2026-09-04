@@ -1,5 +1,5 @@
-// Shared utilities for hook installers (claude / cursor / gemini /
-// codebuddy / opencode). Keeps config-file mutation behavior identical
+// Shared utilities for hook installers (claude / codex / opencode).
+// Keeps config-file mutation behavior identical
 // across agents so a fix in one place fixes all of them.
 
 const fs = require("fs");
@@ -280,7 +280,7 @@ async function writeJsonAtomicWithBackupAsync(filePath, data, options = {}) {
 
 // `encodingOrOptions` accepts the legacy encoding string or
 // { encoding, mode }. Passing the ORIGINAL file's mode matters for configs
-// that may hold secrets (e.g. a 0600 mimocode.jsonc with provider tokens):
+// that may hold secrets (e.g. a 0600 JSONC config with provider tokens):
 // the rename-into-place pattern otherwise replaces them with a fresh
 // umask-default 0644 file — a silent permission widening.
 function writeTextAtomic(filePath, text, encodingOrOptions = "utf-8") {

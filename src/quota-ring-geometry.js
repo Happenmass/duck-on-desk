@@ -18,23 +18,16 @@
 // window sizing, positioning, and the auto-hide hot zone.
 
 // Provider → candidate bucket fields for the two rings (outer = rolling, inner
-// = weekly). Antigravity can report both Gemini and Claude/GPT quotas; each ring
-// compresses that timescale to the most constrained candidate, while the
-// Dashboard keeps showing all four values. Mirrors quota-ring-renderer.js.
+// = weekly). A provider that reports several quota families compresses each
+// timescale to its most constrained candidate, while the Dashboard keeps
+// showing every value. Mirrors quota-ring-renderer.js.
 // `label` is the provider's brand name, carried here so main-side consumers
 // (the Settings "show beside the pet" list) have one source for it instead of a
 // third hand-kept copy. Kept byte-identical to the renderer's own RING_PROVIDERS
 // labels; test/quota-ring-geometry.test.js pins the mirror.
 const RING_PROVIDERS = [
-  {
-    key: "antigravityQuota",
-    label: "Antigravity",
-    outer: ["geminiFiveHour", "thirdPartyFiveHour"],
-    inner: ["geminiWeekly", "thirdPartyWeekly"],
-  },
   { key: "claudeQuota", label: "Claude", outer: ["claudeFiveHour"], inner: ["claudeWeekly"] },
   { key: "codexQuota", label: "Codex", outer: ["codexFiveHour"], inner: ["codexWeekly"] },
-  { key: "kimiQuota", label: "Kimi", outer: ["kimiFiveHour"], inner: ["kimiWeekly"] },
 ];
 
 // Layout constants in CSS px (scaled by textScale by the caller, exactly like

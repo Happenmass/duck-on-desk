@@ -174,29 +174,10 @@ function makeServer(overrides = {}) {
       },
     },
     syncClawdHooksImpl: () => syncCalls.push("claude"),
-    syncGeminiHooksImpl: () => syncCalls.push("gemini"),
-    syncAntigravityHooksImpl: () => syncCalls.push("antigravity"),
-    syncCursorHooksImpl: () => syncCalls.push("cursor"),
-    syncCopilotHooksImpl: () => syncCalls.push("copilot"),
-    syncCodeBuddyHooksImpl: () => syncCalls.push("codebuddy"),
-    syncWorkBuddyHooksImpl: () => syncCalls.push("workbuddy"),
-    syncKiroHooksImpl: () => syncCalls.push("kiro"),
-    syncKimiHooksImpl: () => syncCalls.push("kimi"),
-    syncQwenHooksImpl: () => syncCalls.push("qwen"),
     syncCodexHooksImpl: () => syncCalls.push("codex"),
     repairCodexHooksImpl: () => syncCalls.push("codex-repair"),
     syncOpencodePluginImpl: () => syncCalls.push("opencode"),
-    syncMimocodePluginImpl: () => syncCalls.push("mimocode"),
     syncPiExtensionImpl: () => syncCalls.push("pi"),
-    syncOpenClawPluginImpl: () => syncCalls.push("openclaw"),
-    repairOpenClawPluginImpl: () => syncCalls.push("openclaw-repair"),
-    syncHermesPluginImpl: () => syncCalls.push("hermes"),
-    syncCodewhaleHooksImpl: () => syncCalls.push("codewhale"),
-    syncQoderHooksImpl: () => syncCalls.push("qoder"),
-    syncReasonixHooksImpl: () => syncCalls.push("reasonix"),
-    syncQoderWorkHooksImpl: () => syncCalls.push("qoderwork"),
-    syncTraeCodeHooksImpl: () => syncCalls.push("traecode"),
-    syncQwenWorkHooksImpl: () => syncCalls.push("qwenwork"),
     ...overrides,
   }, syncCalls);
 
@@ -245,29 +226,8 @@ describe("server Claude hook management", () => {
 
     api.startHttpServer();
 
-    assert.deepStrictEqual(syncCalls, ["claude", "gemini", "antigravity", "cursor", "copilot", "codebuddy", "workbuddy", "kiro", "kimi", "qwen", "codewhale", "codex", "opencode", "mimocode", "pi", "openclaw", "hermes", "qoder", "reasonix", "qoderwork", "traecode", "qwenwork"]);
+    assert.deepStrictEqual(syncCalls, ["claude", "codex", "opencode", "pi"]);
     assert.ok(getWatcher(), "watcher should start when management is enabled");
-  });
-
-  it("startup skips Hermes plugin sync quietly when Hermes is not installed", () => {
-    const warnings = [];
-    const originalWarn = console.warn;
-    console.warn = (...args) => warnings.push(args.join(" "));
-    try {
-      const { api, syncCalls, getWatcher } = makeServer({
-        manageClaudeHooksAutomatically: true,
-        syncHermesPluginImpl: undefined,
-        isHermesInstalledImpl: () => false,
-      });
-
-      api.startHttpServer();
-
-      assert.deepStrictEqual(syncCalls, ["claude", "gemini", "antigravity", "cursor", "copilot", "codebuddy", "workbuddy", "kiro", "kimi", "qwen", "codewhale", "codex", "opencode", "mimocode", "pi", "openclaw", "qoder", "reasonix", "qoderwork", "traecode", "qwenwork"]);
-      assert.ok(getWatcher(), "watcher should start when management is enabled");
-      assert.strictEqual(warnings.some((line) => /Hermes/i.test(line)), false);
-    } finally {
-      console.warn = originalWarn;
-    }
   });
 
   it("startup skips Claude sync/watcher but still syncs other agents when automatic management is disabled", () => {
@@ -277,19 +237,19 @@ describe("server Claude hook management", () => {
 
     api.startHttpServer();
 
-    assert.deepStrictEqual(syncCalls, ["gemini", "antigravity", "cursor", "copilot", "codebuddy", "workbuddy", "kiro", "kimi", "qwen", "codewhale", "codex", "opencode", "mimocode", "pi", "openclaw", "hermes", "qoder", "reasonix", "qoderwork", "traecode", "qwenwork"]);
+    assert.deepStrictEqual(syncCalls, ["codex", "opencode", "pi"]);
     assert.strictEqual(getWatcher(), null);
   });
 
   it("startup skips automatic hook/plugin sync for disabled agents", () => {
-    const disabled = new Set(["gemini-cli", "antigravity-cli", "cursor-agent", "kiro-cli", "opencode", "pi", "openclaw"]);
+    const disabled = new Set(["opencode", "pi"]);
     const { api, syncCalls, getWatcher } = makeServer({
       isAgentEnabled: (agentId) => !disabled.has(agentId),
     });
 
     api.startHttpServer();
 
-    assert.deepStrictEqual(syncCalls, ["claude", "copilot", "codebuddy", "workbuddy", "kimi", "qwen", "codewhale", "codex", "mimocode", "hermes", "qoder", "reasonix", "qoderwork", "traecode", "qwenwork"]);
+    assert.deepStrictEqual(syncCalls, ["claude", "codex"]);
     assert.ok(getWatcher(), "Claude watcher should still start when Claude is enabled");
   });
 
@@ -300,7 +260,7 @@ describe("server Claude hook management", () => {
 
     api.startHttpServer();
 
-    assert.deepStrictEqual(syncCalls, ["gemini", "antigravity", "cursor", "copilot", "codebuddy", "workbuddy", "kiro", "kimi", "qwen", "codewhale", "codex", "opencode", "mimocode", "pi", "openclaw", "hermes", "qoder", "reasonix", "qoderwork", "traecode", "qwenwork"]);
+    assert.deepStrictEqual(syncCalls, ["codex", "opencode", "pi"]);
     assert.strictEqual(getWatcher(), null);
   });
 
@@ -499,8 +459,8 @@ describe("server Claude hook management", () => {
     const second = makeServer({ manageClaudeHooksAutomatically: false });
     second.api.startHttpServer();
 
-    assert.deepStrictEqual(first.syncCalls, ["gemini", "antigravity", "cursor", "copilot", "codebuddy", "workbuddy", "kiro", "kimi", "qwen", "codewhale", "codex", "opencode", "mimocode", "pi", "openclaw", "hermes", "qoder", "reasonix", "qoderwork", "traecode", "qwenwork"]);
-    assert.deepStrictEqual(second.syncCalls, ["gemini", "antigravity", "cursor", "copilot", "codebuddy", "workbuddy", "kiro", "kimi", "qwen", "codewhale", "codex", "opencode", "mimocode", "pi", "openclaw", "hermes", "qoder", "reasonix", "qoderwork", "traecode", "qwenwork"]);
+    assert.deepStrictEqual(first.syncCalls, ["codex", "opencode", "pi"]);
+    assert.deepStrictEqual(second.syncCalls, ["codex", "opencode", "pi"]);
   });
 
   it("repairIntegrationForAgent uses the Codex official hook repair path", () => {
@@ -512,13 +472,13 @@ describe("server Claude hook management", () => {
     assert.deepStrictEqual(syncCalls, ["codex-repair"]);
   });
 
-  it("repairIntegrationForAgent('copilot-cli') routes through the standard sync path", () => {
+  it("repairIntegrationForAgent('opencode') routes through the standard sync path", () => {
     const { api, syncCalls } = makeServer();
 
-    const repaired = api.repairIntegrationForAgent("copilot-cli");
+    const repaired = api.repairIntegrationForAgent("opencode");
 
     assert.strictEqual(repaired, true);
-    assert.deepStrictEqual(syncCalls, ["copilot"]);
+    assert.deepStrictEqual(syncCalls, ["opencode"]);
   });
 
   it("passes Codex repair options through to the repair implementation", () => {
@@ -538,12 +498,12 @@ describe("server Claude hook management", () => {
 
   it("surfaces repair sync failures instead of reporting success", () => {
     const { api } = makeServer({
-      syncGeminiHooksImpl: () => {
+      syncOpencodePluginImpl: () => {
         throw new Error("permission denied");
       },
     });
 
-    const repaired = api.repairIntegrationForAgent("gemini-cli");
+    const repaired = api.repairIntegrationForAgent("opencode");
 
     assert.strictEqual(repaired.status, "error");
     assert.match(repaired.message, /permission denied/);

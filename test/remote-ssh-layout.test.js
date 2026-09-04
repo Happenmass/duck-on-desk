@@ -30,17 +30,14 @@ test("account-default layout normalizes the reserved runtime key and covers ever
     claudeSettingsFile: "/home/alice/.claude/settings.json",
     codexHome: "/home/alice/.codex",
     codexSessionsDir: "/home/alice/.codex/sessions",
-    copilotHome: "/home/alice/.copilot",
     clawdStateDir: "/home/alice/.clawd",
     binDir: null,
     wrapperEvidenceDir: null,
     bootstrapOwnerFile: null,
     claudeWrapperFile: null,
     codexWrapperFile: null,
-    copilotWrapperFile: null,
     claudeWrapperEvidenceFile: null,
     codexWrapperEvidenceFile: null,
-    copilotWrapperEvidenceFile: null,
     identityFile: "/home/alice/.claude/hooks/clawd-remote.json",
     secureMarkerFile: "/home/alice/.claude/hooks/clawd-ssh-secure-v1",
     hostPrefixFile: "/home/alice/.claude/hooks/clawd-host-prefix",
@@ -65,7 +62,6 @@ test("profile-isolated layout keeps every live path inside its runtime root", ()
   assert.equal(layout.runtimeRoot, "/srv/users/shared/.clawd/profiles/rt_A7x-19");
   assert.equal(layout.claudeConfigDir, `${layout.runtimeRoot}/claude`);
   assert.equal(layout.codexHome, `${layout.runtimeRoot}/codex`);
-  assert.equal(layout.copilotHome, `${layout.runtimeRoot}/copilot`);
   assert.equal(layout.clawdStateDir, `${layout.runtimeRoot}/clawd`);
   assert.equal(layout.legacyMonitorPidFile, null);
   for (const item of collectRemoteLayoutPathSet(layout)) {

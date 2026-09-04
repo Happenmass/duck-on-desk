@@ -36,18 +36,18 @@ function record(journal, agentId, metrics, hour, identity = {}) {
 test("aggregate preserves unsupported null separately from supported zero", (t) => {
   const { aggregate, journal } = fixture(t);
   aggregate.apply(record(journal, "codex", ["activity", "tool-call"], 4));
-  aggregate.apply(record(journal, "antigravity-cli", ["activity", "turn-complete"], 4));
+  aggregate.apply(record(journal, "opencode", ["activity", "turn-complete"], 4));
   const day = aggregate.query("2026-08-29", "2026-08-29")[0];
   const rows = day.rows;
   assert.equal(day.hourCapacities[4], 60);
   const codex = rows.find((row) => row.agentId === "codex");
-  const agy = rows.find((row) => row.agentId === "antigravity-cli");
+  const oc = rows.find((row) => row.agentId === "opencode");
   assert.equal(codex.metrics.toolCalls, 1);
   assert.equal(codex.metrics.turnsCompleted, 0);
   assert.equal(codex.metrics.sessionsStarted, null);
-  assert.equal(agy.metrics.toolCalls, null);
-  assert.equal(agy.metrics.turnsCompleted, 1);
-  assert.equal(agy.hours[4], 1);
+  assert.equal(oc.metrics.toolCalls, null);
+  assert.equal(oc.metrics.turnsCompleted, 1);
+  assert.equal(oc.hours[4], 1);
 });
 
 test("aggregate keeps same agent scopes separate and marks reusable session starts partial", (t) => {
@@ -97,7 +97,7 @@ test("daily rows freeze their historical metric support instead of following cur
   const day = normalizeDay("2026-08-29", {
     rows: {
       old: {
-        agentId: "antigravity-cli",
+        agentId: "opencode",
         scope: "local",
         scopeKeyHash: hash,
         support: { sessionsStarted: false, turnsCompleted: true, toolCalls: true },
@@ -163,10 +163,10 @@ test("unreleased daily aggregate schemas are quarantined without migration", (t)
 
 test("a day with mixed supported and unsupported policy segments stays honestly null", (t) => {
   const { aggregate, journal } = fixture(t);
-  const historical = record(journal, "antigravity-cli", ["activity", "tool-call"], 8);
+  const historical = record(journal, "opencode", ["activity", "tool-call"], 8);
   historical.support.toolCalls = true;
   aggregate.apply(historical);
-  aggregate.apply(record(journal, "antigravity-cli", ["activity"], 9));
+  aggregate.apply(record(journal, "opencode", ["activity"], 9));
   const row = aggregate.query("2026-08-29", "2026-08-29")[0].rows[0];
   assert.equal(row.metrics.toolCalls, null);
   assert.equal(row.metrics.activityEvents, 2);

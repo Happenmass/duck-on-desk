@@ -62,9 +62,6 @@ function resolveRemoteRuntimeLayout({ runtimeMode, runtimeKey, remoteHome } = {}
   const codexHome = isolated
     ? path.posix.join(runtimeRoot, "codex")
     : path.posix.join(remoteHome, ".codex");
-  const copilotHome = isolated
-    ? path.posix.join(runtimeRoot, "copilot")
-    : path.posix.join(remoteHome, ".copilot");
   const clawdStateDir = isolated
     ? path.posix.join(runtimeRoot, "clawd")
     : path.posix.join(remoteHome, ".clawd");
@@ -84,17 +81,14 @@ function resolveRemoteRuntimeLayout({ runtimeMode, runtimeKey, remoteHome } = {}
     claudeSettingsFile: path.posix.join(claudeConfigDir, "settings.json"),
     codexHome,
     codexSessionsDir: path.posix.join(codexHome, "sessions"),
-    copilotHome,
     clawdStateDir,
     binDir,
     wrapperEvidenceDir,
     bootstrapOwnerFile: isolated ? path.posix.join(clawdStateDir, "bootstrap-owner.json") : null,
     claudeWrapperFile: isolated ? path.posix.join(binDir, "claude") : null,
     codexWrapperFile: isolated ? path.posix.join(binDir, "codex") : null,
-    copilotWrapperFile: isolated ? path.posix.join(binDir, "copilot") : null,
     claudeWrapperEvidenceFile: isolated ? path.posix.join(wrapperEvidenceDir, "claude.used") : null,
     codexWrapperEvidenceFile: isolated ? path.posix.join(wrapperEvidenceDir, "codex.used") : null,
-    copilotWrapperEvidenceFile: isolated ? path.posix.join(wrapperEvidenceDir, "copilot.used") : null,
     identityFile: path.posix.join(claudeHooksDir, "clawd-remote.json"),
     secureMarkerFile: path.posix.join(claudeHooksDir, "clawd-ssh-secure-v1"),
     hostPrefixFile: path.posix.join(claudeHooksDir, "clawd-host-prefix"),

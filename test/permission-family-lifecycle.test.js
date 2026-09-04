@@ -436,8 +436,7 @@ describe("opencode-family lifecycle route → real runtime", () => {
     };
     await postPermission(harness.ctx, { agent_id: "opencode", session_id: "opencode:ses-duplicates", ...common });
     await postPermission(harness.ctx, { agent_id: "opencode", session_id: "opencode:ses-duplicates", ...common });
-    await postPermission(harness.ctx, { agent_id: "mimocode", session_id: "mimocode:ses-duplicates", ...common });
-    assert.strictEqual(harness.api.pendingPermissions.length, 3);
+    assert.strictEqual(harness.api.pendingPermissions.length, 2);
 
     await postPermission(harness.ctx, {
       agent_id: "opencode",
@@ -447,7 +446,7 @@ describe("opencode-family lifecycle route → real runtime", () => {
       lifecycle_bridge_url: "http://127.0.0.1:43210",
       lifecycle_bridge_token: "wrong_token",
     });
-    assert.strictEqual(harness.api.pendingPermissions.length, 3, "wrong generation token cannot clean anything");
+    assert.strictEqual(harness.api.pendingPermissions.length, 2, "wrong generation token cannot clean anything");
 
     const opencodeCompletion = {
       agent_id: "opencode",
@@ -458,18 +457,10 @@ describe("opencode-family lifecycle route → real runtime", () => {
       lifecycle_bridge_token: "token_duplicates",
     };
     await postPermission(harness.ctx, opencodeCompletion);
-    assert.strictEqual(harness.api.pendingPermissions.length, 1);
-    assert.strictEqual(harness.api.pendingPermissions[0].agentId, "mimocode");
+    assert.strictEqual(harness.api.pendingPermissions.length, 0);
 
     await postPermission(harness.ctx, opencodeCompletion);
-    assert.strictEqual(harness.api.pendingPermissions.length, 1, "duplicate lifecycle is idempotent");
-
-    await postPermission(harness.ctx, {
-      ...opencodeCompletion,
-      agent_id: "mimocode",
-      session_id: "mimocode:ses-duplicates",
-    });
-    assert.strictEqual(harness.api.pendingPermissions.length, 0);
+    assert.strictEqual(harness.api.pendingPermissions.length, 0, "duplicate lifecycle is idempotent");
     assert.deepStrictEqual(harness.calls.replyOpencodeFamilyPermission, []);
     harness.api.cleanup();
   });

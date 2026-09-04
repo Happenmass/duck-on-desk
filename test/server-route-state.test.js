@@ -21,7 +21,6 @@ const { classifyPermissionInteraction } = require("../src/permission-automation-
 const { buildStateBody } = require("../hooks/clawd-hook");
 const { makeSessionKey } = require("../src/session-key");
 const createAgentRuntimeMain = require("../src/agent-runtime-main");
-const { createDshStateSequenceFence } = require("../src/dsh-state-sequence");
 const initState = require("../src/state");
 const themeLoader = require("../src/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
@@ -190,73 +189,6 @@ describe("server-route-state health", () => {
 });
 
 describe("server-route-state POST", () => {
-  it("enforces DSH upstream sequence order across created, event, and disposed callbacks", async () => {
-    const fence = createDshStateSequenceFence();
-    const post = (event, state, sequence = {}) => callStatePost(JSON.stringify({
-      agent_id: "deepseek-harness",
-      hook_source: "dsh-plugin",
-      session_id: "deepseek-harness:ordered",
-      event,
-      state,
-      ...sequence,
-    }), { options: { dshStateSequenceFence: fence } });
-
-    const started = await post("SessionStart", "idle", { session_seq: 0 });
-    const event = await post("UserPromptSubmit", "thinking", { event_seq: 0 });
-    const duplicate = await post("PreToolUse", "working", { event_seq: 0 });
-    const ended = await post("SessionEnd", "sleeping", { session_seq: 1 });
-    const late = await post("Stop", "attention", { event_seq: 1 });
-
-    assert.strictEqual(started.statusCode, 200);
-    assert.strictEqual(event.statusCode, 200);
-    assert.strictEqual(duplicate.statusCode, 204);
-    assert.deepStrictEqual(duplicate.calls.updateSession, []);
-    assert.deepStrictEqual(duplicate.calls.recorder.map((entry) => entry.outcome).filter(Boolean), ["unsupported"]);
-    assert.strictEqual(ended.statusCode, 200);
-    assert.strictEqual(late.statusCode, 204);
-    assert.deepStrictEqual(late.calls.updateSession, []);
-  });
-
-  it("fails DSH state closed when its sequence fence or required watermark is unavailable", async () => {
-    const body = {
-      agent_id: "deepseek-harness",
-      hook_source: "dsh-plugin",
-      session_id: "deepseek-harness:missing-fence",
-      event: "SessionStart",
-      state: "idle",
-      session_seq: 0,
-    };
-    const absent = await callStatePost(JSON.stringify(body));
-    const missingWatermark = await callStatePost(JSON.stringify({ ...body, session_seq: undefined }), {
-      options: { dshStateSequenceFence: createDshStateSequenceFence() },
-    });
-    assert.strictEqual(absent.statusCode, 204);
-    assert.strictEqual(missingWatermark.statusCode, 204);
-    assert.deepStrictEqual(absent.calls.updateSession, []);
-    assert.deepStrictEqual(missingWatermark.calls.updateSession, []);
-  });
-
-  it("does not advance the DSH sequence fence for a disabled integration", async () => {
-    const fence = createDshStateSequenceFence();
-    const body = JSON.stringify({
-      agent_id: "deepseek-harness",
-      hook_source: "dsh-plugin",
-      session_id: "deepseek-harness:gated",
-      event: "SessionStart",
-      state: "idle",
-      session_seq: 3,
-    });
-    const disabled = await callStatePost(body, {
-      ctx: { isAgentEnabled: () => false },
-      options: { dshStateSequenceFence: fence },
-    });
-    const enabled = await callStatePost(body, {
-      options: { dshStateSequenceFence: fence },
-    });
-    assert.strictEqual(disabled.statusCode, 204);
-    assert.strictEqual(enabled.statusCode, 200);
-  });
-
   it("relays a normalized test result after the lifecycle update", async () => {
     const res = await callStatePost(JSON.stringify({
       state: "working",
@@ -398,95 +330,6 @@ describe("server-route-state POST", () => {
     }));
     assert.strictEqual(invalid.calls.updateSession[0][3].subagentLifecycleSource, undefined);
     assert.strictEqual(invalid.calls.updateSession[0][3].sessionStartSource, undefined);
-  });
-
-  it("forwards only the closed recap boundary provenance", async () => {
-    const permission = await callStatePost(JSON.stringify({
-      state: "working",
-      session_id: "qwenwork:permission",
-      event: "PreToolUse",
-      agent_id: "qwenwork",
-      recap_boundary: "permission",
-      tool_use_id: "tool-1",
-    }));
-    assert.strictEqual(permission.statusCode, 200);
-    assert.strictEqual(permission.calls.updateSession[0][3].recapBoundary, "permission");
-    assert.strictEqual(permission.calls.updateSession[0][3].toolUseId, "tool-1");
-
-    const invalid = await callStatePost(JSON.stringify({
-      state: "working",
-      session_id: "qwenwork:invalid",
-      event: "PreToolUse",
-      agent_id: "qwenwork",
-      recap_boundary: "PermissionRequest",
-    }));
-    assert.strictEqual(invalid.calls.updateSession[0][3].recapBoundary, undefined);
-
-    const spoofed = await callStatePost(JSON.stringify({
-      state: "working",
-      session_id: "claude-spoof",
-      event: "PreToolUse",
-      agent_id: "claude-code",
-      recap_boundary: "permission",
-    }));
-    assert.strictEqual(spoofed.calls.updateSession[0][3].recapBoundary, undefined);
-
-    const kimiTool = await callStatePost(JSON.stringify({
-      state: "notification",
-      session_id: "kimi-cli:tool",
-      event: "PermissionRequest",
-      agent_id: "kimi-cli",
-      recap_boundary: "tool-call",
-      tool_use_id: "kimi-tool-1",
-      permission_gate_open: true,
-    }));
-    assert.strictEqual(kimiTool.calls.updateSession[0][3].recapBoundary, "tool-call");
-    assert.strictEqual(kimiTool.calls.updateSession[0][3].toolUseId, "kimi-tool-1");
-
-    const spoofedTool = await callStatePost(JSON.stringify({
-      state: "working",
-      session_id: "claude-tool-spoof",
-      event: "PreToolUse",
-      agent_id: "claude-code",
-      recap_boundary: "tool-call",
-    }));
-    assert.strictEqual(spoofedTool.calls.updateSession[0][3].recapBoundary, undefined);
-
-    const malformedKimiTool = await callStatePost(JSON.stringify({
-      state: "working",
-      session_id: "kimi-cli:tool-spoof",
-      event: "PreToolUse",
-      agent_id: "kimi-cli",
-      recap_boundary: "tool-call",
-      permission_gate_open: true,
-    }));
-    assert.strictEqual(malformedKimiTool.calls.updateSession[0][3].recapBoundary, undefined);
-
-    const dshSubagent = await callStatePost(JSON.stringify({
-      state: "attention",
-      session_id: "deepseek-harness:child",
-      event: "Stop",
-      agent_id: "deepseek-harness",
-      hook_source: "dsh-plugin",
-      event_seq: 0,
-      recap_is_subagent: true,
-    }), {
-      options: { dshStateSequenceFence: createDshStateSequenceFence() },
-    });
-    assert.strictEqual(dshSubagent.calls.updateSession[0][3].recapIsSubagent, true);
-
-    const spoofedSubagent = await callStatePost(JSON.stringify({
-      state: "attention",
-      session_id: "deepseek-harness:spoof",
-      event: "Stop",
-      agent_id: "deepseek-harness",
-      hook_source: "foreign-plugin",
-      event_seq: 0,
-      recap_is_subagent: true,
-    }), {
-      options: { dshStateSequenceFence: createDshStateSequenceFence() },
-    });
-    assert.strictEqual(spoofedSubagent.calls.updateSession[0][3].recapIsSubagent, undefined);
   });
 
   it("clears main-thread and all subagent decisions on a main-session SessionEnd", async () => {
@@ -664,7 +507,6 @@ describe("server-route-state POST", () => {
       session_title: "  Work title  ",
       tool_name: "Read",
       transcript_path: "/Users/tester/.claude/projects/repo/session.jsonl",
-      permission_suspect: true,
       preserve_state: true,
       hook_source: "codex-official",
     }));
@@ -704,13 +546,6 @@ describe("server-route-state POST", () => {
         assistantLastOutputTruncated: false,
         toolName: "Read",
         transcriptPath: "/Users/tester/.claude/projects/repo/session.jsonl",
-        permissionSuspect: true,
-        permissionAction: null,
-        permissionCommand: null,
-        permissionToolInput: null,
-        permissionGateOpen: false,
-        permissionGated: false,
-        permissionGateId: null,
         preserveState: true,
         hookSource: "codex-official",
         backgroundTasksCount: 0,
@@ -802,7 +637,7 @@ describe("server-route-state POST", () => {
     assert.strictEqual(request.calls.updateSession[0][3].transientPermissionEvent, true);
     assert.deepStrictEqual(request.calls.updateAccountQuota, [[
       "remote-box",
-      { antigravityQuota: null, claudeQuota: null, codexQuota: { codexWeekly: { usedPercent: 43 } } },
+      { claudeQuota: null, codexQuota: { codexWeekly: { usedPercent: 43 } } },
     ]]);
 
     const resolved = await callStatePost(JSON.stringify({
@@ -821,115 +656,8 @@ describe("server-route-state POST", () => {
     assert.deepStrictEqual(resolved.calls.updateSession, []);
     assert.deepStrictEqual(resolved.calls.updateAccountQuota, [[
       "remote-box",
-      { antigravityQuota: null, claudeQuota: null, codexQuota: { codexFiveHour: { usedPercent: 12 } } },
+      { claudeQuota: null, codexQuota: { codexFiveHour: { usedPercent: 12 } } },
     ]]);
-  });
-
-  it("forwards Kimi Code permission context to updateSession (#563)", async () => {
-    const res = await callStatePost(JSON.stringify({
-      state: "notification",
-      session_id: "kimi-cli:session_abc",
-      event: "PermissionRequest",
-      agent_id: "kimi-cli",
-      tool_name: "Bash",
-      permission_action: "Running: echo hi",
-      permission_command: "echo hi",
-      permission_tool_input: { command: "echo hi" },
-    }), { ctx: { STATE_SVGS: { notification: "x.svg" } } });
-
-    assert.strictEqual(res.statusCode, 200);
-    const opts = res.calls.updateSession[0][3];
-    assert.strictEqual(opts.toolName, "Bash");
-    assert.strictEqual(opts.permissionAction, "Running: echo hi");
-    assert.strictEqual(opts.permissionCommand, "echo hi");
-    assert.deepStrictEqual(opts.permissionToolInput, { command: "echo hi" });
-  });
-
-  it("forwards Kimi gate-ledger markers and re-validates their types", async () => {
-    const post = (extra) => callStatePost(JSON.stringify({
-      state: "working",
-      session_id: "kimi-cli:session_abc",
-      event: "PreToolUse",
-      agent_id: "kimi-cli",
-      ...extra,
-    }));
-
-    // Well-formed markers pass through; the id is trimmed and clamped.
-    const open = await post({
-      permission_suspect: true,
-      permission_gate_open: true,
-      permission_gate_id: `  ${"g".repeat(150)}  `,
-    });
-    const openOpts = open.calls.updateSession[0][3];
-    assert.strictEqual(openOpts.permissionGateOpen, true);
-    assert.strictEqual(openOpts.permissionGated, false);
-    assert.strictEqual(openOpts.permissionGateId, "g".repeat(100));
-
-    const gated = await post({
-      event: "PostToolUse",
-      permission_gated: true,
-      permission_gate_id: "call_1",
-    });
-    const gatedOpts = gated.calls.updateSession[0][3];
-    assert.strictEqual(gatedOpts.permissionGated, true);
-    assert.strictEqual(gatedOpts.permissionGateOpen, false);
-    assert.strictEqual(gatedOpts.permissionGateId, "call_1");
-
-    // Wrong types are dropped at the trust boundary — truthiness is not enough.
-    const junk = await post({
-      permission_gate_open: "yes",
-      permission_gated: 1,
-      permission_gate_id: { id: "x" },
-    });
-    const junkOpts = junk.calls.updateSession[0][3];
-    assert.strictEqual(junkOpts.permissionGateOpen, false);
-    assert.strictEqual(junkOpts.permissionGated, false);
-    assert.strictEqual(junkOpts.permissionGateId, null);
-
-    // Whitespace-only id degrades to null, same as an absent field.
-    const blank = await post({ permission_gate_id: "   " });
-    assert.strictEqual(blank.calls.updateSession[0][3].permissionGateId, null);
-  });
-
-  it("re-validates permission_tool_input instead of trusting the hook", async () => {
-    const post = (permissionToolInput) => callStatePost(JSON.stringify({
-      state: "notification",
-      session_id: "kimi-cli:session_abc",
-      event: "PermissionRequest",
-      agent_id: "kimi-cli",
-      tool_name: "Write",
-      permission_tool_input: permissionToolInput,
-    }), { ctx: { STATE_SVGS: { notification: "x.svg" } } });
-
-    // Non-whitelisted and non-string fields are dropped; strings re-clamped.
-    const mixed = await post({
-      file_path: ` ${"p".repeat(600)} `,
-      content: "never forwarded",
-      command: 42,
-    });
-    const forwarded = mixed.calls.updateSession[0][3].permissionToolInput;
-    assert.deepStrictEqual(Object.keys(forwarded), ["file_path"]);
-    assert.strictEqual(forwarded.file_path.length, 500);
-
-    // description is deliberately outside the whitelist: formatDetail prefers
-    // it over command, so a model-authored string could mask the real command.
-    const masked = await post({ command: "rm -rf /tmp/x", description: "Tidy workspace" });
-    assert.deepStrictEqual(
-      masked.calls.updateSession[0][3].permissionToolInput,
-      { command: "rm -rf /tmp/x" }
-    );
-
-    const pattern = await post({ pattern: "TODO(kimi)" });
-    assert.deepStrictEqual(
-      pattern.calls.updateSession[0][3].permissionToolInput,
-      { pattern: "TODO(kimi)" }
-    );
-
-    // Nothing whitelisted survives -> null, same as an absent field.
-    for (const garbage of [{ content: "x" }, "text", [1, 2], 7]) {
-      const res = await post(garbage);
-      assert.strictEqual(res.calls.updateSession[0][3].permissionToolInput, null);
-    }
   });
 
   it("passes assistant last output metadata to updateSession", async () => {
@@ -1119,26 +847,6 @@ describe("server-route-state POST", () => {
   // Account quota is session-independent: any POST carrying it feeds the
   // per-source store (keyed by the reporting host, null = local), and it
   // never rides updateSession opts.
-  it("routes valid antigravity_quota to updateAccountQuota, not updateSession", async () => {
-    const res = await callStatePost(JSON.stringify({
-      state: "idle",
-      session_id: "sid",
-      antigravity_quota: {
-        geminiFiveHour: { usedPercent: 100 },
-        geminiWeekly: { usedPercent: 98, resetAt: 1738831180000 },
-      },
-    }));
-
-    assert.strictEqual(res.statusCode, 200);
-    assert.strictEqual(res.calls.updateAccountQuota.length, 1);
-    assert.strictEqual(res.calls.updateAccountQuota[0][0], null);
-    assert.deepStrictEqual(res.calls.updateAccountQuota[0][1].antigravityQuota, {
-      geminiFiveHour: { usedPercent: 100 },
-      geminiWeekly: { usedPercent: 98, resetAt: 1738831180000 },
-    });
-    assert.strictEqual(Object.prototype.hasOwnProperty.call(res.calls.updateSession[0][3], "antigravityQuota"), false);
-  });
-
   it("does not call updateAccountQuota for invalid antigravity_quota", async () => {
     const res = await callStatePost(JSON.stringify({
       state: "idle",
@@ -1912,7 +1620,7 @@ describe("server-route-state Windows B1a process metadata", () => {
       state: "working",
       session_id: "b1a-state",
       event: "PreToolUse",
-      agent_id: "kiro-cli",
+      agent_id: "codex",
       source_pid: 11,
       agent_pid: 12,
       pid_chain: [11, 12],
@@ -1921,10 +1629,10 @@ describe("server-route-state Windows B1a process metadata", () => {
       headers,
       options: {
         isWinHost: true,
-        windowsProcessChainRuntime: runtime("kiro-cli", "b1a-authoritative"),
+        windowsProcessChainRuntime: runtime("codex", "b1a-authoritative"),
         resolveWindowsProcessMetadata: ({ agentId, hookPid }) => {
           calls++;
-          assert.strictEqual(agentId, "kiro-cli");
+          assert.strictEqual(agentId, "codex");
           assert.strictEqual(hookPid, 4321);
           return {
             status: "ok",
@@ -1946,39 +1654,13 @@ describe("server-route-state Windows B1a process metadata", () => {
     assert.strictEqual(res.calls.updateSession[0][3].replaceProcessMetadata, true);
   });
 
-  it("authoritative failure clears derived fields while preserving Cursor's constant editor", async () => {
-    const res = await callStatePost(JSON.stringify({
-      state: "working",
-      session_id: "b1a-cursor",
-      event: "PreToolUse",
-      agent_id: "cursor-agent",
-      source_pid: 11,
-      cursor_pid: 12,
-      pid_chain: [11, 12],
-    }), {
-      headers,
-      options: {
-        isWinHost: true,
-        windowsProcessChainRuntime: runtime("cursor-agent", "b1a-authoritative"),
-        resolveWindowsProcessMetadata: () => ({ status: "unavailable", reason: "access-denied" }),
-      },
-    });
-
-    const opts = res.calls.updateSession[0][3];
-    assert.strictEqual(opts.sourcePid, null);
-    assert.strictEqual(opts.agentPid, null);
-    assert.strictEqual(opts.pidChain, null);
-    assert.strictEqual(opts.editor, "cursor");
-    assert.strictEqual(opts.replaceProcessMetadata, true);
-  });
-
   it("shadow mode records parity but keeps legacy metadata authoritative", async () => {
     const records = [];
     const res = await callStatePost(JSON.stringify({
       state: "working",
       session_id: "b1a-shadow",
       event: "PreToolUse",
-      agent_id: "reasonix",
+      agent_id: "codex",
       source_pid: 11,
       agent_pid: 12,
       pid_chain: [11, 12],
@@ -1986,7 +1668,7 @@ describe("server-route-state Windows B1a process metadata", () => {
       headers,
       options: {
         isWinHost: true,
-        windowsProcessChainRuntime: runtime("reasonix", "shadow"),
+        windowsProcessChainRuntime: runtime("codex", "shadow"),
         resolveWindowsProcessMetadata: () => ({
           status: "ok",
           sourcePid: 21,
@@ -2035,49 +1717,6 @@ describe("server-route-state Windows B1a process metadata", () => {
     assert.strictEqual(resolverCalls, 0);
     assert.strictEqual(res.calls.updateSession[0][3].sourcePid, 88);
     assert.strictEqual(res.calls.updateSession[0][3].replaceProcessMetadata, undefined);
-  });
-
-  it("resolves every interleaved Kiro default event from its own hook PID", async () => {
-    const resolverCalls = [];
-    const resolver = ({ agentId, hookPid }) => {
-      resolverCalls.push({ agentId, hookPid });
-      return {
-        status: "ok",
-        sourcePid: hookPid + 100,
-        agentPid: hookPid + 200,
-        pidChain: [hookPid + 200, hookPid + 100],
-        editor: null,
-      };
-    };
-    const cases = [
-      { hookPid: 7001, cwd: "D:\\repo-a" },
-      { hookPid: 7002, cwd: "D:\\repo-b" },
-      { hookPid: 7003, cwd: "D:\\repo-a" },
-    ];
-    for (const entry of cases) {
-      const res = await callStatePost(JSON.stringify({
-        state: "working",
-        session_id: "default",
-        event: "PreToolUse",
-        agent_id: "kiro-cli",
-        cwd: entry.cwd,
-      }), {
-        headers: {
-          ...headers,
-          [CLAWD_HOOK_PID_HEADER.toLowerCase()]: String(entry.hookPid),
-        },
-        options: {
-          isWinHost: true,
-          windowsProcessChainRuntime: runtime("kiro-cli", "b1a-authoritative"),
-          resolveWindowsProcessMetadata: resolver,
-        },
-      });
-      assert.strictEqual(res.calls.updateSession[0][3].sourcePid, entry.hookPid + 100);
-    }
-    assert.deepStrictEqual(resolverCalls, cases.map((entry) => ({
-      agentId: "kiro-cli",
-      hookPid: entry.hookPid,
-    })));
   });
 
   it("authoritative Codex SessionStart samples HWND server-side and ignores sender HWND", async () => {

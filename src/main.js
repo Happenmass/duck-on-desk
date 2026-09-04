@@ -91,9 +91,6 @@ const {
 const { registerSettingsIpc } = require("./settings-ipc");
 const createSettingsEffectRouter = require("./settings-effect-router");
 const { createRecapRuntime } = require("./recap-runtime");
-const { createKimiQuotaClient } = require("./kimi-quota-client");
-const { createKimiQuotaCredentialStore } = require("./kimi-quota-credential-store");
-const { createKimiQuotaRuntime } = require("./kimi-quota-runtime");
 const {
   getPetTintIdForTheme,
   resolvePetTintPayload,
@@ -1241,7 +1238,6 @@ let sessionHudShowQuota = _settingsController.get("sessionHudShowQuota");
 let quotaRingDisplayMode = _settingsController.get("quotaRingDisplayMode");
 let quotaRingHiddenProviders = _settingsController.get("quotaRingHiddenProviders");
 let claudeQuotaCollectionEnabled = _settingsController.get("claudeQuotaCollectionEnabled");
-let kimiQuotaCollectionEnabled = _settingsController.get("kimiQuotaCollectionEnabled");
 let quotaMergeSources = _settingsController.get("quotaMergeSources");
 let sessionHudCleanupDetached = _settingsController.get("sessionHudCleanupDetached");
 let sessionHudPinned = _settingsController.get("sessionHudPinned");
@@ -2011,7 +2007,7 @@ const _permCtx = {
 };
 const _perm = initPermission(_permCtx);
 permissionPresentationRuntime = _perm;
-const { showPermissionBubble, resolvePermissionEntry, sendPermissionResponse, repositionBubbles, permLog, PASSTHROUGH_TOOLS, addPendingPermission, removePendingPermission, isPermissionEntryLive, canAutoResolvePendingPermission, beginSessionTrustConfirmation, endSessionTrustConfirmation, syncPermissionBubbleContent, maybeStartRemoteApproval, clearCodexNotifyBubbles, showCodexUserInputBubble, clearCodexUserInputBubbles, showKimiNotifyBubble, clearKimiNotifyBubbles, syncPermissionShortcuts, replyOpencodeFamilyPermission, dismissOpencodeFamilyPermissionResolvedExternally } = _perm;
+const { showPermissionBubble, resolvePermissionEntry, sendPermissionResponse, repositionBubbles, permLog, PASSTHROUGH_TOOLS, addPendingPermission, removePendingPermission, isPermissionEntryLive, canAutoResolvePendingPermission, beginSessionTrustConfirmation, endSessionTrustConfirmation, syncPermissionBubbleContent, maybeStartRemoteApproval, clearCodexNotifyBubbles, showCodexUserInputBubble, clearCodexUserInputBubbles, syncPermissionShortcuts, replyOpencodeFamilyPermission, dismissOpencodeFamilyPermissionResolvedExternally } = _perm;
 const pendingPermissions = _perm.pendingPermissions;
 let permDebugLog = null; // set after app.whenReady()
 let updateDebugLog = null; // set after app.whenReady()
@@ -2185,7 +2181,6 @@ const _stateCtx = {
   accountQuotaPersistPath: require("./state-account-quota").DEFAULT_PERSIST_PATH,
   recapSink: recapRuntime,
   get claudeQuotaCollectionEnabled() { return claudeQuotaCollectionEnabled; },
-  get kimiQuotaCollectionEnabled() { return kimiQuotaCollectionEnabled; },
   get quotaMergeSources() { return quotaMergeSources; },
   get doNotDisturb() { return doNotDisturb; },
   set doNotDisturb(v) { doNotDisturb = v; },
@@ -2212,12 +2207,6 @@ const _stateCtx = {
   focusTerminalWindow: (...args) => focusTerminalWindow(...args),
   resolvePermissionEntry: (...args) => resolvePermissionEntry(...args),
   dismissPermissionsForDnd: (...args) => _perm.dismissPermissionsForDnd(...args),
-  showKimiNotifyBubble: (...args) => showKimiNotifyBubble(...args),
-  clearKimiNotifyBubbles: (...args) => clearKimiNotifyBubbles(...args),
-  // state.js needs this to gate startKimiPermissionPoll symmetrically with
-  // shouldSuppressKimiNotifyBubble in permission.js — without it the
-  // permissionsEnabled=false toggle would silently rebuild holds on every
-  // incoming Kimi PermissionRequest.
   isAgentPermissionsEnabled: (agentId) =>
     _runtimeAgentGate.isAgentPermissionsEnabled(agentId),
   // state.js gates self-issued Notification events (idle / wait-for-input
@@ -2315,28 +2304,6 @@ displayedVisualProjection = createDisplayedVisualProjection({
     resetDisplayedVisualProjection("renderer-unresponsive", { preserveCommitted: true });
     petWindowRuntime.reloadWindowWebContents(win);
   },
-});
-const _kimiQuotaCredentialStore = createKimiQuotaCredentialStore({ safeStorage });
-const _kimiQuotaRuntime = createKimiQuotaRuntime({
-  credentialStore: _kimiQuotaCredentialStore,
-  client: createKimiQuotaClient({ appVersion: app.getVersion() }),
-  getSettingsSnapshot: () => _settingsController.getSnapshot(),
-  setCollectionEnabled: (enabled) => _settingsController.applyCommand(
-    "setKimiQuotaCollectionEnabled",
-    { enabled }
-  ),
-  commitLocalKimiQuota: (quota) => _state.commitLocalKimiQuota(quota),
-  clearLocalKimiQuota: () => _state.clearLocalKimiQuota(),
-});
-_settingsController.subscribeKey("kimiQuotaCollectionEnabled", (enabled) => {
-  void _kimiQuotaRuntime.onCollectionPreferenceChanged(enabled).catch((error) => {
-    console.warn("Clawd: Kimi quota preference reconciliation failed:", error && error.message);
-  });
-});
-_settingsController.subscribeKey("agents", (_agents, snapshot) => {
-  if (!_runtimeAgentGate.isAgentEnabled("kimi-cli")) {
-    _kimiQuotaRuntime.invalidateRequests();
-  }
 });
 const { setState, applyState, updateSession, resolveDisplayState, getSvgOverride,
         enableDoNotDisturb, disableDoNotDisturb, startStaleCleanup, stopStaleCleanup,
@@ -4295,7 +4262,6 @@ const SETTINGS_MIRROR_SETTERS = {
   // value straight from a settings broadcast, and every consumer indexes it.
   quotaRingHiddenProviders: (v) => { quotaRingHiddenProviders = Array.isArray(v) ? v : []; },
   claudeQuotaCollectionEnabled: (v) => { claudeQuotaCollectionEnabled = v; },
-  kimiQuotaCollectionEnabled: (v) => { kimiQuotaCollectionEnabled = v; },
   quotaMergeSources: (v) => { quotaMergeSources = v; },
   sessionHudCleanupDetached: (v) => { sessionHudCleanupDetached = v; },
   sessionHudPinned: (v) => { sessionHudPinned = v; },
@@ -4364,7 +4330,6 @@ const settingsEffectRouter = createSettingsEffectRouter({
   dismissInteractivePermissionBubbles: () => callRuntimeMethod(_perm, "dismissInteractivePermissionBubbles"),
   clearCodexNotifyBubbles,
   clearCodexUserInputBubbles,
-  clearKimiNotifyBubbles,
   refreshPassiveNotifyAutoClose: () => callRuntimeMethod(_perm, "refreshPassiveNotifyAutoClose"),
   refreshPermissionAutoCloseForPolicy: () => callRuntimeMethod(_perm, "refreshPermissionAutoCloseForPolicy"),
   hideUpdateBubbleForPolicy: () => callRuntimeMethod(_updateBubble, "hideForPolicy"),
@@ -4704,7 +4669,6 @@ const settingsIpcRuntime = registerSettingsIpc({
   getAllAgents,
   getHookServerPort: () => getHookServerPort(),
   getRecentHookEvents: (options) => _server.getRecentHookEvents(options),
-  kimiQuotaRuntime: _kimiQuotaRuntime,
   checkForUpdates,
   getUpdateCheckSnapshot,
   clearUpdateError,
@@ -4725,8 +4689,6 @@ registerSessionIpc({
   getSessionSnapshot: () => _state.buildSessionSnapshot(),
   getI18n: () => getDashboardI18nPayload(),
   getDashboardWindow: () => _dashboard.getWindow(),
-  getKimiQuotaStatus: () => _kimiQuotaRuntime.getStatus(),
-  refreshKimiQuota: () => _kimiQuotaRuntime.refresh(),
   focusSession: (sessionId, options) => focusDashboardSession(sessionId, options),
   hideSession: (sessionId) => hideDashboardSession(sessionId),
   openSessionFolder: (sessionId) => openDashboardSessionFolder(sessionId),
@@ -5484,13 +5446,6 @@ if (!gotTheLock) {
     createWindow();
     try { recapRuntime.start(); }
     catch (err) { console.warn("Clawd: local recap startup failed:", err && err.code ? err.code : "storage-error"); }
-    // Reconcile the local quota binding only after the app has visible UI.
-    // initialize() reads opaque credential metadata but never decrypts the key
-    // or performs a network request, so ordinary startup cannot be held behind
-    // a Keychain/DPAPI prompt.
-    void _kimiQuotaRuntime.initialize().catch((err) => {
-      console.warn("Clawd: Kimi quota startup reconciliation failed:", err && err.message);
-    });
     notifyPrefsAuthorityFailure();
     if (feishuApprovalMigrationNudge) {
       void feishuApprovalMigrationNudge.sync({ allowNotify: true });

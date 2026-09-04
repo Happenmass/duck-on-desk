@@ -11322,23 +11322,6 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(autoStart.extraElement, null);
   });
 
-  it("shows the TraeCode enable-in-Trae hint on the card when the integration is installed", () => {
-    const harness = loadAgentsTabForTest({
-      snapshot: {
-        agents: { traecode: { integrationInstalled: true, enabled: true } },
-      },
-      agentMetadata: [
-        { id: "traecode", name: "TraeCode", eventSource: "hook", capabilities: {} },
-      ],
-    });
-
-    harness.core.ops.requestRender({ content: true });
-
-    const hint = harness.content.querySelector(".agent-traecode-hint");
-    assert.ok(hint, "TraeCode hint should render on the installed card");
-    assert.match(collectText(hint), /Enable hooks in Trae/);
-  });
-
   it("omits the TraeCode enable-in-Trae hint until the integration is installed", () => {
     const harness = loadAgentsTabForTest({
       snapshot: {
@@ -11525,9 +11508,6 @@ describe("settings renderer browser environment", () => {
     assert.ok(!generalSource.includes('key: "claudeQuotaCollectionEnabled"'));
     assert.ok(agentsSource.includes('key: "claudeQuotaCollectionEnabled"'));
     assert.ok(agentsSource.includes("rowClaudeQuotaCollection"));
-    // Kimi's card is the pattern being matched, not something that moved.
-    assert.ok(agentsSource.includes("buildKimiQuotaCard"));
-    assert.ok(agentsSource.includes('agent.id === "kimi-cli"'));
     // General keeps the display-only decisions, and nothing else.
     assert.ok(generalSource.includes('key: "sessionHudShowQuota"'));
     assert.ok(generalSource.includes("buildQuotaRingDisplayModeRow"));
@@ -12650,148 +12630,6 @@ describe("settings renderer browser environment", () => {
     assert.ok(agentsSource.includes("agent-subgroup"));
     assert.ok(agentsSource.includes("function syncAgentSwitchDisabledState("));
     assert.ok(!agentsSource.includes("full re-render"));
-  });
-
-  it("renders Kimi quota as an explicit manual-only encrypted-key workflow", async () => {
-    let configured = false;
-    let collectionEnabled = false;
-    let connectedKey = null;
-    let reconnects = 0;
-    const genericCommands = [];
-    const flush = async (n = 8) => { for (let i = 0; i < n; i += 1) await Promise.resolve(); };
-    const harness = loadAgentsTabForTest({
-      snapshot: {
-        kimiQuotaCollectionEnabled: false,
-        agents: { "kimi-cli": { integrationInstalled: true, enabled: true } },
-        customApplications: [],
-        customToolDiscoveryPaths: [],
-      },
-      agentMetadata: [{
-        id: "kimi-cli",
-        name: "Kimi Code",
-        eventSource: "hook",
-        capabilities: {},
-      }],
-      settingsAPI: {
-        command: (name, payload) => {
-          genericCommands.push([name, payload]);
-          return Promise.resolve({ status: "ok" });
-        },
-        getKimiQuotaStatus: () => Promise.resolve({
-          status: "ok",
-          configured,
-          decryptable: configured,
-          collectionEnabled,
-          agentEnabled: true,
-          state: !configured ? "unconfigured" : (collectionEnabled ? "fresh" : "configured-disabled"),
-          lastQuotaCapturedAt: configured ? 1_786_708_953_953 : null,
-        }),
-        connectKimiQuota: (apiKey) => {
-          connectedKey = apiKey;
-          configured = true;
-          collectionEnabled = true;
-          return Promise.resolve({ status: "ok" });
-        },
-        refreshKimiQuota: () => Promise.resolve({ status: "ok" }),
-        reconnectKimiQuota: () => {
-          reconnects += 1;
-          collectionEnabled = true;
-          return Promise.resolve({ status: "ok" });
-        },
-        disconnectKimiQuota: () => {
-          collectionEnabled = false;
-          return Promise.resolve({ status: "ok" });
-        },
-        forgetKimiQuotaCredential: () => Promise.resolve({ status: "ok" }),
-        openExternal: () => Promise.resolve({ status: "ok" }),
-      },
-    });
-    harness.core.runtime.agentInstallationHints = {
-      checkedAt: 1,
-      agents: [],
-      customAgents: [],
-      customTools: [],
-      skippedAgentIds: [],
-    };
-    harness.core.runtime.agentInstallationHintsFetched = true;
-    harness.core.ops.requestRender({ content: true });
-    await flush();
-
-    const card = harness.content.querySelector(".kimi-quota-card");
-    assert.ok(card);
-    const connectSection = card.querySelector(".kimi-quota-connect");
-    const manageSection = card.querySelector(".kimi-quota-manage");
-    assert.ok(connectSection);
-    assert.ok(manageSection);
-
-    // ── Unconnected: one clean connect card, one primary action ──
-    assert.strictEqual(connectSection.hidden, false);
-    assert.strictEqual(manageSection.hidden, true);
-    const input = connectSection.querySelector(".kimi-quota-key-input");
-    assert.strictEqual(input.type, "password");
-    assert.strictEqual(input.autocomplete, "new-password");
-    const connectPrimary = connectSection.querySelectorAll(".kimi-quota-primary");
-    assert.strictEqual(connectPrimary.length, 1, "the connect card has exactly one primary action");
-    assert.ok(connectPrimary[0].classList.contains("accent"));
-    // The Console link is present but quiet — it never competes with Connect.
-    assert.ok(connectSection.querySelector(".kimi-quota-console-link").classList.contains("quiet"));
-
-    input.value = "sk-renderer-secret";
-    connectPrimary[0].dispatchEvent({ type: "click", stopPropagation() {} });
-    assert.strictEqual(input.value, "", "the DOM must drop the key immediately after submission");
-    await flush();
-    assert.strictEqual(connectedKey, "sk-renderer-secret");
-    assert.strictEqual(
-      genericCommands.some((call) => JSON.stringify(call).includes("sk-renderer-secret")),
-      false,
-      "the secret must use dedicated IPC instead of settings:command"
-    );
-
-    // ── Connected: status first, Refresh as the single primary, no key field ──
-    assert.strictEqual(connectSection.hidden, true);
-    assert.strictEqual(manageSection.hidden, false);
-    const primaryRow = manageSection.querySelector(".kimi-quota-primary-row");
-    const primaryButtons = primaryRow.querySelectorAll(".kimi-quota-primary");
-    assert.strictEqual(primaryButtons.length, 1, "exactly one primary action when connected");
-    assert.strictEqual(primaryButtons[0].textContent, "kimiQuotaRefresh");
-    const replacePanel = manageSection.querySelector(".kimi-quota-replace");
-    assert.strictEqual(replacePanel.hidden, true, "no empty key field once connected");
-    // The password field only appears after opting into the replace flow.
-    const replaceToggle = primaryRow.querySelectorAll("button")
-      .find((button) => button.classList.contains("quiet"));
-    replaceToggle.dispatchEvent({ type: "click", stopPropagation() {} });
-    assert.strictEqual(replacePanel.hidden, false);
-    assert.ok(replacePanel.querySelector(".kimi-quota-key-input"));
-
-    // Destructive / low-frequency actions live in the separated danger zone,
-    // each with its own consequence note — never beside Refresh.
-    const dangerZone = manageSection.querySelector(".kimi-quota-danger");
-    assert.ok(dangerZone);
-    const dangerButtons = dangerZone.querySelectorAll(".kimi-quota-danger-row button");
-    assert.ok(dangerButtons.some((button) => button.classList.contains("danger")));
-    assert.ok(
-      !primaryRow.querySelectorAll("button").some((button) => button.classList.contains("danger")),
-      "danger actions must not sit beside the primary action"
-    );
-    const dangerNotes = dangerZone.querySelectorAll(".kimi-quota-danger-desc")
-      .map((el) => el.textContent);
-    assert.ok(dangerNotes.includes("kimiQuotaDisconnectDesc"));
-    assert.ok(dangerNotes.includes("kimiQuotaForgetDesc"));
-
-    // ── Disconnected but still configured: primary becomes Reconnect, which
-    // revives the stored key through the dedicated channel ──
-    const dangerRows = dangerZone.querySelectorAll(".kimi-quota-danger-row");
-    dangerRows[0].querySelector("button").dispatchEvent({ type: "click", stopPropagation() {} });
-    await flush();
-    assert.strictEqual(primaryButtons[0].textContent, "kimiQuotaReconnect");
-    assert.strictEqual(dangerRows[0].hidden, true, "Disconnect hides while disconnected");
-    primaryButtons[0].dispatchEvent({ type: "click", stopPropagation() {} });
-    await flush();
-    assert.strictEqual(reconnects, 1, "Reconnect revives the stored key via dedicated IPC");
-
-    const source = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
-    assert.ok(source.includes("Manual-only") || source.includes("kimiQuotaManualOnly"));
-    assert.ok(!source.includes("setInterval("));
   });
 
   it("uses a dedicated Settings agent ordering helper before rendering Agent management groups", () => {

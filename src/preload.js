@@ -23,7 +23,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onPetAccessorySlotsChange: (cb) => ipcRenderer.on("pet-accessory-slots-change", (_, snapshot) => cb(snapshot)),
   // State sync from main
   onStateChange: (callback) => ipcRenderer.on("state-change", (_, requestOrState, legacySvg) => callback(requestOrState, legacySvg)),
-  onKimiPermissionPulse: (callback) => ipcRenderer.on("kimi-permission-pulse", () => callback()),
   onEyeMove: (callback) => ipcRenderer.on("eye-move", (_, dx, dy) => callback(dx, dy)),
   onCloudlingPointer: (callback) => ipcRenderer.on("cloudling-pointer", (_, payload) => callback(payload)),
   onRoamHeading: (callback) => ipcRenderer.on("roam-heading", (_, headingLeft) => callback(headingLeft)),

@@ -364,8 +364,8 @@ function makeCapturingRes() {
 
 describe("unattended: per-agent allow wire formats", () => {
   // Each case: the is* flags that the route stamps + a verify() over the
-  // captured HTTP response body. CC / CodeBuddy / Kimi share the generic
-  // hookSpecificOutput path (no is* flag).
+  // captured HTTP response body. CC shares the generic hookSpecificOutput
+  // path (no is* flag).
   const cases = [
     {
       name: "claude-code",
@@ -377,47 +377,12 @@ describe("unattended: per-agent allow wire formats", () => {
       },
     },
     {
-      name: "codebuddy (shares CC path)",
-      entry: { agentId: "codebuddy" },
-      verify(captured) {
-        const d = JSON.parse(captured.body).hookSpecificOutput.decision;
-        assert.equal(d.behavior, "allow");
-      },
-    },
-    {
       name: "codex",
       entry: { agentId: "codex", isCodex: true },
       verify(captured) {
         assert.equal(captured.statusCode, 200);
         const d = JSON.parse(captured.body).hookSpecificOutput.decision;
         assert.equal(d.behavior, "allow");
-      },
-    },
-    {
-      name: "qwen-code",
-      entry: { agentId: "qwen-code", isQwenCode: true },
-      verify(captured) {
-        const d = JSON.parse(captured.body).hookSpecificOutput.decision;
-        assert.equal(d.behavior, "allow");
-      },
-    },
-    {
-      name: "copilot-cli (bare {behavior} format)",
-      entry: { agentId: "copilot-cli", isCopilotCli: true },
-      verify(captured) {
-        assert.equal(captured.statusCode, 200);
-        const body = JSON.parse(captured.body);
-        // Copilot has no hookSpecificOutput envelope — bare {behavior}.
-        assert.equal(body.behavior, "allow");
-        assert.equal(body.hookSpecificOutput, undefined);
-      },
-    },
-    {
-      name: "hermes ({decision} format)",
-      entry: { agentId: "hermes", isHermes: true },
-      verify(captured) {
-        const body = JSON.parse(captured.body);
-        assert.equal(body.decision, "allow");
       },
     },
   ];

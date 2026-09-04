@@ -99,17 +99,6 @@ function createHarness(overrides = {}) {
       return { status: "applied" };
     }),
     getDashboardWindow: overrides.getDashboardWindow || (() => dashboardWindow),
-    getKimiQuotaStatus: overrides.getKimiQuotaStatus || (() => ({
-      status: "ok",
-      configured: true,
-      decryptable: true,
-      collectionEnabled: true,
-      agentEnabled: true,
-    })),
-    refreshKimiQuota: overrides.refreshKimiQuota || (() => {
-      calls.push(["refreshKimiQuota"]);
-      return { status: "ok" };
-    }),
   });
   return {
     ipcMain,
@@ -128,11 +117,9 @@ test("session IPC registers owned channels and disposes them", () => {
   assert.deepStrictEqual([...ipcMain.handlers.keys()].sort(), [
     "dashboard:clear-session-automation-grant",
     "dashboard:get-i18n",
-    "dashboard:get-kimi-quota-status",
     "dashboard:get-snapshot",
     "dashboard:hide-session",
     "dashboard:open-session-folder",
-    "dashboard:refresh-kimi-quota",
     "dashboard:set-session-alias",
     "dashboard:set-session-automation",
     "session-hud:get-i18n",
@@ -210,38 +197,6 @@ test("dashboard and HUD open-folder IPC accept only a sessionId string", async (
     }
   }
   assert.deepStrictEqual(calls, []);
-});
-
-test("Kimi quota Dashboard IPC accepts only the real Dashboard main frame", async () => {
-  const { ipcMain, calls, trustedDashboardEvent } = createHarness();
-
-  assert.deepStrictEqual(
-    await ipcMain.invokeFrom(trustedDashboardEvent, "dashboard:get-kimi-quota-status"),
-    {
-      status: "ok",
-      configured: true,
-      decryptable: true,
-      collectionEnabled: true,
-      agentEnabled: true,
-    }
-  );
-  assert.deepStrictEqual(
-    await ipcMain.invokeFrom(trustedDashboardEvent, "dashboard:refresh-kimi-quota"),
-    { status: "ok" }
-  );
-  assert.deepStrictEqual(calls, [["refreshKimiQuota"]]);
-
-  for (const event of [
-    { sender: trustedDashboardEvent.sender },
-    { sender: {}, senderFrame: trustedDashboardEvent.senderFrame },
-    { sender: trustedDashboardEvent.sender, senderFrame: { ...trustedDashboardEvent.senderFrame } },
-  ]) {
-    assert.deepStrictEqual(
-      await ipcMain.invokeFrom(event, "dashboard:refresh-kimi-quota"),
-      { status: "error", reason: "untrusted-dashboard-sender" }
-    );
-  }
-  assert.deepStrictEqual(calls, [["refreshKimiQuota"]]);
 });
 
 test("session IPC owns dashboard open bridges", () => {
@@ -383,32 +338,6 @@ test("dashboard renderer wires the Mark-read button + ackCompletion fallback (so
     const matchCount = matches ? matches.length : 0;
     assert.strictEqual(matchCount, SUPPORTED_LANGS.length,
       `${key} should appear in all ${SUPPORTED_LANGS.length} supported language tables (saw ${matchCount})`);
-  }
-});
-
-test("Dashboard exposes the trusted Kimi quota refresh bridge and localized action", () => {
-  const rendererSrc = fs.readFileSync(path.join(__dirname, "..", "src", "dashboard-renderer.js"), "utf8");
-  const preloadSrc = fs.readFileSync(path.join(__dirname, "..", "src", "preload-dashboard.js"), "utf8");
-  const htmlSrc = fs.readFileSync(path.join(__dirname, "..", "src", "dashboard.html"), "utf8");
-  const i18nSrc = fs.readFileSync(path.join(__dirname, "..", "src", "i18n.js"), "utf8");
-
-  // The refresh button is built by the renderer inside the Kimi quota
-  // section header, not static markup in dashboard.html.
-  assert.match(rendererSrc, /quota-refresh-button/);
-  assert.match(htmlSrc, /\.quota-refresh-button\s*\{/);
-  assert.match(preloadSrc, /dashboard:get-kimi-quota-status/);
-  assert.match(preloadSrc, /dashboard:refresh-kimi-quota/);
-  assert.match(rendererSrc, /refreshKimiQuotaFromDashboard/);
-  for (const key of [
-    "dashboardKimiQuotaRefresh",
-    "dashboardKimiQuotaRefreshing",
-    "dashboardKimiQuotaUpdated",
-    "dashboardKimiQuotaRefreshFailed",
-    "dashboardKimiQuotaEmpty",
-    "dashboardKimiQuotaRefreshShort",
-  ]) {
-    const matches = i18nSrc.match(new RegExp(`\\b${key}:`, "g"));
-    assert.strictEqual(matches ? matches.length : 0, SUPPORTED_LANGS.length);
   }
 });
 

@@ -205,14 +205,6 @@
       .replace("{removed}", String(Number(summary.entriesRemoved || 0)))
       .replace("{affected}", String(Number(summary.agentsAffected || 0)))
       .replace("{failed}", String(failed));
-    const hasKiroNote = Array.isArray(result.cleanup.agents)
-      && result.cleanup.agents.some((agent) =>
-        agent
-        && agent.agentId === "kiro-cli"
-        && Array.isArray(agent.notes)
-        && agent.notes.length > 0
-      );
-    if (hasKiroNote) text += " " + t("aboutCleanupKiroNote");
     return text;
   }
 

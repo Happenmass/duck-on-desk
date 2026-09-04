@@ -29,68 +29,17 @@ describe("settings agent order", () => {
 
   it("sorts known agents by collapsible group and fixed priority", () => {
     const sorted = sortAgentMetadataForSettings([
-      { id: "kiro-cli", name: "Kiro CLI", capabilities: {} },
-      { id: "codebuddy", name: "CodeBuddy", capabilities: { permissionApproval: true, notificationHook: true } },
-      { id: "copilot-cli", name: "Copilot CLI", capabilities: {} },
       { id: "opencode", name: "OpenCode", capabilities: { permissionApproval: true } },
-      { id: "gemini-cli", name: "Gemini CLI", capabilities: { notificationHook: true } },
-      { id: "antigravity-cli", name: "Antigravity CLI", capabilities: {} },
       { id: "claude-code", name: "Claude Code", capabilities: { permissionApproval: true, notificationHook: true } },
-      { id: "codewhale", name: "CodeWhale", capabilities: { notificationHook: true } },
-      { id: "cursor-agent", name: "Cursor Agent", capabilities: {} },
-      { id: "openclaw", name: "OpenClaw", capabilities: {} },
-      { id: "hermes", name: "Hermes Agent", capabilities: {} },
-      { id: "reasonix", name: "Reasonix", capabilities: { notificationHook: true } },
       { id: "codex", name: "Codex CLI", capabilities: { interactiveBubble: true } },
-      { id: "kimi-cli", name: "Kimi CLI", capabilities: { permissionApproval: true, notificationHook: true } },
-      { id: "qwen-code", name: "Qwen Code", capabilities: { permissionApproval: true, notificationHook: true } },
       { id: "pi", name: "Pi", capabilities: {} },
     ]);
 
     assert.deepStrictEqual(sorted.map((agent) => agent.id), [
       "claude-code",
       "codex",
-      "gemini-cli",
-      "kimi-cli",
-      "qwen-code",
-      "codewhale",
       "opencode",
-      "codebuddy",
-      "reasonix",
-      "antigravity-cli",
-      "cursor-agent",
-      "copilot-cli",
-      "kiro-cli",
       "pi",
-      "openclaw",
-      "hermes",
-    ]);
-  });
-
-  it("places Qoder in the collapsible group right after codebuddy", () => {
-    const sorted = sortAgentMetadataForSettings([
-      { id: "qoder", name: "Qoder", capabilities: { notificationHook: true } },
-      { id: "codebuddy", name: "CodeBuddy", capabilities: { permissionApproval: true, notificationHook: true } },
-      { id: "claude-code", name: "Claude Code", capabilities: { permissionApproval: true } },
-    ]);
-    assert.deepStrictEqual(sorted.map((agent) => agent.id), ["claude-code", "codebuddy", "qoder"]);
-  });
-
-  it("places ZCode (state-only) in the non-collapsible group after reasonix", () => {
-    // Regression: zcode was absent from both priority tables, so it fell to
-    // Infinity and landed after every known agent by name — unstable. It is
-    // state-only (no permission/notification hooks) → non-collapsible.
-    const sorted = sortAgentMetadataForSettings([
-      { id: "zcode", name: "ZCode", capabilities: {} },
-      { id: "reasonix", name: "Reasonix", capabilities: {} },
-      { id: "antigravity-cli", name: "Antigravity CLI", capabilities: {} },
-      { id: "claude-code", name: "Claude Code", capabilities: { permissionApproval: true } },
-    ]);
-    assert.deepStrictEqual(sorted.map((agent) => agent.id), [
-      "claude-code",
-      "antigravity-cli",
-      "reasonix",
-      "zcode",
     ]);
   });
 
@@ -101,14 +50,14 @@ describe("settings agent order", () => {
       { id: "gamma-cli", name: "Gamma CLI", capabilities: {} },
       { id: "alpha-cli", name: "Alpha CLI", capabilities: {} },
       { id: "claude-code", name: "Claude Code", capabilities: { permissionApproval: true } },
-      { id: "cursor-agent", name: "Cursor Agent", capabilities: {} },
+      { id: "pi", name: "Pi", capabilities: {} },
     ]);
 
     assert.deepStrictEqual(sorted.map((agent) => agent.id), [
       "claude-code",
       "beta-hook",
       "zeta-hook",
-      "cursor-agent",
+      "pi",
       "alpha-cli",
       "gamma-cli",
     ]);

@@ -33,10 +33,6 @@ function normalizeSessionId(sessionId) {
 function normalizeSessionScope(agentId, sessionId, options = {}) {
   const normalizedAgent = normalizeSessionAgent(agentId);
   const normalizedSessionId = normalizeSessionId(sessionId);
-  const cwd = options && typeof options.cwd === "string" ? options.cwd.trim() : "";
-  if (normalizedAgent === "kiro-cli" && normalizedSessionId === "default" && cwd) {
-    return `cwd:${encodeURIComponent(cwd)}`;
-  }
   return "";
 }
 

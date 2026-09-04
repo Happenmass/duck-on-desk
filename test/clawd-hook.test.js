@@ -61,22 +61,6 @@ describe("buildStateBody", () => {
     assert.strictEqual(body.cwd, "/tmp/p");
   });
 
-  it("attributes Cursor-imported Claude hooks to Cursor Agent (#773)", () => {
-    const body = buildStateBody(
-      "SessionStart",
-      {
-        conversation_id: "cursor-conversation-1",
-        session_id: "cursor-conversation-1",
-        hook_event_name: "SessionStart",
-        cursor_version: "3.13.25",
-        workspace_roots: ["/tmp/p"],
-        cwd: "/tmp/p",
-      },
-      mockResolve
-    );
-    assert.strictEqual(body.agent_id, "cursor-agent");
-  });
-
   for (const [label, cursorVersion] of [
     ["blank", " \t "],
     ["overlong", "v".repeat(129)],

@@ -29,53 +29,14 @@ const {
 const AUTO_REPAIRABLE_AGENT_IDS = new Set([
   "claude-code",
   "codex",
-  "deepseek-harness",
-  "copilot-cli",
-  "cursor-agent",
-  "gemini-cli",
-  "antigravity-cli",
-  "codebuddy",
-  "workbuddy",
-  "kiro-cli",
-  "kimi-cli",
-  "qwen-code",
-  "zcode",
-  "codewhale",
   "opencode",
-  "mimocode",
-  "hermes",
-  "qoder",
-  "reasonix",
-  "qoderwork",
-  "traecode",
-  "qwenwork",
 ]);
 
 const INSTALLABLE_AGENT_IDS = new Set([
   "claude-code",
   "codex",
-  "deepseek-harness",
-  "copilot-cli",
-  "cursor-agent",
-  "gemini-cli",
-  "antigravity-cli",
-  "codebuddy",
-  "workbuddy",
-  "kiro-cli",
-  "kimi-cli",
-  "qwen-code",
-  "zcode",
-  "codewhale",
   "opencode",
-  "mimocode",
   "pi",
-  "openclaw",
-  "hermes",
-  "qoder",
-  "reasonix",
-  "qoderwork",
-  "traecode",
-  "qwenwork",
 ]);
 const SETTABLE_AGENT_FLAGS = AGENT_FLAGS.filter((flag) => flag !== "integrationInstalled");
 const CUSTOM_DISCOVERY_AGENT_IDS = new Set([...INSTALLABLE_AGENT_IDS, "custom"]);
@@ -866,12 +827,6 @@ async function _wslCommand(payload, deps, { commandName, depName, action }) {
       // the distro (NAT networking) — renderer shows a localized warning.
       if (result.connectivity === false) okResult.wslConnectivity = false;
       if (typeof result.warning === "string" && result.warning) okResult.warning = result.warning;
-      if (commandName === "deployToWsl" && agentId === "hermes") {
-        // WSL pairing opens the shared ingress gate but is not a Windows-local
-        // integration install. Preserve integrationInstalled and every sibling
-        // flag so startup cannot auto-sync Hermes onto the host by accident.
-        okResult.commit = buildAgentCommit(deps.snapshot || {}, agentId, { enabled: true });
-      }
       return okResult;
     }
     return {

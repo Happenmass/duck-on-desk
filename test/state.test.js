@@ -482,26 +482,6 @@ describe("resolveDisplayState()", () => {
     api.setUpdateVisualState(null);
   });
 
-  it("checking overlay does not override an active Kimi permission lock", () => {
-    api.cleanup();
-    const ctx = makeCtx({
-      isAgentPermissionsEnabled: () => true,
-      showKimiNotifyBubble: () => {},
-      clearKimiNotifyBubbles: () => {},
-    });
-    api = require("../src/state")(ctx);
-
-    update(api, {
-      id: "kimi-perm",
-      state: "notification",
-      event: "PermissionRequest",
-      agentId: "kimi-cli",
-    });
-    api.setUpdateVisualState("checking");
-
-    assert.strictEqual(api.resolveDisplayState(), "notification");
-  });
-
   it("update overlay wins when no sessions exist", () => {
     api.setUpdateVisualState("checking");
     assert.strictEqual(api.resolveDisplayState(), "thinking");
@@ -1620,26 +1600,6 @@ describe("cleanStaleSessions()", () => {
     }));
     api.cleanStaleSessions();
     assert.strictEqual(api.sessions.size, 1);
-  });
-
-  it("detached ended Kimi auto-clear disposes notification state", () => {
-    const cleared = [];
-    api = require("../src/state")(makeCtx({
-      processKill: makePidKill(new Set()),
-      sessionHudCleanupDetached: true,
-      clearKimiNotifyBubbles: (id, reason) => cleared.push({ id, reason }),
-    }));
-    api.updateSession("k1", "notification", "PermissionRequest", { agentId: "kimi-cli" });
-    api.sessions.set("k1", rawSession("idle", {
-      agentId: "kimi-cli",
-      sourcePid: 9999,
-      pidReachable: true,
-      updatedAt: Date.now() - 31000,
-      recentEvents: [{ event: "Stop", state: "attention", at: Date.now() - 32000 }],
-    }));
-    api.cleanStaleSessions();
-    assert.strictEqual(api.sessions.size, 0);
-    assert.deepStrictEqual(cleared, [{ id: "k1", reason: "kimi-session-disposed" }]);
   });
 
   it("last non-headless deleted → returns to idle", () => {
@@ -2956,18 +2916,6 @@ describe("updateSession()", () => {
     assert.strictEqual(api.sessions.get("s1").sessionTitle, "My Task");
   });
 
-  it("keeps the FIRST title for traecode sessions (follow-up prompts never overwrite)", () => {
-    update(api, { id: "s1", state: "thinking", event: "UserPromptSubmit", agentId: "traecode", sessionTitle: "第一个问题" });
-    assert.strictEqual(api.sessions.get("s1").sessionTitle, "第一个问题");
-
-    update(api, { id: "s1", state: "thinking", event: "UserPromptSubmit", agentId: "traecode", sessionTitle: "第二个问题" });
-    assert.strictEqual(api.sessions.get("s1").sessionTitle, "第一个问题");
-
-    // An empty candidate must never clear the sticky first title either.
-    update(api, { id: "s1", state: "working", event: "PreToolUse", agentId: "traecode", sessionTitle: "" });
-    assert.strictEqual(api.sessions.get("s1").sessionTitle, "第一个问题");
-  });
-
   it("lets the latest title win for non-traecode agents (unchanged behaviour)", () => {
     update(api, { id: "s2", state: "thinking", event: "UserPromptSubmit", agentId: "claude-code", sessionTitle: "旧标题" });
     update(api, { id: "s2", state: "thinking", event: "UserPromptSubmit", agentId: "claude-code", sessionTitle: "新标题" });
@@ -3202,31 +3150,6 @@ describe("updateSession()", () => {
     assert.strictEqual(reloaded.find((entry) => entry.host === null).claudeQuota, undefined,
       "startup cleanup must be persisted synchronously");
     assert.strictEqual(reloaded.find((entry) => entry.host === "workbox").claudeQuota.group.claudeWeekly.usedPercent, 90);
-  });
-
-  it("commits, flushes, and clears only local Kimi quota", () => {
-    const persistPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "clawd-kimi-state-")), "account-quota.json");
-    const localApi = require("../src/state")(makeCtx({
-      accountQuotaPersistPath: persistPath,
-      kimiQuotaCollectionEnabled: true,
-    }));
-    const resetAt = Date.now() + 3600000;
-    assert.deepStrictEqual(localApi.commitLocalKimiQuota({
-      kimiFiveHour: { usedPercent: 12, resetAt, capturedAt: Date.now() },
-      kimiWeekly: { usedPercent: 4, resetAt: resetAt + 86400000, capturedAt: Date.now() },
-    }), { accepted: true, persisted: true });
-    assert.strictEqual(
-      localApi.buildSessionSnapshot().accountQuota[0].kimiQuota.group.kimiFiveHour.usedPercent,
-      12
-    );
-    assert.deepStrictEqual(localApi.clearLocalKimiQuota(), { cleared: true, persisted: true });
-    assert.strictEqual(localApi.buildSessionSnapshot().accountQuota.length, 0);
-    localApi.cleanup();
-    assert.strictEqual(
-      require("../src/state-account-quota").createAccountQuotaStore({ persistPath }).snapshot().length,
-      0,
-      "the explicit disconnect boundary must survive restart"
-    );
   });
 
   it("cleans a persisted local Kimi cache on startup when collection is disabled", () => {
@@ -3926,7 +3849,7 @@ describe("buildSessionSnapshot", () => {
     // shape, then compare the rest exactly.
     const { quotaAgentIcons, ...rest } = snapshot;
     assert.deepStrictEqual(Object.keys(quotaAgentIcons).sort(), [
-      "antigravityQuota", "claudeQuota", "codexQuota", "kimiQuota",
+      "claudeQuota", "codexQuota",
     ]);
     assert.deepStrictEqual(rest, {
       sessions: [],
@@ -4307,24 +4230,6 @@ describe("buildSessionSnapshot", () => {
     assert.strictEqual(snapshot.sessions[0].displayTitle, "Legacy Kiro");
   });
 
-  it("prefers cwd-scoped Kiro default-session aliases over legacy aliases", () => {
-    api.cleanup();
-    api = require("../src/state")(makeCtx({
-      getSessionAliases: () => ({
-        "local|kiro-cli|default": { title: "Legacy Kiro", updatedAt: 100 },
-        "local|kiro-cli|default|cwd:%2Frepo%2Fa": { title: "Kiro repo A", updatedAt: 200 },
-      }),
-    }));
-    api.sessions.set("default", rawSession("working", {
-      updatedAt: 1000,
-      cwd: "/repo/a",
-      agentId: "kiro-cli",
-    }));
-
-    const snapshot = api.buildSessionSnapshot();
-    assert.strictEqual(snapshot.sessions[0].displayTitle, "Kiro repo A");
-  });
-
   it("returns active session alias keys for all sessions including idle and headless", () => {
     api.cleanup();
     api = require("../src/state")(makeCtx());
@@ -4338,7 +4243,7 @@ describe("buildSessionSnapshot", () => {
       headless: true,
     }));
     api.sessions.set("default", rawSession("working", {
-      agentId: "kiro-cli",
+      agentId: "opencode",
       cwd: "/repo/a",
     }));
 
@@ -4346,7 +4251,7 @@ describe("buildSessionSnapshot", () => {
       Array.from(api.getActiveSessionAliasKeys()).sort(),
       [
         "local|codex|idle-session",
-        "local|kiro-cli|default|cwd:%2Frepo%2Fa",
+        "local|opencode|default",
         "remote-box|claude-code|headless-session",
       ]
     );
@@ -6257,217 +6162,8 @@ describe("evictOldestSessionIfNeeded two-phase", () => {
 // yet been followed by Stop. See project_qwen_0_16_1_event_semantics canary.
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe("qwen-code self-submit filter", () => {
-  let api, ctx;
-
-  beforeEach(() => {
-    mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-    ctx = makeCtx();
-    api = require("../src/state")(ctx);
-    delete process.env.CLAWD_QWEN_SELF_SUBMIT_FILTER;
-    delete process.env.CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS;
-  });
-  afterEach(() => {
-    api.cleanup();
-    mock.timers.reset();
-    delete process.env.CLAWD_QWEN_SELF_SUBMIT_FILTER;
-    delete process.env.CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS;
-  });
-
-  function bootQwenAfterPostToolUse() {
-    update(api, { id: "qsid", state: "working", event: "PreToolUse", agentId: "qwen-code" });
-    update(api, { id: "qsid", state: "working", event: "PostToolUse", agentId: "qwen-code" });
-    const entry = api.sessions.get("qsid");
-    assert.ok(entry, "qwen session should exist after PostToolUse");
-    assert.ok(Number.isFinite(entry.lastToolBoundaryAt), "PostToolUse should bump lastToolBoundaryAt");
-    return entry;
-  }
-
-  it("PostToolUse within window → UserPromptSubmit dropped (state/updatedAt/recentEvents untouched)", () => {
-    const before = bootQwenAfterPostToolUse();
-    const snapshot = {
-      state: before.state,
-      updatedAt: before.updatedAt,
-      recentEvents: [...(before.recentEvents || [])],
-      lastToolBoundaryAt: before.lastToolBoundaryAt,
-    };
-
-    mock.timers.tick(1500); // within 2000ms
-    update(api, { id: "qsid", state: "thinking", event: "UserPromptSubmit", agentId: "qwen-code" });
-
-    const after = api.sessions.get("qsid");
-    assert.strictEqual(after.state, snapshot.state, "state must not change");
-    assert.strictEqual(after.updatedAt, snapshot.updatedAt, "updatedAt must not bump");
-    assert.deepStrictEqual(after.recentEvents, snapshot.recentEvents, "recentEvents must not append");
-    assert.strictEqual(after.lastToolBoundaryAt, snapshot.lastToolBoundaryAt, "lastToolBoundaryAt must not change");
-  });
-
-  it("UserPromptSubmit after window passes through → state switches to thinking", () => {
-    bootQwenAfterPostToolUse();
-    mock.timers.tick(2500); // outside 2000ms
-    update(api, { id: "qsid", state: "thinking", event: "UserPromptSubmit", agentId: "qwen-code" });
-
-    const after = api.sessions.get("qsid");
-    assert.strictEqual(after.state, "thinking", "real human input must reach state");
-  });
-
-  it("PostToolUseFailure also acts as a tool boundary (defensive — qwen 0.16.1 does not emit it, but other agents do)", () => {
-    update(api, { id: "qsid", state: "working", event: "PreToolUse", agentId: "qwen-code" });
-    update(api, { id: "qsid", state: "working", event: "PostToolUseFailure", agentId: "qwen-code" });
-    const before = api.sessions.get("qsid");
-    assert.ok(Number.isFinite(before.lastToolBoundaryAt), "PostToolUseFailure should bump lastToolBoundaryAt");
-
-    mock.timers.tick(1500);
-    update(api, { id: "qsid", state: "thinking", event: "UserPromptSubmit", agentId: "qwen-code" });
-
-    const after = api.sessions.get("qsid");
-    assert.strictEqual(after.state, "working", "self-submit dropped after PostToolUseFailure");
-  });
-
-  it("Stop after tool boundary → next UserPromptSubmit passes through even within window", () => {
-    // Codex review caught this: end-of-turn must reset the self-submit window,
-    // otherwise a user typing "继续" within 2s of Stop would be eaten as a
-    // false self-submit. Stop bumps lastStopAt, which beats lastToolBoundaryAt.
-    bootQwenAfterPostToolUse();
-    mock.timers.tick(800); // simulate qwen Stop landing after the loop settles
-    update(api, { id: "qsid", state: "attention", event: "Stop", agentId: "qwen-code" });
-    const afterStop = api.sessions.get("qsid");
-    assert.ok(Number.isFinite(afterStop.lastStopAt), "Stop should bump lastStopAt");
-    assert.ok(afterStop.lastStopAt >= afterStop.lastToolBoundaryAt, "Stop must land after tool boundary");
-
-    mock.timers.tick(500); // user types fast — 500ms after Stop, still inside the tool-boundary window
-    update(api, { id: "qsid", state: "thinking", event: "UserPromptSubmit", agentId: "qwen-code" });
-
-    const after = api.sessions.get("qsid");
-    assert.strictEqual(after.state, "thinking", "real input after Stop must reach state");
-  });
-
-  it("non-qwen agents are not filtered", () => {
-    update(api, { id: "csid", state: "working", event: "PreToolUse", agentId: "claude-code" });
-    update(api, { id: "csid", state: "working", event: "PostToolUse", agentId: "claude-code" });
-    mock.timers.tick(500); // well within the qwen window
-    update(api, { id: "csid", state: "thinking", event: "UserPromptSubmit", agentId: "claude-code" });
-
-    const after = api.sessions.get("csid");
-    assert.strictEqual(after.state, "thinking", "claude-code must pass through normally");
-  });
-
-  it("kill switch CLAWD_QWEN_SELF_SUBMIT_FILTER=0 disables the filter", () => {
-    process.env.CLAWD_QWEN_SELF_SUBMIT_FILTER = "0";
-    bootQwenAfterPostToolUse();
-    mock.timers.tick(500);
-    update(api, { id: "qsid", state: "thinking", event: "UserPromptSubmit", agentId: "qwen-code" });
-
-    const after = api.sessions.get("qsid");
-    assert.strictEqual(after.state, "thinking", "filter disabled — UserPromptSubmit must take effect");
-  });
-
-  it("UserPromptSubmit with no prior boundary passes through (cold session)", () => {
-    // Brand new qwen session, no PostToolUse yet — first UserPromptSubmit is
-    // always real human input, must reach state.
-    update(api, { id: "qsid", state: "thinking", event: "UserPromptSubmit", agentId: "qwen-code" });
-    const after = api.sessions.get("qsid");
-    assert.strictEqual(after.state, "thinking", "no boundary → cannot be a self-submit");
-  });
-
-  it("CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS override widens the window", () => {
-    process.env.CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS = "5000";
-    bootQwenAfterPostToolUse();
-    mock.timers.tick(3500); // would pass with default 2000 window, but env override extends to 5000
-    update(api, { id: "qsid", state: "thinking", event: "UserPromptSubmit", agentId: "qwen-code" });
-
-    const after = api.sessions.get("qsid");
-    assert.strictEqual(after.state, "working", "extended window must still drop self-submit");
-  });
-
-  it("CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS invalid value falls back to default 2000ms", () => {
-    process.env.CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS = "not-a-number";
-    bootQwenAfterPostToolUse();
-    mock.timers.tick(1500); // within default 2000ms
-    update(api, { id: "qsid", state: "thinking", event: "UserPromptSubmit", agentId: "qwen-code" });
-
-    const after = api.sessions.get("qsid");
-    assert.strictEqual(after.state, "working", "invalid env must fall back to default and still drop");
-  });
-
-  it("CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS out-of-range value falls back to default", () => {
-    process.env.CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS = "999999"; // above max 10000
-    bootQwenAfterPostToolUse();
-    mock.timers.tick(3000); // outside default 2000ms window
-    update(api, { id: "qsid", state: "thinking", event: "UserPromptSubmit", agentId: "qwen-code" });
-
-    const after = api.sessions.get("qsid");
-    assert.strictEqual(after.state, "thinking", "out-of-range env must fall back to default 2000ms (not honored)");
-  });
-});
-
 // ═════════════════════════════════════════════════════════════════════════════
 // Antigravity 1.0.6 can emit a trailing PostToolUse after Stop. Once Stop has
 // marked the session awaiting input, that stale tool boundary must not resurrect
 // the mascot into a stuck typing/working state.
 // ═════════════════════════════════════════════════════════════════════════════
-
-describe("antigravity trailing PostToolUse filter", () => {
-  let api, ctx;
-
-  beforeEach(() => {
-    mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-    ctx = makeCtx();
-    api = require("../src/state")(ctx);
-  });
-  afterEach(() => {
-    api.cleanup();
-    mock.timers.reset();
-  });
-
-  function finishAntigravityTurn() {
-    update(api, { id: "agid", state: "thinking", event: "UserPromptSubmit", agentId: "antigravity-cli" });
-    mock.timers.tick(100);
-    update(api, { id: "agid", state: "working", event: "PostToolUse", agentId: "antigravity-cli" });
-    mock.timers.tick(100);
-    update(api, { id: "agid", state: "idle", event: "AfterAgent", agentId: "antigravity-cli" });
-    mock.timers.tick(100);
-    update(api, { id: "agid", state: "attention", event: "Stop", agentId: "antigravity-cli" });
-    const afterStop = api.sessions.get("agid");
-    assert.ok(afterStop, "Antigravity session should exist after Stop");
-    assert.strictEqual(afterStop.state, "idle");
-    assert.strictEqual(afterStop.awaitingInputSinceStop, true);
-    assert.ok(Number.isFinite(afterStop.lastStopAt), "Stop should bump lastStopAt");
-    return afterStop;
-  }
-
-  it("drops PostToolUse that arrives after a fully-idle Stop", () => {
-    const before = finishAntigravityTurn();
-    const snapshot = {
-      state: before.state,
-      updatedAt: before.updatedAt,
-      recentEvents: [...(before.recentEvents || [])],
-      lastToolBoundaryAt: before.lastToolBoundaryAt,
-      lastStopAt: before.lastStopAt,
-    };
-
-    mock.timers.tick(1200);
-    update(api, { id: "agid", state: "working", event: "PostToolUse", agentId: "antigravity-cli" });
-
-    const after = api.sessions.get("agid");
-    assert.strictEqual(after.state, "idle", "stale PostToolUse must not resurrect working");
-    assert.strictEqual(after.updatedAt, snapshot.updatedAt, "dropped event must not bump updatedAt");
-    assert.deepStrictEqual(after.recentEvents, snapshot.recentEvents, "dropped event must not append history");
-    assert.strictEqual(after.lastToolBoundaryAt, snapshot.lastToolBoundaryAt, "dropped event must not refresh tool boundary");
-    assert.strictEqual(after.lastStopAt, snapshot.lastStopAt, "dropped event must preserve Stop timestamp");
-  });
-
-  it("allows PostToolUse after a new user prompt starts the next turn", () => {
-    finishAntigravityTurn();
-
-    mock.timers.tick(500);
-    update(api, { id: "agid", state: "thinking", event: "UserPromptSubmit", agentId: "antigravity-cli" });
-    mock.timers.tick(100);
-    update(api, { id: "agid", state: "working", event: "PostToolUse", agentId: "antigravity-cli" });
-
-    const after = api.sessions.get("agid");
-    assert.strictEqual(after.state, "working");
-    assert.strictEqual(after.awaitingInputSinceStop, false);
-    assert.ok(after.lastToolBoundaryAt > after.lastStopAt, "new turn should refresh tool boundary after Stop");
-  });
-});

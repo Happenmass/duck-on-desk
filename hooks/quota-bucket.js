@@ -1,7 +1,7 @@
 "use strict";
 
-// Shared shape for account-wide rate-limit quota buckets (Antigravity's
-// gemini-5h/weekly/3p-5h/weekly, Claude Code's five_hour/seven_day). Always
+// Shared shape for account-wide rate-limit quota buckets (Claude Code's
+// five_hour/seven_day, Codex's windows). Always
 // "how much has been used" (0-100) so every source and every renderer means
 // the same thing - a full bar is a warning, not a healthy state.
 //

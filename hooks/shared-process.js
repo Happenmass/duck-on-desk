@@ -1,5 +1,5 @@
 // hooks/shared-process.js — Shared process tree walk, stdin reader, platform config
-// Used by hook scripts (clawd, copilot, cursor, gemini, kiro, codebuddy).
+// Used by hook scripts (clawd, codex).
 // Zero third-party dependencies — Node built-ins plus the sibling hook helpers
 // registered in both deployment manifests (./server-config, lazily ./pid-cache).
 // server-config.js does NOT require this module, so there is no cycle.
@@ -18,7 +18,7 @@ const BASE_TERMINAL_NAMES_WIN = [
   "conhost.exe", "openconsole.exe",
   "code.exe", "alacritty.exe", "wezterm-gui.exe", "mintty.exe",
   "conemu64.exe", "conemu.exe", "hyper.exe", "tabby.exe",
-  "antigravity.exe", "warp.exe", "iterm.exe", "ghostty.exe",
+  "warp.exe", "iterm.exe", "ghostty.exe",
 ];
 const BASE_TERMINAL_NAMES_MAC = [
   "terminal", "iterm2", "alacritty", "wezterm-gui", "kitty",
@@ -342,12 +342,11 @@ const SKIP_REASON_SNAPSHOT_FAILED = "snapshot-failed";
 // the wrong path.
 const SKIP_REASON_SELF_NOT_FOUND = "snapshot-self-not-found";
 
-// pidChain MUST be [] and never null: six adapters (codex, copilot, cursor,
-// kimi, kiro, codebuddy) do a bare `pidChain.length` with no Array.isArray
-// guard, and in cursor/codebuddy that TypeError would unwind past
-// writeStdoutOnce and silently downgrade their gating stdout ({"continue":true}
-// / {"decision":"allow"}) to {}. [] is falsy-length everywhere, so all 13
-// adapters skip the field cleanly. stablePid:null is safe to ship: the six
+// pidChain MUST be [] and never null: some adapters do a bare
+// `pidChain.length` with no Array.isArray guard, and that TypeError could
+// unwind past writeStdoutOnce and silently downgrade a gating stdout
+// ({"continue":true} / {"decision":"allow"}) to {}. [] is falsy-length
+// everywhere, so every adapter skips the field cleanly. stablePid:null is safe to ship: the six
 // adapters that assign source_pid unconditionally emit an explicit null, which
 // src/server-route-state.js normalizes identically to an absent field
 // (Number.isFinite(null) === false), and src/state.js merges it as
@@ -988,8 +987,8 @@ function createPidResolver(options) {
 
 // ── readStdinJson ────────────────────────────────────────────────────────────
 // Reads stdin until EOF, parses JSON. EOF-driven with a safety-net timer.
-// The default stays at 400ms: several agent hooks (cursor, codebuddy, gemini,
-// reasonix) run their own ~800ms stdout safety timers and non-async hot-path
+// The default stays at 400ms: several agent hooks run their own ~800ms
+// stdout safety timers and non-async hot-path
 // registrations, so a longer shared default would let those timers win the
 // race and drop payloads that used to be parsed at 400ms. Callers whose agent
 // registration tolerates a longer stall (claude-code: async + 5s hook timeout)

@@ -587,7 +587,7 @@ test("identity transaction is layout-bound and requires evidence for N/A steps",
   const steps = Object.fromEntries(
     REMOTE_IDENTITY_STEP_NAMES.map((name) => [name, { status: "pending" }]),
   );
-  steps.installCopilot = { status: "not-applicable", evidence: "agent-not-installed" };
+  steps.installCodex = { status: "not-applicable", evidence: "agent-not-installed" };
   const raw = {
     runtimeKey: "account-default",
     layoutVersion: REMOTE_LAYOUT_VERSION,
@@ -604,7 +604,7 @@ test("identity transaction is layout-bound and requires evidence for N/A steps",
     layoutVersion: REMOTE_LAYOUT_VERSION,
   }));
   const invalid = structuredClone(raw);
-  invalid.steps.installCopilot = { status: "not-applicable" };
+  invalid.steps.installCodex = { status: "not-applicable" };
   assert.equal(sanitizeIdentityTxn(invalid, {
     runtimeMode: "account-default",
     runtimeKey: "account-default",

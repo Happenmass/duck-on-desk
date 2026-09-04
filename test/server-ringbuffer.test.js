@@ -189,7 +189,7 @@ describe("server hook event ringbuffer", () => {
     const { api, handler } = startServer();
 
     const res = await callHandler(handler, "POST", "/state", {
-      agent_id: "gemini-cli",
+      agent_id: "opencode",
       state: "thinking",
       event: "UserPromptSubmit",
     });
@@ -201,7 +201,7 @@ describe("server hook event ringbuffer", () => {
       route,
       outcome,
     })), [{
-      agentId: "gemini-cli",
+      agentId: "opencode",
       eventType: "UserPromptSubmit",
       route: "state",
       outcome: "accepted",
@@ -256,10 +256,10 @@ describe("server hook event ringbuffer", () => {
     const { api, handler, ctx } = startServer();
 
     const res = await callHandler(handler, "POST", "/state", {
-      agent_id: "gemini-cli",
+      agent_id: "opencode",
       state: "idle",
       event: "PreCompress",
-      session_id: "gemini:s1",
+      session_id: "opencode:s1",
       preserve_state: true,
     });
 
@@ -267,7 +267,7 @@ describe("server hook event ringbuffer", () => {
     assert.strictEqual(ctx._test.updateSessionCalls.length, 1);
     assert.strictEqual(
       ctx._test.updateSessionCalls[0][0],
-      makeSessionKey({ profileId: "local", rawSessionId: "gemini:s1" }),
+      makeSessionKey({ profileId: "local", rawSessionId: "opencode:s1" }),
     );
     assert.strictEqual(ctx._test.updateSessionCalls[0][1], "idle");
     assert.strictEqual(ctx._test.updateSessionCalls[0][2], "PreCompress");
@@ -278,7 +278,7 @@ describe("server hook event ringbuffer", () => {
       route,
       outcome,
     })), [{
-      agentId: "gemini-cli",
+      agentId: "opencode",
       eventType: "PreCompress",
       route: "state",
       outcome: "accepted",

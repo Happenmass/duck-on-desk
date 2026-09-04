@@ -127,7 +127,6 @@ function preparePermissionDetail(toolName, rawInput, options = {}) {
   let structuralTruncated = false;
   const rawText = formatDetail(toolName, detailInput, {
     mode: "detail",
-    isAntigravity: options.isAntigravity === true,
     formatUnknownDetail(value) {
       const serialized = serializeBoundedDetailJson(value);
       structuralTruncated = serialized.truncated;

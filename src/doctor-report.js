@@ -113,24 +113,6 @@ function pushIfValue(lines, label, value) {
   lines.push(`${label}: ${value}`);
 }
 
-function formatKiroScan(scan) {
-  if (!scan || typeof scan !== "object") return null;
-  const parts = [];
-  if (Array.isArray(scan.fullyValidFiles) && scan.fullyValidFiles.length) {
-    parts.push(`valid=${scan.fullyValidFiles.join(", ")}`);
-  }
-  if (Array.isArray(scan.brokenFiles) && scan.brokenFiles.length) {
-    parts.push(`broken=${scan.brokenFiles.join(", ")}`);
-  }
-  if (Array.isArray(scan.corruptFiles) && scan.corruptFiles.length) {
-    parts.push(`corrupt=${scan.corruptFiles.join(", ")}`);
-  }
-  if (Array.isArray(scan.noMarkerFiles) && scan.noMarkerFiles.length) {
-    parts.push(`no-marker=${scan.noMarkerFiles.length}`);
-  }
-  return parts.length ? parts.join("; ") : null;
-}
-
 function formatAgentDiagnosticNotes(detail) {
   if (!detail || typeof detail !== "object") return [];
   const notes = [];
@@ -147,10 +129,9 @@ function formatAgentDiagnosticNotes(detail) {
     const suffix = detail.codexHookTrust.detail ? ` (${detail.codexHookTrust.detail})` : "";
     notes.push(`${key}=${value}${suffix}`);
   }
-  pushIfValue(notes, "kiro", formatKiroScan(detail.kiroScan));
   pushIfValue(notes, "hook issue", detail.hookCommandIssue);
   // Field names are historical (checkOpencodeSettings); the label must stay
-  // agent-neutral — mimocode reports through the same fields (R9 F3).
+  // agent-neutral.
   pushIfValue(notes, "plugin issue", detail.opencodeEntryIssue);
   pushIfValue(notes, "plugin entry", detail.opencodeEntry);
   return notes;

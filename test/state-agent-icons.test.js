@@ -166,18 +166,7 @@ describe("state agent icons", () => {
     );
   });
 
-  it("returns the bundled Kiro PNG icon", () => {
-    const iconUrl = getAgentIconUrl("kiro-cli");
-
-    assert.strictEqual(new URL(iconUrl).protocol, "file:");
-    assert.strictEqual(
-      path.normalize(fileURLToPath(iconUrl)),
-      path.join(AGENT_ICON_DIR, "kiro-cli.png")
-    );
-    assert.strictEqual(getAgentIconPath("kiro-cli"), path.join(AGENT_ICON_DIR, "kiro-cli.png"));
-  });
-
-  it("returns bundled PNG icons for Pi and OpenClaw", () => {
+  it("returns the bundled Pi PNG icon", () => {
     const iconUrl = getAgentIconUrl("pi");
 
     assert.strictEqual(new URL(iconUrl).protocol, "file:");
@@ -186,14 +175,6 @@ describe("state agent icons", () => {
       path.join(AGENT_ICON_DIR, "pi.png")
     );
     assert.strictEqual(getAgentIconPath("pi"), path.join(AGENT_ICON_DIR, "pi.png"));
-
-    const openClawIconUrl = getAgentIconUrl("openclaw");
-    assert.strictEqual(new URL(openClawIconUrl).protocol, "file:");
-    assert.strictEqual(
-      path.normalize(fileURLToPath(openClawIconUrl)),
-      path.join(AGENT_ICON_DIR, "openclaw.png")
-    );
-    assert.strictEqual(getAgentIconPath("openclaw"), path.join(AGENT_ICON_DIR, "openclaw.png"));
   });
 
   it("has canonical runtime PNG icons for every registered agent", () => {
@@ -240,28 +221,17 @@ describe("state agent icons", () => {
         .filter(([, record]) => record.fallback)
         .map(([agentId]) => agentId)
         .sort(),
-      ["codewhale", "kimi-cli", "qoderwork", "qwenwork", "reasonix", "traecode", "zcode"]
+      []
     );
   });
 
   it("records complete LobeHub provenance for package and official website assets", () => {
     const manifest = readSourceManifest();
     const selectedLobeHubIds = [
-      "antigravity-cli",
       "claude-code",
-      "codebuddy",
       "codex",
-      "copilot-cli",
-      "cursor-agent",
-      "gemini-cli",
-      "hermes",
-      "kiro-cli",
-      "mimocode",
-      "openclaw",
       "opencode",
       "pi",
-      "qoder",
-      "qwen-code",
     ];
 
     for (const agentId of selectedLobeHubIds) {
@@ -272,15 +242,7 @@ describe("state agent icons", () => {
       assert.strictEqual(record.variant, "light");
     }
 
-    const archivedKimiPng = manifest.sources["kimi-cli"].archivedSources
-      .find((record) => record.sourceFilename === "kimi-cli.png");
-    assert.ok(archivedKimiPng, "Missing archived Kimi CLI LobeHub PNG");
-    assert.strictEqual(archivedKimiPng.upstreamPackage, "@lobehub/icons-static-png");
-    assert.strictEqual(archivedKimiPng.upstreamVersion, "1.95.0");
-    assert.strictEqual(archivedKimiPng.license, "MIT");
-    assert.strictEqual(archivedKimiPng.variant, "light");
-
-    const officialWebsiteSvgIds = [...selectedLobeHubIds, "kimi-cli"].sort();
+    const officialWebsiteSvgIds = [...selectedLobeHubIds].sort();
     assert.deepStrictEqual(Object.keys(manifest.svgSources).sort(), officialWebsiteSvgIds);
     assert.deepStrictEqual(LOBE_ICONS_OFFICIAL_WEBSITE, {
       upstreamName: "Lobe Icons",
@@ -381,13 +343,8 @@ describe("state agent icons", () => {
   it("uses centered neutral tiles only for low-contrast variants", () => {
     const expected = {
       codex: "neutral-light-tile",
-      "copilot-cli": "neutral-light-tile",
-      "cursor-agent": "neutral-light-tile",
-      hermes: "neutral-light-tile",
-      mimocode: "neutral-light-tile",
       opencode: "neutral-light-tile",
       pi: "neutral-light-tile",
-      "qwen-code": "neutral-light-tile",
     };
     const actual = Object.fromEntries(
       Object.entries(SOURCE_PROVENANCE)
@@ -414,49 +371,6 @@ describe("state agent icons", () => {
     assert.deepStrictEqual(calculateContainedSize(32, 24), { width: 32, height: 24 });
     assert.strictEqual(centerOffset(64, 56), 4);
     assert.strictEqual(centerOffset(64, 35), 14);
-  });
-
-  it("preserves approved passthrough icons byte-for-byte", () => {
-    const expectedHashes = {
-      "kimi-cli": "f2df6353abdcccb3aca6512f04c64c3934a35361b92a0f2e475cdb9f8efe5351",
-      qoderwork: "e354f670f8b7310a7bbcb9ca7d313221fb87131aa5d3fef05747718af44b81cf",
-      zcode: "491802e3a5b169006b3c56e400d051c0cca9cc8c47c5eedfd0bbe958faacc5b7",
-    };
-    const manifest = readSourceManifest();
-
-    for (const [agentId, expectedHash] of Object.entries(expectedHashes)) {
-      const sourcePath = getSourcePath(agentId);
-      const runtimePath = path.join(AGENT_ICON_DIR, `${agentId}.png`);
-      const record = manifest.sources[agentId];
-      assert.strictEqual(record.fallback, true);
-      assert.strictEqual(record.exportMode, "passthrough");
-      assert.strictEqual(hashFileSource(sourcePath), expectedHash);
-      assert.strictEqual(hashFileSource(runtimePath), expectedHash);
-    }
-  });
-
-  it("keeps archived Kimi CLI and QoderWork candidates with original provenance", () => {
-    const expected = {
-      "kimi-cli": [
-        { originalFilename: "kimi-color.png", sourceFilename: "kimi-cli.png", sha256: "fb460178c19cd28fc953fb446eb200b4050f4046eae3d84d1a15189eb50f717c" },
-        { originalFilename: "kimi-color.svg", sourceFilename: "kimi-cli.svg", sha256: "74a7292aeb0220445d14c5d397d75760e2e8c6ed6a9e5fe4f3023471bf62a9ff" },
-      ],
-      qoderwork: [
-        { originalFilename: "qoderwork.png", sourceFilename: "qoderwork.png", sha256: "31e3cec21e8d99e01208f1fd2a62f2ee5c690eee8210efce011e6de87fa24d92" },
-      ],
-    };
-    const manifest = readSourceManifest();
-
-    for (const [agentId, candidates] of Object.entries(expected)) {
-      const archivedSources = manifest.sources[agentId].archivedSources;
-      assert.deepStrictEqual(
-        archivedSources.map(({ originalFilename, sourceFilename, sha256 }) => ({ originalFilename, sourceFilename, sha256 })),
-        candidates
-      );
-      for (const candidate of archivedSources) {
-        assert.strictEqual(hashSource(path.join(SOURCE_DIR, candidate.sourceFilename)), candidate.sha256);
-      }
-    }
   });
 
   it("keeps an opaque source's complete canvas instead of alpha-cropping", () => {

@@ -255,19 +255,6 @@ describe("state stale cleanup decisions", () => {
     }
   });
 
-  it("deletes an idle local ZCode conversation after timeout even while shared pids are alive", () => {
-    const { result, calls } = decision(zcodeDesktopSession({
-      updatedAt: 1000000 - 60_001,
-    }), {
-      alivePids: new Set([30, 31]),
-      staleConfig: { sessionStaleMs: 60_000 },
-    });
-
-    assert.strictEqual(isLocalZcodeDesktopIdleSession(zcodeDesktopSession()), true);
-    assert.deepStrictEqual(result, { action: "delete", reason: "zcode-desktop-idle-timeout" });
-    assert.deepStrictEqual(calls, [30]);
-  });
-
   it("keeps ZCode conversations before the cutoff or when the cutoff is disabled", () => {
     const alivePids = new Set([30, 31]);
     assert.deepStrictEqual(decision(zcodeDesktopSession({
@@ -297,19 +284,6 @@ describe("state stale cleanup decisions", () => {
       const result = decision(target, { alivePids, staleConfig }).result;
       assert.notStrictEqual(result.reason, "zcode-desktop-idle-timeout");
     }
-  });
-
-  it("deletes an idle local TraeCode conversation after timeout even while the IDE pid is alive", () => {
-    const { result, calls } = decision(traeDesktopSession({
-      updatedAt: 1000000 - 60_001,
-    }), {
-      alivePids: new Set([40, 41]),
-      staleConfig: { sessionStaleMs: 60_000 },
-    });
-
-    assert.strictEqual(isLocalTraeDesktopIdleSession(traeDesktopSession()), true);
-    assert.deepStrictEqual(result, { action: "delete", reason: "traecode-desktop-idle-timeout" });
-    assert.deepStrictEqual(calls, [40]);
   });
 
   it("keeps TraeCode conversations before the cutoff or when the cutoff is disabled", () => {

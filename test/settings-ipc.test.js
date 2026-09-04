@@ -263,51 +263,6 @@ function createHarness(overrides = {}) {
   return { ipcMain, runtime, calls, activeTheme, settingsWindow };
 }
 
-test("Kimi quota IPC is trusted-window-only and bypasses generic settings commands", async () => {
-  const runtimeCalls = [];
-  const kimiQuotaRuntime = {
-    getStatus: () => ({ status: "ok", configured: false, mode: "manual-only" }),
-    connect: async (apiKey) => { runtimeCalls.push(["connect", apiKey]); return { status: "ok" }; },
-    refresh: async () => { runtimeCalls.push(["refresh"]); return { status: "ok" }; },
-    reconnect: async () => { runtimeCalls.push(["reconnect"]); return { status: "ok" }; },
-    disconnect: async () => { runtimeCalls.push(["disconnect"]); return { status: "ok" }; },
-    forget: async () => { runtimeCalls.push(["forget"]); return { status: "ok" }; },
-  };
-  const harness = createHarness({ kimiQuotaRuntime });
-  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:kimi-quota-status"), {
-    status: "ok",
-    configured: false,
-    mode: "manual-only",
-  });
-  assert.deepStrictEqual(
-    await harness.ipcMain.invoke("settings:kimi-quota-connect", { apiKey: "sk-secret" }),
-    { status: "ok" }
-  );
-  await harness.ipcMain.invoke("settings:kimi-quota-refresh");
-  await harness.ipcMain.invoke("settings:kimi-quota-reconnect");
-  await harness.ipcMain.invoke("settings:kimi-quota-disconnect");
-  await harness.ipcMain.invoke("settings:kimi-quota-forget");
-  assert.deepStrictEqual(runtimeCalls, [
-    ["connect", "sk-secret"],
-    ["refresh"],
-    ["reconnect"],
-    ["disconnect"],
-    ["forget"],
-  ]);
-  assert.equal(harness.calls.some((call) => JSON.stringify(call).includes("sk-secret")), false);
-
-  harness.ipcMain.invokeEvent = { sender: {}, senderFrame: null };
-  assert.deepStrictEqual(
-    await harness.ipcMain.invoke("settings:kimi-quota-connect", { apiKey: "sk-secret" }),
-    { status: "error", message: "untrusted settings sender" }
-  );
-  assert.deepStrictEqual(
-    await harness.ipcMain.invoke("settings:kimi-quota-reconnect"),
-    { status: "error", message: "untrusted settings sender" }
-  );
-  assert.equal(runtimeCalls.length, 5);
-});
-
 test("settings IPC registers owned channels and leaves animation override channels to their module", () => {
   const { ipcMain, runtime } = createHarness();
 

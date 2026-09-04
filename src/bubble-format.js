@@ -18,60 +18,6 @@
     return "";
   }
 
-  function maybeTruncate(value, max) {
-    return Number.isFinite(max) ? truncate(value, max) : String(value == null ? "" : value);
-  }
-
-  function formatAntigravityDetail(name, input, options) {
-    const toolName = typeof name === "string" ? name.trim().toLowerCase() : "";
-    if (!toolName) return "";
-    const max = options && options.mode === "detail" ? Infinity : 160;
-
-    if (toolName === "run_command" || toolName === "bash" || toolName === "shell") {
-      return maybeTruncate(firstStringValue(input, ["CommandLine", "command", "Command", "cmd"]), max);
-    }
-    if (
-      toolName === "write_to_file" ||
-      toolName === "replace_file_content" ||
-      toolName === "multi_replace_file_content" ||
-      toolName === "write" ||
-      toolName === "edit" ||
-      toolName === "multiedit"
-    ) {
-      const filePath = firstStringValue(input, ["TargetFile", "AbsolutePath", "file_path", "path", "filePath", "FilePath"]);
-      const description = firstStringValue(input, ["Description", "Instruction"]);
-      return maybeTruncate(description && filePath ? `${filePath}: ${description}` : (filePath || description), max);
-    }
-    if (toolName === "view_file" || toolName === "read") {
-      return maybeTruncate(firstStringValue(input, ["AbsolutePath", "file_path", "path", "filePath", "FilePath"]), max);
-    }
-    if (toolName === "list_dir") {
-      return maybeTruncate(firstStringValue(input, ["DirectoryPath", "path", "directory"]), max);
-    }
-    if (toolName === "find_by_name") {
-      const searchPath = firstStringValue(input, ["SearchDirectory", "DirectoryPath", "path"]);
-      const pattern = firstStringValue(input, ["Pattern", "pattern"]);
-      return maybeTruncate(pattern && searchPath ? `${searchPath}: ${pattern}` : (searchPath || pattern), max);
-    }
-    if (toolName === "grep_search") {
-      const searchPath = firstStringValue(input, ["SearchPath", "SearchDirectory", "DirectoryPath", "path"]);
-      const query = firstStringValue(input, ["Query", "query"]);
-      return maybeTruncate(query && searchPath ? `${searchPath}: ${query}` : (searchPath || query), max);
-    }
-    if (toolName === "ask_permission") {
-      const target = firstStringValue(input, ["Target", "target", "Permission", "permission"]);
-      const reason = firstStringValue(input, ["Reason", "reason", "Description", "description"]);
-      return maybeTruncate(reason && target ? `${target}: ${reason}` : (target || reason), max);
-    }
-    if (toolName === "read_url_content") {
-      return maybeTruncate(firstStringValue(input, ["Url", "url"]), max);
-    }
-    if (toolName === "search_web") {
-      return maybeTruncate(firstStringValue(input, ["query", "Query"]), max);
-    }
-    return "";
-  }
-
   function formatDetail(name, input, options) {
     if (!input || typeof input !== "object") return "";
     const detailMode = !!(options && options.mode === "detail");
@@ -93,10 +39,6 @@
         const pattern = firstStringValue(input, ["pattern", "Pattern", "query", "Query"]);
         if (pattern) return pattern;
       }
-      if (options && options.isAntigravity) {
-        const antigravityDetail = formatAntigravityDetail(name, input, { mode: "detail" });
-        if (antigravityDetail) return antigravityDetail;
-      }
       if (options && typeof options.formatUnknownDetail === "function") {
         return options.formatUnknownDetail(input);
       }
@@ -114,10 +56,6 @@
       return truncate(input.file_path, 120);
     if ((name === "Glob" || name === "Grep") && typeof input.pattern === "string")
       return truncate(input.pattern, 120);
-    if (options && options.isAntigravity) {
-      const antigravityDetail = formatAntigravityDetail(name, input);
-      if (antigravityDetail) return antigravityDetail;
-    }
     for (const v of Object.values(input)) {
       if (typeof v === "string" && v.trim()) return truncate(v.trim(), 100);
     }
@@ -254,7 +192,7 @@
     return { server, tool, display };
   }
 
-  const api = { formatDetail, formatAntigravityDetail, truncate, firstStringValue, parseMcpToolName, detectIrreversible };
+  const api = { formatDetail, truncate, firstStringValue, parseMcpToolName, detectIrreversible };
 
   if (typeof module === "object" && module.exports) {
     module.exports = api;

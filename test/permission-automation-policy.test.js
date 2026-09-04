@@ -39,15 +39,6 @@ describe("permission automation interaction classifier", () => {
     assert.strictEqual(plan.capabilities.planFeedback, true);
   });
 
-  it("classifies Hermes clarify as an answerable human question", () => {
-    const interaction = classifyPermissionInteraction({
-      agentId: "hermes",
-      toolName: "clarify",
-    });
-    assert.strictEqual(interaction.intent, INTERACTION_INTENT.HUMAN_QUESTION);
-    assert.strictEqual(interaction.capabilities.answerQuestions, true);
-  });
-
   it("normalizes reviewed decision names across casing and Tool suffix aliases", () => {
     const cases = [
       {
@@ -61,12 +52,6 @@ describe("permission automation interaction classifier", () => {
         toolNames: ["ExitPlanMode", "exitplanmode", "ExitPlanModeTool"],
         intent: INTERACTION_INTENT.PLAN_REVIEW,
         unattendedAction: AUTOMATION_ACTION.AUTO_ALLOW,
-      },
-      {
-        agentId: "hermes",
-        toolNames: ["clarify", "CLARIFY", "clarifyTool"],
-        intent: INTERACTION_INTENT.HUMAN_QUESTION,
-        unattendedAction: AUTOMATION_ACTION.AUTO_ANSWER,
       },
     ];
 
@@ -100,11 +85,7 @@ describe("permission automation interaction classifier", () => {
     ];
     for (const agentId of [
       "claude-code",
-      "codebuddy",
       "codex",
-      "qwen-code",
-      "copilot-cli",
-      "hermes",
       "opencode",
     ]) {
       for (const toolName of aliases) {
@@ -113,50 +94,6 @@ describe("permission automation interaction classifier", () => {
           interaction.intent,
           INTERACTION_INTENT.TOOL_APPROVAL,
           `${agentId}:${toolName}`
-        );
-      }
-    }
-  });
-
-  it("keeps Hermes-only clarify names on each non-Hermes agent's ordinary compatibility path", () => {
-    const cases = [
-      {
-        agentId: "claude-code",
-        intent: INTERACTION_INTENT.UNKNOWN,
-        autoToolsAction: AUTOMATION_ACTION.DEFER,
-        unattendedAction: AUTOMATION_ACTION.AUTO_ALLOW,
-      },
-      {
-        agentId: "qwen-code",
-        intent: INTERACTION_INTENT.UNKNOWN,
-        autoToolsAction: AUTOMATION_ACTION.DEFER,
-        unattendedAction: AUTOMATION_ACTION.AUTO_ALLOW,
-      },
-      ...["codebuddy", "codex", "copilot-cli", "opencode"].map((agentId) => ({
-        agentId,
-        intent: INTERACTION_INTENT.TOOL_APPROVAL,
-        autoToolsAction: AUTOMATION_ACTION.AUTO_ALLOW,
-        unattendedAction: AUTOMATION_ACTION.AUTO_ALLOW,
-      })),
-    ];
-
-    for (const testCase of cases) {
-      for (const toolName of ["clarify", "CLARIFY", "clarifyTool", "ClarifyTool"]) {
-        const interaction = classifyPermissionInteraction({
-          agentId: testCase.agentId,
-          toolName,
-        });
-        assert.strictEqual(interaction.intent, testCase.intent, `${testCase.agentId}:${toolName}`);
-        assert.strictEqual(interaction.capabilities.allowDeny, true, `${testCase.agentId}:${toolName}`);
-        assert.strictEqual(
-          evaluate(PERMISSION_AUTOMATION_MODE.AUTO_TOOLS, interaction),
-          testCase.autoToolsAction,
-          `${testCase.agentId}:${toolName}:auto-tools`
-        );
-        assert.strictEqual(
-          evaluate(PERMISSION_AUTOMATION_MODE.UNATTENDED, interaction),
-          testCase.unattendedAction,
-          `${testCase.agentId}:${toolName}:unattended`
         );
       }
     }
@@ -180,35 +117,10 @@ describe("permission automation interaction classifier", () => {
     assert.strictEqual(notification.intent, INTERACTION_INTENT.NOTIFICATION);
   });
 
-  it("makes CodeBuddy decision interactions non-automatable", () => {
-    for (const toolName of [
-      "AskUserQuestion",
-      "askuserquestion",
-      "AskUserQuestionTool",
-      "ExitPlanMode",
-      "exitplanmode",
-      "ExitPlanModeTool",
-    ]) {
-      const interaction = classifyPermissionInteraction({
-        agentId: "codebuddy",
-        toolName,
-      });
-      assert.strictEqual(interaction.automationEligibility.autoTools, false);
-      assert.strictEqual(interaction.automationEligibility.unattended, false);
-      assert.strictEqual(interaction.capabilities.answerQuestions, false);
-      assert.strictEqual(interaction.capabilities.planFeedback, false);
-      assert.strictEqual(isDecisionInteraction(interaction), true);
-    }
-  });
-
   it("never gives Claude plan-review capabilities to a tool-name collision", () => {
     for (const agentId of [
       "codex",
-      "qwen-code",
-      "copilot-cli",
-      "hermes",
       "opencode",
-      "zcode",
     ]) {
       for (const toolName of ["ExitPlanMode", "exitplanmode", "ExitPlanModeTool"]) {
         const interaction = classifyPermissionInteraction({
@@ -221,80 +133,6 @@ describe("permission automation interaction classifier", () => {
         assert.strictEqual(interaction.automationEligibility.unattended, false, `${agentId}:${toolName}`);
       }
     }
-  });
-
-  it("automates ordinary CodeBuddy permissions in both automatic modes", () => {
-    const interaction = classifyPermissionInteraction({
-      agentId: "codebuddy",
-      toolName: "Bash",
-    });
-    assert.deepStrictEqual(
-      { ...interaction.automationEligibility },
-      { autoTools: true, unattended: true }
-    );
-    assert.strictEqual(interaction.capabilities.allowDeny, true);
-  });
-
-  it("keeps ordinary ZCode permissions manual until its tool surface is audited", () => {
-    const interaction = classifyPermissionInteraction({
-      agentId: "zcode",
-      toolName: "Bash",
-    });
-    assert.strictEqual(interaction.intent, INTERACTION_INTENT.TOOL_APPROVAL);
-    assert.deepStrictEqual(
-      { ...interaction.automationEligibility },
-      { autoTools: false, unattended: false }
-    );
-    assert.strictEqual(interaction.capabilities.allowDeny, true);
-    assert.strictEqual(interaction.capabilities.nativeFallback, true);
-    for (const mode of [PERMISSION_AUTOMATION_MODE.AUTO_TOOLS, PERMISSION_AUTOMATION_MODE.UNATTENDED]) {
-      assert.strictEqual(
-        evaluatePermissionAutomation({ mode, interaction }),
-        AUTOMATION_ACTION.DEFER
-      );
-    }
-  });
-
-  it("never auto-allows an unreviewed ZCode built-in name", () => {
-    const interaction = classifyPermissionInteraction({
-      agentId: "zcode",
-      toolName: "RequestUserChoiceV2",
-    });
-    assert.strictEqual(interaction.intent, INTERACTION_INTENT.TOOL_APPROVAL);
-    assert.deepStrictEqual(
-      { ...interaction.automationEligibility },
-      { autoTools: false, unattended: false }
-    );
-    for (const mode of [PERMISSION_AUTOMATION_MODE.AUTO_TOOLS, PERMISSION_AUTOMATION_MODE.UNATTENDED]) {
-      assert.strictEqual(
-        evaluatePermissionAutomation({ mode, interaction }),
-        AUTOMATION_ACTION.DEFER
-      );
-    }
-  });
-
-  it("keeps DSH manually actionable while every automation mode defers", () => {
-    const interaction = classifyPermissionInteraction({
-      agentId: "deepseek-harness",
-      toolName: "execute_shell",
-    });
-    assert.strictEqual(interaction.intent, INTERACTION_INTENT.TOOL_APPROVAL);
-    assert.strictEqual(interaction.capabilities.allowDeny, true);
-    assert.strictEqual(interaction.capabilities.nativeFallback, true);
-    assert.deepStrictEqual(
-      { ...interaction.automationEligibility },
-      { autoTools: false, unattended: false }
-    );
-    for (const mode of [PERMISSION_AUTOMATION_MODE.AUTO_TOOLS, PERMISSION_AUTOMATION_MODE.UNATTENDED]) {
-      assert.strictEqual(evaluate(mode, interaction), AUTOMATION_ACTION.DEFER, mode);
-    }
-    const question = classifyPermissionInteraction({
-      agentId: "deepseek-harness",
-      toolName: "ask_user_question",
-    });
-    assert.strictEqual(question.intent, INTERACTION_INTENT.HUMAN_QUESTION);
-    assert.strictEqual(question.capabilities.answerQuestions, false);
-    assert.strictEqual(evaluate(PERMISSION_AUTOMATION_MODE.UNATTENDED, question), AUTOMATION_ACTION.DEFER);
   });
 
   it("defaults unknown agents to unknown with no automation eligibility", () => {
@@ -312,11 +150,7 @@ describe("permission automation interaction classifier", () => {
   it("fails closed for missing or placeholder tool names from known agents", () => {
     for (const agentId of [
       "claude-code",
-      "codebuddy",
       "codex",
-      "qwen-code",
-      "copilot-cli",
-      "hermes",
       "opencode",
     ]) {
       for (const toolName of [undefined, null, "", "  ", "Unknown", "unknown"]) {
@@ -348,7 +182,7 @@ describe("permission automation interaction classifier", () => {
   });
 
   it("fails closed in auto-tools but preserves unattended for a non-empty unreviewed Claude-compatible tool", () => {
-    for (const agentId of ["claude-code", "qwen-code"]) {
+    for (const agentId of ["claude-code"]) {
       const interaction = classifyPermissionInteraction({
         agentId,
         toolName: "RequestUserChoiceV2",
@@ -477,16 +311,4 @@ describe("evaluatePermissionAutomation", () => {
     assert.strictEqual(isValidInteraction(null), false);
   });
 
-  it("auto-tools handles CodeBuddy tools but defers CodeBuddy decisions", () => {
-    const tool = classifyPermissionInteraction({ agentId: "codebuddy", toolName: "Bash" });
-    const question = classifyPermissionInteraction({ agentId: "codebuddy", toolName: "AskUserQuestion" });
-    assert.strictEqual(
-      evaluate(PERMISSION_AUTOMATION_MODE.AUTO_TOOLS, tool),
-      AUTOMATION_ACTION.AUTO_ALLOW
-    );
-    assert.strictEqual(
-      evaluate(PERMISSION_AUTOMATION_MODE.AUTO_TOOLS, question),
-      AUTOMATION_ACTION.DEFER
-    );
-  });
 });

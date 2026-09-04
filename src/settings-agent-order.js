@@ -4,30 +4,11 @@ function buildSettingsAgentOrderExports() {
   const COLLAPSIBLE_AGENT_PRIORITY = [
     "claude-code",
     "codex",
-    "gemini-cli",
-    "kimi-cli",
-    "qwen-code",
-    "codewhale",
     "opencode",
-    "mimocode",
-    "codebuddy",
-    "workbuddy",
-    "qoder",
-    "qoderwork",
-    "traecode",
-    "qwenwork",
   ];
 
   const NON_COLLAPSIBLE_AGENT_PRIORITY = [
-    "antigravity-cli",
-    "cursor-agent",
-    "copilot-cli",
-    "kiro-cli",
     "pi",
-    "openclaw",
-    "hermes",
-    "reasonix",
-    "zcode",
   ];
 
   const COLLAPSIBLE_AGENT_PRIORITY_MAP = new Map(

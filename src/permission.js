@@ -83,13 +83,7 @@ const QUEUE_DRAWER_PREFERRED_HEIGHT = 620;
 const QUEUE_COMMIT_TIMEOUT_MS = 1500;
 const QUEUE_SUMMARY_MAX = 120;
 const PLAN_FEEDBACK_MAX_LENGTH = 4000;
-// WorkBuddy is intentionally absent: its desktop form factor resolves the
-// permission loop inside its own native sandbox + GUI, so Clawd never issues a
-// rich remote approval for it (see agents/workbuddy.js). If a future CLI form
-// factor emits a real PermissionRequest, re-adding it will need a source-owned
-// endpoint or server-side identity injection first (WorkBuddy's native events
-// carry client:"WorkBuddy", not an agent_id server-agent-id.js recognizes).
-const REMOTE_RICH_APPROVAL_AGENT_IDS = new Set(["claude-code", "codebuddy"]);
+const REMOTE_RICH_APPROVAL_AGENT_IDS = new Set(["claude-code"]);
 
 function requiredDependency(value, name, owner) {
   if (!value) throw new Error(`${owner} requires ${name}`);
@@ -184,14 +178,6 @@ function shouldSuppressCodexUserInputBubble(ctx) {
   return !!(ctx.doNotDisturb || !policy.enabled);
 }
 
-function shouldSuppressKimiNotifyBubble(ctx) {
-  const kimiBubblesEnabled =
-    typeof ctx.isAgentPermissionsEnabled !== "function" ||
-    ctx.isAgentPermissionsEnabled("kimi-cli");
-  const policy = getPolicy(ctx, "notification");
-  return !!(ctx.doNotDisturb || !policy.enabled || !kimiBubblesEnabled);
-}
-
 function getPolicy(ctx, kind) {
   if (typeof ctx.getBubblePolicy === "function") {
     try {
@@ -230,73 +216,6 @@ function buildCodexPermissionResponseBody(decisionOrBehavior, message) {
       decision,
     },
   });
-}
-
-function buildQwenCodePermissionResponseBody(decisionOrBehavior, message) {
-  return buildCodexPermissionResponseBody(decisionOrBehavior, message);
-}
-
-// ZCode's 3.5.x PermissionRequest schema accepts the same minimal union the
-// codex builder emits ({ behavior } allow / { behavior, message } deny).
-// End-to-end Allow/Deny is verified on macOS ZCode 3.8.1.
-function buildZcodePermissionResponseBody(decisionOrBehavior, message) {
-  return buildCodexPermissionResponseBody(decisionOrBehavior, message);
-}
-
-function sanitizeAntigravityPermissionDecision(decisionOrBehavior, message) {
-  const source = typeof decisionOrBehavior === "string"
-    ? { decision: decisionOrBehavior, reason: message }
-    : (decisionOrBehavior && typeof decisionOrBehavior === "object" ? decisionOrBehavior : null);
-  if (!source) return null;
-
-  const raw = typeof source.decision === "string"
-    ? source.decision
-    : (typeof source.behavior === "string" ? source.behavior : "");
-  const decision = raw === "deny" ? "deny"
-    : (raw === "allow" ? "allow"
-      : (raw === "ask" || raw === "force_ask" ? raw : null));
-  if (!decision) return null;
-
-  const out = { decision };
-  const reason = typeof source.reason === "string" && source.reason
-    ? source.reason
-    : (typeof source.message === "string" ? source.message : "");
-  if (reason && decision !== "allow") out.reason = reason;
-  if (decision === "allow") out.allowTool = true;
-  if (decision === "deny" && reason) out.denyReason = reason;
-  return out;
-}
-
-function buildAntigravityPermissionResponseBody(decisionOrBehavior, message) {
-  const decision = sanitizeAntigravityPermissionDecision(decisionOrBehavior, message);
-  return decision ? JSON.stringify(decision) : "{}";
-}
-
-// Copilot CLI wire format: hook reads `{behavior, message?}` JSON from the
-// HTTP response body and re-emits it on stdout. Unlike Codex/Qwen there is
-// no hookSpecificOutput envelope — Phase 0 §5 locked the schema. Anything
-// other than allow/deny falls back to "{}" so the caller can emit 204 and
-// let copilot-hook.js write empty stdout (Phase 0 §3 native-flow signal).
-function sanitizeCopilotPermissionDecision(decisionOrBehavior, message) {
-  const source = typeof decisionOrBehavior === "string"
-    ? { behavior: decisionOrBehavior, message }
-    : (decisionOrBehavior && typeof decisionOrBehavior === "object" ? decisionOrBehavior : null);
-  if (!source) return null;
-
-  const behavior = source.behavior === "deny" ? "deny"
-    : (source.behavior === "allow" ? "allow" : null);
-  if (!behavior) return null;
-
-  const decision = { behavior };
-  if (behavior === "deny" && typeof source.message === "string" && source.message) {
-    decision.message = source.message;
-  }
-  return decision;
-}
-
-function buildCopilotPermissionResponseBody(decisionOrBehavior, message) {
-  const decision = sanitizeCopilotPermissionDecision(decisionOrBehavior, message);
-  return decision ? JSON.stringify(decision) : "{}";
 }
 
 function computePassiveNotifyRemainingMs(createdAt, autoCloseMs, now = Date.now()) {
@@ -1471,10 +1390,10 @@ function compactQueueSummary(entry) {
     if (entry && typeof entry.detailText === "string" && entry.detailText.trim()) {
       return truncate(entry.detailText.replace(/\s+/g, " ").trim(), QUEUE_SUMMARY_MAX);
     }
-    const toolName = entry && entry.kimiToolName ? entry.kimiToolName : entry && entry.toolName;
-    const toolInput = entry && entry.kimiToolInput ? entry.kimiToolInput : entry && entry.toolInput;
+    const toolName = entry && entry.toolName;
+    const toolInput = entry && entry.toolInput;
     return truncate(
-      String(formatDetail(toolName, toolInput, { isAntigravity: !!(entry && entry.isAntigravity) }) || "")
+      String(formatDetail(toolName, toolInput) || "")
         .replace(/\s+/g, " ")
         .trim(),
       QUEUE_SUMMARY_MAX
@@ -1485,7 +1404,7 @@ function compactQueueSummary(entry) {
 }
 
 function queueToolLabel(entry) {
-  const raw = String((entry && (entry.kimiToolName || entry.toolName)) || "Request");
+  const raw = String((entry && entry.toolName) || "Request");
   const parsed = parseMcpToolName(raw);
   return truncate(parsed ? parsed.display : raw, 80);
 }
@@ -1504,13 +1423,7 @@ function queueAgentLabel(entry) {
   const id = String((entry && entry.agentId) || "claude-code");
   const labels = {
     "claude-code": "Claude Code",
-    codebuddy: "CodeBuddy",
     codex: "Codex",
-    "qwen-code": "Qwen Code",
-    zcode: "ZCode",
-    "copilot-cli": "Copilot CLI",
-    hermes: "Hermes",
-    dsh: "DeepSeek Harness",
   };
   return labels[id] || id;
 }
@@ -2116,7 +2029,7 @@ function repositionBubbles() {
 // funnels through showPermissionBubble after its DND / per-agent / headless
 // gates have already run, so this is the single place to honor the
 // runtime mode without auto-approving requests those gates
-// meant to drop. Passive notifications (codex/kimi) are excluded — they are
+// meant to drop. Passive notifications (codex) are excluded — they are
 // not approvals and carry no HTTP response
 // to satisfy. Returns true when it consumed the entry (caller must NOT build a
 // bubble), false otherwise.
@@ -2402,19 +2315,8 @@ function showPermissionBubble(permEntry) {
       permissionBubbleWindows.delete(bub);
       const idx = pendingPermissions.indexOf(permEntry);
       if (idx !== -1) {
-        // Qwen + Copilot + ZCode + DSH can hand no-decision back to their native
-        // flow. Hermes has no native permission UI, so its opt-in plugin gate
-        // treats this as a retryable block. In every case we avoid fabricating a
-        // user denial. CC/CodeBuddy still get an explicit deny for this
-        // user-close action.
-        const behavior = (
-          permEntry.isQwenCode
-          || permEntry.isCopilotCli
-          || permEntry.isHermes
-          || permEntry.isZcode
-          || permEntry.isDsh
-        ) ? "no-decision" : "deny";
-        resolvePermissionEntry(permEntry, behavior, "Bubble window closed by user");
+        // Claude Code gets an explicit deny for this user-close action.
+        resolvePermissionEntry(permEntry, "deny", "Bubble window closed by user");
       }
       repositionDependentBubbles();
     });
@@ -2523,7 +2425,7 @@ function showPermissionBubble(permEntry) {
   }
 }
 // Autoclose: set up the dismiss-without-decision timer for a single pending
-// permission. Passive notification entries (codex/kimi) own their own
+// permission. Passive notification entries (codex) own their own
 // dismissal via dismissPassiveNotify and must not be auto-closed through this
 // path — their UI lifecycle is decoupled from the agent's response channel.
 function armPermissionAutoCloseTimer(permEntry) {
@@ -2668,7 +2570,6 @@ function buildPermissionBubblePayload(permEntry) {
     familyDisplayName: isOpencodeFamilyEntry(permEntry)
       ? ((getFamilyConfig(permEntry.agentId) || {}).displayName || permEntry.agentId)
       : null,
-    isAntigravity: permEntry.isAntigravity || false,
     // Provenance for the renderer: lets the bubble relabel Codex MCP tool calls
     // (issue #445) without touching approval semantics. Mirrors the flags above.
     isCodex: permEntry.isCodex || false,
@@ -2677,19 +2578,6 @@ function buildPermissionBubblePayload(permEntry) {
     isCodexUserInputNotify: permEntry.isCodexUserInputNotify || false,
     codexUserInputCallId: permEntry.codexUserInputCallId || null,
     isRemote: !!permEntry.host,
-    // Hermes must NOT get the regular go-to-terminal fallback: its opt-in
-    // permission gate has no native approval prompt to hand back to. A 204 is
-    // converted into a retryable block by the plugin. Clarify elicitation is
-    // different and can hand control to Hermes' native clarification UI.
-    isHermes: permEntry.isHermes || false,
-    // DSH has a downstream native web answerer. Its first-release bubble must
-    // not render Go to Terminal because that action has no decision meaning.
-    isDsh: permEntry.isDsh || false,
-    // Display-only detail for the passive Kimi notify card: the real tool
-    // name plus the whitelisted tool_input subset let the renderer reuse the
-    // standard cue path (formatDetail) while the card stays dismiss-only.
-    kimiToolName: permEntry.kimiToolName || null,
-    kimiToolInput: permEntry.kimiToolInput || null,
     familyAlways: permEntry.familyAlwaysCandidates || [],
     familyPatterns: permEntry.familyPatterns || [],
     sessionFolder,
@@ -2779,7 +2667,7 @@ function isRemoteApprovalActionable(permEntry) {
     && interaction.intent === INTERACTION_INTENT.HUMAN_QUESTION
     && interaction.capabilities.answerQuestions
   ) return true;
-  if (isPassiveNotifyEntry(permEntry) || isOpencodeFamilyEntry(permEntry) || permEntry.isAntigravity || permEntry.isCopilotCli) return false;
+  if (isPassiveNotifyEntry(permEntry) || isOpencodeFamilyEntry(permEntry)) return false;
   if (isDecisionInteraction(interaction)) return false;
   if (PASSTHROUGH_TOOLS.has(permEntry.toolName)) return false;
   // Mirror the local headless gate on remote channels. An audited interactive
@@ -2791,7 +2679,7 @@ function isRemoteApprovalActionable(permEntry) {
 
 // Slack is a one-way attention channel, not an approval transport. Do not
 // reuse isRemoteApprovalActionable here: that predicate intentionally excludes
-// adapters such as the opencode family and Copilot because Telegram/Feishu
+// adapters such as the opencode family because Telegram/Feishu
 // cannot safely return a decision for them. A successfully rendered desktop
 // bubble is still something Slack should announce.
 //
@@ -3169,10 +3057,10 @@ function cancelRemoteApproval(permEntry, options = {}) {
 
 // "Go to terminal" path: drop the bubble, abort any in-flight Telegram prompt,
 // destroy the hook socket WITHOUT writing a decision, hand focus back to the
-// agent terminal. The destroy is what actually frees the terminal: CC and
-// CodeBuddy block on the PermissionRequest HTTP hook (600s) and show nothing
+// agent terminal. The destroy is what actually frees the terminal: CC blocks
+// on the PermissionRequest HTTP hook (600s) and shows nothing
 // in the terminal until it finishes — a dropped connection is a non-blocking
-// hook error, so they immediately fall back to their native chat prompt
+// hook error, so it immediately falls back to the native chat prompt
 // without treating it as a deny (same mechanism as the autoclose no-decision
 // path and the bypass gate in server-route-permission.js). For opencode the
 // destroy is a no-op behind the writableEnded guard: its fire-and-forget POST
@@ -3515,18 +3403,10 @@ function handleRemoteApprovalDecision(
       isValidInteraction(permEntry.interaction)
       && permEntry.interaction.intent === INTERACTION_INTENT.HUMAN_QUESTION
     ) {
-      if (permEntry.isHermes || permEntry.isDsh) {
-        // Hermes treats an explicit deny as "clarification cancelled"; only a
-        // no-decision (204) falls back to its native terminal prompt, which is
-        // what "go to terminal" means here.
-        resolvePermissionEntry(permEntry, "no-decision", "Go to terminal from remote approval");
-        ctx.focusTerminalForSession(permEntry.sessionId, { fallbackEntry: buildPermissionFocusEntry(permEntry) });
-        return true;
-      }
       resolvePermissionEntry(permEntry, "deny", "User answered in terminal");
       return true;
     }
-    if (permEntry.isCodex || permEntry.isQwenCode || permEntry.isAntigravity || permEntry.isZcode || permEntry.isDsh) {
+    if (permEntry.isCodex) {
       resolvePermissionEntry(permEntry, "no-decision", "Go to terminal from remote approval");
       ctx.focusTerminalForSession(permEntry.sessionId, { fallbackEntry: buildPermissionFocusEntry(permEntry) });
     } else {
@@ -3722,85 +3602,6 @@ function applyPermissionSuggestion(perm, index, options = {}) {
     return;
   }
 
-  if (permEntry.isQwenCode) {
-    if (behavior === "no-decision") {
-      sendQwenCodeNoDecisionResponse(res, message || "fallback");
-    } else {
-      sendQwenCodePermissionResponse(res, {
-        behavior: behavior === "deny" ? "deny" : "allow",
-        message,
-      });
-    }
-    return;
-  }
-
-  if (permEntry.isZcode) {
-    if (behavior === "no-decision") {
-      sendZcodeNoDecisionResponse(res, message || "fallback");
-    } else {
-      sendZcodePermissionResponse(res, {
-        behavior: behavior === "deny" ? "deny" : "allow",
-        message,
-      });
-    }
-    return;
-  }
-
-  if (permEntry.isCopilotCli) {
-    if (behavior === "no-decision") {
-      sendCopilotNoDecisionResponse(res, message || "fallback");
-    } else {
-      sendCopilotPermissionResponse(res, {
-        behavior: behavior === "deny" ? "deny" : "allow",
-        message,
-      });
-    }
-    return;
-  }
-
-  if (permEntry.isAntigravity) {
-    if (behavior === "no-decision") {
-      sendAntigravityNoDecisionResponse(res, message || "fallback");
-    } else {
-      sendAntigravityPermissionResponse(res, {
-        behavior: behavior === "deny" ? "deny" : "allow",
-        message,
-      });
-    }
-    return;
-  }
-
-  if (permEntry.isHermes) {
-    if (behavior === "no-decision") {
-      sendHermesNoDecisionResponse(res, message || "fallback");
-    } else if (permEntry.isElicitation && behavior === "allow" && permEntry.resolvedUpdatedInput) {
-      sendHermesPermissionResponse(res, {
-        decision: "allow",
-        answers: permEntry.resolvedUpdatedInput.answers || {},
-      });
-    } else {
-      sendHermesPermissionResponse(res, {
-        decision: behavior === "deny" ? "deny" : "allow",
-        message: message || undefined,
-      });
-    }
-    return;
-  }
-
-  // DeepSeek Harness bridge waits on this HTTP response inside its public
-  // approval/request waterfall. Only ordinary approval decisions travel here;
-  // ask_user_question remains owned by DSH's native provider.
-  if (permEntry.isDsh) {
-    if (behavior === "no-decision") {
-      sendDshNoDecisionResponse(res, message || "fallback");
-      return;
-    }
-    sendDshPermissionResponse(res, {
-      decision: behavior === "deny" ? "deny" : "allow",
-    });
-    return;
-  }
-
   if (permEntry.isElicitation) {
     if (behavior === "no-decision") {
       // Autoclose: drop the socket so CC stops waiting, then refocus the
@@ -3822,7 +3623,7 @@ function applyPermissionSuggestion(perm, index, options = {}) {
   }
 
   if (behavior === "no-decision") {
-    // Claude Code / CodeBuddy autoclose path: destroy the socket so the
+    // Claude Code autoclose path: destroy the socket so the
     // hook's curl sees a connection failure, which is a non-blocking error
     // per the hooks doc — CC falls back to its built-in chat prompt rather
     // than treating it as an explicit deny.
@@ -3958,114 +3759,6 @@ function sendCodexPermissionResponse(res, decisionOrBehavior, message) {
     return sendCodexNoDecisionResponse(res, "invalid decision");
   }
   permLog(`codex response: ${responseBody}`);
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
-  });
-  res.end(responseBody);
-  return true;
-}
-
-function sendQwenCodeNoDecisionResponse(res, reason = "") {
-  return sendNoDecisionResponse(res, reason, "qwen-code");
-}
-
-function sendQwenCodePermissionResponse(res, decisionOrBehavior, message) {
-  if (!res || res.writableEnded || res.destroyed || res.headersSent) return false;
-  const responseBody = buildQwenCodePermissionResponseBody(decisionOrBehavior, message);
-  if (responseBody === "{}") {
-    return sendQwenCodeNoDecisionResponse(res, "invalid decision");
-  }
-  permLog(`qwen-code response: ${responseBody}`);
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
-  });
-  res.end(responseBody);
-  return true;
-}
-
-function sendZcodeNoDecisionResponse(res, reason = "") {
-  return sendNoDecisionResponse(res, reason, "zcode");
-}
-
-function sendZcodePermissionResponse(res, decisionOrBehavior, message) {
-  if (!res || res.writableEnded || res.destroyed || res.headersSent) return false;
-  const responseBody = buildZcodePermissionResponseBody(decisionOrBehavior, message);
-  if (responseBody === "{}") {
-    return sendZcodeNoDecisionResponse(res, "invalid decision");
-  }
-  permLog(`zcode response: ${responseBody}`);
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
-  });
-  res.end(responseBody);
-  return true;
-}
-
-function sendCopilotNoDecisionResponse(res, reason = "") {
-  return sendNoDecisionResponse(res, reason, "copilot-cli");
-}
-
-function sendCopilotPermissionResponse(res, decisionOrBehavior, message) {
-  if (!res || res.writableEnded || res.destroyed || res.headersSent) return false;
-  const responseBody = buildCopilotPermissionResponseBody(decisionOrBehavior, message);
-  if (responseBody === "{}") {
-    return sendCopilotNoDecisionResponse(res, "invalid decision");
-  }
-  permLog(`copilot-cli response: ${responseBody}`);
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
-  });
-  res.end(responseBody);
-  return true;
-}
-
-function sendAntigravityNoDecisionResponse(res, reason = "") {
-  return sendNoDecisionResponse(res, reason, "antigravity");
-}
-
-function sendAntigravityPermissionResponse(res, decisionOrBehavior, message) {
-  if (!res || res.writableEnded || res.destroyed || res.headersSent) return false;
-  const responseBody = buildAntigravityPermissionResponseBody(decisionOrBehavior, message);
-  if (responseBody === "{}") {
-    return sendAntigravityNoDecisionResponse(res, "invalid decision");
-  }
-  permLog(`antigravity response: ${responseBody}`);
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
-  });
-  res.end(responseBody);
-  return true;
-}
-
-function sendHermesNoDecisionResponse(res, reason = "") {
-  return sendNoDecisionResponse(res, reason, "hermes");
-}
-
-function sendDshNoDecisionResponse(res, reason = "") {
-  return sendNoDecisionResponse(res, reason, "dsh");
-}
-
-function sendDshPermissionResponse(res, responseObj) {
-  if (!res || res.writableEnded || res.destroyed || res.headersSent) return false;
-  const responseBody = JSON.stringify(responseObj);
-  permLog(`dsh response: ${responseBody}`);
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
-  });
-  res.end(responseBody);
-  return true;
-}
-
-function sendHermesPermissionResponse(res, responseObj) {
-  if (!res || res.writableEnded || res.destroyed || res.headersSent) return false;
-  const responseBody = JSON.stringify(responseObj);
-  permLog(`hermes response: ${responseBody}`);
   res.writeHead(200, {
     "Content-Type": "application/json",
     [CLAWD_SERVER_HEADER]: CLAWD_SERVER_ID,
@@ -4455,15 +4148,8 @@ function handleDecide(event, behavior) {
     }
     return;
   }
-  if (perm.isCodexNotify || perm.isKimiNotify) {
+  if (perm.isCodexNotify) {
     dismissPassiveNotify(perm, "ipc-decide");
-    // Kimi Code's cue is a heads-up that its terminal is blocking on a native
-    // approve/reject prompt, so "Got it" doubles as "take me there": focus the
-    // originating terminal after dismissing. Codex's passive notify is
-    // informational-only, so it stays a plain acknowledge.
-    if (perm.isKimiNotify) {
-      ctx.focusTerminalForSession(perm.sessionId, { fallbackEntry: buildPermissionFocusEntry(perm) });
-    }
     return;
   }
   if (behavior === "session-trust") {
@@ -4488,99 +4174,6 @@ function handleDecide(event, behavior) {
     // elsewhere" must answer no-decision immediately instead of leaving the
     // hook parked until its long timeout.
     resolvePermissionEntry(perm, "no-decision", `Unsupported Codex bubble action: ${String(behavior)}`);
-    if (behavior === "deny-and-focus") {
-      ctx.focusTerminalForSession(perm.sessionId, { fallbackEntry: buildPermissionFocusEntry(perm) });
-    }
-    return;
-  }
-  if (perm.isQwenCode) {
-    if (behavior === "allow" || behavior === "deny") {
-      resolvePermissionEntry(perm, behavior);
-      return;
-    }
-    resolvePermissionEntry(perm, "no-decision", `Unsupported Qwen bubble action: ${String(behavior)}`);
-    if (behavior === "deny-and-focus") {
-      ctx.focusTerminalForSession(perm.sessionId, { fallbackEntry: buildPermissionFocusEntry(perm) });
-    }
-    return;
-  }
-  if (perm.isZcode) {
-    if (behavior === "allow" || behavior === "deny") {
-      resolvePermissionEntry(perm, behavior);
-      return;
-    }
-    resolvePermissionEntry(perm, "no-decision", `Unsupported ZCode bubble action: ${String(behavior)}`);
-    if (behavior === "deny-and-focus") {
-      ctx.focusTerminalForSession(perm.sessionId, { fallbackEntry: buildPermissionFocusEntry(perm) });
-    }
-    return;
-  }
-  if (perm.isCopilotCli) {
-    if (behavior === "allow" || behavior === "deny") {
-      resolvePermissionEntry(perm, behavior);
-      return;
-    }
-    // Mirror Codex/Qwen: any non-allow/deny UI action (deny-and-focus,
-    // suggestion picker, family-always) is unsupported for Copilot's
-    // simple {behavior, message} wire format. Resolve as no-decision so
-    // the hook returns empty stdout and Copilot's native menu owns the
-    // call rather than the bubble parking until timeout.
-    resolvePermissionEntry(perm, "no-decision", `Unsupported Copilot bubble action: ${String(behavior)}`);
-    if (behavior === "deny-and-focus") {
-      ctx.focusTerminalForSession(perm.sessionId, { fallbackEntry: buildPermissionFocusEntry(perm) });
-    }
-    return;
-  }
-  if (perm.isAntigravity && behavior !== "allow" && behavior !== "deny") {
-    resolvePermissionEntry(perm, "no-decision", `Unsupported Antigravity bubble action: ${String(behavior)}`);
-    if (behavior === "deny-and-focus") {
-      ctx.focusTerminalForSession(perm.sessionId, { fallbackEntry: buildPermissionFocusEntry(perm) });
-    }
-    return;
-  }
-  if (perm.isDsh) {
-    if (behavior === "allow" || behavior === "deny") {
-      resolvePermissionEntry(perm, behavior);
-      return;
-    }
-    resolvePermissionEntry(perm, "no-decision", `Unsupported DSH bubble action: ${String(behavior)}`);
-    return;
-  }
-  if (perm.isHermes) {
-    if (behavior === "allow" || behavior === "deny") {
-      resolvePermissionEntry(perm, behavior);
-      return;
-    }
-    if (
-      isValidInteraction(perm.interaction)
-      && perm.interaction.intent === INTERACTION_INTENT.HUMAN_QUESTION
-      && perm.interaction.capabilities.answerQuestions
-      && behavior
-      && typeof behavior === "object"
-      && behavior.type === "elicitation-submit"
-    ) {
-      const wireInput = perm.elicitationWireInput || perm.toolInput;
-      const validatedAnswers = validateAndRemapIndexedElicitationAnswers(
-        wireInput,
-        behavior.answers
-      );
-      if (!validatedAnswers.ok) {
-        permLog(`desktop Hermes elicitation rejected: ${validatedAnswers.reason}`);
-        resolvePermissionEntry(perm, "no-decision", validatedAnswers.reason);
-        return;
-      }
-      perm.resolvedUpdatedInput = buildElicitationUpdatedInput(
-        wireInput,
-        validatedAnswers.answers
-      );
-      resolvePermissionEntry(perm, "allow");
-      return;
-    }
-    // Hermes' opt-in permission gate has no native approval prompt. The plugin
-    // maps no-decision to a retryable block, while clarify elicitation maps it
-    // to Hermes' native clarification UI. This branch backstops unknown/legacy
-    // actions without fabricating allow or deny.
-    resolvePermissionEntry(perm, "no-decision", `Unsupported Hermes bubble action: ${String(behavior)}`);
     if (behavior === "deny-and-focus") {
       ctx.focusTerminalForSession(perm.sessionId, { fallbackEntry: buildPermissionFocusEntry(perm) });
     }
@@ -4759,69 +4352,8 @@ function showCodexUserInputBubble({
   return true;
 }
 
-function showKimiNotifyBubble({ sessionId, command, toolName, permissionAction, permissionCommand, permissionToolInput }) {
-  if (shouldSuppressKimiNotifyBubble(ctx)) {
-    const policy = getPolicy(ctx, "notification");
-    permLog(`kimi notify suppressed: session=${sessionId} dnd=${ctx.doNotDisturb} notificationEnabled=${policy.enabled}`);
-    return;
-  }
-  const policy = getPolicy(ctx, "notification");
-  // #563: prefer the real command from Kimi Code's native PermissionRequest
-  // display block, then its human-readable action line; legacy synthesized
-  // requests carry neither and keep the generic copy.
-  const bubbleCommand = permissionCommand || permissionAction || command
-    || "Approve or reject in Kimi terminal.";
-  // A newer request for the same session replaces the stale cue in place
-  // (codex idiom above): the terminal now blocks on the NEW command, and
-  // keeping request #1's pill/command/badge would show a wrong answer with
-  // authority. A legacy-shaped refresh downgrades to the generic copy — the
-  // generic line can't be wrong.
-  const existing = findKimiNotifyEntryBySession(sessionId);
-  if (existing) {
-    existing.toolInput = { command: bubbleCommand };
-    existing.kimiToolName = typeof toolName === "string" && toolName ? toolName : null;
-    existing.kimiToolInput = permissionToolInput && typeof permissionToolInput === "object"
-      ? permissionToolInput
-      : null;
-    existing.createdAt = Date.now();
-    permLog(`passive notify refresh: agent=kimi-cli session=${sessionId} autoCloseMs=${policy.autoCloseMs}`);
-    syncPermissionBubbleContent(existing);
-    schedulePassiveNotifyAutoExpire(existing, policy.autoCloseMs);
-    return;
-  }
-  const permEntry = {
-    res: null,
-    abortHandler: null, suggestions: [],
-    sessionId, bubble: null, hideTimer: null,
-    toolName: "KimiPermission",
-    toolInput: { command: bubbleCommand },
-    kimiToolName: typeof toolName === "string" && toolName ? toolName : null,
-    // Whitelisted subset of the native request's tool_input (see
-    // extractPermissionToolInput in hooks/kimi-hook.js — the server re-runs
-    // it at the trust boundary). Display-only: it feeds the bubble's
-    // tool-aware cue and never touches approval semantics.
-    kimiToolInput: permissionToolInput && typeof permissionToolInput === "object"
-      ? permissionToolInput
-      : null,
-    resolvedSuggestion: null, createdAt: Date.now(),
-    interaction: classifyPermissionInteraction({
-      agentId: "kimi-cli",
-      eventKind: "notification",
-      toolName: "KimiPermission",
-    }),
-    isElicitation: false, isKimiNotify: true,
-    agentId: "kimi-cli",
-    autoExpireTimer: null,
-  };
-  addPendingPermission(permEntry, "passive-added");
-  showPermissionBubble(permEntry);
-  permLog(`passive notify show: agent=kimi-cli session=${sessionId} autoCloseMs=${policy.autoCloseMs}`);
-  schedulePassiveNotifyAutoExpire(permEntry, policy.autoCloseMs);
-}
-
 function getPassiveNotifyAgentId(permEntry) {
   if (permEntry?.isCodexNotify || permEntry?.isCodexUserInputNotify) return "codex";
-  if (permEntry?.isKimiNotify) return "kimi-cli";
   return permEntry?.agentId || "unknown";
 }
 
@@ -4838,11 +4370,6 @@ function findCodexUserInputEntry(sessionId, callId) {
 function findCodexNotifyEntryBySession(sessionId) {
   if (!sessionId) return null;
   return pendingPermissions.find((permEntry) => permEntry && permEntry.isCodexNotify && permEntry.sessionId === sessionId) || null;
-}
-
-function findKimiNotifyEntryBySession(sessionId) {
-  if (!sessionId) return null;
-  return pendingPermissions.find((permEntry) => permEntry && permEntry.isKimiNotify && permEntry.sessionId === sessionId) || null;
 }
 
 function dismissPassiveNotify(permEntry, reason = "unknown") {
@@ -4916,22 +4443,10 @@ function dismissInteractivePermissionWithoutDecision(perm, reason) {
   }
   hidePermissionBubbleSafely(perm);
   // Do not answer approval requests on the user's behalf. Dropping the UI
-  // means Codex/Antigravity receive no decision, CC/CodeBuddy fall back
-  // via socket close, and opencode falls back by receiving no bridge reply.
+  // means Codex receives no decision, Claude Code falls back via socket
+  // close, and opencode falls back by receiving no bridge reply.
   if (perm.isCodex) {
     sendCodexNoDecisionResponse(perm.res, reason || "permission-dismissed");
-  } else if (perm.isQwenCode) {
-    sendQwenCodeNoDecisionResponse(perm.res, reason || "permission-dismissed");
-  } else if (perm.isZcode) {
-    sendZcodeNoDecisionResponse(perm.res, reason || "permission-dismissed");
-  } else if (perm.isCopilotCli) {
-    sendCopilotNoDecisionResponse(perm.res, reason || "permission-dismissed");
-  } else if (perm.isAntigravity) {
-    sendAntigravityNoDecisionResponse(perm.res, reason || "permission-dismissed");
-  } else if (perm.isHermes) {
-    sendHermesNoDecisionResponse(perm.res, reason || "permission-dismissed");
-  } else if (perm.isDsh) {
-    sendDshNoDecisionResponse(perm.res, reason || "permission-dismissed");
   } else if (!isOpencodeFamilyEntry(perm) && perm.res && !perm.res.destroyed) {
     try { perm.res.destroy(); } catch {}
   }
@@ -5106,15 +4621,6 @@ function clearCodexUserInputBubbles(sessionId, callId, reason = "codex-user-inpu
   return toRemove.length;
 }
 
-function clearKimiNotifyBubbles(sessionId, reason = sessionId ? "kimi-session-release" : "kimi-global-clear") {
-  const hasKimi = pendingPermissions.some(p => p.isKimiNotify);
-  if (!hasKimi) return;
-  const toRemove = sessionId
-    ? pendingPermissions.filter((p) => p.isKimiNotify && p.sessionId === sessionId)
-    : pendingPermissions.filter((p) => p.isKimiNotify);
-  for (const perm of toRemove) dismissPassiveNotify(perm, reason);
-}
-
 function cleanup() {
   // Unregister hotkeys
   if (registeredAllowAccel !== null) {
@@ -5130,7 +4636,7 @@ function cleanup() {
   }
   // Clean up all pending permission requests without deciding on the user's
   // behalf. Each protocol gets its normal no-decision fallback: bodyless
-  // replies for supported hooks, socket close for Claude/CodeBuddy, and no
+  // replies for supported hooks, socket close for Claude Code, and no
   // bridge reply for opencode-family requests.
   for (const perm of [...pendingPermissions]) {
     if (perm._delayTimer) clearTimeout(perm._delayTimer);
@@ -5159,8 +4665,6 @@ return {
   syncPermissionBubbleContent,
   maybeStartRemoteApproval,
   dismissPermissionForTerminal,
-  // Test seam: lets wire-level tests pin which provenance flags reach the
-  // renderer (isHermes suppresses the go-to-terminal action — issue #689).
   buildPermissionBubblePayload,
   handleBubbleHeight, handleBubbleExpanded, handleCompositionActive,
   handleQueueDrawerOpen, handleQueueDrawerClose,
@@ -5168,7 +4672,6 @@ return {
   handleDecide, handleImeEditing, handleBubbleRendererGone, cleanup,
   showCodexNotifyBubble, clearCodexNotifyBubbles,
   showCodexUserInputBubble, clearCodexUserInputBubbles,
-  showKimiNotifyBubble, clearKimiNotifyBubbles,
   refreshPassiveNotifyAutoClose,
   refreshPermissionAutoCloseForPolicy,
   dismissPermissionsByAgent, dismissInteractivePermissionBubbles,
@@ -5195,10 +4698,6 @@ module.exports.__test = {
   shouldSuppressCodexNotifyBubble,
   sanitizeCodexPermissionDecision,
   buildCodexPermissionResponseBody,
-  buildQwenCodePermissionResponseBody,
-  buildZcodePermissionResponseBody,
-  sanitizeAntigravityPermissionDecision,
-  buildAntigravityPermissionResponseBody,
   buildElicitationUpdatedInput,
   remapIndexedElicitationAnswers,
   validateAndRemapIndexedElicitationAnswers,

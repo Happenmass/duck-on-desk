@@ -87,7 +87,6 @@ function secureHappySpawn(options = {}) {
     legacyTraces: 0,
     claudePresent: true,
     codexPresent: true,
-    copilotPresent: true,
   };
   return makeRecordingSpawn((_child, meta) => {
     const child = _child;
@@ -102,7 +101,7 @@ function secureHappySpawn(options = {}) {
       code: 0,
       stdout: `${JSON.stringify(preflight)}\n`,
     };
-    else if (current === 14) response = {
+    else if (current === 13) response = {
       code: 0,
       stdout: `${options.permissionMode === "native" ? "native" : "managed"}\n`,
     };
@@ -121,12 +120,10 @@ function secureIsolatedHappySpawn(options = {}) {
   const cliCapabilities = options.cliCapabilities || {
     claude: { present: true, path: "/opt/tools/claude", version: "2.1.211" },
     codex: { present: true, path: "/opt/tools/codex", version: "0.100.0" },
-    copilot: { present: true, path: "/opt/tools/copilot", version: "1.0.0" },
   };
   const artifacts = options.artifacts || {
     claude: { artifact: true, wrapper: true },
     codex: { artifact: true, wrapper: true },
-    copilot: { artifact: true, wrapper: true },
   };
   const preflight = {
     ok: true,
@@ -134,7 +131,6 @@ function secureIsolatedHappySpawn(options = {}) {
     legacyTraces: 0,
     claudePresent: false,
     codexPresent: false,
-    copilotPresent: false,
   };
   return makeRecordingSpawn((child) => {
     const current = index++;
@@ -149,9 +145,9 @@ function secureIsolatedHappySpawn(options = {}) {
       response = { code: 0, stdout: `${JSON.stringify(preflight)}\n` };
     } else if (current === 4) {
       response = { code: 0, stdout: `${JSON.stringify(cliCapabilities)}\n` };
-    } else if (current === 16) {
+    } else if (current === 15) {
       response = { code: 0, stdout: "managed\n" };
-    } else if (current === 17) {
+    } else if (current === 16) {
       response = { code: 0, stdout: `${JSON.stringify(artifacts)}\n` };
     }
     queueMicrotask(() => {
@@ -216,7 +212,6 @@ test("secure deploy holds a fenced lease, verifies every component, and never pu
     "hookFiles",
     "installClaude",
     "installCodex",
-    "installCopilot",
     "claudePermission",
     "codexMonitor",
   ]);
@@ -551,8 +546,7 @@ test("secure deploy never releases its lock after an unknown-result mutation", a
             legacyTraces: 0,
             claudePresent: true,
             codexPresent: true,
-            copilotPresent: true,
-          })}\n`;
+                  })}\n`;
         }
         if (spec.role === "identity-write") {
           response = { code: 255, stdout: "", stderr: "Connection closed by remote host" };
@@ -648,7 +642,6 @@ test("legacy traces always require explicit migration confirmation; local timest
     legacyTraces: 2,
     claudePresent: true,
     codexPresent: true,
-    copilotPresent: true,
   };
   const fixture = secureFixture();
   const blockedRecorder = secureHappySpawn({ preflight: legacyPreflight });
@@ -727,9 +720,8 @@ test("every applicable identity component failure leaves the transaction uncommi
     ["hook-files", 8, "hookFiles"],
     ["install-claude", 11, "installClaude"],
     ["install-codex", 12, "installCodex"],
-    ["install-copilot", 13, "installCopilot"],
-    ["claude-permission", 14, "claudePermission"],
-    ["codex-monitor", 15, "codexMonitor"],
+    ["claude-permission", 13, "claudePermission"],
+    ["codex-monitor", 14, "codexMonitor"],
   ];
   for (const [expectedStep, failureIndex, txnStep] of cases) {
     const fixture = secureFixture({
@@ -859,8 +851,7 @@ test("isolated monitor and cleanup commands stay inside their layout and retain 
             legacyMonitorPresent: false,
             claudePresent: true,
             codexPresent: true,
-            copilotPresent: true,
-          })}\n`,
+                  })}\n`,
         };
       }
       queueMicrotask(() => {
@@ -904,7 +895,7 @@ test("isolated monitor and cleanup commands stay inside their layout and retain 
     .map((call) => String(call.args.at(-1)))
     .join("\n");
   assert.match(cleanupMutations, /\/home\/shared\/\.clawd\/profiles\/runtime_a/);
-  assert.doesNotMatch(cleanupMutations, /\/home\/shared\/\.claude|\/home\/shared\/\.codex|\/home\/shared\/\.copilot/);
+  assert.doesNotMatch(cleanupMutations, /\/home\/shared\/\.claude|\/home\/shared\/\.codex/);
   assert.doesNotMatch(cleanupMutations, /\.clawd-codex-monitor\.pid/);
   assert.doesNotMatch(cleanupMutations, /rm -rf '\/home\/shared\/\.clawd\/profiles\/runtime_a'/);
 });
@@ -1050,24 +1041,6 @@ test("installer verification reads back the secure managed command shape", {
     result = childProcess.spawnSync("/bin/sh", ["-c", command], { encoding: "utf8" });
     assert.notEqual(result.status, 0);
 
-    const copilotHooksFile = path.join(layout.copilotHome, "hooks", "hooks.json");
-    fs.mkdirSync(path.dirname(copilotHooksFile), { recursive: true });
-    fs.writeFileSync(copilotHooksFile, JSON.stringify({
-      hooks: {
-        sessionStart: [{
-          type: "command",
-          bash: `CLAWD_REMOTE=1 CLAWD_SSH_REMOTE=1 CLAWD_REMOTE_IDENTITY_PATH='${layout.identityFile}' COPILOT_HOME='${layout.copilotHome}' node '${path.join(layout.claudeHooksDir, "copilot-hook.js")}' sessionStart`,
-          powershell: "$env:CLAWD_REMOTE='1'; exit 99",
-        }],
-      },
-    }));
-    const copilotCommand = __test.buildInstallerVerificationCommand(
-      "installCopilot",
-      layout,
-      process.execPath,
-    );
-    result = childProcess.spawnSync("/bin/sh", ["-c", copilotCommand], { encoding: "utf8" });
-    assert.equal(result.status, 0, result.stderr);
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }
@@ -1151,8 +1124,7 @@ test("isolated CLI probe survives the real remote shell and discovers PATH execu
     for (const [name, version] of [
       ["claude", "2.1.211"],
       ["codex", "0.100.0"],
-      ["copilot", "1.0.0"],
-    ]) {
+      ]) {
       fs.writeFileSync(
         path.join(fakeBin, name),
         `#!/bin/sh\nprintf '%s\\n' '${version}'\n`,
@@ -1179,11 +1151,10 @@ test("isolated CLI probe survives the real remote shell and discovers PATH execu
       minimums: {
         claude: { major: 2, minor: 1, patch: 211 },
         codex: { major: 0, minor: 100, patch: 0 },
-        copilot: { major: 1, minor: 0, patch: 0 },
       },
     });
     assert.equal(result.ok, true);
-    for (const name of ["claude", "codex", "copilot"]) {
+    for (const name of ["claude", "codex"]) {
       assert.equal(result.capabilities[name].present, true, name);
       assert.equal(result.capabilities[name].versionVerified, true, name);
       assert.equal(
@@ -1433,7 +1404,6 @@ test("profile-isolated deploy writes root-specific wrappers and activates only a
       isolatedCliMinimums: {
         claude: { major: 2, minor: 1, patch: 211 },
         codex: { major: 0, minor: 100, patch: 0 },
-        copilot: { major: 1, minor: 0, patch: 0 },
       },
     },
   });
@@ -1465,10 +1435,6 @@ test("profile-isolated deploy writes root-specific wrappers and activates only a
     wrapperPayload["/home/shared/.clawd/profiles/rt_profile_a/bin/codex"],
     /export CODEX_HOME='\/home\/shared\/\.clawd\/profiles\/rt_profile_a\/codex'/,
   );
-  assert.match(
-    wrapperPayload["/home/shared/.clawd/profiles/rt_profile_a/bin/copilot"],
-    /export COPILOT_HOME='\/home\/shared\/\.clawd\/profiles\/rt_profile_a\/copilot'/,
-  );
   for (const body of Object.values(wrapperPayload)) {
     assert.doesNotMatch(body, /export HOME=/);
     assert.match(body, /wrapper-evidence/);
@@ -1486,7 +1452,6 @@ test("profile-isolated deploy writes root-specific wrappers and activates only a
   assert.match(remoteArgv, /\/home\/shared\/\.clawd\/profiles\/rt_profile_a\/claude/);
   assert.doesNotMatch(remoteArgv, /\/home\/shared\/\.claude/);
   assert.doesNotMatch(remoteArgv, /\/home\/shared\/\.codex/);
-  assert.doesNotMatch(remoteArgv, /\/home\/shared\/\.copilot/);
 });
 
 test("profile-isolated deploy stays prepared, not active, for absent artifacts or unverified Claude versions", async () => {
@@ -1504,15 +1469,13 @@ test("profile-isolated deploy stays prepared, not active, for absent artifacts o
       artifacts: {
         claude: { artifact: false, wrapper: true },
         codex: { artifact: true, wrapper: true },
-        copilot: { artifact: true, wrapper: true },
-      },
+          },
     })],
     ["old Claude", secureIsolatedHappySpawn({
       cliCapabilities: {
         claude: { present: true, path: "/opt/tools/claude", version: "2.1.210" },
         codex: { present: true, path: "/opt/tools/codex", version: "0.100.0" },
-        copilot: { present: true, path: "/opt/tools/copilot", version: "1.0.0" },
-      },
+          },
     })],
   ]) {
     const result = await secureDeploy({
@@ -1638,7 +1601,6 @@ test("deploy: full happy path emits expected progress sequence", async () => {
     { code: 0 }, // scp
     { code: 0 }, // install-claude
     { code: 0 }, // install-codex
-    { code: 0 }, // install-copilot
   ]);
   const runtime = makeRuntimeStub();
   const result = await deploy({ profile, runtime, deps: { spawn, hooksDir, detectRemoteShell: stubPosixShellProbe } });
@@ -1658,7 +1620,6 @@ test("deploy: full happy path emits expected progress sequence", async () => {
     "scp:start", "scp:ok",
     "install-claude:start", "install-claude:ok",
     "install-codex:start", "install-codex:ok",
-    "install-copilot:start", "install-copilot:ok",
   ]);
 });
 
@@ -1676,17 +1637,15 @@ test("deploy: reuses resolved absolute Node path for all remote installers", asy
     { code: 0 }, // scp
     { code: 0 }, // install-claude
     { code: 0 }, // install-codex
-    { code: 0 }, // install-copilot
   ]);
   const runtime = makeRuntimeStub();
   const result = await deploy({ profile, runtime, deps: { spawn, hooksDir, detectRemoteShell: stubPosixShellProbe } });
   assert.equal(result.ok, true);
 
-  const installCommands = calls.slice(3, 6).map((c) => c.args[c.args.length - 1]);
+  const installCommands = calls.slice(3, 5).map((c) => c.args[c.args.length - 1]);
   assert.deepEqual(installCommands, [
     `'${nodeBin}' "$HOME/.claude/hooks/install.js" '--remote'`,
     `'${nodeBin}' "$HOME/.claude/hooks/codex-install.js" '--remote'`,
-    `'${nodeBin}' "$HOME/.claude/hooks/copilot-install.js" '--remote'`,
   ]);
   for (const command of installCommands) {
     assert.equal(command.includes(" node "), false);
@@ -1712,7 +1671,6 @@ test("deploy: verifies stale persisted Node metadata before using it", async () 
     { code: 0 }, // scp
     { code: 0 }, // install-claude
     { code: 0 }, // install-codex
-    { code: 0 }, // install-copilot
   ]);
   const runtime = makeRuntimeStub();
   const result = await deploy({ profile, runtime, deps: { spawn, hooksDir, detectRemoteShell: stubPosixShellProbe } });
@@ -1745,7 +1703,6 @@ test("deploy: with hostPrefix triggers host-prefix step via ssh stdin", async ()
     },
     { code: 0 }, // install-claude
     { code: 0 }, // install-codex
-    { code: 0 }, // install-copilot
   ]);
   const runtime = makeRuntimeStub();
   const result = await deploy({ profile, runtime, deps: { spawn, hooksDir, detectRemoteShell: stubPosixShellProbe } });
@@ -1863,7 +1820,6 @@ test("deploy: install-claude failure is non-fatal (best-effort)", async () => {
     { code: 0 },
     { code: 1, stderr: "install.js failed" }, // install-claude
     { code: 0 }, // install-codex
-    { code: 0 }, // install-copilot
   ]);
   const runtime = makeRuntimeStub();
   const result = await deploy({ profile, runtime, deps: { spawn, hooksDir, detectRemoteShell: stubPosixShellProbe } });
@@ -1872,7 +1828,6 @@ test("deploy: install-claude failure is non-fatal (best-effort)", async () => {
   const steps = runtime.events.map((e) => `${e.payload.step}:${e.payload.status}`);
   assert.ok(steps.includes("install-claude:fail"));
   assert.ok(steps.includes("install-codex:ok"));
-  assert.ok(steps.includes("install-copilot:ok"));
 });
 
 // ── Codex monitor PID management ──
@@ -2097,7 +2052,6 @@ test("deploy: proceeds when remote-shell probe returns posix", async () => {
     { code: 0 }, // scp
     { code: 0 }, // install-claude
     { code: 0 }, // install-codex
-    { code: 0 }, // install-copilot
   ]);
   const runtime = makeRuntimeStub();
   const result = await deploy({
@@ -2130,7 +2084,6 @@ test("deploy: unknown remote shell does not block deploy", async () => {
     { code: 0 }, // scp
     { code: 0 }, // install-claude
     { code: 0 }, // install-codex
-    { code: 0 }, // install-copilot
   ]);
   const runtime = makeRuntimeStub();
   const result = await deploy({

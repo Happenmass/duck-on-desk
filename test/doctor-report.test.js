@@ -111,12 +111,6 @@ describe("formatDiagnosticReport", () => {
         value: "needs-review",
         detail: "2/2 Clawd Codex hook(s) need Codex /hooks review: PermissionRequest, Stop",
       },
-      kiroScan: {
-        fullyValidFiles: ["clawd.json"],
-        brokenFiles: ["custom.json"],
-        noMarkerFiles: ["other.json"],
-        corruptFiles: ["bad.json"],
-      },
       opencodeEntryIssue: "directory-missing",
       opencodeEntry: "C:\\Users\\Alice\\opencode-plugin",
     });
@@ -125,10 +119,6 @@ describe("formatDiagnosticReport", () => {
     assert.match(detail, /hooks=uncertain/);
     assert.match(detail, /codex_hook_trust=needs-review/);
     assert.match(detail, /PermissionRequest, Stop/);
-    assert.match(detail, /valid=clawd\.json/);
-    assert.match(detail, /broken=custom\.json/);
-    assert.match(detail, /corrupt=bad\.json/);
-    assert.match(detail, /no-marker=1/);
     assert.match(detail, /plugin issue: directory-missing/);
     assert.match(detail, /plugin entry:/);
   });
@@ -171,12 +161,6 @@ describe("formatDiagnosticReport", () => {
                 value: "uncertain",
                 detail: "config missing",
               },
-              kiroScan: {
-                fullyValidFiles: ["clawd.json"],
-                brokenFiles: [],
-                noMarkerFiles: [],
-                corruptFiles: [],
-              },
               opencodeEntryIssue: "directory-missing",
               opencodeEntry: "D:/animation/hooks/opencode-plugin",
             },
@@ -213,7 +197,6 @@ describe("formatDiagnosticReport", () => {
     assert.match(report, /Cursor Agent/);
     assert.match(report, /permission bubbles disabled/);
     assert.match(report, /hooks=uncertain/);
-    assert.match(report, /valid=clawd\.json/);
     assert.match(report, /plugin issue: directory-missing/);
     assert.match(report, /\[APP\]\/hooks\/opencode-plugin/);
     assert.match(report, /## Connection Test/);

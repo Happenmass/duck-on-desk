@@ -14,7 +14,6 @@ const {
 const serverConfig = require("../hooks/server-config");
 const claudeInstall = require("../hooks/install");
 const codexInstall = require("../hooks/codex-install-utils");
-const copilotInstall = require("../hooks/copilot-install");
 const { __test: statuslineTest } = require("../hooks/claude-statusline");
 const { __test: monitorTest } = require("../hooks/codex-remote-monitor");
 const recoveryLease = require("../hooks/session-recovery-lease");
@@ -37,7 +36,6 @@ test("synthetic isolated env resolves every mutable hook path away from poison H
     HOME: poison,
     CLAUDE_CONFIG_DIR: layout.claudeConfigDir,
     CODEX_HOME: layout.codexHome,
-    COPILOT_HOME: layout.copilotHome,
     CLAWD_REMOTE: "1",
     CLAWD_SSH_REMOTE: "1",
     CLAWD_REMOTE_IDENTITY_PATH: layout.identityFile,
@@ -49,7 +47,6 @@ test("synthetic isolated env resolves every mutable hook path away from poison H
   try {
     assert.equal(claudeInstall.resolveClaudeHome({ env, homeDir: poison }), layout.claudeConfigDir);
     assert.equal(codexInstall.resolveCodexHome({ env, homeDir: poison }), layout.codexHome);
-    assert.equal(copilotInstall.resolveCopilotHome({ env, homeDir: poison }), layout.copilotHome);
     assert.equal(monitorTest.resolveCodexSessionDir({ env, homeDir: poison }), layout.codexSessionsDir);
     assert.equal(statuslineTest.resolveChainSidecarPath({ env }), layout.statuslineSidecarFile);
     assert.equal(serverConfig.resolveRemoteIdentityPath({ env }), layout.identityFile);
@@ -83,7 +80,6 @@ test("synthetic isolated env resolves every mutable hook path away from poison H
       "CLAWD_SSH_REMOTE=1",
       layout.claudeConfigDir,
       layout.codexHome,
-      layout.copilotHome,
       layout.identityFile,
       layout.secureMarkerFile,
       layout.hostPrefixFile,
@@ -114,7 +110,6 @@ test("remote hook modules execute in a fresh process without reading or writing 
     HOME: poison,
     CLAUDE_CONFIG_DIR: layout.claudeConfigDir,
     CODEX_HOME: layout.codexHome,
-    COPILOT_HOME: layout.copilotHome,
     CLAWD_REMOTE: "1",
     CLAWD_SSH_REMOTE: "1",
     CLAWD_REMOTE_IDENTITY_PATH: layout.identityFile,
@@ -195,7 +190,6 @@ test("two isolated layouts expose disjoint complete live path sets, including wr
       "wrapperEvidenceDir",
       "claudeWrapperEvidenceFile",
       "codexWrapperEvidenceFile",
-      "copilotWrapperEvidenceFile",
     ]) {
       assert.equal(sets[layouts.indexOf(layout)].has(layout[required]), true, required);
     }
@@ -208,7 +202,6 @@ test("remote-capable modules resolve mutable HOME paths at call time, never modu
     "hooks/server-config.js",
     "hooks/install.js",
     "hooks/codex-install-utils.js",
-    "hooks/copilot-install.js",
     "hooks/codex-remote-monitor.js",
     "hooks/claude-statusline.js",
     "hooks/session-recovery-lease.js",

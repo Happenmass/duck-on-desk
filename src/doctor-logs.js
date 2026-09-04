@@ -9,9 +9,7 @@ const DEFAULT_LOG_BASENAMES = Object.freeze([
   "session-debug.log",
   "focus-debug.log",
   "update-debug.log",
-  "gemini-debug.log",
   "opencode-plugin.log",
-  "mimocode-plugin.log",
 ]);
 
 function isAllowedLogBasename(name, pathApi = path) {

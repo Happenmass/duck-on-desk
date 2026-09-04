@@ -26,14 +26,13 @@ describe("quota ring — coin counting", () => {
           host: null,
           claudeQuota: { group: { claudeFiveHour: bucket(41), claudeWeekly: bucket(20) }, updatedAt: 1 },
           codexQuota: { group: { codexFiveHour: bucket(72) }, updatedAt: 1 },
-          kimiQuota: { group: { kimiFiveHour: bucket(0), kimiWeekly: bucket(0) }, updatedAt: 1 },
         },
         { host: "pi", claudeQuota: { group: { claudeWeekly: bucket(9) }, updatedAt: 1 } },
       ],
     };
-    // 3 providers on local + 1 on the remote = 4 coins (a provider with two
+    // 2 providers on local + 1 on the remote = 3 coins (a provider with two
     // windows is still ONE coin — the two windows become concentric rings).
-    assert.strictEqual(countQuotaCoins(snapshot, true), 4);
+    assert.strictEqual(countQuotaCoins(snapshot, true), 3);
   });
 
   it("still counts a source whose only window has expired (dimmed reset coin)", () => {
@@ -64,26 +63,6 @@ describe("quota ring — coin counting", () => {
     assert.strictEqual(countQuotaCoins(sparkOnly, true), 0);
   });
 
-  it("counts Antigravity third-party-only quota without creating another agent coin", () => {
-    const thirdPartyOnly = {
-      accountQuota: [{ antigravityQuota: { group: { thirdPartyWeekly: bucket(52) }, updatedAt: 1 } }],
-    };
-    assert.strictEqual(countQuotaCoins(thirdPartyOnly, true), 1);
-    const allAntigravity = {
-      accountQuota: [{
-        antigravityQuota: {
-          group: {
-            geminiFiveHour: bucket(10),
-            geminiWeekly: bucket(20),
-            thirdPartyFiveHour: bucket(30),
-            thirdPartyWeekly: bucket(40),
-          },
-          updatedAt: 1,
-        },
-      }],
-    };
-    assert.strictEqual(countQuotaCoins(allAntigravity, true), 1);
-  });
 });
 
 describe("quota ring — cluster sizing", () => {
@@ -255,17 +234,15 @@ describe("quota ring — per-provider visibility", () => {
         host: null,
         claudeQuota: { group: { claudeFiveHour: bucket(41) }, updatedAt: 1 },
         codexQuota: { group: { codexWeekly: bucket(31) }, updatedAt: 1 },
-        kimiQuota: { group: { kimiFiveHour: bucket(0), kimiWeekly: bucket(11) }, updatedAt: 1 },
       },
     ],
   };
 
   it("drops hidden providers from the coin count that sizes the window", () => {
-    assert.strictEqual(countQuotaCoins(snapshot, true), 3);
-    assert.strictEqual(countQuotaCoins(snapshot, true, ["codexQuota"]), 2);
-    assert.strictEqual(countQuotaCoins(snapshot, true, ["codexQuota", "kimiQuota"]), 1);
+    assert.strictEqual(countQuotaCoins(snapshot, true), 2);
+    assert.strictEqual(countQuotaCoins(snapshot, true, ["codexQuota"]), 1);
     assert.strictEqual(
-      countQuotaCoins(snapshot, true, ["claudeQuota", "codexQuota", "kimiQuota"]), 0,
+      countQuotaCoins(snapshot, true, ["claudeQuota", "codexQuota"]), 0,
       "hiding every provider must collapse the cluster, not leave an empty window"
     );
   });
@@ -273,7 +250,7 @@ describe("quota ring — per-provider visibility", () => {
   it("treats a missing, empty or junk hidden list as hiding nothing", () => {
     for (const hidden of [undefined, null, [], ["  "], [""], [null, 7, {}], "codexQuota"]) {
       assert.strictEqual(
-        countQuotaCoins(snapshot, true, hidden), 3,
+        countQuotaCoins(snapshot, true, hidden), 2,
         `hidden=${JSON.stringify(hidden)} must not drop a coin`
       );
     }
@@ -300,13 +277,10 @@ describe("quota ring — per-provider visibility", () => {
 
   it("lists only providers that actually report, flagging the hidden ones", () => {
     const listed = ringGeom.listQuotaRingProviders(snapshot, ["codexQuota"]);
-    assert.deepStrictEqual(listed.map((p) => p.key), ["claudeQuota", "codexQuota", "kimiQuota"]);
-    assert.deepStrictEqual(listed.map((p) => p.label), ["Claude", "Codex", "Kimi"]);
-    // Antigravity reports nothing here, so it must not be offered — the same
-    // rule that keeps "merge across machines" hidden on a single machine.
-    assert.ok(!listed.some((p) => p.key === "antigravityQuota"));
+    assert.deepStrictEqual(listed.map((p) => p.key), ["claudeQuota", "codexQuota"]);
+    assert.deepStrictEqual(listed.map((p) => p.label), ["Claude", "Codex"]);
     // An already-hidden provider still lists, or it could never be turned back on.
-    assert.deepStrictEqual(listed.map((p) => p.hidden), [false, true, false]);
+    assert.deepStrictEqual(listed.map((p) => p.hidden), [false, true]);
   });
 
   it("lists nothing for an empty snapshot instead of offering every provider", () => {
@@ -332,17 +306,15 @@ describe("quota ring — geometry/renderer mirror", () => {
   const everyProvider = {
     accountQuota: [{
       host: null,
-      antigravityQuota: { group: { geminiFiveHour: bucket(1) }, updatedAt: 1 },
       claudeQuota: { group: { claudeFiveHour: bucket(1) }, updatedAt: 1 },
       codexQuota: { group: { codexFiveHour: bucket(1) }, updatedAt: 1 },
-      kimiQuota: { group: { kimiFiveHour: bucket(1) }, updatedAt: 1 },
     }],
   };
 
   it("declares the same provider keys, in the same order, on both sides", () => {
     const rendererKeys = [...rendererSource.matchAll(/key:\s*"(\w+Quota)"/g)].map((m) => m[1]);
     const geometryKeys = ringGeom.listQuotaRingProviders(everyProvider, []).map((p) => p.key);
-    assert.strictEqual(geometryKeys.length, 4, "the all-providers fixture must exercise the table");
+    assert.strictEqual(geometryKeys.length, 2, "the all-providers fixture must exercise the table");
     assert.deepStrictEqual(
       rendererKeys, geometryKeys,
       "provider order decides which coins survive the four-coin cap"
@@ -352,7 +324,7 @@ describe("quota ring — geometry/renderer mirror", () => {
   it("gives every provider the same brand label on both sides", () => {
     const rendererLabels = [...rendererSource.matchAll(/key:\s*"(\w+Quota)",\s*label:\s*"([^"]+)"/g)]
       .map((m) => [m[1], m[2]]);
-    assert.ok(rendererLabels.length >= 4, `expected renderer labels, got ${rendererLabels.length}`);
+    assert.ok(rendererLabels.length >= 2, `expected renderer labels, got ${rendererLabels.length}`);
     const listed = ringGeom.listQuotaRingProviders(everyProvider, []);
     for (const [key, label] of rendererLabels) {
       const match = listed.find((p) => p.key === key);

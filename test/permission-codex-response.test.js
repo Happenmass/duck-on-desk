@@ -135,67 +135,6 @@ describe("Codex permission response sanitizer", () => {
     assert.strictEqual(permission.__test.buildCodexPermissionResponseBody({ behavior: "ask" }), "{}");
   });
 
-  it("uses Codex-shaped Qwen responses while omitting unsupported fields", () => {
-    const permission = loadPermissionWithElectron();
-    const body = permission.__test.buildQwenCodePermissionResponseBody({
-      behavior: "allow",
-      message: "ignored",
-      updatedInput: { command: "nope" },
-      updatedPermissions: [{ type: "setMode", mode: "default" }],
-      interrupt: true,
-    });
-    const parsed = JSON.parse(body);
-
-    assert.deepStrictEqual(parsed.hookSpecificOutput.decision, { behavior: "allow" });
-    assert.strictEqual(permission.__test.buildQwenCodePermissionResponseBody({ behavior: "ask" }), "{}");
-  });
-
-  it("uses the same minimal ZCode decision union (allow bare, deny with message)", () => {
-    const permission = loadPermissionWithElectron();
-    const allow = JSON.parse(permission.__test.buildZcodePermissionResponseBody({
-      behavior: "allow",
-      // ZCode's schema would accept these on the allow variant, but Clawd
-      // never rewrites input or permission rules — they must be omitted.
-      updatedInput: { command: "nope" },
-      permissionUpdates: [{ type: "addRules", behavior: "allow", rules: [] }],
-      updatedPermissions: [],
-    }));
-    assert.deepStrictEqual(allow.hookSpecificOutput, {
-      hookEventName: "PermissionRequest",
-      decision: { behavior: "allow" },
-    });
-
-    const deny = JSON.parse(permission.__test.buildZcodePermissionResponseBody("deny", "Blocked by Clawd"));
-    assert.deepStrictEqual(deny.hookSpecificOutput.decision, { behavior: "deny", message: "Blocked by Clawd" });
-
-    assert.strictEqual(permission.__test.buildZcodePermissionResponseBody({ behavior: "ask" }), "{}");
-    assert.strictEqual(permission.__test.buildZcodePermissionResponseBody(null), "{}");
-  });
-
-  it("keeps Antigravity allow/ask decisions and drops permissionOverrides", () => {
-    const permission = loadPermissionWithElectron();
-    const body = permission.__test.buildAntigravityPermissionResponseBody({
-      decision: "force_ask",
-      reason: "Review natively",
-      permissionOverrides: ["command(npm test)"],
-    });
-    const parsed = JSON.parse(body);
-
-    assert.deepStrictEqual(parsed, {
-      decision: "force_ask",
-      reason: "Review natively",
-    });
-    const allowBody = permission.__test.buildAntigravityPermissionResponseBody({
-      decision: "allow",
-      permissionOverrides: ["command(Remove-Item test.md)"],
-    });
-    assert.deepStrictEqual(JSON.parse(allowBody), {
-      decision: "allow",
-      allowTool: true,
-    });
-    assert.strictEqual(permission.__test.buildAntigravityPermissionResponseBody({ decision: "maybe" }), "{}");
-  });
-
   it("treats Codex deny-and-focus as immediate no-decision instead of hanging the socket", () => {
     const { api, focusCalls } = createCodexDecisionHarness();
     const res = createFakeRes();
@@ -245,81 +184,6 @@ describe("Codex permission response sanitizer", () => {
         },
       },
     ]]);
-    assert.strictEqual(api.pendingPermissions.length, 0);
-  });
-
-  it("treats Qwen deny-and-focus as immediate no-decision and focuses terminal", () => {
-    const { api, focusCalls } = createCodexDecisionHarness();
-    const res = createFakeRes();
-    const bubble = createFakeBubble();
-    api.pendingPermissions.push({
-      res,
-      abortHandler: () => {},
-      suggestions: [],
-      sessionId: "qwen-code:s1",
-      bubble,
-      hideTimer: null,
-      toolName: "Bash",
-      toolInput: { command: "npm test" },
-      createdAt: Date.now(),
-      agentId: "qwen-code",
-      isQwenCode: true,
-      sourcePid: 456,
-      cwd: "/repo",
-      agentPid: 456,
-      pidChain: [789, 456],
-      model: "qwen3-coder-plus",
-    });
-
-    api.handleDecide({ sender: { __window: bubble } }, "deny-and-focus");
-
-    assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.body, "");
-    assert.deepStrictEqual(focusCalls, [[
-      "qwen-code:s1",
-      {
-        fallbackEntry: {
-          id: "qwen-code:s1",
-          agentId: "qwen-code",
-          sourcePid: 456,
-          cwd: "/repo",
-          agentPid: 456,
-          pidChain: [789, 456],
-          model: "qwen3-coder-plus",
-        },
-      },
-    ]]);
-    assert.strictEqual(api.pendingPermissions.length, 0);
-  });
-
-  it("focuses the originating terminal when the Kimi cue's Got it button is clicked", () => {
-    const { api, focusCalls } = createCodexDecisionHarness();
-    const bubble = createFakeBubble();
-    const permEntry = {
-      res: null,
-      abortHandler: null,
-      suggestions: [],
-      sessionId: "kimi-cli:s1",
-      bubble,
-      hideTimer: null,
-      toolName: "KimiPermission",
-      toolInput: { command: "rm -rf build" },
-      createdAt: Date.now(),
-      agentId: "kimi-cli",
-      isKimiNotify: true,
-    };
-    api.pendingPermissions.push(permEntry);
-
-    // The renderer sends "allow" for the relabeled "Got it" button; the passive
-    // branch dismisses regardless of the behavior value, and Kimi additionally
-    // brings the terminal forward so the native approve/reject prompt is in view.
-    api.handleDecide({ sender: { __window: bubble } }, "allow");
-
-    assert.deepStrictEqual(focusCalls, [[
-      "kimi-cli:s1",
-      { fallbackEntry: { id: "kimi-cli:s1", agentId: "kimi-cli" } },
-    ]]);
-    assert.strictEqual(bubble.hidden, true);
     assert.strictEqual(api.pendingPermissions.length, 0);
   });
 
@@ -377,96 +241,14 @@ describe("Codex permission response sanitizer", () => {
     }
   });
 
-  it("treats Antigravity deny-and-focus as immediate no-decision instead of hanging the socket", () => {
-    const { api, focusCalls } = createCodexDecisionHarness();
-    const res = createFakeRes();
-    const bubble = createFakeBubble();
-    const permEntry = {
-      res,
-      abortHandler: () => {},
-      suggestions: [],
-      sessionId: "antigravity:s1",
-      bubble,
-      hideTimer: null,
-      toolName: "run_command",
-      toolInput: { CommandLine: "npm test" },
-      createdAt: Date.now(),
-      agentId: "antigravity-cli",
-      isAntigravity: true,
-      sourcePid: 456,
-      cwd: "/repo",
-      agentPid: 456,
-      pidChain: [789, 456],
-      platform: "win32",
-    };
-    api.pendingPermissions.push(permEntry);
-
-    api.handleDecide({ sender: { __window: bubble } }, "deny-and-focus");
-
-    assert.strictEqual(res.statusCode, 204);
-    assert.strictEqual(res.writableEnded, true);
-    assert.strictEqual(res.body, "");
-    assert.deepStrictEqual(focusCalls, [[
-      "antigravity:s1",
-      {
-        fallbackEntry: {
-          id: "antigravity:s1",
-          agentId: "antigravity-cli",
-          sourcePid: 456,
-          cwd: "/repo",
-          agentPid: 456,
-          pidChain: [789, 456],
-          platform: "win32",
-        },
-      },
-    ]]);
-    assert.strictEqual(api.pendingPermissions.length, 0);
-  });
-
-  it("responds to Antigravity allow and deny with direct hook stdout shape", () => {
-    for (const behavior of ["allow", "deny"]) {
-      const { api } = createCodexDecisionHarness();
-      const res = createFakeRes();
-      const bubble = createFakeBubble();
-      api.pendingPermissions.push({
-        res,
-        abortHandler: () => {},
-        suggestions: [],
-        sessionId: "antigravity:s1",
-        bubble,
-        hideTimer: null,
-        toolName: "run_command",
-        toolInput: { CommandLine: "npm test" },
-        createdAt: Date.now(),
-        agentId: "antigravity-cli",
-        isAntigravity: true,
-      });
-
-      api.handleDecide({ sender: { __window: bubble } }, behavior);
-
-      assert.strictEqual(res.statusCode, 200);
-      const parsed = JSON.parse(res.body);
-      assert.strictEqual(parsed.decision, behavior);
-      if (behavior === "allow") {
-        assert.strictEqual(parsed.allowTool, true);
-      }
-      assert.strictEqual(parsed.permissionOverrides, undefined);
-      assert.strictEqual(api.pendingPermissions.length, 0);
-    }
-  });
-
   it("dismisses DND permissions without approving or denying on the user's behalf", () => {
     const { api } = createCodexDecisionHarness();
     const codexRes = createFakeRes();
-    const qwenRes = createFakeRes();
     const claudeRes = createFakeRes();
     const opencodeRes = createFakeRes();
-    const antigravityRes = createFakeRes();
     const codexBubble = createFakeBubble();
-    const qwenBubble = createFakeBubble();
     const claudeBubble = createFakeBubble();
     const opencodeBubble = createFakeBubble();
-    const antigravityBubble = createFakeBubble();
     const notifyBubble = createFakeBubble();
 
     api.pendingPermissions.push(
@@ -478,15 +260,6 @@ describe("Codex permission response sanitizer", () => {
         hideTimer: null,
         agentId: "codex",
         isCodex: true,
-      },
-      {
-        res: qwenRes,
-        abortHandler: () => {},
-        sessionId: "qwen-code:s1",
-        bubble: qwenBubble,
-        hideTimer: null,
-        agentId: "qwen-code",
-        isQwenCode: true,
       },
       {
         res: claudeRes,
@@ -507,15 +280,6 @@ describe("Codex permission response sanitizer", () => {
         requestId: "req-1",
       },
       {
-        res: antigravityRes,
-        abortHandler: () => {},
-        sessionId: "antigravity:s1",
-        bubble: antigravityBubble,
-        hideTimer: null,
-        agentId: "antigravity-cli",
-        isAntigravity: true,
-      },
-      {
         sessionId: "codex:s1",
         bubble: notifyBubble,
         agentId: "codex",
@@ -523,40 +287,24 @@ describe("Codex permission response sanitizer", () => {
       }
     );
 
-    assert.strictEqual(api.dismissPermissionsForDnd(), 6);
+    assert.strictEqual(api.dismissPermissionsForDnd(), 4);
 
     assert.strictEqual(codexRes.statusCode, 204);
     assert.strictEqual(codexRes.body, "");
-    assert.strictEqual(qwenRes.statusCode, 204);
-    assert.strictEqual(qwenRes.body, "");
-    assert.strictEqual(antigravityRes.statusCode, 204);
-    assert.strictEqual(antigravityRes.body, "");
     assert.strictEqual(claudeRes.destroyed, true);
     assert.strictEqual(opencodeRes.destroyed, false);
     assert.strictEqual(opencodeRes.statusCode, null);
     assert.strictEqual(codexBubble.hidden, true);
-    assert.strictEqual(qwenBubble.hidden, true);
     assert.strictEqual(claudeBubble.hidden, true);
     assert.strictEqual(opencodeBubble.hidden, true);
-    assert.strictEqual(antigravityBubble.hidden, true);
     assert.strictEqual(notifyBubble.hidden, true);
     assert.strictEqual(api.pendingPermissions.length, 0);
   });
 
-  it("cleans up Qwen and Claude permissions without deciding when Clawd quits", () => {
+  it("cleans up Claude permissions without deciding when Clawd quits", () => {
     const { api } = createCodexDecisionHarness();
-    const qwenRes = createFakeRes();
     const claudeRes = createFakeRes();
     api.pendingPermissions.push(
-      {
-        res: qwenRes,
-        abortHandler: () => {},
-        sessionId: "qwen-code:s1",
-        bubble: createFakeBubble(),
-        hideTimer: null,
-        agentId: "qwen-code",
-        isQwenCode: true,
-      },
       {
         res: claudeRes,
         abortHandler: () => {},
@@ -569,8 +317,6 @@ describe("Codex permission response sanitizer", () => {
 
     api.cleanup();
 
-    assert.strictEqual(qwenRes.statusCode, 204);
-    assert.strictEqual(qwenRes.body, "");
     assert.strictEqual(claudeRes.destroyed, true);
     assert.strictEqual(claudeRes.body, "");
     assert.strictEqual(api.pendingPermissions.length, 0);

@@ -3,8 +3,8 @@
 // permission path (see docs/project/agent-runtime-architecture.md).
 //
 // Membership is an EXPLICIT allowlist. Never infer it from
-// eventSource === "plugin-event": openclaw and hermes also declare that
-// eventSource but use entirely different plugin shapes and must stay
+// eventSource === "plugin-event": other integrations may declare that
+// eventSource while using entirely different plugin shapes, and must stay
 // independent. Joining the family requires satisfying the full opencode wire
 // contract (session.* / message.part.updated event shapes, permission.asked
 // payload, once/always/reject reply vocabulary, Bun CLI/TUI or Node Desktop
@@ -44,32 +44,6 @@ const OPENCODE_FAMILY = Object.freeze({
     configCandidates: Object.freeze(["opencode.jsonc", "opencode.json", "config.json"]),
     jsonc: true,
     schema: "https://opencode.ai/config.json",
-  }),
-  // MiMo Code — opencode-derived runtime with the identical plugin loader +
-  // event wire contract. Its config is JSONC (comments/trailing commas
-  // legal), so installer/doctor edits go through
-  // hooks/opencode-family-jsonc.js instead of JSON.parse/stringify.
-  //
-  // Verified against MiMo Code v0.1.6 (config.ts:588-590, paths.ts:63-65,
-  // plugin/install.ts:349-355): the global config is a MERGE of three files
-  // — config.json → mimocode.json → mimocode.jsonc, later wins — and array
-  // fields like "plugin" are REPLACED by the later file, not concatenated.
-  // configCandidates lists them highest-priority first; the installer must
-  // edit the file whose "plugin" actually wins and sweep ALL of them on
-  // uninstall, or a masked entry could resurrect later (#607 review).
-  // configFileName stays the create-default (MiMo's own starter file).
-  // schema matches what MiMo v0.1.6 stamps into configs (config.ts:564-566).
-  mimocode: Object.freeze({
-    displayName: "MiMo Code",
-    sessionIdPrefix: "mimocode:",
-    hookSource: "mimocode-plugin",
-    pluginDirName: "mimocode-plugin",
-    logFileName: "mimocode-plugin.log",
-    configDirSegments: Object.freeze([".config", "mimocode"]),
-    configFileName: "mimocode.jsonc",
-    configCandidates: Object.freeze(["mimocode.jsonc", "mimocode.json", "config.json"]),
-    jsonc: true,
-    schema: "https://mimo.xiaomi.com/mimocode/config.json",
   }),
 });
 

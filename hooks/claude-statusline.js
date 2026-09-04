@@ -11,7 +11,7 @@
 // latter are available. Context metadata is authoritative for the denominator;
 // transcript hooks remain the fallback and keep used tokens moving.
 //
-// Like antigravity-statusline.js, this script also owns rendering visible
+// Like every statusline script, this one also owns rendering visible
 // terminal text, so it must always print *something* fast and never throw -
 // a stuck or crashed statusline script would blank out the real status line.
 

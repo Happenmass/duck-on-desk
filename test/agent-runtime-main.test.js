@@ -681,7 +681,7 @@ describe("agent-runtime-main", () => {
     assert.equal(missingServerRuntime.stopIntegrationForAgent("codex"), false);
   });
 
-  it("clears sessions and releases Kimi permission state when an agent is disabled", () => {
+  it("clears sessions and dismisses permissions when an agent is disabled", () => {
     const calls = [];
     const runtime = createAgentRuntimeMain({
       codexSubagentClassifier: {},
@@ -696,27 +696,14 @@ describe("agent-runtime-main", () => {
           calls.push(["clear", agentId]);
           return 2;
         },
-        disposeAllKimiPermissionState: () => {
-          calls.push(["disposeKimi"]);
-          return true;
-        },
-        resolveDisplayState: () => {
-          calls.push(["resolve"]);
-          return "idle";
-        },
-        getSvgOverride: (state) => `svg:${state}`,
-        setState: (state, svg) => calls.push(["setState", state, svg]),
       }),
     });
 
-    assert.equal(runtime.clearSessionsByAgent("kimi-cli"), 2);
-    assert.equal(runtime.dismissPermissionsByAgent("kimi-cli"), 3);
+    assert.equal(runtime.clearSessionsByAgent("codex"), 2);
+    assert.equal(runtime.dismissPermissionsByAgent("codex"), 3);
     assert.deepStrictEqual(calls, [
-      ["clear", "kimi-cli"],
-      ["dismiss", "kimi-cli"],
-      ["disposeKimi"],
-      ["resolve"],
-      ["setState", "idle", "svg:idle"],
+      ["clear", "codex"],
+      ["dismiss", "codex"],
     ]);
   });
 

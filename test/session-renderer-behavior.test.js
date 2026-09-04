@@ -269,42 +269,6 @@ test("Dashboard renders local/remote/webui reasons and only local folder action"
   assert.strictEqual(byClass(root, "open-folder-button").length, 1);
 });
 
-test("Dashboard hosts the manual Kimi quota refresh inside the Kimi quota section", async () => {
-  const dashboard = await loadDashboard(
-    [],
-    { status: "ok" },
-    {},
-    { status: "applied" },
-    {
-      status: {
-        status: "ok",
-        configured: true,
-        decryptable: true,
-        collectionEnabled: true,
-        agentEnabled: true,
-      },
-    }
-  );
-
-  // Connected but nothing reported yet: the section stays visible with an
-  // empty hint so the refresh that fetches the first numbers has a home.
-  const button = byClass(dashboard.quotaSummary, "quota-refresh-button")[0];
-  assert.ok(button, "Kimi quota section header should host the refresh button");
-  assert.strictEqual(button.disabled, false);
-  assert.strictEqual(button.title, "Refresh Kimi quota");
-  assert.strictEqual(byClass(dashboard.quotaSummary, "quota-empty-hint").length, 1);
-
-  await button.dispatch("click");
-  await flush();
-
-  assert.strictEqual(dashboard.kimiRefreshCalls.length, 1);
-  assert.strictEqual(button.disabled, false);
-  const feedback = byClass(dashboard.quotaSummary, "quota-refresh-feedback")[0];
-  assert.ok(feedback, "Kimi quota section header should host the refresh feedback");
-  assert.strictEqual(feedback.hidden, false);
-  assert.strictEqual(feedback.textContent, "Kimi quota updated.");
-});
-
 test("Dashboard renders no Kimi quota section or refresh for a disconnected key", async () => {
   const dashboard = await loadDashboard([]);
 

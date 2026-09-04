@@ -11,37 +11,10 @@ const ADAPTER_POLICY = Object.freeze({
     reason: "identity-verification-required",
     placeholders: Object.freeze(["default"]),
   }),
-  codebuddy: Object.freeze({
-    eligible: false,
-    reason: "identity-verification-required",
-    placeholders: Object.freeze(["default"]),
-  }),
-  "qwen-code": Object.freeze({
-    eligible: false,
-    reason: "identity-verification-required",
-    placeholders: Object.freeze(["default", "qwen-code:", "qwen-code:default"]),
-  }),
-  // ZCode permissions are manual-only until both its tool surface and its
-  // session-lifecycle identity facts have been audited for automation.
-  zcode: Object.freeze({
-    eligible: false,
-    reason: "automation-not-audited",
-    placeholders: Object.freeze(["default", "zcode:", "zcode:default"]),
-  }),
-  "copilot-cli": Object.freeze({
-    eligible: false,
-    reason: "session-lifecycle-not-authoritative",
-    placeholders: Object.freeze(["default", "copilot-cli:", "copilot-cli:default"]),
-  }),
   opencode: Object.freeze({
     eligible: false,
     reason: "permission-session-association-not-authoritative",
     placeholders: Object.freeze(["default", "opencode:", "opencode:default"]),
-  }),
-  mimocode: Object.freeze({
-    eligible: false,
-    reason: "permission-session-association-not-authoritative",
-    placeholders: Object.freeze(["default", "mimocode:", "mimocode:default"]),
   }),
   codex: Object.freeze({
     // Conditional, not blanket eligibility. Only the local, process-bound TUI
@@ -50,29 +23,6 @@ const ADAPTER_POLICY = Object.freeze({
     eligible: true,
     reason: "codex-local-cli-identity-required",
     placeholders: Object.freeze(["default", "codex:", "codex:default"]),
-  }),
-  hermes: Object.freeze({
-    eligible: false,
-    reason: "session-lifecycle-not-authoritative",
-    placeholders: Object.freeze(["default", "hermes:", "hermes:default"]),
-  }),
-  "deepseek-harness": Object.freeze({
-    // ApprovalRequest intentionally exposes no arguments, so the DSH adapter's
-    // tool-input fingerprint is the same empty-object hash for every request.
-    // Do not make this eligible until an audited identity adds a public,
-    // per-call discriminator; otherwise unrelated tools could share a grant.
-    eligible: false,
-    reason: "automation-not-audited",
-    placeholders: Object.freeze([
-      "default",
-      "deepseek-harness:",
-      "deepseek-harness:default",
-    ]),
-  }),
-  "kimi-cli": Object.freeze({
-    eligible: false,
-    reason: "no-blocking-permission-decision",
-    placeholders: Object.freeze(["default", "kimi-cli:", "kimi-cli:default"]),
   }),
 });
 

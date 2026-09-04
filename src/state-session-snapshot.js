@@ -209,29 +209,13 @@ function getEffectiveSessionTitle(id, sessionLike, options = {}) {
 // `agentId` is the reliable signal; `sessionPrefix` covers snapshot shapes that
 // carry only the namespaced session id (older persisted sessions, and menu
 // callers that pass an id without the full session object).
-const INTERNAL_WORKSPACE_AGENTS = Object.freeze([
-  Object.freeze({
-    agentId: "qoderwork",
-    sessionPrefix: "qoderwork:",
-    // ~/.qoderwork/workspace/<id>
-    cwdPattern: /\/\.qoderwork\/workspace\/[^/]+$/,
-  }),
-  Object.freeze({
-    agentId: "qwenwork",
-    sessionPrefix: "qwenwork:",
-    // ~/.QwenWorkCN/workspace/<id> — the directory is created case-preserving
-    // as ".QwenWorkCN". Windows and default macOS volumes are commonly
-    // case-insensitive, while macOS can also use case-sensitive APFS; accept
-    // spelling variants without making filesystem sensitivity an assumption.
-    cwdPattern: /\/\.qwenworkcn\/workspace\/[^/]+$/i,
-  }),
-]);
+const INTERNAL_WORKSPACE_AGENTS = Object.freeze([]);
 
 function isInternalWorkspaceCwd(id, sessionLike, cwd) {
   const agentId = sessionLike && sessionLike.agentId;
   // Hook payloads are not required to normalize cwd. Strip one or more
   // trailing separators before matching so an opaque workspace leaf is not
-  // exposed merely because QwenWork/QoderWork reported a directory form.
+  // exposed merely because an agent reported a directory form.
   const posixCwd = cwd.replace(/\\/g, "/").replace(/\/+$/, "");
   for (const entry of INTERNAL_WORKSPACE_AGENTS) {
     const belongsToAgent = agentId === entry.agentId
@@ -435,7 +419,7 @@ function snapshotContextUsage(session) {
   if (Number.isFinite(limit) && limit > 0) out.limit = limit;
   const percent = Number(usage.percent);
   if (Number.isFinite(percent)) out.percent = Math.max(0, Math.min(100, Math.round(percent)));
-  if (usage.source === "claude" || usage.source === "codex" || usage.source === "antigravity" || usage.source === "opencode") out.source = usage.source;
+  if (usage.source === "claude" || usage.source === "codex" || usage.source === "opencode") out.source = usage.source;
   return out;
 }
 
@@ -526,10 +510,8 @@ function buildSessionSnapshot(sessions, options = {}) {
         ? options.getAgentIconUrl
         : () => null;
       return {
-        antigravityQuota: iconFor("antigravity-cli"),
         claudeQuota: iconFor("claude-code"),
         codexQuota: iconFor("codex"),
-        kimiQuota: iconFor("kimi-cli"),
       };
     })(),
     sessionAutomationOrphans: automationRecords
@@ -579,9 +561,6 @@ function sessionSnapshotSignature(snapshot) {
     // the renderers, so it must move the signature too.
     accountQuota: (snapshot.accountQuota || []).map((entry) => ({
       host: entry.host,
-      antigravityQuota: entry.antigravityQuota
-        ? { group: entry.antigravityQuota.group, lastSeenAt: entry.antigravityQuota.lastSeenAt }
-        : null,
       claudeQuota: entry.claudeQuota
         ? { group: entry.claudeQuota.group, lastSeenAt: entry.claudeQuota.lastSeenAt }
         : null,
@@ -590,9 +569,6 @@ function sessionSnapshotSignature(snapshot) {
         : null,
       codexSparkQuota: entry.codexSparkQuota
         ? { group: entry.codexSparkQuota.group, lastSeenAt: entry.codexSparkQuota.lastSeenAt }
-        : null,
-      kimiQuota: entry.kimiQuota
-        ? { group: entry.kimiQuota.group, lastSeenAt: entry.kimiQuota.lastSeenAt }
         : null,
     })),
     sessions: snapshot.sessions.map((entry) => ({
