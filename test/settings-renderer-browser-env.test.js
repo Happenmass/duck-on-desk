@@ -891,8 +891,6 @@ function makeGeneralSnapshot(overrides = {}) {
     sessionHudShowStateLabels: true,
     sessionHudShowElapsed: true,
     sessionHudShowContextUsage: true,
-    sessionHudShowQuota: true,
-    quotaRingDisplayMode: "used",
     sessionHudCleanupDetached: true,
     soundMuted: false,
     soundVolume: 0.5,

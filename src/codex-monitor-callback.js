@@ -1,8 +1,11 @@
 "use strict";
 
-function isCodexMonitorMetadataOnlyEvent(event, extra) {
-  return event === "event_msg:token_count"
-    && !!(extra && typeof extra === "object" && extra.contextUsage);
+// token_count is a metadata refresh, never a turn boundary: Codex Desktop
+// rewrites it on focus long after a session went idle, so it must never reach
+// updateSession (which would create a session card from thin air) no matter
+// what the payload carries.
+function isCodexMonitorMetadataOnlyEvent(event) {
+  return event === "event_msg:token_count";
 }
 
 function normalizeContextUsage(value) {

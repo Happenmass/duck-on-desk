@@ -2246,7 +2246,6 @@ function restoreSessionFromLease(lease) {
     sessionTitle: typeof lease.title === "string" ? lease.title : null,
     contextUsage: null,
     contextUsageOrigin: null,
-    claudeQuota: null,
     metadataUpdatedAt: null,
     assistantLastOutput: null,
     assistantLastOutputTruncated: false,

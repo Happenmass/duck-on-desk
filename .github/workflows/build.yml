@@ -41,7 +41,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.artifact_validation_only }}
       - name: Run package validation tests
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_validation_only }}
-        run: node --test test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/mobile-preview-lifecycle.test.js test/mobile-preview-server.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
+        run: node --test test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
       - run: npx electron-builder --win --publish never
       - name: Audit packaged native payloads
         run: |
@@ -83,7 +83,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.artifact_validation_only }}
       - name: Run package validation tests
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_validation_only }}
-        run: node --test test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/mobile-preview-lifecycle.test.js test/mobile-preview-server.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
+        run: node --test test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
       - name: Prepare macOS signing credentials
         id: mac-signing
         shell: bash
@@ -436,7 +436,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.artifact_validation_only }}
       - name: Run package validation tests
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_validation_only }}
-        run: xvfb-run -a node --test test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/mobile-preview-lifecycle.test.js test/mobile-preview-server.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
+        run: xvfb-run -a node --test test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
       - run: npx electron-builder --linux --publish never
       - name: Verify final AppImage AppRun search paths
         run: node scripts/verify-appimage-apprun.js --artifact dist/*.AppImage --output dist/appimage-apprun-manifests/linux-x64.json

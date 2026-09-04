@@ -9,14 +9,17 @@ const {
 } = require("../src/codex-monitor-callback");
 
 describe("Codex monitor callback helpers", () => {
-  it("identifies token_count context updates as metadata-only events", () => {
+  it("identifies every token_count as a metadata-only event, whatever it carries", () => {
     assert.strictEqual(
       isCodexMonitorMetadataOnlyEvent("event_msg:token_count", {
         contextUsage: { used: 23959, limit: 258400, percent: 9, source: "codex" },
       }),
       true
     );
-    assert.strictEqual(isCodexMonitorMetadataOnlyEvent("event_msg:token_count", {}), false);
+    // No context usage at all: still metadata, never a lifecycle event that
+    // could create a session card.
+    assert.strictEqual(isCodexMonitorMetadataOnlyEvent("event_msg:token_count", {}), true);
+    assert.strictEqual(isCodexMonitorMetadataOnlyEvent("event_msg:token_count", null), true);
     assert.strictEqual(
       isCodexMonitorMetadataOnlyEvent("event_msg:task_complete", {
         contextUsage: { used: 23959, source: "codex" },

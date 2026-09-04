@@ -267,7 +267,7 @@ function createAgentRuntimeMain(options = {}) {
             contextUsage: sessionOptions.contextUsage,
           });
         };
-        if (isCodexMonitorMetadataOnlyEvent(event, extra)) {
+        if (isCodexMonitorMetadataOnlyEvent(event)) {
           annotateCodexContextUsage();
           return;
         }

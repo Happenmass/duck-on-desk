@@ -23,11 +23,6 @@ const {
   clampAssistantOutputText,
   extractAssistantTextFromRecord,
 } = require("../hooks/codex-assistant-output");
-const {
-  resolveCodexRateLimitReport,
-  resolveCodexModelQuotaProvider,
-  isFreshCodexQuotaTimestamp,
-} = require("../hooks/codex-rate-limits");
 const { parseCodexUserInputRecord } = require("../hooks/codex-user-input");
 const { normalizeCodexTurnId } = require("../src/codex-turn-id");
 
@@ -845,7 +840,6 @@ class CodexLogMonitor {
       sessionTitle: null,
       codexOriginator: null,
       codexSource: null,
-      codexQuotaProviderHint: null,
       lastEventTime: nowMs,
       lastState: recentlyActive ? null : "notification",
       lastStateEvent: null,
@@ -868,8 +862,6 @@ class CodexLogMonitor {
       contextUsage: null,
       activeTurnId: null,
       turnBoundaryOpen: false,
-      codexQuota: null,
-      codexSparkQuota: null,
       pendingUserInputs: recentlyActive ? new Map() : pending,
       initializingUserInputs: recentlyActive,
       backfilling: recentlyActive,
@@ -888,9 +880,9 @@ class CodexLogMonitor {
     }
 
     // Reconstruct only the bounded tail in backfill mode. Historical
-    // lifecycle events stay silent, while fresh token_count captures seed
-    // the session-independent quota store. Head metadata was read separately
-    // above so subagent/cwd classification does not depend on the tail window.
+    // lifecycle events stay silent; only the snapshot below is emitted. Head
+    // metadata was read separately above so subagent/cwd classification does
+    // not depend on the tail window.
     if (tailStart !== 0) this._applySessionMeta(sessionMeta.payload, recovered);
     for (const line of rawLines) {
       if (!line.trim()) continue;
@@ -1212,7 +1204,6 @@ class CodexLogMonitor {
         sessionTitle: retired ? retired.sessionTitle : null,
         codexOriginator: retired ? retired.codexOriginator : null,
         codexSource: retired ? retired.codexSource : null,
-        codexQuotaProviderHint: retired ? retired.codexQuotaProviderHint || null : null,
         lastEventTime: Date.now(),
         lastState: retired ? retired.lastState : null,
         lastStateEvent: retired ? retired.lastStateEvent : null,
@@ -1225,8 +1216,6 @@ class CodexLogMonitor {
         contextUsage: retired ? retired.contextUsage || null : null,
         activeTurnId: retired ? retired.activeTurnId || null : null,
         turnBoundaryOpen: retired ? retired.turnBoundaryOpen === true : false,
-        codexQuota: retired ? retired.codexQuota || null : null,
-        codexSparkQuota: retired ? retired.codexSparkQuota || null : null,
         pendingUserInputs: retired && retired.pendingUserInputs instanceof Map
           ? new Map(retired.pendingUserInputs)
           : new Map(),
@@ -1539,8 +1528,6 @@ class CodexLogMonitor {
       tracked.contextUsage = null;
       tracked.activeTurnId = null;
       tracked.turnBoundaryOpen = false;
-      tracked.codexQuota = null;
-      tracked.codexSparkQuota = null;
     }
   }
 
@@ -1637,10 +1624,6 @@ class CodexLogMonitor {
     if (type === "session_meta") {
       this._applySessionMeta(payload, tracked);
     }
-    if (type === "turn_context" && payload && typeof payload === "object") {
-      const providerHint = resolveCodexModelQuotaProvider(payload.model);
-      if (providerHint) tracked.codexQuotaProviderHint = providerHint;
-    }
 
     // request_user_input/function_call_output correlation must survive the
     // timestamp guard below: Codex Desktop can rewrite event_msg:token_count
@@ -1670,36 +1653,14 @@ class CodexLogMonitor {
     if (key === "event_msg:token_count") {
       const contextUsage = extractCodexContextUsage(payload);
       if (contextUsage) tracked.contextUsage = contextUsage;
-      // Subscription quota rides the same event. Gated on the line's own
-      // timestamp: backfill/restart replays parse old lines, and posting
-      // their quota would stamp fresh arbitration metadata on stale data.
-      // capturedAt (the same line timestamp) rides on every bucket so the
-      // account store can reject out-of-order writes — with two live
-      // sessions, one session's older observation must never overwrite the
-      // other's newer one.
-      const quotaReport = isFreshCodexQuotaTimestamp(obj && obj.timestamp)
-        ? resolveCodexRateLimitReport(payload, {
-          capturedAt: Date.parse(obj.timestamp),
-          providerHint: tracked.codexQuotaProviderHint,
-        })
-        : null;
-      const quotaExtra = quotaReport
-        ? { [quotaReport.providerKey]: quotaReport.quota }
-        : null;
-      if (quotaReport) tracked[quotaReport.providerKey] = quotaReport.quota;
-      if ((contextUsage || quotaReport) && !tracked.backfilling) {
+      if (contextUsage && !tracked.backfilling) {
         // token_count is a metadata refresh, not a turn boundary: Codex
         // Desktop rewrites it on focus long after a session went idle. Never
         // replay one-shot states such as attention (#535).
         const carry = SUSTAINED_ACTIVE_STATES.has(tracked.lastState)
           ? tracked.lastState
           : "idle";
-        // Quota is attached ONLY to the emission of the event that captured
-        // it (plus the backfill snapshot) — never re-attached from the
-        // per-session cache on ordinary lifecycle events, which would keep
-        // replaying a session's last-seen value as if it were a new report.
-        this._emitStateChange(tracked, carry, key,
-          quotaExtra);
+        this._emitStateChange(tracked, carry, key);
       }
       return;
     }
@@ -1912,7 +1873,6 @@ class CodexLogMonitor {
       sessionTitle: tracked.sessionTitle || null,
       codexOriginator: tracked.codexOriginator || null,
       codexSource: tracked.codexSource || null,
-      codexQuotaProviderHint: tracked.codexQuotaProviderHint || null,
       lastState: tracked.lastState || null,
       lastStateEvent: tracked.lastStateEvent || null,
       hasEmittedState: tracked.hasEmittedState === true,
@@ -1924,8 +1884,6 @@ class CodexLogMonitor {
       contextUsage: tracked.contextUsage || null,
       activeTurnId: tracked.activeTurnId || null,
       turnBoundaryOpen: tracked.turnBoundaryOpen === true,
-      codexQuota: tracked.codexQuota || null,
-      codexSparkQuota: tracked.codexSparkQuota || null,
       pendingUserInputs: tracked.pendingUserInputs instanceof Map
         ? new Map(tracked.pendingUserInputs)
         : new Map(),
@@ -1937,14 +1895,6 @@ class CodexLogMonitor {
   }
 
   _emitBackfillSnapshot(tracked) {
-    // The backfill snapshot is the one non-capture emission that carries the
-    // cached quota: it is how a restart re-seeds the account store with the
-    // last-known (still freshness-gated) numbers parsed from history.
-    const quotaExtra = {
-      ...(tracked.codexQuota ? { codexQuota: tracked.codexQuota } : {}),
-      ...(tracked.codexSparkQuota ? { codexSparkQuota: tracked.codexSparkQuota } : {}),
-    };
-    const hasQuota = Object.keys(quotaExtra).length > 0;
     // A pending question already gets its own card via
     // _emitPendingUserInputRequests, so a root session's redundant sustained-
     // state snapshot is skipped here. Subagents never get that card
@@ -1955,17 +1905,12 @@ class CodexLogMonitor {
       && tracked.pendingUserInputs instanceof Map
       && tracked.pendingUserInputs.size > 0
     ) {
-      // The question callback does not carry account quota. Seed the
-      // session-independent store without replaying the sustained state.
-      if (hasQuota) {
-        this._emitStateChange(tracked, "idle", "event_msg:token_count", quotaExtra);
-      }
       return;
     }
     const snapshotState = tracked.lastState;
     if (!SUSTAINED_ACTIVE_STATES.has(snapshotState)) {
-      if (tracked.contextUsage || hasQuota) {
-        this._emitStateChange(tracked, "idle", "event_msg:token_count", quotaExtra);
+      if (tracked.contextUsage) {
+        this._emitStateChange(tracked, "idle", "event_msg:token_count");
       }
       return;
     }
@@ -1974,7 +1919,6 @@ class CodexLogMonitor {
       snapshotState,
       tracked.lastStateEvent || "session_meta",
       {
-        ...(hasQuota ? quotaExtra : {}),
         syntheticBackfill: true,
         turnBoundaryOpen: tracked.turnBoundaryOpen === true,
         ...(tracked.activeTurnId ? { turnId: tracked.activeTurnId } : {}),
@@ -2088,12 +2032,8 @@ class CodexLogMonitor {
     };
   }
 
-  // contextUsage only, deliberately NOT either tracked account-quota
-  // provider: context usage is a per-session property (re-attaching the
-  // cached value to lifecycle events keeps the session card current), but
-  // account quota is not — a cached copy goes stale the moment another
-  // session reports, and blindly re-attaching it would replay old numbers
-  // into the account store on every lifecycle event (see token_count above).
+  // Context usage is a per-session property: re-attaching the cached value
+  // to lifecycle events keeps the session card current.
   _withTrackedContextUsage(tracked, extra = null) {
     if (!tracked || !tracked.contextUsage) return extra;
     return { ...(extra || {}), contextUsage: tracked.contextUsage };

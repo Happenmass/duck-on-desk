@@ -7,9 +7,10 @@
 // stdout as the terminal status line. See:
 // https://code.claude.com/docs/en/statusline
 //
-// This forwards Claude's documented context window plus rate_limits when the
-// latter are available. Context metadata is authoritative for the denominator;
-// transcript hooks remain the fallback and keep used tokens moving.
+// This forwards Claude's documented context window to the running app.
+// Context metadata is authoritative for the denominator; transcript hooks
+// remain the fallback and keep used tokens moving. rate_limits are only
+// rendered into the visible line.
 //
 // Like every statusline script, this one also owns rendering visible
 // terminal text, so it must always print *something* fast and never throw -
@@ -33,7 +34,7 @@ const STATE_POST_TIMEOUT_MS = 150;
 
 // ── Chain mode (POSIX remotes only, installed via --chain-existing) ──
 // The user's own statusline keeps rendering the visible line while we only
-// siphon rate_limits. Their original statusLine object lives verbatim in a
+// siphon the context window. Their original statusLine object lives verbatim in a
 // sidecar written by hooks/install.js (a file, not a CLI argument - real
 // statusline commands are arbitrarily-quoted shell one-liners).
 function resolveChainSidecarPath(options = {}) {
@@ -123,12 +124,12 @@ function buildStatusLineText(payload, quota, modelLabel) {
   return parts.join(" · ");
 }
 
-function buildStateBody(payload, quota, contextUsage, options = {}) {
+function buildStateBody(payload, contextUsage, options = {}) {
   const sessionId = payload && payload.session_id;
-  if (!sessionId || (!quota && !contextUsage)) return null;
+  if (!sessionId || !contextUsage) return null;
 
   // metadata_only routes this around the updateSession lifecycle machine:
-  // quota is annotated onto an existing session and dropped otherwise -
+  // context usage is annotated onto an existing session and dropped otherwise -
   // never creating a session, touching recentEvents, or bumping updatedAt
   // (src/server-route-state.js + state.js updateSessionMetadata).
   // state/preserve_state stay as a defensive fallback shape only.
@@ -138,9 +139,8 @@ function buildStateBody(payload, quota, contextUsage, options = {}) {
     metadata_only: true,
     session_id: String(sessionId),
     agent_id: "claude-code",
+    context_usage: contextUsage,
   };
-  if (quota) body.claude_quota = quota;
-  if (contextUsage) body.context_usage = contextUsage;
   const cwd = payload && payload.workspace && typeof payload.workspace.current_dir === "string"
     ? payload.workspace.current_dir
     : "";
@@ -157,7 +157,7 @@ function postStateBody(body, deps, env) {
   if (!body) return Promise.resolve(false);
   const postState = deps.postState || postStateToRunningServer;
   return new Promise((resolve) => {
-    // Status-line quota forwarding is best-effort telemetry, not a blocking
+    // Status-line context forwarding is best-effort telemetry, not a blocking
     // hook. Keep its small timeout even on CLAWD_REMOTE: the shared transport
     // normally raises every remote request to 5s, which is appropriate for
     // state/permission hooks but lets a stale reverse tunnel accumulate
@@ -213,7 +213,7 @@ async function main(deps = {}) {
 
   // Plain mode owns the visible line, so publish it before touching the
   // network. Claude reads the child pipe as it runs; a slow or half-open SSH
-  // reverse tunnel must never hold the terminal UI behind quota forwarding.
+  // reverse tunnel must never hold the terminal UI behind context forwarding.
   // Chain mode keeps stdout reserved for the user's command and only falls
   // back below when that command could not spawn at all.
   if (!chainPromise) writeStdout(`${text}\n`);
@@ -221,7 +221,7 @@ async function main(deps = {}) {
   let chainResult = null;
   try {
     const remote = !!env.CLAWD_REMOTE;
-    const body = buildStateBody(payload, quota, contextUsage, {
+    const body = buildStateBody(payload, contextUsage, {
       remote,
       host: remote && deps.readHostPrefix ? deps.readHostPrefix() : undefined,
       applyWslSourceFields: deps.applyWslSourceFields,

@@ -36,11 +36,11 @@ describe("Claude Code statusline adapter", () => {
     assert.strictEqual(buildStatusLineText({}, null, null), "");
   });
 
-  it("builds a metadata_only body carrying claude_quota, no event field", () => {
+  it("builds a metadata_only body carrying context_usage, no event field", () => {
+    const contextUsage = { used: 202475, limit: 1000000, percent: 20, source: "claude" };
     const body = buildStateBody(
       { session_id: "abc123", workspace: { current_dir: "/work" } },
-      { claudeFiveHour: { usedPercent: 24, resetAt: 1738425600000 } },
-      null
+      contextUsage
     );
     assert.deepStrictEqual(body, {
       state: "idle",
@@ -48,33 +48,15 @@ describe("Claude Code statusline adapter", () => {
       metadata_only: true,
       session_id: "abc123",
       agent_id: "claude-code",
-      claude_quota: { claudeFiveHour: { usedPercent: 24, resetAt: 1738425600000 } },
+      context_usage: contextUsage,
       cwd: "/work",
     });
   });
 
-  it("builds context-only and combined metadata bodies", () => {
+  it("returns null when there is no session id or no context usage worth posting", () => {
     const contextUsage = { used: 202475, limit: 1000000, percent: 20, source: "claude" };
-    assert.deepStrictEqual(buildStateBody({ session_id: "context" }, null, contextUsage), {
-      state: "idle",
-      preserve_state: true,
-      metadata_only: true,
-      session_id: "context",
-      agent_id: "claude-code",
-      context_usage: contextUsage,
-    });
-    const both = buildStateBody(
-      { session_id: "both" },
-      { claudeWeekly: { usedPercent: 1 } },
-      contextUsage
-    );
-    assert.ok(both.claude_quota);
-    assert.deepStrictEqual(both.context_usage, contextUsage);
-  });
-
-  it("returns null when there is no session id or no metadata worth posting", () => {
-    assert.strictEqual(buildStateBody({}, { claudeWeekly: { usedPercent: 1 } }, null), null);
-    assert.strictEqual(buildStateBody({ session_id: "abc" }, null, null), null);
+    assert.strictEqual(buildStateBody({}, contextUsage), null);
+    assert.strictEqual(buildStateBody({ session_id: "abc" }, null), null);
   });
 
   it("stamps local WSL source fields and preserves an SSH host on remote WSL", () => {
@@ -83,10 +65,10 @@ describe("Claude Code statusline adapter", () => {
       if (!options.remote) body.host = "wsl:Ubuntu";
       return body;
     };
+    const contextUsage = { used: 202475, limit: 1000000, percent: 20, source: "claude" };
     const local = buildStateBody(
       { session_id: "local" },
-      { claudeWeekly: { usedPercent: 1 } },
-      null,
+      contextUsage,
       { applyWslSourceFields: applyWsl }
     );
     assert.strictEqual(local.host, "wsl:Ubuntu");
@@ -94,15 +76,14 @@ describe("Claude Code statusline adapter", () => {
 
     const remote = buildStateBody(
       { session_id: "remote" },
-      { claudeWeekly: { usedPercent: 2 } },
-      null,
+      contextUsage,
       { remote: true, host: "lab", applyWslSourceFields: applyWsl }
     );
     assert.strictEqual(remote.host, "lab");
     assert.strictEqual(remote.wsl_distro, "Ubuntu");
   });
 
-  it("main() posts state and always writes a stdout line", async () => {
+  it("main() renders rate_limits into the visible line but never posts them", async () => {
     const writes = [];
     const posted = [];
     const originalWrite = process.stdout.write;
@@ -125,14 +106,11 @@ describe("Claude Code statusline adapter", () => {
     }
     assert.strictEqual(writes.length, 1);
     assert.strictEqual(writes[0], "Claude Sonnet 5 · 8% ctx · 41% weekly\n");
-    assert.deepStrictEqual(posted[0].claude_quota, {
-      claudeFiveHour: { usedPercent: 24, resetAt: 1738425600000 },
-      claudeWeekly: { usedPercent: 41 },
-    });
-    assert.strictEqual(posted[0].context_usage, undefined);
+    // Subscription quota has no consumer in the app: nothing to POST.
+    assert.deepStrictEqual(posted, []);
   });
 
-  it("writes the visible line before a remote quota POST settles", async () => {
+  it("writes the visible line before a remote metadata POST settles", async () => {
     const events = [];
     let finishPost;
     const run = main({
@@ -140,6 +118,11 @@ describe("Claude Code statusline adapter", () => {
       payload: {
         session_id: "remote-session",
         model: { display_name: "Remote Claude" },
+        context_window: {
+          context_window_size: 1000000,
+          used_percentage: 8,
+          current_usage: { input_tokens: 80000 },
+        },
         rate_limits: { seven_day: { used_percentage: 19 } },
       },
       writeStdout: (chunk) => { events.push(["stdout", chunk]); return true; },
@@ -150,7 +133,7 @@ describe("Claude Code statusline adapter", () => {
     });
 
     assert.deepStrictEqual(events.map(([kind]) => kind), ["stdout", "post"]);
-    assert.strictEqual(events[0][1], "Remote Claude · 19% weekly\n");
+    assert.strictEqual(events[0][1], "Remote Claude · 8% ctx · 19% weekly\n");
     assert.strictEqual(events[1][1].remote, false, "statusline POST must skip the shared 5s remote timeout floor");
     assert.strictEqual(events[1][1].timeoutMs, 150);
     finishPost(false);
@@ -185,7 +168,6 @@ describe("Claude Code statusline adapter", () => {
       percent: 8,
       source: "claude",
     });
-    assert.strictEqual(posted[0].claude_quota, undefined);
     assert.strictEqual(writes[0], "Claude Sonnet 5 · 8% ctx\n");
   });
 
@@ -224,6 +206,11 @@ describe("Claude Code statusline chain mode", () => {
   const payload = {
     session_id: "abc123",
     model: { display_name: "ChainMarkerModel" },
+    context_window: {
+      context_window_size: 1000000,
+      used_percentage: 8,
+      current_usage: { input_tokens: 80000 },
+    },
     rate_limits: { five_hour: { used_percentage: 24, resets_at: 1738425600 } },
   };
 
@@ -260,9 +247,9 @@ describe("Claude Code statusline chain mode", () => {
     assert.deepStrictEqual(JSON.parse(child.stdin.written.join("")), payload);
     // The chained script owns the visible line - our own render never fires.
     assert.deepStrictEqual(writes, []);
-    // Quota still flows.
+    // Context usage still flows.
     assert.strictEqual(posted.length, 1);
-    assert.ok(posted[0].claude_quota);
+    assert.strictEqual(posted[0].context_usage.percent, 8);
   });
 
   it("--chain degrades to plain rendering when the sidecar is missing", async () => {

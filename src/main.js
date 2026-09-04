@@ -74,7 +74,6 @@ const { clampTextScale, scaleWidth, scaleHeight, resolveTextScaleForKey } = requ
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
-const { pathToFileURL } = require("url");
 const { EventEmitter } = require("events");
 const {
   applyWindowsAppUserModelId,
@@ -171,7 +170,6 @@ const { focusCodexThreadTarget } = require("./session-focus-handoff");
 const { isSessionInProgress } = require("./state-session-snapshot");
 const { restoreSessionsFromRecoveryLeases } = require("./session-recovery-loader");
 const { getAllAgents } = require("../agents/registry");
-const { getAgentIconUrl } = require("./state-agent-icons");
 // ── Autoplay policy: allow sound playback without user gesture ──
 // MUST be set before any BrowserWindow is created (before app.whenReady)
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");

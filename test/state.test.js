@@ -90,7 +90,6 @@ function update(api, o = {}) {
       sessionTitle: o.sessionTitle ?? null,
       contextUsage: o.contextUsage ?? null,
       contextUsageOrigin: o.contextUsageOrigin ?? null,
-      claudeQuota: o.claudeQuota ?? null,
       platform: o.platform ?? null,
       model: o.model ?? null,
       provider: o.provider ?? null,
@@ -113,10 +112,6 @@ function update(api, o = {}) {
       subagentType: o.subagentType ?? null,
       subagentLifecycleSource: o.subagentLifecycleSource ?? null,
       sessionStartSource: o.sessionStartSource ?? null,
-      recapBoundary: o.recapBoundary ?? null,
-      recapDedupeId: o.recapDedupeId ?? null,
-      recapOccurredAt: o.recapOccurredAt ?? null,
-      recapSuppressed: o.recapSuppressed === true,
       toolUseId: o.toolUseId ?? null,
       replaceProcessMetadata: o.replaceProcessMetadata === true,
     },
@@ -3103,8 +3098,6 @@ describe("updateSession()", () => {
   // #590 B2 — statusline refresh POSTs go through updateSessionMetadata,
   // which annotates context usage onto an existing session and does nothing
   // else: no session creation, no recentEvents append, no updatedAt bump.
-  // (Account quota deliberately does NOT flow through here — see the
-  // updateAccountQuota tests above.)
   it("updateSessionMetadata annotates contextUsage without touching lifecycle fields", () => {
     update(api, { id: "s1", state: "working" });
     const session = api.sessions.get("s1");

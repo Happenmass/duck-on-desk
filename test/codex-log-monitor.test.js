@@ -363,30 +363,17 @@ describe("CodexLogMonitor", () => {
     }, 300);
   });
 
-  it("recovers and routes fresh Spark quota from an active Windows rollout whose mtime stayed old", (_, done) => {
+  it("recovers and routes fresh context usage from an active Windows rollout whose mtime stayed old", (_, done) => {
     const testFile = path.join(dateDir, TEST_FILENAME);
     const timestamp = new Date().toISOString();
-    const resetAt = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
     fs.writeFileSync(testFile, [
       JSON.stringify({ timestamp, type: "session_meta", payload: { cwd: "/projects/live-frozen-mtime" } }),
-      JSON.stringify({
-        timestamp,
-        type: "turn_context",
-        payload: { model: "gpt-5.3-codex-spark", effort: "low" },
-      }),
       JSON.stringify({
         timestamp,
         type: "event_msg",
         payload: {
           type: "token_count",
-          rate_limits: {
-            limit_id: "codex",
-            primary: {
-              used_percent: 0,
-              window_minutes: 10080,
-              resets_at: resetAt,
-            },
-          },
+          info: { last_token_usage: { total_tokens: 23959 }, model_context_window: 258400 },
         },
       }),
     ].join("\n") + "\n");
@@ -407,12 +394,16 @@ describe("CodexLogMonitor", () => {
     monitor.start();
 
     setTimeout(() => {
-      const quotaEvent = states.find((entry) => entry.event === "event_msg:token_count");
-      assert.ok(quotaEvent, "fresh embedded activity must override a frozen old mtime");
-      assert.strictEqual(quotaEvent.sid, EXPECTED_SID);
-      assert.strictEqual(quotaEvent.extra.cwd, "/projects/live-frozen-mtime");
-      assert.strictEqual(quotaEvent.extra.codexQuota, undefined);
-      assert.strictEqual(quotaEvent.extra.codexSparkQuota.codexWeekly.usedPercent, 0);
+      const tokenEvent = states.find((entry) => entry.event === "event_msg:token_count");
+      assert.ok(tokenEvent, "fresh embedded activity must override a frozen old mtime");
+      assert.strictEqual(tokenEvent.sid, EXPECTED_SID);
+      assert.strictEqual(tokenEvent.extra.cwd, "/projects/live-frozen-mtime");
+      assert.deepStrictEqual(tokenEvent.extra.contextUsage, {
+        used: 23959,
+        limit: 258400,
+        percent: 9,
+        source: "codex",
+      });
       assert.ok(monitor._tracked.has(testFile), "the recovered active file must stay tracked");
       assert.strictEqual(classifierRegistrations, 1, "validated recent recovery must classify once");
       done();
@@ -511,67 +502,6 @@ describe("CodexLogMonitor", () => {
       assert.deepStrictEqual(states, [], "task_started/task_complete history must stay silent, only the pending question surfaces");
       done();
     }, 300);
-  });
-
-  it("backfill seeds account quota even when a recovered root question suppresses the state snapshot", () => {
-    const testFile = path.join(dateDir, TEST_FILENAME);
-    const timestamp = new Date().toISOString();
-    const resetAt = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
-    fs.writeFileSync(testFile, [
-      JSON.stringify({ timestamp, type: "session_meta", payload: { cwd: "/projects/pending-quota" } }),
-      JSON.stringify({ timestamp, type: "event_msg", payload: { type: "task_started" } }),
-      JSON.stringify({
-        timestamp,
-        type: "event_msg",
-        payload: {
-          type: "token_count",
-          rate_limits: {
-            limit_id: "codex",
-            primary: { used_percent: 12, resets_at: resetAt },
-          },
-        },
-      }),
-      JSON.stringify({
-        timestamp,
-        type: "event_msg",
-        payload: {
-          type: "token_count",
-          rate_limits: {
-            limit_id: "codex_bengalfox",
-            limit_name: "GPT-5.3-Codex-Spark",
-            primary: { used_percent: 7, window_minutes: 10080, resets_at: resetAt },
-          },
-        },
-      }),
-      JSON.stringify({
-        timestamp,
-        type: "response_item",
-        payload: {
-          type: "function_call",
-          name: "request_user_input",
-          call_id: "call_pending_quota",
-          arguments: JSON.stringify({ questions: [{ id: "q", header: "Choice", question: "Pick one", options: [] }] }),
-        },
-      }),
-    ].join("\n") + "\n");
-    const oldTime = new Date(Date.now() - 60000);
-    fs.utimesSync(testFile, oldTime, oldTime);
-
-    const states = [];
-    const requests = [];
-    monitor = new CodexLogMonitor(makeConfig(tmpDir), (sid, state, event, extra) => {
-      states.push({ sid, state, event, extra });
-    }, {
-      onUserInputRequest: (...args) => requests.push(args),
-    });
-    monitor._pollFile(testFile, path.basename(testFile));
-
-    assert.strictEqual(requests.length, 1);
-    assert.strictEqual(states.length, 1, "only quota metadata should emit beside the question card");
-    assert.strictEqual(states[0].event, "event_msg:token_count");
-    assert.strictEqual(states[0].state, "idle");
-    assert.strictEqual(states[0].extra.codexQuota.codexFiveHour.usedPercent, 12);
-    assert.strictEqual(states[0].extra.codexSparkQuota.codexWeekly.usedPercent, 7);
   });
 
   it("keeps a subagent's normal headless backfill snapshot when it has a pending question within the active window", (_, done) => {
@@ -3341,169 +3271,23 @@ describe("CodexLogMonitor", () => {
     });
   });
 
-  it("carries token_count subscription quota with a fresh line timestamp", () => {
-    const testFile = path.join(dateDir, TEST_FILENAME);
-    const lineTimestamp = new Date().toISOString();
-    fs.writeFileSync(testFile, [
-      '{"type":"session_meta","payload":{"cwd":"/tmp"}}',
-      '{"type":"event_msg","payload":{"type":"task_started"}}',
-      JSON.stringify({
-        type: "event_msg",
-        timestamp: lineTimestamp,
-        payload: {
-          type: "token_count",
-          rate_limits: {
-            primary: { used_percent: 1.0, window_minutes: 300, resets_at: 1783669570 },
-            secondary: { used_percent: 42.6, window_minutes: 10080, resets_at: 1784256370 },
-          },
-        },
-      }),
-    ].join("\n") + "\n");
-
-    const config = makeConfig(tmpDir);
-    const events = [];
-    monitor = new CodexLogMonitor(config, (sid, state, event, extra) => {
-      events.push({ sid, state, event, extra });
-    });
-
-    monitor._pollFile(testFile, path.basename(testFile));
-
-    const tokenEvent = events.find((entry) => entry.event === "event_msg:token_count");
-    assert.ok(tokenEvent, "quota-only token_count must still emit a metadata event");
-    // capturedAt = the line's own timestamp: the account store orders writes
-    // by observation time, not receive time.
-    const capturedAt = Date.parse(lineTimestamp);
-    assert.deepStrictEqual(tokenEvent.extra.codexQuota, {
-      codexFiveHour: {
-        usedPercent: 1,
-        windowMinutes: 300,
-        resetAt: 1783669570000,
-        capturedAt,
-      },
-      codexWeekly: {
-        usedPercent: 43,
-        windowMinutes: 10080,
-        resetAt: 1784256370000,
-        capturedAt,
-      },
-    });
-  });
-
-  it("routes fresh Spark quota separately without attaching it as generic quota", () => {
-    const testFile = path.join(dateDir, TEST_FILENAME);
-    const lineTimestamp = new Date().toISOString();
-    fs.writeFileSync(testFile, [
-      '{"type":"session_meta","payload":{"cwd":"/tmp"}}',
-      JSON.stringify({
-        type: "event_msg",
-        timestamp: lineTimestamp,
-        payload: {
-          type: "token_count",
-          rate_limits: {
-            limit_id: "codex_bengalfox",
-            limit_name: "GPT-5.3-Codex-Spark",
-            primary: { used_percent: 7, window_minutes: 10080, resets_at: 1784256370 },
-          },
-        },
-      }),
-    ].join("\n") + "\n");
-
-    const events = [];
-    monitor = new CodexLogMonitor(makeConfig(tmpDir), (sid, state, event, extra) => {
-      events.push({ sid, state, event, extra });
-    });
-    monitor._pollFile(testFile, path.basename(testFile));
-
-    const tokenEvent = events.find((entry) => entry.event === "event_msg:token_count");
-    assert.ok(tokenEvent);
-    assert.strictEqual(tokenEvent.extra.codexQuota, undefined);
-    assert.deepStrictEqual(tokenEvent.extra.codexSparkQuota, {
-      codexWeekly: {
-        usedPercent: 7,
-        windowMinutes: 10080,
-        resetAt: 1784256370000,
-        capturedAt: Date.parse(lineTimestamp),
-      },
-    });
-  });
-
-  it("routes generic codex quota by the current turn model and follows model switches", () => {
-    const testFile = path.join(dateDir, TEST_FILENAME);
-    const sparkTimestamp = new Date(Date.now() - 1000).toISOString();
-    const mainTimestamp = new Date().toISOString();
-    fs.writeFileSync(testFile, [
-      '{"type":"session_meta","payload":{"cwd":"/tmp"}}',
-      JSON.stringify({
-        type: "turn_context",
-        timestamp: sparkTimestamp,
-        payload: { model: "gpt-5.3-codex-spark", effort: "low" },
-      }),
-      JSON.stringify({
-        type: "event_msg",
-        timestamp: sparkTimestamp,
-        payload: {
-          type: "token_count",
-          rate_limits: {
-            limit_id: "codex",
-            primary: { used_percent: 0, window_minutes: 10080 },
-          },
-        },
-      }),
-      JSON.stringify({
-        type: "turn_context",
-        timestamp: mainTimestamp,
-        payload: { model: "gpt-5.6-sol", effort: "xhigh" },
-      }),
-      JSON.stringify({
-        type: "event_msg",
-        timestamp: mainTimestamp,
-        payload: {
-          type: "token_count",
-          rate_limits: {
-            limit_id: "codex",
-            primary: { used_percent: 14, window_minutes: 10080 },
-          },
-        },
-      }),
-    ].join("\n") + "\n");
-
-    const events = [];
-    monitor = new CodexLogMonitor(makeConfig(tmpDir), (sid, state, event, extra) => {
-      if (event === "event_msg:token_count") events.push(extra);
-    });
-    monitor._pollFile(testFile, path.basename(testFile));
-
-    assert.strictEqual(events.length, 2);
-    assert.strictEqual(events[0].codexQuota, undefined);
-    assert.strictEqual(events[0].codexSparkQuota.codexWeekly.usedPercent, 0);
-    assert.strictEqual(events[1].codexSparkQuota, undefined);
-    assert.strictEqual(events[1].codexQuota.codexWeekly.usedPercent, 14);
-    const tracked = monitor._tracked.get(testFile);
-    assert.strictEqual(tracked.codexQuotaProviderHint, "codexQuota");
-  });
-
-  it("drops token_count subscription quota from stale backfill replays but keeps context usage", () => {
+  it("keeps context usage from stale backfill replays", () => {
     const testFile = path.join(dateDir, TEST_FILENAME);
     fs.writeFileSync(testFile, [
       '{"type":"session_meta","payload":{"cwd":"/tmp"}}',
       '{"type":"event_msg","payload":{"type":"task_started"}}',
       JSON.stringify({
         type: "event_msg",
-        // Older than CODEX_QUOTA_MAX_AGE_MS — a restart replay, not live data.
-        // Posting it would stamp fresh arbitration metadata on stale quota.
+        // A restart replay, not live data.
         timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
         payload: {
           type: "token_count",
           info: { last_token_usage: { total_tokens: 23959 }, model_context_window: 258400 },
-          rate_limits: {
-            primary: { used_percent: 1.0, window_minutes: 300, resets_at: 1783669570 },
-          },
         },
       }),
     ].join("\n") + "\n");
     // Backdate mtime past BACKFILL_GRACE_MS so the file replays as history:
-    // backfill bypasses the line-level timestamp guard, which is exactly the
-    // path where the quota freshness gate has to hold the line.
+    // backfill bypasses the line-level timestamp guard.
     const backfillTime = new Date(Date.now() - 60000);
     fs.utimesSync(testFile, backfillTime, backfillTime);
 
@@ -3516,7 +3300,6 @@ describe("CodexLogMonitor", () => {
     monitor._pollFile(testFile, path.basename(testFile));
 
     assert.strictEqual(events.length, 1, "backfill must emit exactly one snapshot");
-    assert.strictEqual(events[0].extra.codexQuota, undefined);
     assert.deepStrictEqual(events[0].extra.contextUsage, {
       used: 23959,
       limit: 258400,

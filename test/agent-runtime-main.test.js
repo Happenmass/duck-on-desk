@@ -377,8 +377,12 @@ describe("agent-runtime-main", () => {
       cwd: "D:\\repo",
       contextUsage: { used: 23959, limit: 258400, percent: 9, source: "codex" },
     });
+    // token_count without contextUsage: must not enter the updateSession
+    // lifecycle machine at all (that would create a session card from thin
+    // air), and there is nothing to annotate either.
+    monitor.emit("codex:abc", "working", "event_msg:token_count", { cwd: "D:\\repo" });
 
-    // A context-usage refresh is metadata: it must not enter the updateSession
+    // A token_count refresh is metadata: it must not enter the updateSession
     // lifecycle machine at all.
     assert.strictEqual(calls.filter((c) => c[0] === "update").length, 0);
     assert.deepStrictEqual(metadataCalls, [[
