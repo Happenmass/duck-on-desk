@@ -1891,6 +1891,8 @@ function buildRendererThemeConfig(accessorySnapshot = null) {
     const canonical = accessorySnapshot || getPetAccessorySlotsSnapshot(activeTheme);
     cfg.idleDefaultVisual = getIdleVisualChoice();
     cfg.petTintPayload = resolvePetTintPayload(tintId, activeTheme);
+    cfg.duckAppearance = _settingsController.getSnapshot().duckAppearance;
+    cfg.duckMuted = _settingsController.getSnapshot().duckMuted === true;
     if (canonical) {
       cfg.accessorySlots = {
         themeId: canonical.themeId,
@@ -3061,7 +3063,7 @@ function createWindow() {
     initialWindowBounds,
     initialVirtualBounds,
     preloadPath: path.join(__dirname, "preload.js"),
-    loadFilePath: path.join(__dirname, "index.html"),
+    loadFilePath: path.join(__dirname, "..", "renderer-dist", "index.html"),
     themeConfig: buildRendererThemeConfig(initialAccessoryDelivery.snapshot),
     setRenderWindow: (createdWindow) => { win = createdWindow; },
     isQuitting: () => isQuitting,

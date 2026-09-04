@@ -201,6 +201,36 @@ module.exports = function initMenu(ctx) {
     };
   }
 
+  // 3D duck skin picker + the duck's own mute toggle. Both are plain prefs
+  // writes through the settings controller (ctx.settings); the router turns
+  // them into duck-appearance-change / duck-muted-change IPC.
+  const DUCK_SKINS = [["classic", "Cream"], ["charcoal", "Graphite"], ["purple", "Lavender"], ["blue", "Sky"]];
+
+  function buildDuckAppearanceMenuItems() {
+    // Same optional-ctx discipline as the other menu entries: test harnesses
+    // build a minimal ctx, and without a controller there is nothing to write.
+    const settings = ctx.settings;
+    if (!settings || typeof settings.get !== "function") return [];
+    const current = settings.get("duckAppearance");
+    return [
+      {
+        label: t("menuDuckSkin"),
+        submenu: DUCK_SKINS.map(([id, label]) => ({
+          label,
+          type: "radio",
+          checked: current === id,
+          click: () => settings.applyUpdate("duckAppearance", id),
+        })),
+      },
+      {
+        label: t("menuDuckMute"),
+        type: "checkbox",
+        checked: settings.get("duckMuted") === true,
+        click: (menuItem) => settings.applyUpdate("duckMuted", menuItem.checked),
+      },
+    ];
+  }
+
   function buildBringToPrimaryDisplayMenuItem() {
     return {
       label: t("bringPetToPrimaryDisplay"),
@@ -270,6 +300,7 @@ module.exports = function initMenu(ctx) {
         checked: !ctx.soundMuted,
         click: (menuItem) => { ctx.soundMuted = !menuItem.checked; },
       },
+      ...buildDuckAppearanceMenuItems(),
     ];
 
     // Dashboard + the danger auto-approve toggle (danger last, as in the
@@ -495,6 +526,8 @@ module.exports = function initMenu(ctx) {
       },
     ];
 
+    const duckGroup = buildDuckAppearanceMenuItems();
+
     const workGroup = [
       {
         label: t("openDashboard"),
@@ -570,7 +603,7 @@ module.exports = function initMenu(ctx) {
       { label: t("quit"), click: () => requestAppQuit() },
     ];
 
-    const template = joinGroups([stateGroup, workGroup, displayGroup, appGroup, quitGroup]);
+    const template = joinGroups([stateGroup, duckGroup, workGroup, displayGroup, appGroup, quitGroup]);
     ctx.contextMenu = Menu.buildFromTemplate(template);
   }
 

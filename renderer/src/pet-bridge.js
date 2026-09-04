@@ -35,6 +35,7 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
       audio.setAppearance(name);
     });
   }
+  api.onDuckMutedChange?.((muted) => audio.setMuted(muted));
   api.notifyPetVisualReady();
   return { dispose: () => behaviours.dispose() };
 }

@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onPetTintChange: (cb) => ipcRenderer.on("pet-tint-change", (_, payload) => cb(payload)),
   onPetAccessoryChange: (cb) => ipcRenderer.on("pet-accessory-change", (_, payload) => cb(payload)),
   onPetAccessorySlotsChange: (cb) => ipcRenderer.on("pet-accessory-slots-change", (_, snapshot) => cb(snapshot)),
+  onDuckAppearanceChange: (cb) => ipcRenderer.on("duck-appearance-change", (_, name) => cb(name)),
+  onDuckMutedChange: (cb) => ipcRenderer.on("duck-muted-change", (_, muted) => cb(muted === true)),
   // State sync from main
   onStateChange: (callback) => ipcRenderer.on("state-change", (_, requestOrState, legacySvg) => callback(requestOrState, legacySvg)),
   onEyeMove: (callback) => ipcRenderer.on("eye-move", (_, dx, dy) => callback(dx, dy)),

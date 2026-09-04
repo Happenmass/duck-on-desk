@@ -180,6 +180,12 @@ function createSettingsEffectRouter(options = {}) {
         syncSessionHudVisibility
       );
     }
+    if ("duckAppearance" in changes) {
+      sendToRenderer("duck-appearance-change", changes.duckAppearance);
+    }
+    if ("duckMuted" in changes) {
+      sendToRenderer("duck-muted-change", changes.duckMuted === true);
+    }
     if ("petTint" in changes) {
       const activeTheme = getActiveTheme();
       const tintId = getPetTintIdForTheme(changes.petTint, activeTheme && activeTheme._id);

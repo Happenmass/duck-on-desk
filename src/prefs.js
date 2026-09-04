@@ -235,6 +235,10 @@ const SCHEMA = {
     validate: (v) => Number.isInteger(v) && v >= 0 && v <= MAX_AUTO_CLOSE_SECONDS,
   },
   soundMuted: { type: "boolean", default: false },
+  // 3D duck skin + its own sound design (the duck owns its audio, so the
+  // sprite-era soundMuted/soundVolume pair does not reach it).
+  duckAppearance: { type: "string", default: "classic", enum: ["classic", "charcoal", "purple", "blue"] },
+  duckMuted: { type: "boolean", default: false },
   soundVolume: {
     type: "number",
     default: 1,
