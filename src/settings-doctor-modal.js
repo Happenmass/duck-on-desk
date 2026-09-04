@@ -134,7 +134,6 @@
       "local-server": "doctorCheckLocalServer",
       "agent-integrations": "doctorCheckAgentIntegrations",
       "permission-bubble-policy": "doctorCheckPermissionBubbles",
-      "feishu-approval": "doctorCheckFeishuApproval",
       "theme-health": "doctorCheckTheme",
     };
     return t(core, map[check.id] || "doctorCheckUnknown");

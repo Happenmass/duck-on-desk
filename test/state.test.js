@@ -5112,7 +5112,7 @@ describe("Stop completion gate (#406)", () => {
     const s = api.sessions.get("s1");
     assert.strictEqual(s.state, "idle");
     // The Notification no longer buries the Stop tail: badge → done, so the HUD
-    // and the Telegram completion still fire. (The celebration is visual-only
+    // and the completion notification still fire. (The celebration is visual-only
     // and intentionally yields to the wait-for-input visual by priority.)
     assert.strictEqual(api.deriveSessionBadge(s), "done");
   });

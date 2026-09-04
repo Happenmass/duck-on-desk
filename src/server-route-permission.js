@@ -273,120 +273,6 @@ function sendGenericPermissionNoDecision(res) {
   res.end();
 }
 
-// Turning off the desktop permission bubble (arePermissionBubblesEnabled ===
-// false) means "don't show a window on this computer" — it must not also
-// silence Telegram remote approval, since that's a separate channel the user
-// may still be relying on. Builds a permEntry with no bubble (bubble stays
-// null forever) and hands it straight to Telegram. Returns true if Telegram
-// picked it up — caller must leave the HTTP connection open; it's answered
-// later via the normal resolvePermissionEntry path. Returns false if there's
-// nowhere to send it (Telegram not configured/enabled), in which case the
-// caller keeps the pre-existing destroy-connection/native-chat-fallback
-// behavior.
-function tryRemoteOnlyApproval(ctx, fields) {
-  const { res } = fields;
-  const permEntry = {
-    ...fields,
-    bubble: null,
-    hideTimer: null,
-    resolvedSuggestion: null,
-    createdAt: Date.now(),
-    // Never gets a desktop bubble (that's the whole point of this path) —
-    // lets the bubble-stack layout skip it instead of reserving an empty slot.
-    remoteOnly: true,
-  };
-  const abortHandler = () => {
-    if (res.writableFinished) return;
-    ctx.permLog("abortHandler fired (remote-only, bubbles disabled)");
-    // no-decision, not deny: the agent went away (timeout/exit) — nobody
-    // denied anything. The socket is already closed so no response is sent
-    // either way; this only keeps the remote-card status line honest
-    // ("no decision" instead of "denied") when the card is cancelled.
-    ctx.resolvePermissionEntry(permEntry, "no-decision", "Client disconnected");
-  };
-  permEntry.abortHandler = abortHandler;
-  res.on("close", abortHandler);
-  addPendingPermission(ctx, permEntry);
-
-  if (typeof ctx.maybeAutoResolveSessionPermission === "function") {
-    try {
-      if (ctx.maybeAutoResolveSessionPermission(permEntry, { sessionOnly: true })) {
-        return { handled: true, resolution: "session-automation" };
-      }
-    } catch (err) {
-      ctx.permLog(`session automation check failed (remote-only): ${err && err.message ? err.message : err}`);
-    }
-  }
-
-  let started = false;
-  if (typeof ctx.maybeStartRemoteApproval === "function") {
-    try {
-      started = !!ctx.maybeStartRemoteApproval(permEntry);
-    } catch (err) {
-      ctx.permLog(`telegram remote approval start failed (remote-only): ${err && err.message ? err.message : err}`);
-      started = false;
-    }
-  }
-
-  if (!started) {
-    removePendingPermission(ctx, permEntry, "remote-only-approval-unavailable");
-    res.removeListener("close", abortHandler);
-    return { handled: false, resolution: "unhandled" };
-  }
-
-  // Only after a remote client actually took the request: a card is on its
-  // way, so the pet's PermissionRequest notification animation has something
-  // to announce. Playing it before the `started` check meant a no-op flash
-  // when Telegram wasn't available and the caller fell back to res.destroy().
-  try {
-    ctx.updateSession(fields.sessionId, "notification", "PermissionRequest", {
-      agentId: fields.agentId,
-      profileId: fields.profileId,
-      rawSessionId: fields.rawSessionId,
-      ...(fields.host ? { host: fields.host } : {}),
-      sessionAutomationIdentity: fields.sessionAutomationIdentity,
-    });
-  } catch (err) {
-    // The remote client has already accepted the request, so an uncaught
-    // session-update error would leave a pending entry and a stale remote card
-    // while the outer route emits 500. Resolve through the normal no-decision
-    // path so the remote channel is cancelled and the agent regains control.
-    ctx.permLog(`remote-only session update failed: ${err && err.message ? err.message : err}`);
-    try {
-      ctx.resolvePermissionEntry(
-        permEntry,
-        "no-decision",
-        "Remote-only permission session update failed"
-      );
-    } catch (resolveErr) {
-      ctx.permLog(`remote-only rollback failed: ${resolveErr && resolveErr.message ? resolveErr.message : resolveErr}`);
-      removePendingPermission(ctx, permEntry, "remote-only-session-update-failed");
-      res.removeListener("close", abortHandler);
-      try { res.destroy(); } catch {}
-    }
-    return { handled: true, resolution: "session-update-failed" };
-  }
-  if (typeof ctx.syncPermissionShortcuts === "function") {
-    try { ctx.syncPermissionShortcuts(); } catch {}
-  }
-  ctx.permLog(`permission bubbles disabled, routed to Telegram-only approval: tool=${fields.toolName} session=${fields.sessionId}`);
-  return { handled: true, resolution: "remote" };
-}
-
-function startRemoteApproval(ctx, permEntry) {
-  if (
-    permEntry
-    && isDecisionInteraction(permEntry.interaction)
-    && permEntry.interaction.intent === INTERACTION_INTENT.PLAN_REVIEW
-  ) return;
-  if (typeof ctx.maybeStartRemoteApproval !== "function") return;
-  try {
-    ctx.maybeStartRemoteApproval(permEntry);
-  } catch (err) {
-    ctx.permLog(`telegram remote approval start failed: ${err && err.message ? err.message : err}`);
-  }
-}
-
 function addPendingPermission(ctx, permEntry) {
   if (typeof ctx.addPendingPermission === "function") {
     return ctx.addPendingPermission(permEntry);
@@ -936,7 +822,6 @@ function handlePermissionPost(req, res, options) {
           sendCodexPermissionNoDecision(res);
           return;
         }
-        startRemoteApproval(ctx, permEntry);
         return;
       }
 
@@ -1061,26 +946,11 @@ function handlePermissionPost(req, res, options) {
 
       if (shouldBypassCCBubble(ctx, interaction, permAgentId)) {
         recordRequestHookEvent.accepted();
-        // "Permission bubbles disabled" (the global/local toggle) only means
-        // no desktop window — it must not also drop Telegram remote approval.
-        // "<agent> bubbles disabled" is the per-agent gate (isAgentPermissionsEnabled),
-        // a stronger opt-out that keeps Clawd fully out of that agent's loop —
-        // including remote channels — so it is checked first and falls straight
-        // back to the native chat prompt even when the global toggle is also off.
+        // Either gate off means the desktop bubble is the only decision source
+        // and it is unavailable: drop the connection so the agent falls back to
+        // its native prompt. A dropped socket is a no-decision, never a deny.
         const agentGateOff = typeof ctx.isAgentPermissionsEnabled === "function"
           && !ctx.isAgentPermissionsEnabled(permAgentId);
-        if (!agentGateOff && !arePermissionBubblesEnabled(ctx)) {
-          const remoteOnlyResult = tryRemoteOnlyApproval(ctx, {
-            res, sessionId, toolName, toolInput, toolUseId, toolInputFingerprint,
-            agentId: permAgentId, subagentId, subagentType, suggestions, interaction,
-            sessionAutomationIdentity,
-            ...trustedSessionFields(sessionIdentity),
-          });
-          if (remoteOnlyResult.handled) return;
-          ctx.permLog(`permission bubbles disabled, no remote approval available → destroy connection, chat fallback (tool=${toolName})`);
-          res.destroy();
-          return;
-        }
         const reason = agentGateOff ? `${permAgentId} bubbles disabled` : "permission bubbles disabled";
         ctx.permLog(`${reason} → destroy connection, chat fallback (tool=${toolName})`);
         res.destroy();
@@ -1152,9 +1022,6 @@ function handlePermissionPost(req, res, options) {
           permEntry.bubble = null;
           ctx.sendPermissionResponse(res, "deny", "Elicitation bubble unavailable; answer in terminal", "Elicitation");
           return;
-        }
-        if (Array.isArray(elicitationInput.questions) && elicitationInput.questions.length > 0) {
-          startRemoteApproval(ctx, permEntry);
         }
         return;
       }
@@ -1228,7 +1095,6 @@ function handlePermissionPost(req, res, options) {
         try { res.destroy(); } catch {}
         return;
       }
-      startRemoteApproval(ctx, permEntry);
     } catch (err) {
       ctx.permLog(`/permission handler error: ${err && err.message}`);
       // Response may already be sent (opencode branch 200-ACKs before

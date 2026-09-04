@@ -116,7 +116,6 @@ function createPermissionHarness({
   const permissionFactory = loadPermissionWithElectron(fakeElectron);
   let notificationAutoCloseMs = 10_000;
   const focused = [];
-  const slackAnnouncements = [];
   const api = permissionFactory({
     win: { isDestroyed() { return false; } },
     permDebugLog: logPath,
@@ -141,7 +140,6 @@ function createPermissionHarness({
     getHudReservedOffset: () => 0,
     repositionUpdateBubble: () => {},
     focusTerminalForSession: (...args) => focused.push(args),
-    notifySlackPermission: (payload) => slackAnnouncements.push(payload),
     guardAlwaysOnTop: () => {},
     reapplyMacVisibility: () => {},
   });
@@ -149,7 +147,6 @@ function createPermissionHarness({
   return {
     api,
     focused,
-    slackAnnouncements,
     createdWindows,
     setNotificationAutoCloseMs(value) {
       notificationAutoCloseMs = value;
@@ -472,7 +469,6 @@ describe("interactive permission bubble fatal fallback", () => {
     harness.api.pendingPermissions.push(entry);
 
     assert.throws(() => harness.api.showPermissionBubble(entry), /BrowserWindow unavailable/);
-    assert.deepStrictEqual(harness.slackAnnouncements, []);
   });
 
   it("returns no-decision immediately when bubble.html cannot be loaded", () => {
@@ -483,7 +479,6 @@ describe("interactive permission bubble fatal fallback", () => {
     assert.doesNotThrow(() => harness.api.showPermissionBubble(entry));
     assert.strictEqual(harness.api.pendingPermissions.length, 0);
     assert.strictEqual(response.destroyed, true);
-    assert.deepStrictEqual(harness.slackAnnouncements, []);
   });
 
   it("returns no-decision when loadFile rejects asynchronously", async () => {
@@ -498,7 +493,6 @@ describe("interactive permission bubble fatal fallback", () => {
     assert.strictEqual(harness.api.pendingPermissions.length, 0);
     assert.strictEqual(response.destroyed, true);
     assert.strictEqual(response.destroyCalls, 1);
-    assert.deepStrictEqual(harness.slackAnnouncements, []);
   });
 
   it("returns no-decision when the main frame emits did-fail-load", () => {
@@ -511,7 +505,6 @@ describe("interactive permission bubble fatal fallback", () => {
     assert.strictEqual(harness.api.pendingPermissions.length, 0);
     assert.strictEqual(response.destroyed, true);
     assert.strictEqual(response.destroyCalls, 1);
-    assert.deepStrictEqual(harness.slackAnnouncements, []);
   });
 
   it("does not turn a fatal no-decision into a second deny when closed fires", () => {
@@ -558,7 +551,6 @@ describe("interactive permission bubble fatal fallback", () => {
 
     assert.strictEqual(harness.api.pendingPermissions.length, 0);
     assert.strictEqual(response.destroyed, true);
-    assert.deepStrictEqual(harness.slackAnnouncements, []);
   });
 
 });

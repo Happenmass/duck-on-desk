@@ -76,7 +76,6 @@ function makeRuntimeHarness() {
   const resolved = [];
   const changed = [];
   const layout = { update: 0, hud: 0 };
-  const sessionTrustCancels = [];
   const logs = [];
   const permDebugLog = path.join(
     os.tmpdir(),
@@ -96,13 +95,12 @@ function makeRuntimeHarness() {
     focusTerminalForSession() {},
     onPermissionsChanged: (reason) => changed.push(reason),
     onPermissionResolved: (entry, meta) => resolved.push({ entry, meta }),
-    cancelSessionTrustCandidate: (entry, meta) => sessionTrustCancels.push({ entry, meta }),
     repositionUpdateBubble: () => { layout.update += 1; },
     repositionSessionHud: () => { layout.hud += 1; },
     permDebugLog,
   };
   const api = initPermission(ctx);
-  return { api, ctx, shortcutCalls, resolved, changed, layout, sessionTrustCancels, logs, permDebugLog };
+  return { api, ctx, shortcutCalls, resolved, changed, layout, logs, permDebugLog };
 }
 
 function readPermissionDebugLog(harness) {
@@ -236,7 +234,6 @@ describe("opencode-family external lifecycle runtime", () => {
     const harness = makeRuntimeHarness();
     const { api } = harness;
     let timerFires = 0;
-    let remoteAborts = 0;
     let allExactWereDeadAtHide = false;
     const exactA = familyEntry();
     const exactB = familyEntry({
@@ -247,8 +244,6 @@ describe("opencode-family external lifecycle runtime", () => {
       _delayTimer: setTimeout(() => { timerFires += 1; }, 40),
       autoCloseTimer: setTimeout(() => { timerFires += 1; }, 40),
       autoExpireTimer: setTimeout(() => { timerFires += 1; }, 40),
-      remoteApprovalAbortController: { abort: () => { remoteAborts += 1; } },
-      sessionTrustCandidate: { mode: "always" },
     });
     exactA.bubble = makeBubble();
     const sameSessionOtherRequest = familyEntry({ familyRequestId: "per-other" });
@@ -283,8 +278,6 @@ describe("opencode-family external lifecycle runtime", () => {
     assert.strictEqual(exactB._delayTimer, null);
     assert.strictEqual(exactB.autoCloseTimer, null);
     assert.strictEqual(exactB.autoExpireTimer, null);
-    assert.strictEqual(remoteAborts, 1);
-    assert.strictEqual(harness.sessionTrustCancels.length, 1);
     assert.strictEqual(reverseRequests, 0);
     assert.deepStrictEqual(harness.changed, ["resolved-externally"]);
     assert.strictEqual(harness.resolved.length, 2);

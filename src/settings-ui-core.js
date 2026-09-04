@@ -128,7 +128,6 @@
     // null = not chosen yet; the Agents tab resolves it from what is connected.
     agentsSubtab: null,
     agentsUnavailableQuery: "",
-    remoteApprovalSubtab: "channels",
     expandedOverrideRowIds: new Set(),
     assetPicker: {
       state: null,

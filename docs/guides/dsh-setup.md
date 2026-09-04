@@ -180,8 +180,7 @@ warnings, and rely on DSH's native web flow whenever Clawd yields no decision.
 - Linux, WSL, remote SSH, non-web profiles, macOS packaging, and ARM64 packaging
   remain unverified.
 - There is no terminal-focus action because DSH web is a browser surface.
-- Closing the local bubble does not deny the request. If a configured Telegram
-  or Feishu/Lark remote channel takes it, that channel may decide; otherwise DSH
+- Closing the local bubble does not deny the request. DSH
   receives no Clawd decision and continues its native flow.
 - Hiding the pet is not DND, so a new approval may still show a bubble. DND
   returns control to DSH without deciding.

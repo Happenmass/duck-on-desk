@@ -143,42 +143,6 @@ Use the pet or tray **Permission handling** submenu to choose how Clawd handles 
 
 Both automation modes are confirmation-gated. The Dashboard can independently set each eligible live session to **Ask every time** or the tools-only mode. New agents do not become eligible merely because they expose permission support, but tool-name handling remains adapter- and mode-specific as described above. State-only integrations and agents that own a native permission flow continue to use that native flow.
 
-## Telegram Approval
-
-Clawd can optionally mirror supported permission bubbles to a dedicated Telegram
-bot, so you can Allow or Deny from Telegram while the local desktop bubble
-remains available. See [telegram-approval.md](telegram-approval.md) for setup,
-token ownership, supported agents, and fallback behavior.
-
-v0.14.0 retires the old Go sidecar transport. Existing legacy users keep their
-saved bot token, allowed user, and target chat, but must complete one real
-Telegram verification callback from the blocking Settings migration panel
-before remote approval is active again. A failed or timed-out check never
-deletes those settings and never falls back to the retired runtime.
-
-## Feishu / Lark Approval
-
-Clawd can also mirror permission bubbles to a Feishu (China) or Lark
-(International) self-built app as an interactive card. Pick the platform in
-**Settings → Remote Approval → Feishu / Lark**; both are the same channel, so
-existing Feishu users keep their credentials and stay on Feishu by default. See
-[feishu-lark-remote-approval.md](feishu-lark-remote-approval.md) for the
-platform choice, permission scope, `open_id` / `union_id` / `user_id`
-differences, and card language.
-
-## Slack Notifications
-
-Unlike the two channels above, Slack is **notification-only**: Clawd posts when
-a session finishes, errors out, or is waiting for permission, but the decision
-is always made in the desktop app — Slack cannot Allow or Deny in this version.
-Set it up with an Incoming Webhook (recommended) or an `xoxb-` bot token with
-the `chat:write` scope under **Settings → Remote Approval → Slack**.
-
-Messages go to a Slack channel and can include the session title (derived from
-your prompt), folder name, and host name, so a **private channel is
-recommended**. See [slack-notifications.md](slack-notifications.md) for setup,
-the full list of fields that are sent, secret storage, and troubleshooting.
-
 ## Remote SSH (Claude Code, Codex CLI & Copilot CLI)
 
 <img src="../../assets/screenshot-remote-ssh.png" width="560" alt="Remote SSH — permission bubble from Raspberry Pi">

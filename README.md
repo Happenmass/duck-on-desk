@@ -82,15 +82,10 @@ Thinking when you prompt, typing when tools run, grooving or juggling for subage
 - **In-app permission review** — when a permission-capable integration sends a supported request, Clawd can pop a floating bubble card instead of waiting in the terminal; state-only agents keep their native permission flow
 - **Allow / deny / agent-native extras** — one-click approve or reject, plus permission rules / `Always` actions when the source agent supports them
 - **Permission handling modes** — choose **Ask every time**, confirmation-gated **Question prompts only** (tool-shaped requests from explicitly supported agents), or **Auto-approve**. Auto-approve handles every request the adapter marks automation-eligible—including unrecognized non-empty Claude/Qwen request names—but missing names, unsupported decision shapes, and CodeBuddy questions/plans still defer to the native flow. It downgrades after restart, and each eligible live session can independently choose Ask every time or tools-only. See the [setup guide](docs/guides/setup-guide.md#permission-handling-automation)
-- **Optional remote approval** — Telegram and Feishu/Lark can mirror eligible pending requests while the local bubble remains available. A channel failure produces no remote decision and never a denial: the desktop request stays pending, while remote-only requests fall back to the agent only after every available client returns no decision
 - **Global hotkeys** — `Ctrl+Shift+Y` to Allow, `Ctrl+Shift+N` to Deny the latest permission bubble (only registered while bubbles are visible)
 - **Stacking layout** — multiple permission requests stack upward from the bottom-right corner
 - **Auto-dismiss** — if you answer in the terminal first, the bubble disappears automatically
 - **Per-agent toggle** — open `Settings…` → `Agents`, pick an agent, and turn off `Show pop-up bubbles` to keep prompts in that agent's own terminal/TUI
-
-### Remote Notifications
-- **Telegram / Feishu (Lark)** — interactive remote approval: route permission requests to your phone and Allow/Deny them without touching the desktop
-- **Slack** — **notification-only**: task **done**, **errors**, and **permission requests** are pushed via a Slack Incoming Webhook (or an optional `xoxb-` bot token + channel id) as rich Block Kit cards. Slack cannot Allow or Deny in this version — a permission message is an announcement, and you decide in the desktop app. Configure it next to Telegram/Feishu in the remote approval channels; secrets are stored locally in an env file outside prefs (`0600` on macOS/Linux; Windows relies on the AppData ACL), and everything degrades gracefully when unconfigured or offline. Messages can carry the session title, folder, and host name, so a **private channel is recommended** — see [slack-notifications.md](docs/guides/slack-notifications.md)
 
 ### Session Intelligence
 - **Multi-session tracking** — sessions across all agents resolve to the highest-priority state
@@ -104,7 +99,7 @@ Thinking when you prompt, typing when tools run, grooving or juggling for subage
 
 ### Mobile Companion (PWA)
 - **Live mirror on your phone** — enable `Settings…` → `Mobile / PWA` and open the pairing URL on your phone; the Clawd Mobile web app shows your agent sessions and their live states in real time
-- **Read-only by design** — the LAN bridge only broadcasts state; nothing in the PWA can touch your machine (LAN PWA approval is on the roadmap; Telegram and Feishu/Lark are separate supported channels)
+- **Read-only by design** — the LAN bridge only broadcasts state; nothing in the PWA can touch your machine (LAN PWA approval is on the roadmap)
 - **LAN-only + token-gated** — pairing requires a token, tokens rotate automatically with a grace window, and access can be regenerated or reset in one click
 - **Installable** — it's a PWA: add it to your home screen for an app-like experience
 > The mobile companion line — from the first prototype to token rotation — is built and led by core contributor [@Bynlk](https://github.com/Bynlk), who also maintains [clawd-on-mobile](https://github.com/Bynlk/clawd-on-mobile), a sister fork with a native Android app.
@@ -114,7 +109,7 @@ Thinking when you prompt, typing when tools run, grooving or juggling for subage
 - **Position memory** — Clawd remembers where you left it across restarts (including mini mode)
 - **Single instance lock** — prevents duplicate Clawd windows
 - **Auto-start** — Claude Code's SessionStart hook can launch Clawd automatically if it's not running
-- **Do Not Disturb** — right-click or tray menu to enter sleep mode; the pet stops reacting until you wake Clawd. DND suppresses things that ask you to act, not status: remote **completion** notifications (Telegram/Slack) still arrive, since they are the point of walking away. Permission bubbles are suppressed during DND — Codex, opencode, and MiMo Code fall back to their native prompts, while Claude Code and CodeBuddy fall back to their built-in permission flow. WorkBuddy uses state + Notification only; Antigravity and Pi are state-only integrations.
+- **Do Not Disturb** — right-click or tray menu to enter sleep mode; the pet stops reacting until you wake Clawd. DND suppresses things that ask you to act, not status. Permission bubbles are suppressed during DND — Codex, opencode, and MiMo Code fall back to their native prompts, while Claude Code and CodeBuddy fall back to their built-in permission flow. WorkBuddy uses state + Notification only; Antigravity and Pi are state-only integrations.
 - **Sound effects** — short audio cues on task completion and permission requests (toggle via the system tray or Settings; 10s cooldown, auto-muted during DND)
 - **System tray** — DND mode, auto-start, check for updates
 - **i18n** — English, Simplified Chinese, Traditional Chinese, Korean, Japanese, Brazilian Portuguese, and Spanish UI; switch in Settings → General
@@ -226,7 +221,7 @@ Some things we'd like to explore in the future:
 - Codex terminal focus via process tree lookup from `codex.exe` PID
 - Theme registry and in-app download
 - Hook uninstall script for clean app removal
-- LAN PWA mobile companion: in-browser permission approval (in progress, led by [@Bynlk](https://github.com/Bynlk)); Telegram and Feishu/Lark approval are separate supported channels
+- LAN PWA mobile companion: in-browser permission approval (in progress, led by [@Bynlk](https://github.com/Bynlk))
 
 ## Contributing
 

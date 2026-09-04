@@ -158,16 +158,10 @@ describe("package build config", () => {
       assert.strictEqual(pkg.scripts["verify:updater-metadata"], "node scripts/verify-updater-metadata.js");
     });
 
-    it("uses reproducible installs in release and five-target package CI", () => {
+    it("uses reproducible installs in release CI", () => {
       const release = fs.readFileSync(path.join(ROOT, ".github", "workflows", "build.yml"), "utf8");
-      const packageAudit = fs.readFileSync(
-        path.join(ROOT, ".github", "workflows", "telegram-retirement-package-audit.yml"),
-        "utf8",
-      );
       assert.strictEqual((release.match(/      - run: npm ci/g) || []).length, 3);
-      assert.strictEqual((packageAudit.match(/      - run: npm ci/g) || []).length, 2);
       assert.doesNotMatch(release, /      - run: npm install(?:\s|$)/m);
-      assert.doesNotMatch(packageAudit, /      - run: npm install(?:\s|$)/m);
     });
   });
 
@@ -260,7 +254,7 @@ describe("package build config", () => {
       const adHocVerification = sliceWorkflowBlock(
         workflow,
         "      - name: Verify macOS ad-hoc hardened signatures",
-        "      - name: Assert retired Telegram sidecar is absent",
+        "      - name: Verify macOS ZIP payloads",
       );
       assert.match(adHocVerification, /^\s+if: steps\.mac-signing\.outputs\.mode == 'adhoc'$/m);
       assert.match(adHocVerification, /dist\/mac\/Clawd on Desk\.app/);
@@ -384,7 +378,7 @@ describe("package build config", () => {
       const zipVerification = sliceWorkflowBlock(
         workflow,
         "      - name: Verify macOS ZIP payloads",
-        "      - name: Assert retired Telegram sidecar is absent",
+        "      - name: Audit packaged native payloads",
       );
       assert.match(zipVerification, /ditto -x -k/);
       assert.match(zipVerification, /ZIP must contain exactly Clawd on Desk\.app at its root/);
@@ -512,8 +506,8 @@ describe("package build config", () => {
     });
   });
 
-  describe("Telegram legacy retirement packaging", () => {
-    it("starts directly without fetching a retired executable", () => {
+  describe("packaging surface and release CI gates", () => {
+    it("starts directly without fetching an external binary", () => {
       assert.strictEqual(pkg.scripts.start, "node launch.js");
     });
 
@@ -534,7 +528,7 @@ describe("package build config", () => {
       }
       for (const platform of ["win", "mac", "linux"]) {
         const entries = pkg.build[platform] && pkg.build[platform].extraResources;
-        assert.equal(entries, undefined, `${platform} should not package a Telegram sidecar`);
+        assert.equal(entries, undefined, `${platform} should not package an extra sidecar`);
       }
       assert.deepEqual(pkg.build.extraResources, [{ from: "assets/icon.ico", to: "icon.ico" }]);
     });
@@ -546,17 +540,8 @@ describe("package build config", () => {
       assert.strictEqual(pkg.scripts["build:linux:x64"], "electron-builder --linux AppImage:x64 deb:x64");
     });
 
-    it("release builds assert the retired sidecar is absent from every unpacked tree", () => {
+    it("release CI carries no retired sidecar fetch or assertion steps", () => {
       const workflow = fs.readFileSync(path.join(ROOT, ".github", "workflows", "build.yml"), "utf8");
-      for (const root of [
-        "dist/win-unpacked/resources",
-        "dist/win-arm64-unpacked/resources",
-        "dist/mac/Clawd on Desk.app/Contents/Resources",
-        "dist/mac-arm64/Clawd on Desk.app/Contents/Resources",
-        "dist/linux-unpacked/resources",
-      ]) {
-        assert.match(workflow, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-      }
       assert.doesNotMatch(workflow, /fetch:sidecars|verify-sidecar|assert:packaged-sidecar/);
     });
 
@@ -597,7 +582,7 @@ describe("package build config", () => {
         );
         const focusedLine = job
           .split(/\r?\n/)
-          .find((line) => line.includes("node --test test/assert-no-retired"));
+          .find((line) => line.includes("test/after-pack-koffi.test.js"));
         assert.ok(focusedLine, `${label} evidence mode should retain its focused test command`);
         assert.ok(focusedLine.includes(focusedPrefix), `${label} should use the expected focused-test wrapper`);
         for (const testFile of [
@@ -613,63 +598,9 @@ describe("package build config", () => {
       }
     });
 
-    it("builds and uploads all five target artifacts in pull-request and release CI", () => {
-      const workflowPath = path.join(ROOT, ".github", "workflows", "telegram-retirement-package-audit.yml");
-      assert.ok(fs.existsSync(workflowPath), "five-target package audit workflow should exist");
-      const workflow = fs.readFileSync(workflowPath, "utf8");
-      assert.match(workflow, /workflow_call:/);
-      assert.match(workflow, /pull_request:/);
-      assert.match(workflow, /name: Assert installer exists/);
-      assert.match(workflow, /Missing built artifact:/);
-      assert.match(workflow, /if-no-files-found: error/);
-      for (const target of [
-        "windows-x64",
-        "windows-arm64",
-        "darwin-x64",
-        "darwin-arm64",
-        "linux-x64",
-      ]) {
-        assert.match(workflow, new RegExp(`target: ${target}`));
-      }
-      assert.match(workflow, /name: package-audit-\$\{\{ matrix\.target \}\}/);
-      assert.match(workflow, /scripts\/assert-no-retired-telegram-sidecar\.js/);
-      assert.match(workflow, /scripts\/audit-packaged-native\.js/);
-      assert.match(workflow, /scripts\/run-packaged-koffi-smoke\.js/);
-      assert.match(workflow, /name: Configure Linux Chromium sandbox/);
-      assert.match(workflow, /if: matrix\.target == 'linux-x64'/);
-      assert.match(workflow, /sudo chown root:root dist\/linux-unpacked\/chrome-sandbox/);
-      assert.match(workflow, /sudo chmod 4755 dist\/linux-unpacked\/chrome-sandbox/);
-      assert.match(workflow, /dist\/koffi-prune-manifests\/\*\.json/);
-      assert.match(workflow, /dist\/native-package-manifests\/\*\.json/);
-      assert.match(workflow, /runner: windows-11-arm/);
-      assert.match(workflow, /runner: macos-15-intel/);
-      assert.match(workflow, /- "src\/recap-\*\.js"/);
-      assert.match(workflow, /- "src\/settings-ui-core\.js"/);
-      assert.match(workflow, /- "src\/settings-tab-recap\.js"/);
-      assert.match(workflow, /- "test\/recap\*\.test\.js"/);
-      assert.match(workflow, /- "test\/fixtures\/recap-private-permissions-\*\.js"/);
-      assert.match(workflow, /- "test\/settings-recap\.test\.js"/);
-      assert.match(workflow, /name: Run recap unit tests[\s\S]*?test\/recap\*\.test\.js[\s\S]*?test\/settings-recap\.test\.js/);
-      const packageJob = sliceWorkflowJob(workflow, "package");
-      assert.match(packageJob, /runs-on: \$\{\{ matrix\.runner \}\}/);
-      assert.match(packageJob, /name: Run Windows recap ACL tests\s+if: runner\.os == 'Windows'/);
-      for (const testFile of [
-        "test/recap-private-permissions.test.js",
-        "test/recap-private-permissions-electron.test.js",
-        "test/recap-runtime.test.js",
-        "test/recap-store.test.js",
-      ]) {
-        assert.ok(packageJob.includes(testFile), `Windows package job should run ${testFile}`);
-      }
-      assert.doesNotMatch(workflow, /fetch:sidecars|verify-sidecar|assert:packaged-sidecar/);
-      assert.match(workflow, /Clawd-on-Desk-\*-x86_64\.AppImage/);
-      assert.match(workflow, /Clawd-on-Desk-\*-amd64\.deb/);
-    });
-
     it("gates release artifacts on native payload, packaged calls, and updater metadata", () => {
       const workflow = fs.readFileSync(path.join(ROOT, ".github", "workflows", "build.yml"), "utf8");
-      assert.match(workflow, /native-package-audit:\s+needs: validate-release\s+uses: \.\/\.github\/workflows\/telegram-retirement-package-audit\.yml/);
-      assert.match(workflow, /needs: \[build-windows, build-mac, build-linux, native-package-audit\]/);
+      assert.match(workflow, /needs: \[build-windows, build-mac, build-linux\]/);
       assert.strictEqual((workflow.match(/scripts\/audit-packaged-native\.js/g) || []).length, 6);
       assert.strictEqual((workflow.match(/scripts\/run-packaged-koffi-smoke\.js/g) || []).length, 3);
       assert.strictEqual((workflow.match(/scripts\/verify-updater-metadata\.js/g) || []).length, 3);

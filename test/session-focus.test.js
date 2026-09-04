@@ -153,7 +153,7 @@ describe("session focus helpers", () => {
     assert.deepStrictEqual(getSessionFocusTarget({ ...remoteOrca, platform: "webui" }, { osPlatform: "darwin" }), unavailable);
 
     // The HUD/Dashboard click target is enabled, but local-only consumers such
-    // as pet-body focus and Telegram Direct Send must not absorb remote sessions.
+    // as pet-body focus must not absorb remote sessions.
     assert.strictEqual(isFocusableLocalHudSession(remoteOrca, { osPlatform: "darwin" }), false);
   });
 

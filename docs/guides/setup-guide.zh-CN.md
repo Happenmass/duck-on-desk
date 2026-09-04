@@ -98,14 +98,6 @@ Claude Code 只有一个用户级 statusline 槽位，因此 Clawd 绝不会静�
 
 两种自动化模式都会先要求确认。Dashboard 还可以为每个符合条件的 live session 独立选择 **每次询问** 或仅工具模式。新 agent 不会因为声明了权限能力就自动获得自动化资格，但工具名的处理取决于 adapter 和模式。仅状态集成和由 agent 原生接管权限的流程不会被改变。
 
-## Telegram 远程审批
-
-Clawd 可以把受支持、仍待处理的权限请求镜像到专用 Telegram bot；本地气泡仍然可用。通道失败或超时不会产生远程决定，也不会自动拒绝：有本地气泡时请求继续等待；只有 remote-only 且所有可用 client 都无决定时，才回到 agent 原生界面。设置、支持范围和迁移说明见 [telegram-approval.md](telegram-approval.md)。
-
-## 飞书 / Lark 远程审批
-
-Clawd 也可以通过飞书（中国）或 Lark（国际）的自建应用发送交互卡片。两者属于同一个远程审批通道，可在 **Settings → 远程审批 → 飞书 / Lark** 中选择平台。权限范围、用户 ID 差异和卡片语言见 [feishu-lark-remote-approval.md](feishu-lark-remote-approval.md)。
-
 ## 远程 SSH 模式（Claude Code, Codex CLI & Copilot CLI）
 
 <img src="../../assets/screenshot-remote-ssh.png" width="560" alt="远程 SSH — 来自树莓派的权限气泡">

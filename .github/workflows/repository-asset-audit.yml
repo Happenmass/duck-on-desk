@@ -22,7 +22,6 @@ jobs:
       - name: Test audit, macOS icon contracts, and spawned-hook isolation
         run: >-
           node --test
-          test/assert-no-retired-telegram-sidecar.test.js
           test/mac-dock-icon-runtime.test.js
           test/mac-dock-visibility.test.js
           test/mac-tray-icon-assets.test.js
@@ -33,10 +32,6 @@ jobs:
           test/tray-flash-icon.test.js
           test/preload-settings.test.js
           test/repository-asset-audit.test.js
-          test/telegram-legacy-retirement.test.js
-          test/telegram-migration-state.test.js
-          test/telegram-migration-controller.test.js
-          test/telegram-migration-user-data.test.js
           test/spawned-hook-helper.test.js
           test/claude-recovery-lease-hook.test.js
           test/codex-hook.test.js

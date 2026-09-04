@@ -77,7 +77,6 @@ function makeCtx(overrides = {}) {
     replyOpencodeFamilyPermission: [],
     dismissOpencodeFamilyPermissionResolvedExternally: [],
     resolved: [],
-    maybeStartRemoteApproval: [],
     addPendingPermission: [],
     removePendingPermission: [],
   };
@@ -104,7 +103,6 @@ function makeCtx(overrides = {}) {
       return 0;
     },
     resolvePermissionEntry: (entry, behavior, message) => calls.resolved.push({ entry, behavior, message }),
-    maybeStartRemoteApproval: (entry) => calls.maybeStartRemoteApproval.push(entry),
     addPendingPermission(entry) {
       calls.addPendingPermission.push(entry);
       this.pendingPermissions.push(entry);
@@ -170,7 +168,6 @@ function callPermissionPostThroughAutomation(body, mode, options = {}) {
       subscribeShortcuts: () => () => {},
       reportShortcutFailure() {},
       clearShortcutFailure() {},
-      maybeStartRemoteApproval: () => false,
       win: null,
       bubbleFollowPet: false,
       petHidden: false,
@@ -686,7 +683,6 @@ describe("server-route-permission POST", () => {
       },
     ]]);
     assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, [entry]);
-    assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, [entry]);
     assert.deepStrictEqual(res.ctx.calls.addPendingPermission, [entry]);
   });
 
@@ -709,7 +705,6 @@ describe("server-route-permission POST", () => {
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
     assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, []);
     assert.deepStrictEqual(res.ctx.calls.addPendingPermission, []);
-    assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, []);
   });
 
   it("silently drops disabled opencode permissions after ACK", async () => {
@@ -928,7 +923,6 @@ describe("server-route-permission POST", () => {
     assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, []);
     assert.deepStrictEqual(res.ctx.calls.addPendingPermission, []);
     assert.deepStrictEqual(res.ctx.calls.replyOpencodeFamilyPermission, []);
-    assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, []);
   });
 
   it("200-no-ops malformed lifecycle identity without a default session or a thrown validator error", async () => {
@@ -1069,7 +1063,6 @@ describe("server-route-permission POST", () => {
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
     assert.deepStrictEqual(res.ctx.calls.updateSession, []);
     assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, []);
-    assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, []);
     assert.deepStrictEqual(res.ctx.calls.addPendingPermission, []);
     assert.deepStrictEqual(res.recorder.map((item) => item.outcome).filter(Boolean), ["accepted"]);
   });
@@ -1127,7 +1120,6 @@ describe("server-route-permission POST", () => {
       },
     ]]);
     assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, [entry]);
-    assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, [entry]);
     assert.deepStrictEqual(res.recorder.map((item) => item.outcome).filter(Boolean), ["accepted"]);
   });
 
@@ -1174,25 +1166,7 @@ describe("server-route-permission POST", () => {
     assert.deepStrictEqual(res.recorder.map((item) => item.outcome).filter(Boolean), ["invalid-agent"]);
   });
 
-  it("starts remote approval only after a Claude bubble is shown", async () => {
-    const order = [];
-    const res = await callPermissionPost(JSON.stringify({
-      agent_id: "claude-code",
-      session_id: "sid",
-      tool_name: "Bash",
-      tool_input: { command: "npm test" },
-    }), {
-      ctx: {
-        showPermissionBubble: () => order.push("bubble"),
-        maybeStartRemoteApproval: () => order.push("remote"),
-      },
-    });
-
-    assert.strictEqual(res.statusCode, null);
-    assert.deepStrictEqual(order, ["bubble", "remote"]);
-  });
-
-  it("does not start remote approval when a Claude bubble fails", async () => {
+  it("destroys the connection when a Claude bubble fails", async () => {
     const res = await callPermissionPost(JSON.stringify({
       agent_id: "claude-code",
       session_id: "sid",
@@ -1208,130 +1182,10 @@ describe("server-route-permission POST", () => {
 
     assert.strictEqual(res.destroyed, true);
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
-    assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, []);
     assert.deepStrictEqual(res.ctx.calls.removePendingPermission.map((item) => item.reason), ["bubble-failed"]);
   });
 
-  it("routes to Telegram-only approval when permission bubbles are disabled but remote approval picks it up", async () => {
-    const res = await callPermissionPost(JSON.stringify({
-      agent_id: "claude-code",
-      session_id: "sid",
-      tool_name: "Bash",
-      tool_input: { command: "npm test" },
-      tool_use_id: "tool-1",
-    }), {
-      ctx: {
-        hideBubbles: true,
-        maybeStartRemoteApproval: () => true,
-      },
-    });
-
-    // Connection must stay open — it's answered later once Telegram responds.
-    assert.strictEqual(res.destroyed, false);
-    assert.strictEqual(res.statusCode, null);
-    assert.strictEqual(res.ctx.pendingPermissions.length, 1);
-    const entry = res.ctx.pendingPermissions[0];
-    assert.strictEqual(entry.bubble, null);
-    assert.strictEqual(entry.sessionId, localSessionKey("sid"));
-    assert.strictEqual(entry.agentId, "claude-code");
-    assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, []);
-    assert.deepStrictEqual(res.ctx.calls.updateSession, [[
-      localSessionKey("sid"),
-      "notification",
-      "PermissionRequest",
-      {
-        agentId: "claude-code",
-        profileId: "local",
-        rawSessionId: "sid",
-        sessionAutomationIdentity: {
-          eligible: false,
-          reason: "identity-verification-required",
-        },
-      },
-    ]]);
-  });
-
-  it("resolves a remote-only entry from the session override before sending a remote card", async () => {
-    let sawSessionOnly = false;
-    const res = await callPermissionPost(JSON.stringify({
-      agent_id: "claude-code",
-      session_id: "sid",
-      tool_name: "Bash",
-      tool_input: { command: "npm test" },
-      tool_use_id: "tool-session-auto",
-    }), {
-      ctx: {
-        hideBubbles: true,
-        maybeAutoResolveSessionPermission(entry, options) {
-          assert.strictEqual(this.pendingPermissions.includes(entry), true);
-          assert.deepStrictEqual(options, { sessionOnly: true });
-          sawSessionOnly = true;
-          this.resolvePermissionEntry(entry, "allow", "session automation");
-          this.removePendingPermission(entry, "resolved-by-session-automation");
-          entry.res.writeHead(200);
-          entry.res.end("allow");
-          return true;
-        },
-        maybeStartRemoteApproval: () => {
-          throw new Error("remote client must not run after session automation");
-        },
-      },
-    });
-
-    assert.strictEqual(sawSessionOnly, true);
-    assert.strictEqual(res.statusCode, 200);
-    assert.strictEqual(res.body, "allow");
-    assert.deepStrictEqual(res.ctx.pendingPermissions, []);
-    assert.deepStrictEqual(res.ctx.calls.updateSession, []);
-  });
-
-  it("keeps trusted remote profile metadata on Telegram-only approval entries", async () => {
-    const res = await callPermissionPost(JSON.stringify({
-      agent_id: "claude-code",
-      session_id: "same-raw",
-      host: "spoofed-by-hook",
-      tool_name: "Bash",
-      tool_input: { command: "npm test" },
-      tool_use_id: "tool-remote",
-    }), {
-      ctx: {
-        hideBubbles: true,
-        maybeStartRemoteApproval: () => true,
-      },
-      options: {
-        remoteProfile: {
-          profileId: "profile-a",
-          displayHost: "trusted-host",
-        },
-      },
-    });
-
-    const entry = res.ctx.pendingPermissions[0];
-    assert.strictEqual(
-      entry.sessionId,
-      makeSessionKey({ profileId: "profile-a", rawSessionId: "same-raw" }),
-    );
-    assert.strictEqual(entry.profileId, "profile-a");
-    assert.strictEqual(entry.rawSessionId, "same-raw");
-    assert.strictEqual(entry.host, "trusted-host");
-    assert.deepStrictEqual(res.ctx.calls.updateSession[0].slice(0, 3), [
-      entry.sessionId,
-      "notification",
-      "PermissionRequest",
-    ]);
-    assert.deepStrictEqual(res.ctx.calls.updateSession[0][3], {
-      agentId: "claude-code",
-      profileId: "profile-a",
-      rawSessionId: "same-raw",
-      host: "trusted-host",
-      sessionAutomationIdentity: {
-        eligible: false,
-        reason: "identity-verification-required",
-      },
-    });
-  });
-
-  it("falls back to destroying the connection when bubbles are disabled and remote approval has nowhere to send it", async () => {
+  it("destroys the connection when permission bubbles are disabled", async () => {
     const res = await callPermissionPost(JSON.stringify({
       agent_id: "claude-code",
       session_id: "sid",
@@ -1340,7 +1194,6 @@ describe("server-route-permission POST", () => {
     }), {
       ctx: {
         hideBubbles: true,
-        maybeStartRemoteApproval: () => false,
       },
     });
 
@@ -1352,13 +1205,7 @@ describe("server-route-permission POST", () => {
     assert.deepStrictEqual(res.ctx.calls.updateSession, []);
   });
 
-  it("keeps the per-agent gate authoritative over remote-only routing when both toggles are off", async () => {
-    // Recording stub, NOT a throwing one: tryRemoteOnlyApproval swallows
-    // exceptions from maybeStartRemoteApproval (started=false → destroy), so a
-    // throw here would leave every assertion below green even if the gate were
-    // bypassed. Returning true makes a bypass keep the connection open, which
-    // res.destroyed then catches — and the call log catches it directly.
-    const remoteCalls = [];
+  it("keeps the per-agent gate authoritative when both permission toggles are off", async () => {
     const res = await callPermissionPost(JSON.stringify({
       agent_id: "claude-code",
       session_id: "sid",
@@ -1368,17 +1215,11 @@ describe("server-route-permission POST", () => {
       ctx: {
         hideBubbles: true,
         // Stronger opt-out: the user disabled permission handling for this
-        // agent entirely — its requests must never reach a remote channel,
-        // even though the global bubble toggle alone would route there.
+        // agent entirely.
         isAgentPermissionsEnabled: () => false,
-        maybeStartRemoteApproval: (entry) => {
-          remoteCalls.push(entry);
-          return true;
-        },
       },
     });
 
-    assert.deepStrictEqual(remoteCalls, []);
     assert.strictEqual(res.destroyed, true);
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
     assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, []);
@@ -1401,79 +1242,10 @@ describe("server-route-permission POST", () => {
 
     assert.strictEqual(res.statusCode, 200);
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
-    assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, []);
     assert.deepStrictEqual(res.ctx.calls.sendPermissionResponse, [{
       behavior: "deny",
       message: "Elicitation bubble unavailable; answer in terminal",
     }]);
-  });
-
-  it("starts remote approval for Claude AskUserQuestion after the bubble is shown", async () => {
-    const res = await callPermissionPost(JSON.stringify({
-      agent_id: "claude-code",
-      session_id: "sid",
-      tool_name: "AskUserQuestion",
-      tool_input: { questions: [{ question: "Continue?" }] },
-    }));
-
-    assert.strictEqual(res.statusCode, null);
-    assert.strictEqual(res.ctx.pendingPermissions.length, 1);
-    const entry = res.ctx.pendingPermissions[0];
-    assert.strictEqual(entry.isElicitation, true);
-    assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, [entry]);
-    assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, [entry]);
-  });
-
-  it("keeps local Claude permission pending if remote approval startup throws", async () => {
-    const res = await callPermissionPost(JSON.stringify({
-      agent_id: "claude-code",
-      session_id: "sid",
-      tool_name: "Bash",
-      tool_input: { command: "npm test" },
-    }), {
-      ctx: {
-        maybeStartRemoteApproval: () => {
-          throw new Error("sidecar unavailable");
-        },
-      },
-    });
-
-    assert.strictEqual(res.statusCode, null);
-    assert.strictEqual(res.ctx.pendingPermissions.length, 1);
-    assert.match(res.ctx.calls.logs.join("\n"), /sidecar unavailable/);
-  });
-
-  it("does not start remote approval for elicitation, passthrough, DND, or opencode paths", async () => {
-    const cases = [
-      {
-        body: { tool_name: "ExitPlanMode", tool_input: { plan: "ship it" } },
-      },
-      {
-        body: { tool_name: "AskUserQuestion", tool_input: { questions: [] } },
-      },
-      {
-        body: { tool_name: "TaskList", tool_input: {} },
-        ctx: { PASSTHROUGH_TOOLS: new Set(["TaskList"]) },
-      },
-      {
-        body: { tool_name: "Bash", tool_input: { command: "npm test" } },
-        ctx: { doNotDisturb: true },
-      },
-      {
-        body: {
-          agent_id: "opencode",
-          tool_name: "Bash",
-          request_id: "req-1",
-          bridge_url: "http://127.0.0.1:1234",
-          bridge_token: "token",
-        },
-      },
-    ];
-
-    for (const item of cases) {
-      const res = await callPermissionPost(JSON.stringify(item.body), { ctx: item.ctx || {} });
-      assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, [], item.body.tool_name);
-    }
   });
 
 });
@@ -1788,27 +1560,7 @@ describe("server-route-permission POST — CC subagent requests (#451)", () => {
     assert.strictEqual(res.destroyed, true);
     assert.deepStrictEqual(res.ctx.pendingPermissions, []);
     assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, []);
-    assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, []);
     assert.deepStrictEqual(res.recorder.map((item) => item.outcome).filter(Boolean), ["accepted"]);
-  });
-
-  it("checks the subagent gate before the remote-only path", async () => {
-    const remoteCalls = [];
-    const res = await callPermissionPost(subagentBody(), {
-      ctx: {
-        hideBubbles: true,
-        isAgentSubagentPermissionsEnabled: () => false,
-        maybeStartRemoteApproval: (entry) => {
-          remoteCalls.push(entry);
-          return true;
-        },
-      },
-    });
-
-    assert.strictEqual(res.destroyed, true);
-    assert.deepStrictEqual(remoteCalls, []);
-    assert.deepStrictEqual(res.ctx.pendingPermissions, []);
-    assert.deepStrictEqual(res.ctx.calls.showPermissionBubble, []);
   });
 
   it("keeps bubbling main-thread requests while the subagent sub-gate is off", async () => {

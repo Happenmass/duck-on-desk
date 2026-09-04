@@ -26,8 +26,7 @@ const SIDEBAR_TAB_IDS = [
   "theme",
   "animOverrides",
   "shortcuts",
-  "telegram-approval",
-  "discord-presence",
+  "recap",
   "about",
 ];
 

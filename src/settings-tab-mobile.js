@@ -138,9 +138,7 @@
     });
   }
 
-  // Body of the "Mobile Web" channel card inside the Remote Approval tab
-  // (the card frame — header, status badge, collapse — is built by
-  // settings-tab-telegram-approval.js next to the other channels).
+  // Body of the "Mobile Web" channel card inside the Remote Approval tab.
   function renderChannelBody(container) {
     const section = document.createElement("div");
     section.className = "settings-tab-section";

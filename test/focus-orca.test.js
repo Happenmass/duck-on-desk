@@ -697,7 +697,7 @@ describe("scheduleOrcaPaneFocus", () => {
 });
 
 describe("scheduleOrcaPaneFocus outcome", () => {
-  // The switch used to be fire-and-forget, so Telegram Direct Send waited a fixed
+  // The switch used to be fire-and-forget, so callers waited a fixed
   // 1200ms and pressed Ctrl+V whatever happened. A cold CLI outlasts that wait,
   // and the reply then lands in whichever pane was previously active — reported as
   // delivered. The outcome below is what lets Direct Send wait for the real answer.
@@ -1010,7 +1010,7 @@ describe("Orca focus wiring", () => {
     // permission bubble's "go to terminal" is the gesture the whole feature exists
     // for. No fixture in test/permission-*.test.js sets a pane key, so deleting one
     // of these lines otherwise fails nothing. The snapshot entry is a whitelist:
-    // omit it there and the field silently never reaches Telegram Direct Send.
+    // omit it there and the field silently never reaches the focus request.
     const sites = [
       ["src/main.js", "if (entry.orcaPaneKey) focusEntry.orcaPaneKey = entry.orcaPaneKey;"],
       ["src/main.js", "orcaPaneKey: session.orcaPaneKey,"],

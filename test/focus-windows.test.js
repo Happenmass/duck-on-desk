@@ -490,7 +490,7 @@ describe("Windows terminal focus", () => {
   });
 
   it("holds the focus result until the Orca pane switch has answered", async () => {
-    // Telegram Direct Send acts on this promise. Resolving it on the raise alone
+    // Callers act on this promise. Resolving it on the raise alone
     // let it press Ctrl+V while the switch was still in flight, so the reply landed
     // in whichever pane was previously active and was still reported as delivered.
     const stdout = new EventEmitter();
@@ -537,7 +537,7 @@ describe("Windows terminal focus", () => {
         sessionId: "session-orca-gate",
         agentId: "claude-code",
         orcaPaneKey: "8ce1fff7-tab:9813824b-leaf",
-        requestSource: "telegram-direct-send",
+        requestSource: "dashboard-click",
       });
       const token = writes[0].match(/\$focusToken = '([^']+)'/)[1];
       stdout.emit("data", `__CLAWD_FOCUS_RESULT__ {"token":"${token}","reason":"orca-window","targetHwnd":"787468","foregroundHwnd":"787468","confirmed":true,"status":"confirmed"}\n`);
@@ -583,7 +583,7 @@ describe("Windows terminal focus", () => {
         cwd: "D:\\Repos\\Apps\\clawd-on-desk",
         sessionId: "session-plain",
         agentId: "claude-code",
-        requestSource: "telegram-direct-send",
+        requestSource: "dashboard-click",
       });
       const token = writes[0].match(/\$focusToken = '([^']+)'/)[1];
       stdout.emit("data", `__CLAWD_FOCUS_RESULT__ {"token":"${token}","reason":"parent-direct","targetHwnd":"111","foregroundHwnd":"111","confirmed":true,"status":"confirmed"}\n`);
@@ -627,14 +627,14 @@ describe("Windows terminal focus", () => {
         cwd: "D:\\repo-a",
         sessionId: "session-a",
         agentId: "claude-code",
-        requestSource: "telegram-direct-send",
+        requestSource: "dashboard-click",
       });
       const second = focus.focusTerminalWindow({
         sourcePid: 2222,
         cwd: "D:\\repo-b",
         sessionId: "session-b",
         agentId: "claude-code",
-        requestSource: "telegram-direct-send",
+        requestSource: "dashboard-click",
       });
 
       assert.equal(writes.length, 2);

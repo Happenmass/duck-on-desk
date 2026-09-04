@@ -359,7 +359,7 @@ test("remote trust prepares a revocable card before committing and resolving", a
   };
 
   const result = await h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client,
     cardHandle: Object.freeze({}),
   });
@@ -391,7 +391,7 @@ test("remote trust never commits when the preparing edit fails", async () => {
   };
 
   const result = await h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client,
     cardHandle: Object.freeze({}),
   });
@@ -417,7 +417,7 @@ test("remote trust never commits when the entry is resolved while the preparing 
     cancelSessionTrustCandidate: (_work, options) => cancelled.push(options.reason),
   };
   const request = h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client,
     cardHandle: Object.freeze({}),
   });
@@ -445,14 +445,14 @@ test("only one remote session-trust candidate may own an entry at a time", async
     renderActiveSessionTrust: () => true,
   };
   const firstRequest = h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client: firstClient,
     cardHandle: Object.freeze({}),
   });
   await Promise.resolve();
   let secondBeginCalls = 0;
   const secondResult = await h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "feishu",
+    clientName: "remote-b",
     client: {
       beginSessionTrustCandidate: () => {
         secondBeginCalls += 1;
@@ -487,7 +487,7 @@ test("remote trust never commits after session lifecycle cleanup during the prep
     cancelSessionTrustCandidate: (_work, options) => cancelled.push(options.reason),
   };
   const request = h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "feishu",
+    clientName: "remote-b",
     client,
     cardHandle: Object.freeze({}),
   });
@@ -520,7 +520,7 @@ test("remote trust rechecks identity and current grant after the preparing edit"
     cancelSessionTrustCandidate: (_work, options) => cancelledIdentity.push(options.reason),
   };
   const identityRequest = identityHarness.coordinator.requestRemoteSessionTrust(identityEntry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client: identityClient,
     cardHandle: Object.freeze({}),
   });
@@ -545,7 +545,7 @@ test("remote trust rechecks identity and current grant after the preparing edit"
     cancelSessionTrustCandidate: (_work, options) => cancelledGrant.push(options.reason),
   };
   const grantRequest = grantHarness.coordinator.requestRemoteSessionTrust(grantEntry, {
-    clientName: "feishu",
+    clientName: "remote-b",
     client: grantClient,
     cardHandle: Object.freeze({}),
   });
@@ -576,7 +576,7 @@ test("remote trust rechecks the live permission gate after the preparing edit", 
     cancelSessionTrustCandidate: (_work, options) => cancelled.push(options.reason),
   };
   const request = h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client,
     cardHandle: Object.freeze({}),
   });
@@ -610,7 +610,7 @@ test("remote trust leaves the permission pending when the runtime store is full"
   };
 
   const result = await h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client,
     cardHandle: Object.freeze({}),
   });
@@ -643,7 +643,7 @@ test("a failed active-card handoff rolls back to explicit off instead of global 
   };
 
   const result = await h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client,
     cardHandle: Object.freeze({}),
   });
@@ -676,7 +676,7 @@ test("an active-card handoff exception also fails closed to explicit off", async
   };
 
   const result = await h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "feishu",
+    clientName: "remote-b",
     client,
     cardHandle: Object.freeze({}),
   });
@@ -703,7 +703,7 @@ test("a failed best-effort active-card update does not roll back the committed g
   };
 
   const result = await h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client,
     cardHandle: Object.freeze({}),
   });
@@ -726,7 +726,7 @@ test("persistent revoke cancels an exact in-flight candidate without creating a 
     cancelSessionTrustCandidate: (_work, options) => cancelled.push(options.reason),
   };
   const request = h.coordinator.requestRemoteSessionTrust(entry, {
-    clientName: "telegram",
+    clientName: "remote-a",
     client,
     cardHandle: Object.freeze({}),
   });

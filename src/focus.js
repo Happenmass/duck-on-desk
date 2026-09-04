@@ -982,9 +982,9 @@ function scheduleTerminalTabFocus(editor, pidChain) {
 // Warm round-trips measure 330-420ms, but the first call after Orca has been idle
 // has been observed to blow past 2.5s — and a killed call is indistinguishable
 // from a missing pane unless it is reported separately, which is what
-// orca-cli-timeout is for. It is the ceiling on how long Telegram Direct Send
-// waits before giving up on the pane and falling back to the clipboard, so it is
-// generous on purpose: a slow answer is recoverable, a wrong paste is not.
+// orca-cli-timeout is for. It is the ceiling on how long a caller waits before
+// giving up on the pane, so it is generous on purpose: a slow answer is
+// recoverable, focusing the wrong pane is not.
 const ORCA_CLI_TIMEOUT_MS = 6000;
 // Keeps the CLI round-trip off the click's synchronous path. The window raise has
 // already been dispatched by then — it happens inside the generated script.
@@ -1093,8 +1093,8 @@ function raiseOrcaMacWindow(callback) {
 
 // Reports HOW the handle was found, not just that it was: an exact pane match
 // identifies one specific composer, while the worktree fallback is a best-effort
-// guess at the right project. Telegram Direct Send types into whatever is focused,
-// so it is only allowed to paste on the former.
+// guess at the right project, so callers that act on whatever ends up focused
+// are only allowed to proceed on the former.
 function orcaHandleResult(handle, match, failure) {
   return { handle: handle || null, match: handle ? match : null, failure: failure || null };
 }
@@ -1162,8 +1162,8 @@ function resolveOrcaHandle(orcaPaneKey, cwd, callback) {
 // left out because its only handle is WM_CLASS "orca", a substring match that also
 // hits GNOME's screen reader and OrcaSlicer.
 // Resolves — never rejects — with { ok, match, reason }. Callers that only want
-// the side effect can ignore it, but Telegram Direct Send has to wait for it:
-// pressing Ctrl+V before the switch lands types the reply into whichever pane was
+// the side effect can ignore it, but a caller that types into the focused pane
+// has to wait for it: acting before the switch lands hits whichever pane was
 // previously active, and a fixed delay cannot cover a cold CLI.
 function scheduleOrcaPaneFocus(orcaPaneKey, cwd) {
   if (!orcaPaneKey) return Promise.resolve({ ok: false, match: null, reason: "no-pane-key" });

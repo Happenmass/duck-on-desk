@@ -16,13 +16,6 @@ const SOUND_OVERRIDE_ASSET_EXTS = new Set([".mp3", ".wav", ".ogg", ".m4a", ".aac
 // #895: cleanup prompts must skip the default integrations, referencing the
 // prefs list rather than a second hardcoded copy of the ids.
 const CLEANUP_EXEMPT_AGENT_IDS = new Set(DEFAULT_INTEGRATION_INSTALLED_IDS);
-// These commands mutate trust material. They are main-process capabilities,
-// not renderer commands. Keeping the check at the IPC boundary means an
-// injected/compromised Settings renderer cannot mint a trusted binding or
-// claim that an approver was verified.
-const INTERNAL_SETTINGS_COMMANDS = new Set([
-  "feishuApproval.commitResolvedApprover",
-]);
 const SOUND_OVERRIDE_DIALOG_STRINGS = {
   en: { title: "Choose a sound file", filterName: "Audio" },
   zh: { title: "选择音效文件", filterName: "音频" },
@@ -202,10 +195,6 @@ function registerSettingsIpc(options = {}) {
   const getDoNotDisturb = options.getDoNotDisturb || (() => false);
   const getSoundMuted = options.getSoundMuted || (() => false);
   const getSoundVolume = options.getSoundVolume || (() => 1);
-  const saveFeishuApproverByEmail = requiredDependency(
-    options.saveFeishuApproverByEmail,
-    "saveFeishuApproverByEmail",
-  );
   const previewTextScale = options.previewTextScale
     || (() => ({ status: "error", message: "text scale preview unavailable" }));
   const endTextScalePreview = options.endTextScalePreview
@@ -228,7 +217,6 @@ function registerSettingsIpc(options = {}) {
   const aboutHeroSvgPath = options.aboutHeroSvgPath
     || path.join(__dirname, "..", "assets", "svg", "clawd-about-hero.svg");
   const disposers = [];
-  let currentFeishuApproverLookup = null;
 
   function handle(channel, listener) {
     ipcMain.handle(channel, listener);
@@ -255,73 +243,6 @@ function registerSettingsIpc(options = {}) {
     return isTrustedSettingsEvent(event)
       ? null
       : { status: "error", message: "untrusted settings sender" };
-  }
-
-  function removeFeishuLookupListeners(operation) {
-    if (!operation || !operation.sender || typeof operation.sender.removeListener !== "function") return;
-    operation.sender.removeListener("destroyed", operation.onDestroyed);
-    operation.sender.removeListener("render-process-gone", operation.onRenderProcessGone);
-  }
-
-  function abortCurrentFeishuApproverLookup(reason, sender = null) {
-    const operation = currentFeishuApproverLookup;
-    if (!operation || (sender && operation.sender !== sender)) return false;
-    if (!operation.controller.signal.aborted) {
-      operation.reason = reason;
-      operation.controller.abort();
-    }
-    return true;
-  }
-
-  function publicFeishuLookupResult(result) {
-    if (result && result.status === "ok") return { status: "ok" };
-    return result && typeof result.code === "string"
-      ? { status: "error", code: result.code }
-      : { status: "error" };
-  }
-
-  async function runFeishuApproverLookup(event, email) {
-    abortCurrentFeishuApproverLookup("superseded");
-    const operation = {
-      sender: event.sender,
-      controller: new AbortController(),
-      reason: "cancelled",
-      onDestroyed: null,
-      onRenderProcessGone: null,
-    };
-    operation.onDestroyed = () => {
-      if (currentFeishuApproverLookup === operation) {
-        abortCurrentFeishuApproverLookup("destroyed", operation.sender);
-      }
-    };
-    operation.onRenderProcessGone = operation.onDestroyed;
-    currentFeishuApproverLookup = operation;
-    if (typeof operation.sender.once === "function") {
-      operation.sender.once("destroyed", operation.onDestroyed);
-      operation.sender.once("render-process-gone", operation.onRenderProcessGone);
-    }
-
-    try {
-      let result;
-      try {
-        result = await saveFeishuApproverByEmail({
-          email,
-          signal: operation.controller.signal,
-        });
-      } catch {
-        result = { status: "error", code: "lookup-failed" };
-      }
-      if (operation.controller.signal.aborted) {
-        return {
-          status: "error",
-          code: operation.reason === "superseded" ? "lookup-superseded" : "lookup-cancelled",
-        };
-      }
-      return publicFeishuLookupResult(result);
-    } finally {
-      removeFeishuLookupListeners(operation);
-      if (currentFeishuApproverLookup === operation) currentFeishuApproverLookup = null;
-    }
   }
 
   handle("settings:get-snapshot", () => settingsController.getSnapshot());
@@ -405,9 +326,6 @@ function registerSettingsIpc(options = {}) {
     if (!payload || typeof payload !== "object") {
       return { status: "error", message: "settings:update payload must be { key, value }" };
     }
-    if (payload.key === "tgMigration") {
-      return { status: "error", message: "tgMigration is internal; use telegramMigration.dispatch" };
-    }
     // Permission automation is command-only: the command enforces confirmed
     // transitions for both automatic modes at the data layer.
     if (
@@ -455,26 +373,9 @@ function registerSettingsIpc(options = {}) {
     try { return themeLoader.getPreviewSoundUrl(); }
     catch { return null; }
   });
-  handle("settings:command", async (event, payload) => {
+  handle("settings:command", async (_event, payload) => {
     if (!payload || typeof payload !== "object") {
       return { status: "error", message: "settings:command payload must be { action, payload }" };
-    }
-    if (payload.action === "feishuApproval.saveApproverByEmail") {
-      const rejected = rejectUntrustedSettingsEvent(event);
-      if (rejected) return rejected;
-      const email = payload.payload && typeof payload.payload === "object"
-        ? payload.payload.email
-        : undefined;
-      return runFeishuApproverLookup(event, email);
-    }
-    if (payload.action === "feishuApproval.cancelApproverLookup") {
-      const rejected = rejectUntrustedSettingsEvent(event);
-      if (rejected) return rejected;
-      abortCurrentFeishuApproverLookup("cancelled", event.sender);
-      return { status: "ok" };
-    }
-    if (INTERNAL_SETTINGS_COMMANDS.has(payload.action)) {
-      return { status: "error", message: `settings command "${payload.action}" is internal` };
     }
     return settingsController.applyCommand(payload.action, payload.payload);
   });
@@ -872,7 +773,6 @@ function registerSettingsIpc(options = {}) {
 
   return {
     dispose() {
-      abortCurrentFeishuApproverLookup("destroyed");
       while (disposers.length) {
         const dispose = disposers.pop();
         try { dispose(); } catch {}

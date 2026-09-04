@@ -49,7 +49,7 @@ test("a newer tray balloon revokes the previous click owner", () => {
   let secondClicks = 0;
 
   assert.strictEqual(owner.show(tray, {
-    title: "Telegram",
+    title: "Claude Code",
     content: "migrate",
     onClick: () => { firstClicks += 1; },
   }), true);

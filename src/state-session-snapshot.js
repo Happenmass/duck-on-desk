@@ -317,8 +317,7 @@ function buildSessionSnapshotEntry(id, session, sessionAliases = {}, options = {
     wtHwnd: (session && session.wtHwnd) || null,
     editor: (session && session.editor) || null,
     // Beside editor because it feeds the same decision: both mark a host whose
-    // terminal-tab switch lands after the window focus is confirmed, which
-    // src/telegram-direct-send.js has to wait out before pasting.
+    // terminal-tab switch lands after the window focus is confirmed.
     orcaPaneKey: (session && session.orcaPaneKey) || null,
     canFocus: focusTarget.canFocus === true,
     focusTarget: focusTarget.type ? { type: focusTarget.type, url: focusTarget.url || null } : null,

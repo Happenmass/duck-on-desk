@@ -1,10 +1,9 @@
 "use strict";
 
-// Redact common secret shapes from text that is about to leave the desktop for
-// a remote approval channel (Telegram, Feishu). Shared by the desktop approval
-// summary builder (permission.js) and the channel renderers so that an agent
-// which quotes a key in a permission summary OR an elicitation question/option
-// can't leak it into a remote chat log.
+// Redact common secret shapes from text that is about to be displayed or
+// copied out of the desktop app (e.g. an update error the user pastes into a
+// bug report), so a key quoted by an agent or a failing request never leaves
+// with it.
 //
 // Rendering-layer only: callers apply this to the *displayed* string, never to
 // the value used as an answer-map key, so redaction can't desync answer
@@ -19,24 +18,10 @@
 // net, not a license to route real secrets through a chat channel.
 function redactSecrets(value) {
   let text = typeof value === "string" ? value : String(value == null ? "" : value);
-  // Telegram bot token (digits:base64-ish).
-  text = text.replace(/\b\d+:[A-Za-z0-9_-]{20,}\b/g, "<redacted:telegram-token>");
   // Authorization / Proxy-Authorization header: whole scheme + credential. This
   // is the ONLY place Bearer/Basic is redacted, so a bare "the bearer" / "basic
   // auth" in ordinary prose is never touched.
   text = text.replace(/\b(?:proxy-)?authorization\b\s*[:=]\s*[^\r\n]*/gi, "authorization=<redacted>");
-  // A Slack Incoming Webhook URL is itself the credential — anyone holding it
-  // can post to that channel. This matters more than usual for the Slack
-  // notifier, which posts *into* the very channel the URL unlocks, so an agent
-  // quoting it in a summary would publish the key to the people it protects
-  // against. Slack may issue paths beyond the currently documented services/
-  // workflows forms, and local captures can preserve an explicit port, so any
-  // non-empty path on the exact host is credential-shaped. The bare host stays
-  // readable so setup instructions survive.
-  text = text.replace(
-    /\bhttps?:\/\/hooks\.slack\.com(?::\d{1,5})?\/[^\s<>"']+/gi,
-    "<redacted:slack-webhook>",
-  );
   // High-confidence provider token shapes (explicit prefixes only).
   text = text.replace(/\bsk-(?:proj-|ant-)?[A-Za-z0-9_-]{12,}\b/g, "<redacted:token>");
   text = text.replace(/\bxox[abprs]-[A-Za-z0-9-]{10,}\b/g, "<redacted:token>");
@@ -59,7 +44,7 @@ function redactSecrets(value) {
     "$1=<redacted>",
   );
   // General long numeric IDs.
-  text = text.replace(/\b(?:telegram:)?-?\d{7,}(?::\d+){0,2}\b/g, "<redacted:id>");
+  text = text.replace(/\b-?\d{7,}(?::\d+){0,2}\b/g, "<redacted:id>");
   return text;
 }
 

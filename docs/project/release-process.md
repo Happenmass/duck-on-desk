@@ -21,8 +21,7 @@ setup, local verification, and the exact GitHub Actions secret names, follow
 [`docs/guides/release-signing.md`](../guides/release-signing.md). Never commit a
 `.p12`, `.p8`, certificate password, or decoded secret file.
 
-Manual workflow dispatch builds Windows, macOS, and Linux artifacts, checks
-each unpacked resources tree for retired Telegram sidecar binaries/source, and
+Manual workflow dispatch builds Windows, macOS, and Linux artifacts and
 gates every package on its target-native Koffi payload, a packaged positive-call
 smoke, and updater metadata matching both the generated artifacts and the exact
 `package.json` release version. It then uploads
@@ -79,8 +78,6 @@ Before launching:
 - Confirm packaged resources include `app.asar.unpacked/hooks`,
   `app.asar.unpacked/agents`, `app.asar.unpacked/extensions`,
   and `app.asar.unpacked/themes`.
-- Confirm the retirement assertion passes and neither
-  `sidecars/cc-connect-clawd` nor any `cc-connect-clawd(.exe)` exists.
 - Confirm Windows artifacts are architecture-specific x64 / ARM64 installers,
   not a universal NSIS installer.
 - Download the native-package, Koffi prune/smoke, and updater metadata manifests.
@@ -89,9 +86,6 @@ Before launching:
   listed artifact filename identify `1.0.0`.
 - For migration smoke, install v0.16.0 first and save a copy of the old
   `clawd-prefs.json` before upgrading.
-- For legacy Feishu/Lark migration smoke, enable remote approval in v0.15.0 with saved
-  App credentials and an approver before upgrading. Keep the old
-  `feishu-approval.env` alongside the prefs copy.
 - For Reasonix smoke, prepare a machine with Reasonix initialized so
   `<Reasonix home>/` exists (`%APPDATA%\reasonix` on Windows,
   `~/.reasonix` on macOS/Linux). A skipped install because Reasonix is missing
@@ -208,23 +202,9 @@ Required all-platform checks:
   deploy/cleanup must complete without shell `bad substitution`. Confirm
   revoke-all invalidates both current and previous routing nonces, and a normal
   edit of a profile-isolated profile preserves its runtime mode/key/layout.
-- Upgrade a profile that used the retired Telegram sidecar. Confirm the one-time
-  startup reminder points to Settings -> Remote Approval, saved token/recipient
-  values remain, and approval plus completion notifications stay disabled until
-  a real native verification callback succeeds. Failure/timeout must not restart
-  the retired sidecar.
-- Upgrade the prepared legacy v0.15.0 Feishu/Lark profile. Confirm the legacy setup
-  remains fail-closed, a one-time startup warning points to Remote Approval,
-  and Doctor reports the binding problem. Re-save the selected platform and
-  App ID/App Secret, then re-save the approver; restart and confirm the client
-  becomes ready without another warning.
 - Install the DeepSeek Harness bridge with its managed root reached through a
   filesystem symlink. Confirm install and Doctor both report the verified
   generation as healthy; foreign same-name packages must still fail closed.
-- Enable Discord Rich Presence without animation mirroring, then opt into the
-  animation mirror. Confirm coarse status text remains stable, supported Clawd
-  animations use the repository-hosted GIFs, and disabling the option returns
-  to state-based presence.
 
 Recommended all-platform checks:
 
@@ -242,8 +222,6 @@ Recommended all-platform checks:
   permission request still shows a bubble, by design.
 - Settings -> About -> Check for updates completes without an error.
 - Update labels never show a duplicated prefix such as `vv1.0.0`.
-- Telegram approval cards show the final outcome for decisions made on Telegram
-  and for approvals resolved elsewhere.
 - Scan the mobile PWA pairing URL on a phone and confirm session cards appear.
 - Regenerate or reset the mobile token and confirm the phone can reconnect with
   the new token.
@@ -308,14 +286,6 @@ All required Windows items must pass before publishing the draft. Required macOS
 and Linux items must pass when those machines are available. If any required
 item fails, fix it and create a new draft release; do not publish a known-bad
 draft.
-
-## Retired Telegram Sidecar Guard
-
-The legacy Telegram sidecar was removed in v0.14.0. Release builds must run
-`scripts/assert-no-retired-telegram-sidecar.js` against every unpacked target:
-Windows x64/arm64, macOS x64/arm64, and Linux x64. The assertion scans both the
-outer resources tree and the real `app.asar`; a retired executable or runtime
-module is a hard failure.
 
 ## WinGet Publishing
 

@@ -41,7 +41,6 @@ describe("doctor aggregate checks", () => {
       checkLocalServer: () => ({ id: "local-server", status: "pass", level: null }),
       checkAgentIntegrations: () => ({ id: "agent-integrations", status: "pass", level: null, details: [] }),
       checkPermissionBubblePolicy: () => ({ id: "permission-bubble-policy", status: "pass", level: null }),
-      checkFeishuApproval: () => ({ id: "feishu-approval", status: "pass", level: null }),
       checkThemeHealth: () => ({ id: "theme-health", status: "pass", level: null }),
     });
 
@@ -51,16 +50,13 @@ describe("doctor aggregate checks", () => {
       "local-server",
       "agent-integrations",
       "permission-bubble-policy",
-      "feishu-approval",
       "theme-health",
     ]);
   });
 
-  it("surfaces unreadable preferences as critical and legacy Feishu provenance as warning", () => {
+  it("surfaces unreadable preferences as critical", () => {
     const result = runDoctorChecks({
       prefsReadFailure: true,
-      prefs: { feishuApproval: { enabled: true } },
-      feishuApprovalSecrets: { appId: "cli_a1234567890", appSecret: "secret" },
       checkLocalServer: () => ({ id: "local-server", status: "pass" }),
       checkAgentIntegrations: () => ({ id: "agent-integrations", status: "pass" }),
       checkPermissionBubblePolicy: () => ({ id: "permission-bubble-policy", status: "pass" }),
@@ -68,13 +64,9 @@ describe("doctor aggregate checks", () => {
     });
 
     const prefs = result.checks.find((check) => check.id === "prefs-readability");
-    const feishu = result.checks.find((check) => check.id === "feishu-approval");
     assert.strictEqual(prefs.status, "critical");
-    assert.strictEqual(feishu.status, "warning");
-    assert.strictEqual(feishu.reason, "credential-provenance-unknown");
-    assert.match(feishu.detail, /save App ID\/App Secret again/i);
     assert.strictEqual(result.overall.status, "critical");
-    assert.strictEqual(result.overall.issueCount, 2);
+    assert.strictEqual(result.overall.issueCount, 1);
   });
 
   it("surfaces a recovered malformed prefs snapshot as non-authoritative", () => {
@@ -83,7 +75,6 @@ describe("doctor aggregate checks", () => {
       checkLocalServer: () => ({ id: "local-server", status: "pass" }),
       checkAgentIntegrations: () => ({ id: "agent-integrations", status: "pass" }),
       checkPermissionBubblePolicy: () => ({ id: "permission-bubble-policy", status: "pass" }),
-      checkFeishuApproval: () => ({ id: "feishu-approval", status: "pass" }),
       checkThemeHealth: () => ({ id: "theme-health", status: "pass" }),
     });
     const prefs = result.checks.find((check) => check.id === "prefs-readability");
@@ -100,7 +91,6 @@ describe("doctor aggregate checks", () => {
       checkLocalServer: () => ({ id: "local-server", status: "pass" }),
       checkAgentIntegrations: () => ({ id: "agent-integrations", status: "pass" }),
       checkPermissionBubblePolicy: () => ({ id: "permission-bubble-policy", status: "pass" }),
-      checkFeishuApproval: () => ({ id: "feishu-approval", status: "pass" }),
       checkThemeHealth: () => ({ id: "theme-health", status: "pass" }),
     });
     const prefs = result.checks.find((check) => check.id === "prefs-readability");

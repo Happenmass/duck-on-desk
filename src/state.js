@@ -1562,7 +1562,7 @@ function scheduleClaudeTranscriptCompletionProbe(sessionId, transcriptPath) {
 
 // Debounce window elapsed with no forward progress → the turn really ended.
 // Replay the real Stop the gate withheld: append a Stop event (so the badge →
-// "done" and the Telegram completion fires exactly once, re-asserting a Stop
+// "done" and the completion notification fires exactly once, re-asserting a Stop
 // tail over any Notification that landed during the window), settle to idle,
 // and only now flip awaitingInputSinceStop. Then celebrate, unless a
 // permission lock is holding the pet.
@@ -1616,7 +1616,7 @@ function promoteCompletion(sessionId, completionPayload = undefined) {
     setState(display, getSvgOverride(display));
     return true;
   }
-  // The completion's data (done badge + Telegram push) already landed via the
+  // The completion's data (done badge + notification) already landed via the
   // snapshot above. The celebration is visual-only, so let setState()'s
   // priority guard decide: if a higher-priority visual is queued — possibly
   // from ANOTHER session (e.g. an error) — it must win. We must NOT clear the
@@ -2080,7 +2080,7 @@ function updateSession(sessionId, state, event, opts = {}) {
       // resurrected as a false "done" once stale-cleanup flips the session to
       // idle, and (b) be buried by a follow-up Notification, losing the real
       // completion. With no tail the badge stays "running" (no celebrate, no
-      // done, no Telegram push). promoteCompletion replays a real Stop if/when
+      // done, no completion notification). promoteCompletion replays a real Stop if/when
       // the quiet window confirms the turn actually ended.
       state = "working";
       event = null;

@@ -131,6 +131,6 @@ test("release and Wayland workflows gate the final AppImage before artifact hand
   assert.doesNotMatch(waylandBuild, /^\s+if: always\(\)\s*$/m);
   assert.match(
     releaseJob,
-    /needs: \[build-windows, build-mac, build-linux, native-package-audit\]/,
+    /needs: \[build-windows, build-mac, build-linux\]/,
   );
 });

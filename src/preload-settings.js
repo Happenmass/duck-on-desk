@@ -4,8 +4,6 @@
 //
 // Surface: window.settingsAPI
 //
-//   discordDefaultAppIdPresent          boolean — a default Discord App ID is
-//                                       hardcoded (maintainer-shipped)
 //   getSnapshot()                       Promise<snapshot>
 //   getPetTintOptions()                 Promise<Array<{id, labelKey}>>
 //   getPetAccessoryOptions()            Promise<Array<{id, labelKey}>>
@@ -31,19 +29,9 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
-// A sandboxed preload (Electron's default since 20) may only require "electron"
-// plus a few Node builtins — never an app module. The "is a default Discord App
-// ID baked in?" flag is therefore injected by value from main, via
-// webPreferences.additionalArguments, and read off process.argv here.
-const DISCORD_DEFAULT_APP_ID_FLAG = "--discord-default-app-id-present=";
-const discordDefaultAppIdArg = process.argv.find((a) => a.startsWith(DISCORD_DEFAULT_APP_ID_FLAG));
-const discordDefaultAppIdPresent =
-  !!discordDefaultAppIdArg && discordDefaultAppIdArg.slice(DISCORD_DEFAULT_APP_ID_FLAG.length) === "1";
-
 const listeners = new Set();
 const shortcutFailureListeners = new Set();
 const shortcutRecordKeyListeners = new Set();
-const remoteApprovalStatusListeners = new Set();
 const textScaleContextListeners = new Set();
 const agentActivityListeners = new Set();
 const recapChangedListeners = new Set();
@@ -63,11 +51,6 @@ ipcRenderer.on("shortcut-failures-changed", (_event, payload) => {
 ipcRenderer.on("shortcut-record-key", (_event, payload) => {
   for (const cb of shortcutRecordKeyListeners) {
     try { cb(payload); } catch (err) { console.warn("shortcut record listener threw:", err); }
-  }
-});
-ipcRenderer.on("remoteApproval:status-changed", (_event, payload) => {
-  for (const cb of remoteApprovalStatusListeners) {
-    try { cb(payload); } catch (err) { console.warn("remote approval status listener threw:", err); }
   }
 });
 // Fired by the settings-window runtime whenever the window's effective text
@@ -102,9 +85,6 @@ ipcRenderer.on("settings:select-tab", (_event, tab) => {
 });
 
 contextBridge.exposeInMainWorld("settingsAPI", {
-  // Capability flag: true when a default Discord App ID is hardcoded (maintainer-
-  // shipped), so the presence enable switch can be ready without a user-saved App ID.
-  discordDefaultAppIdPresent,
   getSnapshot: () => ipcRenderer.invoke("settings:get-snapshot"),
   queryRecap: (period) => ipcRenderer.invoke("settings:recap-query", period),
   clearRecap: () => ipcRenderer.invoke("settings:recap-clear"),
@@ -204,11 +184,6 @@ contextBridge.exposeInMainWorld("settingsAPI", {
     if (typeof cb !== "function") return () => {};
     shortcutRecordKeyListeners.add(cb);
     return () => shortcutRecordKeyListeners.delete(cb);
-  },
-  onRemoteApprovalStatusChanged: (cb) => {
-    if (typeof cb !== "function") return () => {};
-    remoteApprovalStatusListeners.add(cb);
-    return () => remoteApprovalStatusListeners.delete(cb);
   },
   onUpdateCheckStatus: (cb) => {
     if (typeof cb !== "function") return () => {};

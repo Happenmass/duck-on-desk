@@ -54,7 +54,6 @@ jobs:
       - name: Build the AppImage from this ref
         run: |
           npx electron-builder --linux AppImage --publish never
-          node scripts/assert-no-retired-telegram-sidecar.js --resources-root dist/linux-unpacked/resources --output dist/telegram-retirement-manifest.json
           ls -l dist/*.AppImage
 
       - name: Verify final AppImage AppRun search paths

@@ -311,7 +311,7 @@ const NON_COLLAPSIBLE = [
 "start": "node launch.js"
 ```
 
-CodeWhale 集成本身不需要改动 `npm start`。Telegram legacy sidecar 已退役，源码启动不再预检查、下载或暂存该二进制。
+CodeWhale 集成本身不需要改动 `npm start`。
 
 ### 5.9 Doctor / Cleanup
 

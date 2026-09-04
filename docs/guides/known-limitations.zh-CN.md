@@ -6,8 +6,7 @@
 |------|------|
 | **Codex CLI：终端跳转是 best-effort** | `request_user_input` 卡片会在 official hook / session metadata 能定位本地窗口时跳回 Codex。仅靠 JSONL 可能拿不到可用终端 PID；Remote SSH 会话也无法从本机聚焦远端窗口，此时卡片只作为只读提醒。 |
 | **Codex CLI：hook 覆盖仍不完整** | Official hooks 已覆盖实时状态和 `PermissionRequest` 观察 / intercept 模式，但不是所有运行时信号都有 hook。Clawd 会保留 JSONL 轮询，用于 hook 被禁用的会话，以及 web search、context compaction、turn aborted 等 fallback-only 状态 / metadata 事件；这些事件仍可能有轮询延迟。审批不再从 JSONL 猜测，必须依赖 official `PermissionRequest` hook。 |
-| **Codex CLI：用户提问卡片只读** | Codex official hook 事件集目前不包含 `request_user_input`。Clawd 从 JSONL transcript 观察它，因此提醒可能有一个轮询周期的延迟。选项和自由输入仍在 Codex 原生界面完成；Clawd 不注入按键，也不会把这些问题变成 Telegram / 飞书可操作审批。 |
-| **Copilot CLI：暂无 Telegram 远程审批** | Copilot 的本地权限气泡已可用，v1 接入时主动排除了 Telegram 远程审批。`edit` 工具的 full diff 是最坏 payload，必须先做一套安全摘要 formatter 才能走桥接发出去。本地气泡链路不受影响。 |
+| **Codex CLI：用户提问卡片只读** | Codex official hook 事件集目前不包含 `request_user_input`。Clawd 从 JSONL transcript 观察它，因此提醒可能有一个轮询周期的延迟。选项和自由输入仍在 Codex 原生界面完成；Clawd 不注入按键，也不会把这些问题变成可操作审批。 |
 | **Gemini CLI：无权限气泡** | Gemini 仍在终端内处理工具审批。Clawd 会观察 Gemini hook 事件，但除非 Gemini 未来提供兼容的阻塞式审批协议，否则不显示权限气泡。 |
 | **Antigravity CLI：无权限气泡（仅状态同步）** | Clawd **不会为 agy 弹任何权限气泡**。所有 Allow / Deny / Always-allow 决策都在 agy 自己的 5 选项终端菜单里完成（同意 / 同意并持久 / 拒绝 / 永远拒绝 / 永远拒绝并持久）。想要永久规则就在 agy 菜单里选择标有「Persist to settings.json」的选项 —— 规则落到 `~/.gemini/antigravity-cli/settings.json`，你也可以在那里清理。dogfooding 显示在它之上再加 Clawd bubble 会让单次任务变 8-10 次确认，因此设计上让 agy 完全拥有权限流程。桌宠仍通过 PreInvocation / PostToolUse / Stop hook 反映 working / idle / attention 状态。 |
 | **Cursor Agent：无权限气泡** | Cursor 在 hook 的 stdout JSON 里处理权限，而不是走 HTTP 阻塞式审批，Clawd 无法接管这条审批链路。 |

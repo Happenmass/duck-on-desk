@@ -28,22 +28,6 @@ const { isPlainObject } = require("./theme-loader");
 const { normalizeShortcuts, getDefaultShortcuts } = require("./shortcut-actions");
 const { isValidDisplaySnapshot } = require("./work-area");
 const {
-  cloneDefaultTelegramApproval,
-  normalizeTelegramApproval,
-} = require("./telegram-approval-settings");
-const {
-  cloneDefaultDiscordPresence,
-  normalizeDiscordPresence,
-} = require("./discord-presence-settings");
-const {
-  cloneDefaultFeishuApproval,
-  normalizeFeishuApproval,
-} = require("./feishu-approval-settings");
-const {
-  cloneDefaultSlackNotify,
-  normalizeSlackNotify,
-} = require("./slack-notify-settings");
-const {
   NOTIFICATION_DEFAULT_SECONDS,
   UPDATE_DEFAULT_SECONDS,
   PERMISSION_DEFAULT_SECONDS,
@@ -165,13 +149,6 @@ const SCHEMA = {
   // per distinct breakage, not every launch. See codex-hook-health.js.
   codexHookHealthNotifyEnabled: { type: "boolean", default: true },
   codexHookHealthLastNotified: { type: "string", default: "" },
-  // Edge-triggered startup nudge for users whose retired Telegram sidecar
-  // requires native verification. Cleared after native activation or an
-  // explicit switch-off so a future migration requirement can warn once.
-  telegramMigrationLastNotified: { type: "string", default: "" },
-  // One-time upgrade nudge for Feishu/Lark credentials saved before platform
-  // and approver provenance binding existed. Cleared after repair or disable.
-  feishuApprovalMigrationLastNotified: { type: "string", default: "" },
   // System-backed: actual truth lives in OS login items / autostart files.
   // `openAtLoginHydrated` starts false; main.js's startup hydrate helper imports
   // the current system value into prefs on first run, then flips this flag.
@@ -449,54 +426,6 @@ const SCHEMA = {
     defaultFactory: () => ({}),
     normalize: normalizeSessionAliases,
   },
-  tgApproval: {
-    type: "object",
-    defaultFactory: () => cloneDefaultTelegramApproval(),
-    normalize: normalizeTelegramApproval,
-  },
-  discordPresence: {
-    type: "object",
-    defaultFactory: () => cloneDefaultDiscordPresence(),
-    normalize: normalizeDiscordPresence,
-  },
-  feishuApproval: {
-    type: "object",
-    defaultFactory: () => cloneDefaultFeishuApproval(),
-    normalize: normalizeFeishuApproval,
-  },
-  slackNotify: {
-    type: "object",
-    defaultFactory: () => cloneDefaultSlackNotify(),
-    normalize: normalizeSlackNotify,
-  },
-  // v0.9.0 migration state. transport defaults to null (undecided) so v0.8.x
-  // users upgrading without this key fall onto the "detect legacy artefacts"
-  // path inside the migration reducer.
-  tgMigration: {
-    type: "object",
-    defaultFactory: () => ({
-      transport: null,
-      nativeVerifiedAt: null,
-      legacyEnabled: null,
-      migration: { importedAt: null, importError: null },
-    }),
-    normalize: (value) => {
-      if (!value || typeof value !== "object") {
-        return { transport: null, nativeVerifiedAt: null, legacyEnabled: null, migration: { importedAt: null, importError: null } };
-      }
-      return {
-        transport: ["legacy", "native", "off"].includes(value.transport) ? value.transport : null,
-        nativeVerifiedAt: typeof value.nativeVerifiedAt === "number" ? value.nativeVerifiedAt : null,
-        legacyEnabled: typeof value.legacyEnabled === "boolean" ? value.legacyEnabled : null,
-        migration: value.migration && typeof value.migration === "object"
-          ? {
-              importedAt: typeof value.migration.importedAt === "number" ? value.migration.importedAt : null,
-              importError: typeof value.migration.importError === "string" ? value.migration.importError : null,
-            }
-          : { importedAt: null, importError: null },
-      };
-    },
-  },
   // Background update-check toggle. When true, the scheduler in updater.js
   // runs a quiet GitHub discovery on a 12-hour cycle (packaged builds only).
   // Default on per #329.
@@ -738,13 +667,9 @@ function migrate(raw) {
     }
     out.version = 7;
   }
-  // v7 -> v8: bare Telegram completion pings now default off. There was no
-  // UI for this flag, so a persisted true is overwhelmingly the old default
-  // rather than an explicit user opt-in.
+  // v7 -> v8: retired a completion-ping default that lived on a since-removed
+  // integration. Nothing left to rewrite; the bump keeps the chain contiguous.
   if (out.version < 8) {
-    if (out.tgApproval && typeof out.tgApproval === "object") {
-      out.tgApproval.notifyOnComplete = false;
-    }
     out.version = 8;
   }
   // v8 -> v9: introduce autoApproveAllPermissions ("auto-pilot"). Force the

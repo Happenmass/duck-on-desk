@@ -27,10 +27,6 @@ jobs:
           node-version-file: .nvmrc
       - run: npm run verify:release
 
-  native-package-audit:
-    needs: validate-release
-    uses: ./.github/workflows/telegram-retirement-package-audit.yml
-
   build-windows:
     needs: validate-release
     timeout-minutes: 60
@@ -45,12 +41,8 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.artifact_validation_only }}
       - name: Run package validation tests
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_validation_only }}
-        run: node --test test/assert-no-retired-telegram-sidecar.test.js test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/mobile-preview-lifecycle.test.js test/mobile-preview-server.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/telegram-legacy-retirement.test.js test/telegram-migration-state.test.js test/telegram-migration-controller.test.js test/telegram-migration-user-data.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
+        run: node --test test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/mobile-preview-lifecycle.test.js test/mobile-preview-server.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
       - run: npx electron-builder --win --publish never
-      - name: Assert retired Telegram sidecar is absent
-        run: |
-          node scripts/assert-no-retired-telegram-sidecar.js --resources-root dist/win-unpacked/resources --output dist/telegram-retirement-manifests/windows-x64.json
-          node scripts/assert-no-retired-telegram-sidecar.js --resources-root dist/win-arm64-unpacked/resources --output dist/telegram-retirement-manifests/windows-arm64.json
       - name: Audit packaged native payloads
         run: |
           node scripts/audit-packaged-native.js --app-root dist/win-unpacked --target windows-x64 --output dist/native-package-manifests/windows-x64.json
@@ -66,13 +58,6 @@ jobs:
           path: |
             dist/*.exe
             dist/latest.yml
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: windows-telegram-retirement-manifests
-          path: |
-            dist/telegram-retirement-manifests/*.json
-          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -98,7 +83,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.artifact_validation_only }}
       - name: Run package validation tests
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_validation_only }}
-        run: node --test test/assert-no-retired-telegram-sidecar.test.js test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/mobile-preview-lifecycle.test.js test/mobile-preview-server.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/telegram-legacy-retirement.test.js test/telegram-migration-state.test.js test/telegram-migration-controller.test.js test/telegram-migration-user-data.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
+        run: node --test test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/mobile-preview-lifecycle.test.js test/mobile-preview-server.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
       - name: Prepare macOS signing credentials
         id: mac-signing
         shell: bash
@@ -377,10 +362,6 @@ jobs:
             rm -rf -- "$active_archive"
             active_archive=""
           done
-      - name: Assert retired Telegram sidecar is absent
-        run: |
-          node scripts/assert-no-retired-telegram-sidecar.js --resources-root "dist/mac/Clawd on Desk.app/Contents/Resources" --output dist/telegram-retirement-manifests/darwin-x64.json
-          node scripts/assert-no-retired-telegram-sidecar.js --resources-root "dist/mac-arm64/Clawd on Desk.app/Contents/Resources" --output dist/telegram-retirement-manifests/darwin-arm64.json
       - name: Audit packaged native payloads
         run: |
           node scripts/audit-packaged-native.js --app-root "dist/mac/Clawd on Desk.app" --target darwin-x64 --output dist/native-package-manifests/darwin-x64.json
@@ -430,13 +411,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mac-telegram-retirement-manifests
-          path: |
-            dist/telegram-retirement-manifests/*.json
-          if-no-files-found: warn
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
           name: mac-native-package-audit
           path: |
             dist/koffi-prune-manifests/*.json
@@ -462,13 +436,10 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.artifact_validation_only }}
       - name: Run package validation tests
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_validation_only }}
-        run: xvfb-run -a node --test test/assert-no-retired-telegram-sidecar.test.js test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/mobile-preview-lifecycle.test.js test/mobile-preview-server.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/telegram-legacy-retirement.test.js test/telegram-migration-state.test.js test/telegram-migration-controller.test.js test/telegram-migration-user-data.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
+        run: xvfb-run -a node --test test/after-pack-koffi.test.js test/audit-packaged-native.test.js test/koffi-lockfile.test.js test/native-package-target.test.js test/package-koffi-smoke.test.js test/package-build-config.test.js test/mobile-preview-lifecycle.test.js test/mobile-preview-server.test.js test/pet-window-runtime.test.js test/topmost-runtime.test.js test/verify-updater-metadata.test.js test/win-foreground-terminal.test.js test/win-fullscreen-detect.test.js test/win-hit-window-activation.test.js test/appimage-apprun.test.js test/dependency-security-floor.test.js
       - run: npx electron-builder --linux --publish never
       - name: Verify final AppImage AppRun search paths
         run: node scripts/verify-appimage-apprun.js --artifact dist/*.AppImage --output dist/appimage-apprun-manifests/linux-x64.json
-      - name: Assert retired Telegram sidecar is absent
-        run: |
-          node scripts/assert-no-retired-telegram-sidecar.js --resources-root dist/linux-unpacked/resources --output dist/telegram-retirement-manifests/linux-x64.json
       - name: Audit packaged native payloads
         run: node scripts/audit-packaged-native.js --app-root dist/linux-unpacked --target linux-x64 --output dist/native-package-manifests/linux-x64.json
       - name: Configure Linux Chromium sandbox
@@ -490,13 +461,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: linux-telegram-retirement-manifests
-          path: |
-            dist/telegram-retirement-manifests/*.json
-          if-no-files-found: warn
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
           name: linux-native-package-audit
           path: |
             dist/koffi-prune-manifests/*.json
@@ -508,7 +472,7 @@ jobs:
 
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [build-windows, build-mac, build-linux, native-package-audit]
+    needs: [build-windows, build-mac, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write

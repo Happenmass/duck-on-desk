@@ -450,9 +450,7 @@ function targetTaggedInPath(filePath) {
 
 function isNativeCandidate(file) {
   const basename = path.posix.basename(normalizePath(file.packagePath || file.sourcePath)).toLowerCase();
-  return basename === "cc-connect-clawd"
-    || basename === "cc-connect-clawd.exe"
-    || [".dll", ".dylib", ".exe", ".node", ".so"].includes(path.posix.extname(basename));
+  return [".dll", ".dylib", ".exe", ".node", ".so"].includes(path.posix.extname(basename));
 }
 
 function findForeignNativeFiles(manifest, repoRoot, packageRoot) {
@@ -546,15 +544,6 @@ function analyzeAudit({
           message: `Large tracked binary/media file (${file.bytes} bytes) has no known policy owner.`,
         });
       }
-    }
-    if (file.path.startsWith("bin/cc-connect-clawd/")
-      && /(?:^|\/)cc-connect-clawd(?:\.exe)?$/i.test(file.path)) {
-      findings.push({
-        level: "error",
-        rule: "sidecar-executable-untracked",
-        path: file.path,
-        message: "Retired Telegram sidecar executables must never be tracked.",
-      });
     }
   }
 

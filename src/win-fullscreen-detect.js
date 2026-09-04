@@ -18,7 +18,7 @@
 
 // A maximized normal window covers the work area, so on a monitor that reserves
 // a taskbar strip its rect stops short of the full monitor while a fullscreen
-// app covers the whole monitor (rcMonitor). A couple of px of slack absorbs DPI
+// app covers the whole monitor (rcMonitor). A couple of px of leeway absorbs DPI
 // rounding. Geometry alone is NOT sufficient though — see isMaximizedNormalWindow
 // for the monitors where rcWork == rcMonitor and this test stops separating them.
 const FULLSCREEN_TOLERANCE_PX = 2;

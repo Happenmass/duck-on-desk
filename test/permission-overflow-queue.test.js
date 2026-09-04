@@ -559,7 +559,6 @@ describe("permission overflow queue", () => {
   it("commits representation only after ACK, swaps request windows safely, and falls back with zero decisions", () => {
     FakeBrowserWindow.instances = [];
     const { initPermission, registered } = loadPermission();
-    const announced = [];
     let permissionAutoCloseMs = 0;
     const ctx = {
       win: { isDestroyed: () => false },
@@ -582,7 +581,6 @@ describe("permission overflow queue", () => {
       reapplyMacVisibility() {},
       repositionUpdateBubble() {},
       repositionSessionHud() {},
-      notifySlackPermission(payload) { announced.push(payload); },
     };
     const permission = initPermission(ctx);
     const entries = [1, 2, 3].map((index) => requestEntry(index, requestBubble()));
@@ -616,7 +614,6 @@ describe("permission overflow queue", () => {
     );
     assert.ok(!JSON.stringify(firstPayload).includes("toolInput"));
     assert.ok(!JSON.stringify(firstPayload).includes("detailText"));
-    assert.strictEqual(announced.length, 0);
 
     permission.handleQueuePresentationAck(
       { sender: queueWindow.webContents },
@@ -624,7 +621,6 @@ describe("permission overflow queue", () => {
     );
     assert.strictEqual(queueWindow.isVisible(), true);
     assert.strictEqual(entries.filter((entry) => entry.bubble.isVisible()).length, 1);
-    assert.strictEqual(announced.length, 2, "hidden entries announce only after queue ACK");
     permissionAutoCloseMs = 60_000;
     permission.refreshPermissionAutoCloseForPolicy();
     assert.ok(
@@ -644,14 +640,10 @@ describe("permission overflow queue", () => {
       { sender: lateEntry.bubble.webContents },
       { height: 150, state: "compact", measurementEpoch: 0 }
     );
-    assert.strictEqual(announced.length, 2,
-      "a never-visible request height ACK cannot announce before the queue represents it");
     permission.handleQueuePresentationAck(
       { sender: queueWindow.webContents },
       { revision: latePayload.revision }
     );
-    assert.strictEqual(announced.length, 3,
-      "the late hidden request announces from the queue ACK exactly once");
 
     const lateVisibleEntry = requestEntry(5, requestBubble());
     lateVisibleEntry.sessionId = "second-session";
@@ -669,22 +661,16 @@ describe("permission overflow queue", () => {
       { sender: lateVisibleEntry.bubble.webContents },
       { height: 60, state: "compact", measurementEpoch: 0 }
     );
-    assert.strictEqual(announced.length, 3,
-      "a future representative still cannot announce while the old commit keeps it hidden");
     permission.handleQueuePresentationAck(
       { sender: queueWindow.webContents },
       { revision: lateVisiblePayload.revision }
     );
-    assert.ok(
-      lateVisibleEntry.bubble.webContents.sent.some(([channel]) => channel === "permission-presentation"),
-      "the committed visible representative is asked for a fresh local height acknowledgement"
-    );
+    assert.strictEqual(lateVisibleEntry.bubble.isVisible(), true,
+      "the committed representative's request window is visible after the ACK");
     permission.handleBubbleHeight(
       { sender: lateVisibleEntry.bubble.webContents },
       { height: 60, state: "compact", measurementEpoch: 0 }
     );
-    assert.strictEqual(announced.length, 4,
-      "the newly visible representative announces through the normal visible-window path");
 
     entries[0].compositionActive = true;
     permission.reconcilePermissionPresentation("composition-started");
@@ -1191,92 +1177,4 @@ describe("permission overflow queue", () => {
     queueWindow.webContents.emit("render-process-gone", {}, { reason: "cleanup" });
   });
 
-  it("requests a fresh height ACK when queue failure reveals an unannounced request", () => {
-    FakeBrowserWindow.instances = [];
-    const { initPermission } = loadPermission();
-    const announced = [];
-    const permission = initPermission(makeCtx({
-      notifySlackPermission(payload) { announced.push(payload); },
-    }));
-    const entries = [1, 2, 3].map((index) => requestEntry(index, requestBubble()));
-    permission.pendingPermissions.push(...entries);
-    permission.reconcilePermissionPresentation("slack-initial");
-    const queueWindow = FakeBrowserWindow.instances.find((win) => (
-      win.options.webPreferences
-      && path.basename(win.options.webPreferences.preload) === "preload-permission-queue.js"
-    ));
-    queueWindow.webContents.emit("did-finish-load");
-    let payload = lastQueuePayload(queueWindow);
-    permission.handleQueuePresentationAck(
-      { sender: queueWindow.webContents },
-      { revision: payload.revision }
-    );
-    assert.strictEqual(announced.length, 2);
-
-    const lateEntry = requestEntry(4, requestBubble());
-    permission.pendingPermissions.push(lateEntry);
-    permission.reconcilePermissionPresentation("slack-late");
-    payload = lastQueuePayload(queueWindow);
-    assert.strictEqual(payload.totalCount, 4);
-    assert.strictEqual(lateEntry.bubble.isVisible(), false);
-    assert.strictEqual(lateEntry._slackPermissionAnnounced, undefined);
-
-    queueWindow.webContents.emit("render-process-gone", {}, { reason: "crashed" });
-    assert.strictEqual(lateEntry.bubble.isVisible(), true);
-    assert.ok(
-      lateEntry.bubble.webContents.sent.some(([channel]) => channel === "permission-presentation"),
-      "the newly visible original renderer is asked to prove its presentation"
-    );
-    permission.handleBubbleHeight(
-      { sender: lateEntry.bubble.webContents },
-      { height: 150, state: "compact", measurementEpoch: 0 }
-    );
-    assert.strictEqual(announced.length, 3, "the normal visible-window ACK owns Slack delivery");
-  });
-
-  it("requests a fresh height ACK when a late request returns directly to normal mode", () => {
-    FakeBrowserWindow.instances = [];
-    const { initPermission } = loadPermission();
-    const announced = [];
-    const permission = initPermission(makeCtx({
-      notifySlackPermission(payload) { announced.push(payload); },
-    }));
-    const entries = [1, 2, 3].map((index) => requestEntry(index, requestBubble()));
-    permission.pendingPermissions.push(...entries);
-    permission.reconcilePermissionPresentation("slack-normal-initial");
-    const queueWindow = FakeBrowserWindow.instances.find((win) => (
-      win.options.webPreferences
-      && path.basename(win.options.webPreferences.preload) === "preload-permission-queue.js"
-    ));
-    queueWindow.webContents.emit("did-finish-load");
-    let payload = lastQueuePayload(queueWindow);
-    permission.handleQueuePresentationAck(
-      { sender: queueWindow.webContents },
-      { revision: payload.revision }
-    );
-    assert.strictEqual(announced.length, 2);
-
-    const lateEntry = requestEntry(4, requestBubble());
-    permission.pendingPermissions.push(lateEntry);
-    permission.reconcilePermissionPresentation("slack-normal-late");
-    payload = lastQueuePayload(queueWindow);
-    assert.strictEqual(payload.totalCount, 4);
-    assert.strictEqual(lateEntry.bubble.isVisible(), false);
-
-    permission.removePendingPermission(entries[1], "test-stack-shrink");
-    permission.removePendingPermission(entries[2], "test-stack-shrink");
-    permission.reconcilePermissionPresentation("slack-return-normal");
-
-    assert.strictEqual(queueWindow.isDestroyed(), true);
-    assert.strictEqual(lateEntry.bubble.isVisible(), true);
-    assert.ok(
-      lateEntry.bubble.webContents.sent.some(([channel]) => channel === "permission-presentation"),
-      "normal-mode restoration asks the original renderer for visibility proof"
-    );
-    permission.handleBubbleHeight(
-      { sender: lateEntry.bubble.webContents },
-      { height: 150, state: "compact", measurementEpoch: 0 }
-    );
-    assert.strictEqual(announced.length, 3);
-  });
 });

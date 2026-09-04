@@ -62,7 +62,6 @@ function registerDoctorIpc({
   getPrefsReadFailure,
   getPrefsRecovered,
   getPrefsRecoveryBackupFailed,
-  getFeishuApprovalSecrets,
   getDoNotDisturb,
   getLocale,
   resolveAgentDisplayName,
@@ -86,12 +85,6 @@ function registerDoctorIpc({
   );
 
   function buildDoctorResult() {
-    let feishuApprovalSecrets = {};
-    try {
-      feishuApprovalSecrets = typeof getFeishuApprovalSecrets === "function"
-        ? getFeishuApprovalSecrets()
-        : {};
-    } catch {}
     lastDoctorResult = runDoctorChecks({
       server,
       prefs: getPrefsSnapshot(),
@@ -99,7 +92,6 @@ function registerDoctorIpc({
       prefsRecovered: typeof getPrefsRecovered === "function" && getPrefsRecovered() === true,
       prefsRecoveryBackupFailed: typeof getPrefsRecoveryBackupFailed === "function"
         && getPrefsRecoveryBackupFailed() === true,
-      feishuApprovalSecrets,
       doNotDisturb: getDoNotDisturb(),
     });
     return lastDoctorResult;

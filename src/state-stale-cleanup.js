@@ -102,8 +102,8 @@ function getStaleSessionDecision(session, options = {}) {
   }
 
   // NOTE: requiresCompletionAck does NOT hold a session out of stale cleanup.
-  // The completion notification (e.g. Telegram push) already fires once at the
-  // completion instant, so an unacknowledged remote session has already been
+  // The completion notification already fires once at the completion
+  // instant, so an unacknowledged remote session has already been
   // surfaced — it does not need to linger past the user's configured session
   // timeout to be "seen". The `done` badge (deriveSessionBadge) keeps the
   // session visually distinct while it waits out the normal timeout, then it

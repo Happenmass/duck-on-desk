@@ -6,14 +6,13 @@ const { getDefaultShortcuts } = require("./shortcut-actions");
 const { keepOutOfTaskbar } = require("./taskbar");
 const { clampTextScale, scaleWidth, scaleHeight, applyZoomToWindow } = require("./text-scale");
 const { createTranslator } = require("./i18n");
-const { firstStringValue, formatDetail, truncate, parseMcpToolName } = require("./bubble-format");
+const { formatDetail, truncate, parseMcpToolName } = require("./bubble-format");
 const {
   getPermissionSessionKey,
   groupPermissionEntries,
   selectOverflowRepresentatives,
 } = require("./permission-overflow-model");
 const { MAC_TOPMOST_LEVEL } = require("./topmost-runtime");
-const { redactSecrets } = require("./secret-redact");
 const path = require("path");
 const http = require("http");
 const { timingSafeEqual } = require("crypto");
@@ -77,13 +76,12 @@ const BUBBLE_EXPANDED_DETAIL_LINE_FALLBACK = 18;
 const BUBBLE_EXPANDED_MIN_DETAIL_LINES = 5;
 // Hard cap so a scaled bubble can't swallow a small work area.
 const BUBBLE_MAX_WORK_AREA_WIDTH_RATIO = 0.9;
-const OVERFLOW_EXIT_SLACK_BASE = 30;
+const OVERFLOW_EXIT_HEADROOM_BASE = 30;
 const QUEUE_COMPACT_BASE_HEIGHT = 64;
 const QUEUE_DRAWER_PREFERRED_HEIGHT = 620;
 const QUEUE_COMMIT_TIMEOUT_MS = 1500;
 const QUEUE_SUMMARY_MAX = 120;
 const PLAN_FEEDBACK_MAX_LENGTH = 4000;
-const REMOTE_RICH_APPROVAL_AGENT_IDS = new Set(["claude-code"]);
 
 function requiredDependency(value, name, owner) {
   if (!value) throw new Error(`${owner} requires ${name}`);
@@ -561,12 +559,9 @@ function buildElicitationUpdatedInput(toolInput, answers) {
   };
 }
 
-// Remote clients (Feishu / Telegram) clamp question text to card / message
-// limits before display (240 chars, trimmed, control chars stripped), so the
-// text they hold no longer round-trips to toolInput for long or
-// whitespace-heavy questions. Both remote clients and the desktop renderer
-// therefore key submitted answers by question index. Only this main-process
-// boundary maps those opaque display ids back to the exact upstream wire keys.
+// The desktop renderer clamps question text for display and therefore keys
+// submitted answers by question index. Only this main-process boundary maps
+// those opaque display ids back to the exact upstream wire keys.
 function remapIndexedElicitationAnswers(toolInput, indexedAnswers) {
   const input = toolInput && typeof toolInput === "object" ? toolInput : {};
   const questions = Array.isArray(input.questions) ? input.questions : [];
@@ -1536,37 +1531,6 @@ function applyRequestPresentation(entries, layout, geometry, options = {}) {
   }
 }
 
-function collectSlackRemeasureCandidates(entries) {
-  const candidates = [];
-  for (const entry of entries || []) {
-    if (!entry || entry._slackPermissionAnnounced === true || entry.bubbleReady !== true) continue;
-    const bubble = entry.bubble;
-    if (!isLiveBrowserWindow(bubble) || typeof bubble.isVisible !== "function") continue;
-    try {
-      if (!bubble.isVisible()) candidates.push(entry);
-    } catch {}
-  }
-  return candidates;
-}
-
-function requestSlackRemeasureForNewlyVisible(candidates) {
-  for (const entry of candidates || []) {
-    if (!pendingPermissions.includes(entry) || entry._slackPermissionAnnounced === true) continue;
-    const bubble = entry.bubble;
-    if (!isLiveBrowserWindow(bubble)) continue;
-    try {
-      if (typeof bubble.isVisible === "function" && !bubble.isVisible()) continue;
-    } catch {
-      continue;
-    }
-    // The renderer's height acknowledgement remains the proof that the exact
-    // request content is loaded and visible. Showing a previously queue-hidden
-    // request does not itself generate that acknowledgement, so ask the
-    // existing renderer to repeat its current presentation measurement.
-    sendPermissionPresentation(entry);
-  }
-}
-
 function showQueueWindow(bounds, geometry, options = {}) {
   const queueWindow = overflowPresentation.queueWindow;
   if (!isLiveBrowserWindow(queueWindow) || !bounds) return false;
@@ -1825,11 +1789,9 @@ function applyCommittedOverflowPresentation(entries, geometry) {
 
 function applyNormalPresentation(entries, layout, geometry) {
   const allIds = new Set(entries.map((entry) => entry.uiEntryId));
-  const slackRemeasureCandidates = collectSlackRemeasureCandidates(entries);
   // Restore request cards before removing the queue so there is never an empty
   // permission representation between modes.
   applyRequestPresentation(entries, layout, geometry, { visibleEntryIds: allIds });
-  requestSlackRemeasureForNewlyVisible(slackRemeasureCandidates);
   overflowPresentation.visibleEntryIds = allIds;
   overflowPresentation.mode = "normal";
   destroyQueueWindow({ resetEpisode: true });
@@ -1874,18 +1836,18 @@ function reconcilePermissionPresentation(reason = "geometry") {
       }
 
       const preliminaryNormalLayout = computePresentationLayout(entries, geometry);
-      const exitSlack = scaleHeight(OVERFLOW_EXIT_SLACK_BASE, geometry.scale);
-      const normalHasExitSlack = preliminaryNormalLayout.stackHeight + exitSlack
+      const exitHeadroom = scaleHeight(OVERFLOW_EXIT_HEADROOM_BASE, geometry.scale);
+      const normalHasExitHeadroom = preliminaryNormalLayout.stackHeight + exitHeadroom
         <= geometry.workArea.height - geometry.margin * 2;
       let normalSafe = preliminaryNormalLayout.safe
-        && (overflowPresentation.mode !== "overflow" || normalHasExitSlack);
+        && (overflowPresentation.mode !== "overflow" || normalHasExitHeadroom);
       let normalLayout = preliminaryNormalLayout;
       if (normalSafe) {
         ensureExpandedBudgets(entries, geometry);
         normalLayout = computePresentationLayout(entries, geometry);
         normalSafe = normalLayout.safe
           && (overflowPresentation.mode !== "overflow" || (
-            normalLayout.stackHeight + exitSlack
+            normalLayout.stackHeight + exitHeadroom
               <= geometry.workArea.height - geometry.margin * 2
           ));
       }
@@ -1987,12 +1949,10 @@ function reconcilePermissionPresentation(reason = "geometry") {
         )
       ) {
         const allIds = new Set(entries.map((entry) => entry.uiEntryId));
-        const slackRemeasureCandidates = collectSlackRemeasureCandidates(entries);
         ensureExpandedBudgets(entries, geometry);
         const fallbackLayout = computePresentationLayout(entries, geometry);
         overflowPresentation.visibleEntryIds = allIds;
         applyRequestPresentation(entries, fallbackLayout, geometry, { visibleEntryIds: allIds });
-        requestSlackRemeasureForNewlyVisible(slackRemeasureCandidates);
         hideQueueWindow();
         syncPermissionShortcuts();
         continue;
@@ -2505,12 +2465,6 @@ function notifyPermissionResolved(permEntry, reason) {
   }
 }
 
-// NOTE: deliberately does NOT announce to Slack. Queueing an entry only means
-// the route accepted it — permission automation may still auto-allow it on the
-// very next statement, which used to produce a "needs your approval" Slack ping
-// for a request nobody ever saw. The announce happens later, at the two points
-// where a real user decision is known to be pending (the renderer's bubble
-// height acknowledgement or a remote client's card-delivery acknowledgement).
 function addPendingPermission(permEntry, reason = "added") {
   pendingPermissions.push(permEntry);
   notifyPermissionsChanged(reason);
@@ -2637,425 +2591,8 @@ function basenameForDisplay(value) {
   return parts.length ? parts[parts.length - 1] : text;
 }
 
-function compactRemoteApprovalText(value, maxLen = 200) {
-  let text = typeof value === "string" ? value : String(value == null ? "" : value);
-  text = text.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim();
-  text = redactSecrets(text);
-  if (text.length > maxLen) text = `${text.slice(0, Math.max(0, maxLen - 1))}…`;
-  return text;
-}
 
-function remoteApprovalDecisionLabel(decision) {
-  if (decision === "allow") return "批准一次";
-  if (decision === "deny") return "拒绝";
-  if (decision === "terminal") return "前往终端";
-  if (decision === "no-decision") return "未返回审批结果";
-  if (decision === "elicitation-submit") return "提交输入";
-  return "";
-}
-
-function isRemoteRichApprovalSupported(permEntry) {
-  const agentId = compactRemoteApprovalText(permEntry && permEntry.agentId ? permEntry.agentId : "claude-code", 80);
-  return REMOTE_RICH_APPROVAL_AGENT_IDS.has(agentId);
-}
-
-function isRemoteApprovalActionable(permEntry) {
-  if (!permEntry || typeof permEntry !== "object") return false;
-  const interaction = permEntry.interaction;
-  if (
-    isValidInteraction(interaction)
-    && interaction.intent === INTERACTION_INTENT.HUMAN_QUESTION
-    && interaction.capabilities.answerQuestions
-  ) return true;
-  if (isPassiveNotifyEntry(permEntry) || isOpencodeFamilyEntry(permEntry)) return false;
-  if (isDecisionInteraction(interaction)) return false;
-  if (PASSTHROUGH_TOOLS.has(permEntry.toolName)) return false;
-  // Mirror the local headless gate on remote channels. An audited interactive
-  // Codex Agent thread is the one exception: its state session is headless for
-  // HUD/focus policy, but the approval itself remains human-actionable.
-  if (isPermissionEntryHeadless(permEntry)) return false;
-  return true;
-}
-
-// Slack is a one-way attention channel, not an approval transport. Do not
-// reuse isRemoteApprovalActionable here: that predicate intentionally excludes
-// adapters such as the opencode family because Telegram/Feishu
-// cannot safely return a decision for them. A successfully rendered desktop
-// bubble is still something Slack should announce.
-//
-// Route-owned interaction capabilities remain the authority. In particular,
-// an opencode-family AskUserQuestion cannot be answered in Clawd
-// (answerQuestions=false), so announcing "answer in the desktop app" would be
-// just as misleading as excluding its ordinary Allow/Deny bubbles.
-function isSlackPermissionAnnounceable(permEntry) {
-  if (!permEntry || typeof permEntry !== "object") return false;
-  if (!isValidInteraction(permEntry.interaction)) return false;
-  if (isPassiveNotifyEntry(permEntry)) return false;
-  if (PASSTHROUGH_TOOLS.has(permEntry.toolName)) return false;
-  if (isPermissionEntryHeadless(permEntry)) return false;
-
-  const { intent, capabilities } = permEntry.interaction;
-  if (intent === INTERACTION_INTENT.HUMAN_QUESTION) {
-    return capabilities.answerQuestions === true;
-  }
-  // ExitPlanMode has its own plan-review/feedback contract and is deliberately
-  // not a Slack permission notification in this phase.
-  if (isDecisionInteraction(permEntry.interaction)) return false;
-  return capabilities.allowDeny === true;
-}
-
-function buildRemoteElicitationPayload(permEntry) {
-  if (
-    !permEntry
-    || !isValidInteraction(permEntry.interaction)
-    || permEntry.interaction.intent !== INTERACTION_INTENT.HUMAN_QUESTION
-    || !permEntry.interaction.capabilities.answerQuestions
-  ) return null;
-  const input = permEntry.toolInput && typeof permEntry.toolInput === "object" ? permEntry.toolInput : {};
-  const questions = Array.isArray(input.questions) ? input.questions : [];
-  if (!questions.length) return null;
-  const agentId = compactRemoteApprovalText(permEntry.agentId || "claude-code", 80) || "claude-code";
-  const session = ctx.sessions.get(permEntry.sessionId);
-  const sessionFolder = compactRemoteApprovalText(
-    basenameForDisplay((session && session.cwd) || permEntry.cwd || ""),
-    80
-  );
-  return {
-    title: `${agentId} needs input`,
-    detail: compactRemoteApprovalText(input.description || input.summary || "", 200),
-    agentId,
-    folder: sessionFolder,
-    questions,
-  };
-}
-
-// Tool-specific fields that hint at what the action targets, tried in order
-// when the tool gave no description/summary/reason (e.g. Write, Edit, Read —
-// unlike Bash, which always carries `description`). Only cheap, low-risk
-// identifiers (a path, a Glob file-selection pattern) — never full file
-// contents/diffs/commands/search queries.
-// Field names reuse bubble-format.js's firstStringValue so this list doesn't
-// drift out of sync with the naming variants (TargetFile/AbsolutePath/...)
-// other agents use.
-const FALLBACK_PATH_FIELDS = ["file_path", "path", "TargetFile", "AbsolutePath", "filePath", "FilePath", "DirectoryPath"];
-const FALLBACK_PATTERN_FIELDS = ["pattern", "Pattern"];
-const FALLBACK_URL_FIELDS = ["url", "Url"];
-
-// `command`/`query` are deliberately excluded: they can carry secrets a
-// generic sanitizer can't reliably catch (inline env vars, API query
-// params), so they never leave the desktop bubble.
-function stripUrlQueryAndCredentials(value) {
-  try {
-    const parsed = new URL(value);
-    return `${parsed.origin}${parsed.pathname}`;
-  } catch {
-    return null;
-  }
-}
-
-function buildRemoteApprovalFallbackDetail(input, toolName) {
-  const pathValue = firstStringValue(input, FALLBACK_PATH_FIELDS);
-  if (pathValue) {
-    const text = compactRemoteApprovalText(basenameForDisplay(pathValue), 200);
-    if (text) return text;
-  }
-  // `pattern` is overloaded: Glob uses it to identify files, while Grep uses
-  // it for the user's raw search expression. The latter can contain customer
-  // names, email addresses, or secret identifiers and is no safer to send to
-  // a remote channel than the deliberately excluded `query` field.
-  if (toolName === "Glob") {
-    const patternValue = firstStringValue(input, FALLBACK_PATTERN_FIELDS);
-    if (patternValue) {
-      const text = compactRemoteApprovalText(patternValue, 200);
-      if (text) return text;
-    }
-  }
-  const urlValue = firstStringValue(input, FALLBACK_URL_FIELDS);
-  if (urlValue) {
-    const originAndPath = stripUrlQueryAndCredentials(urlValue);
-    if (originAndPath) {
-      const text = compactRemoteApprovalText(originAndPath, 200);
-      if (text) return text;
-    }
-  }
-  return null;
-}
-
-// String.prototype.replace's replacement-string argument treats $$/$&/$`/$'
-// as special sequences. Dynamic values (tool input, agent/tool names, etc.)
-// must never be interpolated with the string form — a Glob pattern
-// containing "$$", for example, would corrupt the rendered card. The
-// function form of the replacement argument is never parsed for $-sequences.
-function interpolate(template, token, value) {
-  return template.replace(token, () => value);
-}
-
-// Returns a redacted summary string — never null. We used to refuse to send a
-// Telegram card at all when the tool gave no description/summary/reason (e.g.
-// Write/Edit, unlike Bash which always carries `description`), reasoning that
-// a blank "Tool input hidden by Clawd" card would let the user approve a black
-// box. In practice that meant those requests never reached Telegram at all —
-// worse than a labelled blank card, since the user had no idea anything was
-// pending. Now we fall back to a cheap identifier (file path / Glob pattern /
-// URL)
-// and, failing that, an explicit "no description, go check the desktop bubble"
-// notice — so every remote-approval-eligible request produces a card.
-function buildRemoteApprovalSummary(permEntry) {
-  const input = permEntry && permEntry.toolInput && typeof permEntry.toolInput === "object"
-    ? permEntry.toolInput
-    : {};
-  const candidates = [
-    input.description,
-    input.summary,
-    input.reason,
-  ];
-  for (const candidate of candidates) {
-    const text = compactRemoteApprovalText(candidate, 200);
-    if (text) return text;
-  }
-  const fallbackDetail = buildRemoteApprovalFallbackDetail(input, permEntry && permEntry.toolName);
-  if (fallbackDetail) return interpolate(t("approvalSummaryFallbackDetail"), "{detail}", fallbackDetail);
-  return t("approvalSummaryUnavailable");
-}
-
-function buildRemoteSuggestionLabel(suggestion) {
-  if (!suggestion || typeof suggestion !== "object") return "";
-  if (suggestion.type === "setMode") {
-    if (suggestion.mode === "acceptEdits") return t("approvalSuggestionAutoEdits");
-    if (suggestion.mode === "plan") return t("approvalSuggestionPlanMode");
-    const mode = compactRemoteApprovalText(suggestion.mode || "", 18);
-    return mode ? interpolate(t("approvalSuggestionModePrefix"), "{mode}", mode) : "";
-  }
-  if (suggestion.type === "addRules") {
-    const rules = Array.isArray(suggestion.rules) ? suggestion.rules : [suggestion];
-    const first = rules.find((rule) => rule && typeof rule === "object") || {};
-    const behavior = compactRemoteApprovalText(suggestion.behavior || first.behavior || "allow", 12);
-    const isDeny = behavior === "deny";
-    const toolName = compactRemoteApprovalText(first.toolName || suggestion.toolName || "", 16);
-    if (toolName) {
-      return isDeny
-        ? interpolate(t("approvalSuggestionAlwaysDenyTool"), "{tool}", toolName)
-        : interpolate(t("approvalSuggestionAlwaysAllowTool"), "{tool}", toolName);
-    }
-    return isDeny ? t("approvalSuggestionAlwaysDeny") : t("approvalSuggestionAlwaysAllow");
-  }
-  return "";
-}
-
-function buildRemoteSuggestionButtons(permEntry) {
-  if (!isRemoteRichApprovalSupported(permEntry)) return [];
-  const suggestions = Array.isArray(permEntry.suggestions) ? permEntry.suggestions : [];
-  const seen = new Set();
-  const buttons = [];
-  suggestions.forEach((suggestion, index) => {
-    const label = compactRemoteApprovalText(buildRemoteSuggestionLabel(suggestion), 28);
-    if (!label || seen.has(label)) return;
-    seen.add(label);
-    buttons.push({ index, label });
-  });
-  return buttons;
-}
-
-// Returns the Telegram approval payload. buildRemoteApprovalSummary always
-// returns a non-empty string (a real summary, a cheap fallback identifier, or
-// an explicit "no description" notice), so there is always a safe summary to
-// ship — this never returns null.
-function buildRemoteApprovalPayload(permEntry) {
-  const summary = buildRemoteApprovalSummary(permEntry);
-  const agentId = compactRemoteApprovalText(permEntry.agentId || "claude-code", 80) || "claude-code";
-  const toolName = compactRemoteApprovalText(permEntry.toolName || t("approvalUnknownTool"), 80) || t("approvalUnknownTool");
-  const session = ctx.sessions.get(permEntry.sessionId);
-  const sessionFolder = compactRemoteApprovalText(
-    basenameForDisplay((session && session.cwd) || permEntry.cwd || ""),
-    80
-  );
-  // Label this value "Folder" (not "Session"): it is only the cwd basename,
-  // never a session id or full local path.
-  const detail = [
-    `${t("approvalDetailAgent")}: ${agentId}`,
-    `${t("approvalDetailTool")}: ${toolName}`,
-    sessionFolder ? `${t("approvalDetailFolder")}: ${sessionFolder}` : null,
-    `${t("approvalDetailSummary")}: ${summary}`,
-  ].filter(Boolean).join("\n");
-  const fields = [
-    { label: t("approvalDetailAgent"), value: agentId },
-    { label: t("approvalDetailTool"), value: toolName },
-    sessionFolder ? { label: t("approvalDetailFolder"), value: sessionFolder } : null,
-    { label: t("approvalDetailSummary"), value: summary },
-  ].filter(Boolean);
-  const suggestionButtons = buildRemoteSuggestionButtons(permEntry);
-  const payload = {
-    title: interpolate(interpolate(t("approvalRequestsTitle"), "{agent}", agentId), "{tool}", toolName),
-    detail,
-    fields,
-  };
-  if (suggestionButtons.length > 0) payload.suggestions = suggestionButtons;
-  return payload;
-}
-
-// One-way Slack heads-up when a permission request is actually waiting on the
-// user. Fires once per entry (guarded) and independently of whether an
-// interactive remote channel (Telegram/Feishu) is connected — Slack cannot
-// resolve the approval itself in this build, so it only announces where the
-// user can act (the desktop app, or an active remote-only channel).
-// Best-effort: never throws into the caller's sync path.
-//
-// Callers invoke this only after automation has had its chance: desktop entries
-// arrive from the renderer's post-reveal height acknowledgement, while
-// remote-only entries arrive from a remote client's explicit delivery
-// acknowledgement. The gates below are a belt-and-braces re-check of the
-// conditions that make a request human-visible, so a future call site cannot
-// reintroduce a ping for a request silently dropped by DND or already resolved.
-
-function announceSlackPermission(permEntry) {
-  if (typeof ctx.notifySlackPermission !== "function") return;
-  if (!permEntry || permEntry._slackPermissionAnnounced) return;
-  if (!isSlackPermissionAnnounceable(permEntry)) return;
-  // DND drops permission requests before they ever surface locally; a Slack
-  // ping would be the one thing that still reached the user.
-  if (ctx.doNotDisturb) return;
-  // Auto-approved / already-answered entries are out of the pending list.
-  if (pendingPermissions.indexOf(permEntry) === -1) return;
-  permEntry._slackPermissionAnnounced = true;
-  try {
-    const agentId = compactRemoteApprovalText(permEntry.agentId || "claude-code", 80) || "claude-code";
-    const toolName = compactRemoteApprovalText(permEntry.toolName || t("approvalUnknownTool"), 80) || t("approvalUnknownTool");
-    const session = ctx.sessions.get(permEntry.sessionId);
-    const folder = compactRemoteApprovalText(
-      basenameForDisplay((session && session.cwd) || permEntry.cwd || ""),
-      80
-    );
-    // An answerable elicitation is a question, not a decision: its
-    // capabilities.allowDeny is false, and buildRemoteApprovalSummary can never
-    // find a description for one, so it would always have reported "No
-    // description available". Reuse the elicitation payload the interactive
-    // channels already build, so Slack shows what was actually asked.
-    const elicitation = buildRemoteElicitationPayload(permEntry);
-    const actionTarget = permEntry.remoteOnly === true ? "remote" : "desktop";
-    if (elicitation) {
-      ctx.notifySlackPermission({
-        kind: "question",
-        actionTarget,
-        title: elicitation.title,
-        detail: elicitation.detail,
-        agentId: elicitation.agentId,
-        folder: elicitation.folder,
-        questions: elicitation.questions,
-      }, {
-        isStillRelevant: () => pendingPermissions.includes(permEntry),
-      });
-      return;
-    }
-    ctx.notifySlackPermission({
-      kind: "approval",
-      actionTarget,
-      title: interpolate(interpolate(t("approvalRequestsTitle"), "{agent}", agentId), "{tool}", toolName),
-      toolName,
-      agentId,
-      folder,
-      summary: buildRemoteApprovalSummary(permEntry),
-    }, {
-      isStillRelevant: () => pendingPermissions.includes(permEntry),
-    });
-  } catch (err) {
-    permLog(`slack permission announce failed: ${err && err.message ? err.message : err}`);
-  }
-}
-
-function normalizeRemoteApprovalDecision(decision) {
-  if (decision === "allow" || decision === "deny") return { action: decision };
-  if (!decision || typeof decision !== "object") return null;
-  const action = decision.action === "allow" || decision.decision === "allow" ? "allow"
-    : (decision.action === "deny" || decision.decision === "deny" ? "deny"
-      : (decision.action === "suggestion" ? "suggestion" : null));
-  if (!action) return null;
-  if (action !== "suggestion") return { action };
-  const index = Number(decision.index);
-  return Number.isInteger(index) && index >= 0 ? { action, index } : null;
-}
-
-function getTelegramApprovalClient() {
-  if (typeof ctx.getTelegramApprovalClient === "function") {
-    try { return ctx.getTelegramApprovalClient(); } catch (err) {
-      permLog(`telegram remote approval client lookup failed: ${compactRemoteApprovalText(err && err.message ? err.message : err, 200)}`);
-      return null;
-    }
-  }
-  return ctx.telegramApprovalClient || null;
-}
-
-function getRemoteApprovalClients() {
-  const clients = [];
-  const telegramClient = getTelegramApprovalClient();
-  if (telegramClient) clients.push({ name: "telegram", client: telegramClient });
-  if (typeof ctx.getRemoteApprovalClients === "function") {
-    let extra = [];
-    try {
-      extra = ctx.getRemoteApprovalClients() || [];
-    } catch (err) {
-      permLog(`remote approval client lookup failed: ${compactRemoteApprovalText(err && err.message ? err.message : err, 200)}`);
-    }
-    for (const entry of Array.isArray(extra) ? extra : []) {
-      if (!entry) continue;
-      const name = typeof entry.name === "string" && entry.name ? entry.name : "remote";
-      const client = entry.client || entry;
-      if (client && client !== telegramClient) clients.push({ name, client });
-    }
-  }
-  return clients.filter(({ client }) => {
-    if (!client || typeof client.requestApproval !== "function") return false;
-    return !(typeof client.isEnabled === "function" && !client.isEnabled());
-  });
-}
-
-function notifyRemoteApprovalResolved(permEntry, outcome = {}, options = {}) {
-  const requests = Array.isArray(permEntry && permEntry.remoteApprovalRequests)
-    ? [...permEntry.remoteApprovalRequests]
-    : [];
-  let notified = 0;
-  for (const request of requests) {
-    if (!request || request.name === options.skipClientName) continue;
-    const client = request.client;
-    if (!client || typeof client.resolveApprovalExternally !== "function") continue;
-    try {
-      if (client.resolveApprovalExternally(request.signal, outcome)) notified += 1;
-    } catch (err) {
-      permLog(`${request.name || "remote"} remote approval update failed: ${compactRemoteApprovalText(err && err.message ? err.message : err, 200)}`);
-    }
-  }
-  return notified;
-}
-
-function cancelRemoteApproval(permEntry, options = {}) {
-  if (permEntry && permEntry.sessionTrustCandidate && typeof ctx.cancelSessionTrustCandidate === "function") {
-    try {
-      ctx.cancelSessionTrustCandidate(permEntry, {
-        reason: options.reason || "permission-resolved",
-      });
-    } catch {}
-  }
-  if (options.outcome) {
-    notifyRemoteApprovalResolved(permEntry, options.outcome, {
-      skipClientName: options.skipClientName,
-    });
-  }
-  const controllers = [];
-  if (permEntry && Array.isArray(permEntry.remoteApprovalAbortControllers)) {
-    controllers.push(...permEntry.remoteApprovalAbortControllers);
-    permEntry.remoteApprovalAbortControllers = [];
-  }
-  const controller = permEntry && permEntry.remoteApprovalAbortController;
-  if (controller) {
-    controllers.push(controller);
-    permEntry.remoteApprovalAbortController = null;
-  }
-  for (const item of controllers) {
-    try { item.abort(); } catch {}
-  }
-  if (permEntry) permEntry.remoteApprovalRequests = [];
-}
-
-// "Go to terminal" path: drop the bubble, abort any in-flight Telegram prompt,
+// "Go to terminal" path: drop the bubble,
 // destroy the hook socket WITHOUT writing a decision, hand focus back to the
 // agent terminal. The destroy is what actually frees the terminal: CC blocks
 // on the PermissionRequest HTTP hook (600s) and shows nothing
@@ -3117,26 +2654,8 @@ function hidePermissionBubbleSafely(permEntry) {
   return true;
 }
 
-// A remote-only entry (bubbles disabled, decided over Feishu/Telegram) has no
-// desktop bubble to drop — route it through the shared no-decision path.
 function dismissPermissionForTerminal(perm) {
   if (!perm) return;
-  if (perm.remoteOnly) {
-    resolvePermissionEntry(perm, "no-decision", "Go to terminal from remote approval");
-    ctx.focusTerminalForSession(perm.sessionId, { fallbackEntry: buildPermissionFocusEntry(perm) });
-    return;
-  }
-  // Cancel before splicing so a late Telegram decision can't slip in between
-  // the splice and the abort.
-  const remoteOutcome = perm.remoteApprovalResolution || {
-    decision: "terminal",
-    actionLabel: "前往终端",
-    source: "desktop",
-  };
-  cancelRemoteApproval(perm, {
-    outcome: remoteOutcome,
-    skipClientName: perm.remoteApprovalSkipClientName,
-  });
   const idx = pendingPermissions.indexOf(perm);
   if (idx !== -1) {
     pendingPermissions.splice(idx, 1);
@@ -3155,318 +2674,6 @@ function dismissPermissionForTerminal(perm) {
   repositionDependentBubbles();
   syncPermissionShortcuts();
   ctx.focusTerminalForSession(perm.sessionId, { fallbackEntry: buildPermissionFocusEntry(perm) });
-}
-
-function maybeStartRemoteApproval(permEntry) {
-  if (!isRemoteApprovalActionable(permEntry)) return false;
-  if (pendingPermissions.indexOf(permEntry) === -1) return false;
-  const clients = getRemoteApprovalClients();
-  if (!clients.length) return false;
-
-  const payload = isValidInteraction(permEntry.interaction)
-    && permEntry.interaction.intent === INTERACTION_INTENT.HUMAN_QUESTION
-    ? buildRemoteElicitationPayload(permEntry)
-    : buildRemoteApprovalPayload(permEntry);
-  if (!payload) return false;
-
-  const controllers = [];
-  const remoteRequests = [];
-  let started = false;
-  // Remote-only entries (bubble === null, from tryRemoteOnlyApproval when the
-  // desktop bubble is disabled) have no other UI waiting on the decision — if
-  // every remote client settles without ever producing one (send failure,
-  // invalid payload, client disconnect), the entry would otherwise sit in
-  // pendingPermissions holding the HTTP connection open until the hook's own
-  // timeout. Track settlements and fall back once none are left. The fallback
-  // is "no-decision" (drop the socket → the agent re-prompts in its own UI),
-  // NOT an explicit deny: nobody actually said no — answering deny here would
-  // decide on the user's behalf over a transient Telegram/Feishu failure.
-  let settledWithoutDecision = 0;
-
-  function onRemoteCardDelivered() {
-    // Starting requestApproval/requestElicitation only means the client began
-    // an async send. Slack may announce a remote-only request only after the
-    // client confirms that its actionable card obtained a message id. Re-check
-    // relevance here because the request may have resolved or DND may have
-    // been enabled while the send was in flight.
-    if (permEntry.remoteOnly !== true) return;
-    if (ctx.doNotDisturb) return;
-    if (!pendingPermissions.includes(permEntry)) return;
-    announceSlackPermission(permEntry);
-  }
-
-  function maybeFallBackRemoteOnlyEntry() {
-    if (!permEntry.remoteOnly) return;
-    if (settledWithoutDecision < remoteRequests.length) return;
-    if (pendingPermissions.indexOf(permEntry) === -1) return;
-    permLog(`remote-only approval: all remote requests settled without a decision, falling back (tool=${permEntry.toolName} session=${permEntry.sessionId})`);
-    resolvePermissionEntry(permEntry, "no-decision", "Remote approval unavailable; no client returned a decision");
-  }
-
-  for (const { name, client } of clients) {
-    const controller = typeof AbortController === "function" ? new AbortController() : null;
-    if (controller) controllers.push(controller);
-    let request;
-    try {
-      if (
-        isValidInteraction(permEntry.interaction)
-        && permEntry.interaction.intent === INTERACTION_INTENT.HUMAN_QUESTION
-        && permEntry.interaction.capabilities.answerQuestions
-      ) {
-        if (typeof client.requestElicitation !== "function") continue;
-        request = client.requestElicitation(payload, {
-          ...(controller ? { signal: controller.signal } : {}),
-          onDelivered: onRemoteCardDelivered,
-        });
-      } else {
-        const clientPayload = {
-          ...payload,
-          canOfferSessionTrust: typeof ctx.canOfferRemoteSessionTrust === "function"
-            && ctx.canOfferRemoteSessionTrust(permEntry, { name, client }) === true,
-        };
-        request = client.requestApproval(clientPayload, {
-          ...(controller ? { signal: controller.signal } : {}),
-          onDelivered: onRemoteCardDelivered,
-        });
-      }
-      remoteRequests.push({
-        name,
-        client,
-        controller,
-        signal: controller ? controller.signal : null,
-      });
-      permEntry.remoteApprovalRequests = remoteRequests;
-      started = true;
-    } catch (err) {
-      permLog(`${name} remote approval failed: ${compactRemoteApprovalText(err && err.message ? err.message : err, 200)}`);
-      continue;
-    }
-    Promise.resolve(request)
-      .then((decision) => {
-        if (!isRemoteApprovalDecision(decision)) {
-          if (decision) permLog(`${name} remote approval ignored decision=${compactRemoteApprovalText(decision, 40)}`);
-          settledWithoutDecision += 1;
-          maybeFallBackRemoteOnlyEntry();
-          return;
-        }
-        // A decision can pass the shape check above yet still be unusable
-        // (e.g. "suggestion:9" for an entry with no such suggestion). That is
-        // just as settled-without-a-decision as an invalid payload.
-        if (handleRemoteApprovalDecision(
-          permEntry,
-          decision,
-          name,
-          client,
-          () => {
-            settledWithoutDecision += 1;
-            maybeFallBackRemoteOnlyEntry();
-          }
-        ) === false) {
-          settledWithoutDecision += 1;
-          maybeFallBackRemoteOnlyEntry();
-        }
-      })
-      .catch((err) => {
-        permLog(`${name} remote approval failed: ${compactRemoteApprovalText(err && err.message ? err.message : err, 200)}`);
-        settledWithoutDecision += 1;
-        maybeFallBackRemoteOnlyEntry();
-      })
-      .finally(() => {
-        if (!controller || !Array.isArray(permEntry.remoteApprovalAbortControllers)) return;
-        const idx = permEntry.remoteApprovalAbortControllers.indexOf(controller);
-        if (idx !== -1) permEntry.remoteApprovalAbortControllers.splice(idx, 1);
-      });
-  }
-  if (!started) return false;
-  permEntry.remoteApprovalRequests = remoteRequests;
-  if (controllers.length) {
-    permEntry.remoteApprovalAbortControllers = controllers;
-    permEntry.remoteApprovalAbortController = controllers[0];
-  }
-  return started;
-}
-
-function isRemoteApprovalDecision(decision) {
-  return decision === "allow"
-    || decision === "deny"
-    || decision === "terminal"
-    || (decision && typeof decision === "object" && decision.type === "elicitation-submit")
-    || (decision && typeof decision === "object" && decision.action === "session-trust")
-    || (typeof decision === "string" && /^suggestion:\d+$/.test(decision))
-    || !!normalizeRemoteApprovalDecision(decision);
-}
-
-function remoteDecisionSource(name) {
-  if (name === "telegram") return "remote";
-  if (name === "feishu") return "feishu";
-  return "remote";
-}
-
-function applyRemotePermissionSuggestion(permEntry, decision) {
-  if (!isRemoteRichApprovalSupported(permEntry)) return "";
-  const index = parseInt(String(decision).split(":")[1], 10);
-  if (!Number.isInteger(index) || index < 0) return "";
-  const suggestion = permEntry && Array.isArray(permEntry.suggestions)
-    ? permEntry.suggestions[index]
-    : null;
-  if (!suggestion) return "";
-  if (!applyPermissionSuggestion(permEntry, index, { requireResolved: true })) return "";
-  return buildRemoteSuggestionLabel(suggestion);
-}
-
-function setRemoteResolutionOutcome(permEntry, outcome, sourceName) {
-  permEntry.remoteApprovalResolution = outcome;
-  permEntry.remoteApprovalSkipClientName = sourceName || "";
-}
-
-// Returns false only when the decision passed isRemoteApprovalDecision but
-// could not actually be applied (an invalid suggestion index) and the entry is
-// still pending — the caller counts that as "settled without a decision" so a
-// remote-only entry can still fall back instead of hanging until the hook's
-// timeout. Every consumed/already-resolved path returns true.
-function handleRemoteApprovalDecision(
-  permEntry,
-  decision,
-  sourceName,
-  sourceClient,
-  onSessionTrustSettledWithoutDecision
-) {
-  const isSessionTrustDecision = !!(
-    decision
-    && typeof decision === "object"
-    && decision.action === "session-trust"
-  );
-  const discardUnusedSessionTrustHandle = (reason) => {
-    if (
-      !isSessionTrustDecision
-      || !sourceClient
-      || typeof sourceClient.discardSessionTrustCardHandle !== "function"
-    ) {
-      return false;
-    }
-    try {
-      return sourceClient.discardSessionTrustCardHandle(decision.cardHandle, { reason }) === true;
-    } catch {
-      return false;
-    }
-  };
-  if (pendingPermissions.indexOf(permEntry) === -1) {
-    discardUnusedSessionTrustHandle("permission-resolved");
-    return true;
-  }
-  const source = remoteDecisionSource(sourceName);
-  if (
-    isSessionTrustDecision
-    && typeof ctx.requestRemoteSessionTrust === "function"
-  ) {
-    let reportedUnresolved = false;
-    const reportUnresolved = () => {
-      if (reportedUnresolved || pendingPermissions.indexOf(permEntry) === -1) return;
-      reportedUnresolved = true;
-      if (typeof onSessionTrustSettledWithoutDecision === "function") {
-        onSessionTrustSettledWithoutDecision();
-      }
-    };
-    Promise.resolve(ctx.requestRemoteSessionTrust(permEntry, {
-      clientName: sourceName,
-      client: sourceClient,
-      cardHandle: decision.cardHandle,
-    })).then((result) => {
-      const status = result && result.status;
-      if (status !== "applied" && status !== "equivalent") {
-        discardUnusedSessionTrustHandle("session-trust-unavailable");
-        reportUnresolved();
-      }
-    }).catch((err) => {
-      permLog(`${sourceName || "remote"} session trust failed: ${compactRemoteApprovalText(err && err.message ? err.message : err, 200)}`);
-      discardUnusedSessionTrustHandle("session-trust-failed");
-      reportUnresolved();
-    });
-    return true;
-  }
-  if (isSessionTrustDecision) discardUnusedSessionTrustHandle("session-trust-unavailable");
-  const normalizedLegacy = normalizeRemoteApprovalDecision(decision);
-  if (normalizedLegacy) {
-    if (normalizedLegacy.action === "suggestion") {
-      decision = `suggestion:${normalizedLegacy.index}`;
-    } else {
-      decision = normalizedLegacy.action;
-    }
-  }
-  if (decision === "terminal") {
-    setRemoteResolutionOutcome(permEntry, {
-      decision: "terminal",
-      actionLabel: "前往终端",
-      source,
-    }, sourceName);
-    if (
-      isValidInteraction(permEntry.interaction)
-      && permEntry.interaction.intent === INTERACTION_INTENT.HUMAN_QUESTION
-    ) {
-      resolvePermissionEntry(permEntry, "deny", "User answered in terminal");
-      return true;
-    }
-    if (permEntry.isCodex) {
-      resolvePermissionEntry(permEntry, "no-decision", "Go to terminal from remote approval");
-      ctx.focusTerminalForSession(permEntry.sessionId, { fallbackEntry: buildPermissionFocusEntry(permEntry) });
-    } else {
-      dismissPermissionForTerminal(permEntry);
-    }
-    return true;
-  }
-
-  if (
-    isValidInteraction(permEntry.interaction)
-    && permEntry.interaction.intent === INTERACTION_INTENT.HUMAN_QUESTION
-    && permEntry.interaction.capabilities.answerQuestions
-    && decision
-    && typeof decision === "object"
-    && decision.type === "elicitation-submit"
-  ) {
-    const wireInput = permEntry.elicitationWireInput || permEntry.toolInput;
-    const validatedAnswers = validateAndRemapIndexedElicitationAnswers(
-      wireInput,
-      decision.answers
-    );
-    if (!validatedAnswers.ok) {
-      permLog(`${sourceName || "remote"} remote approval ignored incomplete elicitation: ${validatedAnswers.reason}`);
-      return false;
-    }
-    permEntry.resolvedUpdatedInput = buildElicitationUpdatedInput(
-      wireInput,
-      validatedAnswers.answers
-    );
-    setRemoteResolutionOutcome(permEntry, {
-      decision: "elicitation-submit",
-      actionLabel: "提交输入",
-      source,
-    }, sourceName);
-    resolvePermissionEntry(permEntry, "allow");
-    return true;
-  }
-
-  if (typeof decision === "string" && decision.startsWith("suggestion:")) {
-    const label = applyRemotePermissionSuggestion(permEntry, decision);
-    if (!label) {
-      permLog(`${sourceName || "remote"} remote approval ignored invalid suggestion decision=${compactRemoteApprovalText(decision, 40)}`);
-      return false;
-    }
-    setRemoteResolutionOutcome(permEntry, {
-      decision,
-      actionLabel: label,
-      source,
-    }, sourceName);
-    resolvePermissionEntry(permEntry, "allow");
-    return true;
-  }
-
-  setRemoteResolutionOutcome(permEntry, {
-    decision,
-    actionLabel: remoteApprovalDecisionLabel(decision),
-    source,
-  }, sourceName);
-  resolvePermissionEntry(permEntry, decision);
-  return true;
 }
 
 function applyPermissionSuggestion(perm, index, options = {}) {
@@ -3523,16 +2730,6 @@ function applyPermissionSuggestion(perm, index, options = {}) {
       planReviewUpdatedInput = wireInput;
     }
   }
-  const remoteOutcome = permEntry.remoteApprovalResolution || {
-    decision: behavior === "deny" ? "deny" : behavior === "no-decision" ? "no-decision" : "allow",
-    actionLabel: remoteApprovalDecisionLabel(behavior === "deny" || behavior === "no-decision" ? behavior : "allow"),
-    source: "desktop",
-  };
-  cancelRemoteApproval(permEntry, {
-    outcome: remoteOutcome,
-    skipClientName: permEntry.remoteApprovalSkipClientName,
-  });
-
   // Minimum display time: if bubble just appeared and dismiss is automatic
   // (client disconnect / terminal answer), delay so user can see it briefly
   const MIN_BUBBLE_DISPLAY_MS = 2000;
@@ -3795,23 +2992,6 @@ function handleBubbleHeight(event, measurement) {
     // older callers inspect it directly.
     perm.measuredHeight = perm.compactMeasuredHeight;
   }
-  // revealCard() reports height on the next animation frame, so this is the
-  // first main-process acknowledgement that the exact interaction was loaded,
-  // received through permission-show, rendered, and made visible. Announcing
-  // earlier (even at did-finish-load) can strand an unretractable Slack card
-  // when content sync or the renderer fails. Later resize reports are safe:
-  // announceSlackPermission is once-guarded per entry.
-  let requestWindowVisible = true;
-  try {
-    if (perm.bubble && typeof perm.bubble.isVisible === "function") {
-      requestWindowVisible = perm.bubble.isVisible();
-    }
-  } catch {
-    requestWindowVisible = false;
-  }
-  if (requestWindowVisible) announceSlackPermission(perm);
-  // Geometry updates happen after the delivery acknowledgement. If either
-  // reflow throws, the already-rendered card must still be announced.
   repositionBubbles();
   repositionDependentBubbles();
 }
@@ -3941,20 +3121,6 @@ function handleQueuePresentationAck(event, acknowledgement) {
     // shrinking the drawer in the explicit close/select handlers.
     if (!applyCommittedOverflowPresentation(entries, geometry)) return false;
   }
-  for (const entry of entries) {
-    if (commit.hiddenEntryIds.has(entry.uiEntryId)) {
-      announceSlackPermission(entry);
-    } else if (
-      commit.visibleEntryIds.has(entry.uiEntryId)
-      && entry._slackPermissionAnnounced !== true
-    ) {
-      // A representative added after the previous commit may have sent its
-      // first height report while still hidden. Ask its existing renderer for
-      // a fresh local height acknowledgement now that the original request
-      // window is visible; the normal height path then owns Slack delivery.
-      sendPermissionPresentation(entry);
-    }
-  }
   syncPermissionShortcuts();
   repositionDependentBubbles();
   if (typeof ctx.reapplyMacVisibility === "function") {
@@ -4071,7 +3237,7 @@ function handleQueueSelect(event, selection) {
   if (pendingCommit && pendingCommit.visibleEntryIds.has(target.uiEntryId)) {
     // The target was already represented by the ACKed drawer payload, so this
     // trusted user selection may switch request windows immediately. The new
-    // revision still needs an ACK for the launcher payload and Slack once.
+    // revision still needs an ACK for the launcher payload.
     overflowPresentation.visibleEntryIds = new Set(pendingCommit.visibleEntryIds);
   }
   const restored = restoreCommittedRequestsBeforeQueueCollapse();
@@ -4435,7 +3601,6 @@ function dismissInteractivePermissionWithoutDecision(perm, reason) {
     pendingPermissions.splice(idx, 1);
     notifyPermissionsChanged("dismissed");
   }
-  cancelRemoteApproval(perm);
   if (perm._delayTimer) { clearTimeout(perm._delayTimer); perm._delayTimer = null; }
   if (perm.autoCloseTimer) { clearTimeout(perm.autoCloseTimer); perm.autoCloseTimer = null; }
   if (perm.abortHandler && perm.res) {
@@ -4526,7 +3691,6 @@ function dismissOpencodeFamilyPermissionResolvedExternally(identity) {
   notifyPermissionsChanged("resolved-externally");
 
   for (const entry of matches) {
-    cancelRemoteApproval(entry, { reason: "resolved-externally" });
     if (entry._delayTimer) { clearTimeout(entry._delayTimer); entry._delayTimer = null; }
     if (entry.autoCloseTimer) { clearTimeout(entry.autoCloseTimer); entry.autoCloseTimer = null; }
     if (entry.autoExpireTimer) { clearTimeout(entry.autoExpireTimer); entry.autoExpireTimer = null; }
@@ -4663,7 +3827,6 @@ return {
   isPermissionEntryLive, canAutoResolvePendingPermission,
   beginSessionTrustConfirmation, endSessionTrustConfirmation,
   syncPermissionBubbleContent,
-  maybeStartRemoteApproval,
   dismissPermissionForTerminal,
   buildPermissionBubblePayload,
   handleBubbleHeight, handleBubbleExpanded, handleCompositionActive,

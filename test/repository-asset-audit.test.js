@@ -219,19 +219,6 @@ describe("repository asset audit", () => {
     assert.strictEqual(missing.path, "themes/clawd/theme.json");
   });
 
-  it("hard-fails a tracked cc-connect-clawd executable", () => {
-    const report = analyzeAudit({
-      trackedFiles: [
-        tracked("assets/LICENSE", 5),
-        tracked("bin/cc-connect-clawd/windows-x64/cc-connect-clawd.exe", 5),
-      ],
-      manifest: manifest([]),
-      policy: basePolicy(),
-    });
-    const executable = report.findings.find((finding) => finding.rule === "sidecar-executable-untracked");
-    assert.strictEqual(executable.level, "error");
-  });
-
   it("reports duplicate packaged payloads as warnings and budgets independently", () => {
     const policy = basePolicy();
     const report = analyzeAudit({
@@ -331,10 +318,9 @@ describe("repository asset audit", () => {
     try {
       const relative = path.join(
         "resources",
-        "sidecars",
-        "cc-connect-clawd",
+        "native",
         "windows-arm64",
-        "cc-connect-clawd.exe",
+        "helper.exe",
       );
       const executable = path.join(root, relative);
       fs.mkdirSync(path.dirname(executable), { recursive: true });

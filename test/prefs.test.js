@@ -51,7 +51,6 @@ describe("prefs.getDefaults", () => {
     assert.notStrictEqual(a.petMouthAccessory, b.petMouthAccessory);
     assert.notStrictEqual(a.shortcuts, b.shortcuts);
     assert.notStrictEqual(a.sessionAliases, b.sessionAliases);
-    assert.notStrictEqual(a.tgApproval, b.tgApproval);
     // Mutating one shouldn't affect the other
     a.agents["claude-code"].enabled = false;
     assert.strictEqual(b.agents["claude-code"].enabled, true);
@@ -91,7 +90,6 @@ describe("prefs.getDefaults", () => {
     assert.deepStrictEqual(d.quotaRingHiddenProviders, []);
     assert.strictEqual(d.claudeQuotaCollectionEnabled, false);
     assert.strictEqual(d.quotaMergeSources, false);
-    assert.strictEqual(d.telegramMigrationLastNotified, "");
     assert.strictEqual(d.sessionHudCleanupDetached, true);
     assert.strictEqual("sessionHudAutoHide" in d, false);
     assert.strictEqual(d.sessionHudPinned, false);
@@ -107,26 +105,6 @@ describe("prefs.getDefaults", () => {
     assert.strictEqual(d.notificationBubbleAutoCloseSeconds, 6);
     assert.strictEqual(d.updateBubbleAutoCloseSeconds, 9);
     assert.deepStrictEqual(d.sessionAliases, {});
-    assert.deepStrictEqual(d.tgApproval, {
-      enabled: false,
-      allowedTgUserId: "",
-      targetSessionKey: "",
-      notifyOnComplete: false,
-      completionOutputMode: "off",
-      r3DirectSendEnabled: false,
-    });
-    assert.deepStrictEqual(d.feishuApproval, {
-      enabled: false,
-      // Feishu (China) is the default so existing users keep the platform they
-      // were implicitly on before this field existed.
-      platform: "feishu",
-      idType: "open_id",
-      approverId: "",
-      approverSource: "none",
-      approverBoundPlatform: "",
-      approverBoundAppId: "",
-      connectionTimeoutSeconds: 15,
-    });
   });
 
   it("seeds only default-installed agents as enabled", () => {
@@ -191,68 +169,6 @@ describe("prefs.getDefaults", () => {
     assert.strictEqual(d.agents.codex.nativeNotificationSoundEnabled, false);
   });
 
-});
-
-describe("prefs Feishu approval provenance migration", () => {
-  it("normalizes legacy approver provenance lazily without rewriting the file", () => {
-    const p = makeTempPath();
-    const raw = {
-      version: prefs.CURRENT_VERSION,
-      feishuApproval: {
-        enabled: true,
-        platform: "feishu",
-        idType: "union_id",
-        approverId: "legacy-union-id",
-        connectionTimeoutSeconds: 30,
-      },
-    };
-    const original = JSON.stringify(raw, null, 2);
-    fs.writeFileSync(p, original);
-
-    const loaded = prefs.load(p);
-
-    assert.equal(fs.readFileSync(p, "utf8"), original);
-    assert.deepStrictEqual(loaded.snapshot.feishuApproval, {
-      enabled: true,
-      platform: "feishu",
-      idType: "union_id",
-      approverId: "legacy-union-id",
-      approverSource: "unknown",
-      approverBoundPlatform: "",
-      approverBoundAppId: "",
-      connectionTimeoutSeconds: 30,
-    });
-  });
-
-  it("serializes canonical unknown provenance on the next normal save without any App Secret", () => {
-    const p = makeTempPath();
-    fs.writeFileSync(p, JSON.stringify({
-      version: prefs.CURRENT_VERSION,
-      feishuApproval: {
-        enabled: true,
-        platform: "lark",
-        idType: "user_id",
-        approverId: "legacy-user-id",
-      },
-    }));
-
-    const loaded = prefs.load(p);
-    prefs.save(p, loaded.snapshot);
-    const serialized = JSON.parse(fs.readFileSync(p, "utf8"));
-
-    assert.deepStrictEqual(serialized.feishuApproval, {
-      enabled: true,
-      platform: "lark",
-      idType: "user_id",
-      approverId: "legacy-user-id",
-      approverSource: "unknown",
-      approverBoundPlatform: "",
-      approverBoundAppId: "",
-      connectionTimeoutSeconds: 15,
-    });
-    assert.equal("appSecret" in serialized.feishuApproval, false);
-    assert.equal(JSON.stringify(serialized.feishuApproval).includes("FEISHU_APP_SECRET"), false);
-  });
 });
 
 describe("prefs.validate", () => {
@@ -411,26 +327,6 @@ describe("prefs.validate", () => {
 
     assert.strictEqual(v.version, prefs.CURRENT_VERSION);
     assert.strictEqual(v.agents.pi.permissionsEnabled, false);
-  });
-
-  it("normalizes Telegram approval prefs without storing a token", () => {
-    const v = prefs.validate({
-      tgApproval: {
-        enabled: true,
-        allowedTgUserId: " 123456789 ",
-        targetSessionKey: "987654321",
-        botToken: "123:should-not-survive",
-      },
-    });
-    assert.deepStrictEqual(v.tgApproval, {
-      enabled: true,
-      allowedTgUserId: "123456789",
-      targetSessionKey: "telegram:987654321",
-      notifyOnComplete: false,
-      completionOutputMode: "off",
-      r3DirectSendEnabled: false,
-    });
-    assert.strictEqual(Object.prototype.hasOwnProperty.call(v.tgApproval, "botToken"), false);
   });
 
   it("keeps valid fields verbatim", () => {
@@ -1170,27 +1066,8 @@ describe("prefs.migrate v6 → v7 (Codex Native prompt sound default)", () => {
   });
 });
 
-describe("prefs.migrate v7 → v8 (Telegram bare completion default)", () => {
-  it("turns old persisted bare completion pings off", () => {
-    const upgraded = prefs.migrate({
-      version: 7,
-      tgApproval: {
-        enabled: true,
-        allowedTgUserId: "123456789",
-        targetSessionKey: "telegram:123456789",
-        notifyOnComplete: true,
-        completionOutputMode: "full",
-      },
-    });
-    const validated = prefs.validate(upgraded);
-
-    assert.strictEqual(validated.version, prefs.CURRENT_VERSION);
-    assert.strictEqual(validated.tgApproval.notifyOnComplete, false);
-    assert.strictEqual(validated.tgApproval.completionOutputMode, "full");
-    assert.strictEqual(validated.tgApproval.enabled, true);
-  });
-
-  it("migrates older prefs without Telegram approval settings safely", () => {
+describe("prefs.migrate v7 → v8", () => {
+  it("keeps the migration chain contiguous from an older version", () => {
     const upgraded = prefs.migrate({
       version: 6,
       lang: "zh",
@@ -1199,8 +1076,6 @@ describe("prefs.migrate v7 → v8 (Telegram bare completion default)", () => {
 
     assert.strictEqual(validated.version, prefs.CURRENT_VERSION);
     assert.strictEqual(validated.lang, "zh");
-    assert.strictEqual(validated.tgApproval.notifyOnComplete, false);
-    assert.strictEqual(validated.tgApproval.completionOutputMode, "off");
   });
 });
 

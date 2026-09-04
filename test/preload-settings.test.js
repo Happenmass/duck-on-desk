@@ -43,22 +43,20 @@ function loadPreload() {
   return { exposed, ipcHandlers, invokes };
 }
 
-test("settings preload keeps every Feishu approver operation on the generic command IPC", async () => {
+test("settings preload routes commands through the generic command IPC", async () => {
   const { exposed, invokes } = loadPreload();
   const settingsAPI = exposed.get("settingsAPI");
   for (const [action, payload] of [
-    ["feishuApproval.saveApproverByEmail", { email: "person@example.com" }],
-    ["feishuApproval.cancelApproverLookup", undefined],
-    ["feishuApproval.saveManualApprover", { idType: "open_id", approverId: "ou_manual" }],
+    ["setThemeSelection", { themeId: "clawd" }],
+    ["setIdleVisual", undefined],
   ]) {
     assert.deepEqual(await settingsAPI.command(action, payload), { status: "ok" });
   }
   assert.deepEqual(JSON.parse(JSON.stringify(invokes)), [
-    ["settings:command", { action: "feishuApproval.saveApproverByEmail", payload: { email: "person@example.com" } }],
-    ["settings:command", { action: "feishuApproval.cancelApproverLookup" }],
-    ["settings:command", { action: "feishuApproval.saveManualApprover", payload: { idType: "open_id", approverId: "ou_manual" } }],
+    ["settings:command", { action: "setThemeSelection", payload: { themeId: "clawd" } }],
+    ["settings:command", { action: "setIdleVisual" }],
   ]);
-  assert.equal(typeof settingsAPI.feishuApprovalSaveApproverByEmail, "undefined");
+  assert.equal(typeof settingsAPI.setThemeSelection, "undefined");
 });
 
 test("settings preload exposes the three roam area operations", async () => {
@@ -74,26 +72,3 @@ test("settings preload exposes the three roam area operations", async () => {
   ]);
 });
 
-test("settings preload forwards Telegram status revisions and unsubscribe is exact", () => {
-  const { exposed, ipcHandlers } = loadPreload();
-  const settingsAPI = exposed.get("settingsAPI");
-  const forward = ipcHandlers.get("remoteApproval:status-changed");
-  const received = [];
-  const payload = { channel: "telegram", revision: 7 };
-
-  assert.equal(typeof settingsAPI.onRemoteApprovalStatusChanged, "function");
-  assert.equal(typeof forward, "function");
-
-  const unsubscribe = settingsAPI.onRemoteApprovalStatusChanged((value) => {
-    received.push(value);
-  });
-  assert.equal(typeof unsubscribe, "function");
-
-  forward({}, payload);
-  assert.equal(received.length, 1);
-  assert.equal(received[0], payload, "the channel-scoped payload must pass through unchanged");
-
-  unsubscribe();
-  forward({}, { channel: "telegram", revision: 8 });
-  assert.equal(received.length, 1, "unsubscribe must remove only the registered callback");
-});
