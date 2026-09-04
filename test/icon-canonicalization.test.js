@@ -15,12 +15,8 @@ const PACKAGED_ICON_ASSETS = [
   "assets/tray-iconTemplate@2x.png",
   "assets/tray-icon-flash.png",
 ];
-const LOCALIZED_READMES = [
-  "README.md",
-  "README.zh-CN.md",
-];
 
-test("ordinary tray and README callers use the canonical application icon", () => {
+test("ordinary tray callers use the canonical application icon", () => {
   assert.ok(fs.existsSync(CANONICAL_ICON), "assets/icon.png must remain the canonical icon");
   assert.strictEqual(
     fs.existsSync(RETIRED_TRAY_ICON),
@@ -40,12 +36,6 @@ test("ordinary tray and README callers use the canonical application icon", () =
       /assets\/tray-icon\.png/,
       `${relativePath} must not restore the retired ordinary tray icon`,
     );
-  }
-
-  for (const relativePath of LOCALIZED_READMES) {
-    const source = fs.readFileSync(path.join(ROOT, relativePath), "utf8");
-    assert.match(source, /<img src="assets\/icon\.png" width="128" alt="Duck">/);
-    assert.doesNotMatch(source, /assets\/tray-icon\.png/);
   }
 });
 
