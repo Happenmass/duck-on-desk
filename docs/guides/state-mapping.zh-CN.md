@@ -27,42 +27,6 @@ Subagent 事件仍映射到逻辑 `juggling` 状态，但 Duck 主题现在会�
 | 60 秒鼠标静止 | 睡觉 | 睡眠 | <img src="../../assets/gif/duck-sleeping.gif" width="160"> | <img src="../../assets/gif/calico-sleeping.gif" width="130"> | <img src="../../assets/gif/cloudling-sleeping.gif" width="140"> |
 | SessionEnd | 删除会话；无其他 live 会话时回到 idle | 不触发睡眠过渡 | | | |
 
-## Kimi Code CLI（Kimi-CLI）Hook 事件
-
-Kimi Code CLI（Kimi-CLI）现已采用 hook-only 集成（`~/.kimi/config.toml`），下面这 13 个 hook 事件会映射到 Duck 的共享状态：
-
-| Kimi Hook Event | 状态 |
-|---|---|
-| SessionStart | idle |
-| SessionEnd | 删除会话；无其他 live 会话时回到 idle |
-| UserPromptSubmit | thinking |
-| PreToolUse | 默认映射到 working。payload 携带明确审批信号（`permission_required` / `requires_approval` / `waiting_for_approval` / `is_permission_request`）时始终立即切到 permission 类动画。在此之外，持久化模式决定门控工具的处理方式：**`suspect`（安装器默认）**启用延迟启发式——suspect 窗口内没等到 `PostToolUse` 就认定 Kimi 阻塞在审批 TUI 上并弹出提示；`explicit` 仅响应显式信号（现行 kimi-cli 从不发出，等于不弹卡）。安装脚本（`npm run install:kimi-hooks` 及启动时自动同步）把模式以 `--permission-mode=<mode>` 参数持久化到 `~/.kimi/config.toml` 的 `command` 字段，重新同步时保留既有选择。运行时环境变量优先级高于持久化参数：`DUCK_KIMI_PERMISSION_MODE=explicit\|suspect`（压过持久化参数；但 `DUCK_KIMI_DISABLE_PRETOOL_PERMISSION` 与 `DUCK_KIMI_PERMISSION_IMMEDIATE` 的判定顺序在它之前）；`DUCK_KIMI_PERMISSION_IMMEDIATE=1` 对门控工具强制立即映射；`DUCK_KIMI_PERMISSION_SUSPECT=1`（旧别名）只对当前进程开启 suspect；`DUCK_KIMI_PERMISSION_SUSPECT_MS=<ms>` 可调 suspect 窗口；`DUCK_KIMI_DISABLE_PRETOOL_PERMISSION=1` 无论其他开关如何都保持 explicit-only。排队的门控调用由每会话的门控台账跟踪：每答复一个审批，就会为下一个待审批重新弹卡。 |
-| PostToolUse | working |
-| PostToolUseFailure | error |
-| Stop | attention |
-| StopFailure | error |
-| SubagentStart | juggling |
-| SubagentStop | working |
-| PreCompact | sweeping |
-| PostCompact | attention |
-| Notification | notification |
-
-## ZCode Hook 事件
-
-ZCode 使用 `~/.zcode/cli/config.json` 下的 config-file hooks：
-
-| ZCode Hook Event | 状态 |
-|---|---|
-| SessionStart | idle |
-| UserPromptSubmit | thinking |
-| PreToolUse | working |
-| PostToolUse | working |
-| PostToolUseFailure | error |
-| Stop | attention |
-| PermissionRequest | notification（仅 fail-closed 路径） |
-
-`PermissionRequest` 自 Phase 2 起是阻塞式权限审批：hook 等待 Duck 本地气泡或远程审批产生人工决定，并通过 stdout 的 `hookSpecificOutput` 回答 allow/deny。在完成 ZCode 工具面与会话身份审计前，权限自动化会 defer。上表的 `notification` 映射只在 fail-closed 路径（tool name 缺失 / unknown）或 Duck 未运行时触发；真正的决定不会 POST `/state`。当前集成没有 ZCode `SessionEnd` 事件，会话完成依赖 `Stop` 和 Duck 原有的进程存活 / stale session 清理。当 Duck 无决定时（超时、断连、DND、气泡关闭），hook 输出 `{}`，由 ZCode 原生权限流程接管。
-
 ## Pi Extension 事件
 
 Pi 使用全局 extension（`~/.pi/agent/extensions/duck-on-desk`），会把交互式会话生命周期事件映射到 Duck 的共享状态：

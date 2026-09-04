@@ -5,8 +5,7 @@ Use this flow when preparing a Duck app release.
 ## Before Tagging
 
 1. Update `package.json` to the release version.
-2. Add `docs/releases/release-vX.Y.Z.md`.
-3. Run the local tests that match the change scope. For full release prep, run:
+2. Run the local tests that match the change scope. For full release prep, run:
 
 ```bash
 npm run verify:release
@@ -14,7 +13,7 @@ npm test
 npm run audit:assets
 ```
 
-4. Run the `Build & Release` workflow manually on `main`.
+3. Run the `Build & Release` workflow manually on `main`.
 
 For macOS Developer ID certificate creation, App Store Connect Team API key
 setup, local verification, and the exact GitHub Actions secret names, follow
@@ -86,12 +85,6 @@ Before launching:
   listed artifact filename identify `1.0.0`.
 - For migration smoke, install v0.16.0 first and save a copy of the old
   `duck-prefs.json` before upgrading.
-- For Reasonix smoke, prepare a machine with Reasonix initialized so
-  `<Reasonix home>/` exists (`%APPDATA%\reasonix` on Windows,
-  `~/.reasonix` on macOS/Linux). A skipped install because Reasonix is missing
-  does not validate the packaged hook path.
-- For Remote SSH smoke, prepare at least one saved profile that can connect
-  through an SSH reverse tunnel.
 
 Required all-platform checks:
 
@@ -161,10 +154,6 @@ Required all-platform checks:
 - Exercise Ask every time, Question prompts only, and Auto-approve at both the
   global and live-session scopes. Confirmation gates must appear where required,
   and the unattended runtime elevation must downgrade after restart.
-- Feed Claude and Codex quota data from local plus Remote SSH sources. Confirm
-  per-source values appear in Dashboard and the configurable pet Orbit ring,
-  merge-across-machines can be turned both on and off, and an occupied third-party
-  Claude statusline is preserved unless explicit chaining is enabled.
 - Trigger a long CJK Claude or Codex completion and confirm the Stop event reaches
   Duck without a 413 and the happy animation is not dropped.
 - Codex official hook health: disable hooks / leave hooks unreviewed, confirm
@@ -178,33 +167,6 @@ Required all-platform checks:
   the other remains intact. Forged/stale `custom-` ids must be rejected.
 - Install WorkBuddy against the current `~/.workbuddy-ai/settings.json` path and
   confirm state + Notification events arrive without Duck taking over approval.
-- Install MiMo Code into a commented/trailing-comma JSONC config, exercise
-  Allow/Always/Deny and DND fallback, then uninstall and confirm user config is preserved.
-- Settings -> Agents -> Install Reasonix succeeds on Windows when paths contain
-  spaces, and the written command uses the EncodedCommand path when needed.
-- Install TraeCode on Windows with Node under `C:\Program Files`, enable the
-  hooks in Trae CN using Sandbox mode, and confirm all six event types exit 0;
-  then uninstall and confirm all six encoded managed entries are removed.
-- Set `REASONIX_HOME` to an unresolved variable and confirm install/sync fails
-  closed without writing `settings.json` into the launch directory.
-- Install ZCode and confirm lifecycle events plus a real `PermissionRequest`
-  reach Duck. Exercise manual Allow and Deny, then confirm no-decision falls
-  back to ZCode's native permission flow and permission automation stays
-  unavailable. From an Orca pane, jump back to the session and confirm the
-  validated pane key focuses the correct pane locally and over managed Remote SSH.
-- Install QwenWork on Windows or macOS and confirm lifecycle state reaches Duck,
-  `PermissionRequest` / `PermissionDenied` remain observation-only, and uninstall
-  removes only Duck-managed hook entries.
-- Remote SSH profile with connect-on-launch connects after startup; repeat with
-  local port 24333 occupied so the server binds a later port and the tunnel still
-  targets the real bound port.
-- Upgrade a Remote SSH target that still has the legacy Codex monitor PID file;
-  deploy/cleanup must complete without shell `bad substitution`. Confirm
-  revoke-all invalidates both current and previous routing nonces, and a normal
-  edit of a profile-isolated profile preserves its runtime mode/key/layout.
-- Install the DeepSeek Harness bridge with its managed root reached through a
-  filesystem symlink. Confirm install and Doctor both report the verified
-  generation as healthy; foreign same-name packages must still fail closed.
 
 Recommended all-platform checks:
 
@@ -278,8 +240,6 @@ Linux checks:
 - Required when Linux hardware is available: Wayland session launches
   successfully and relaunches under XWayland when available; pet transparency
   and positioning work.
-- Required when Linux hardware is available: MiMo JSONC install/uninstall keeps
-  executable modes and comment-preserving writes correct on a POSIX filesystem.
 - Recommended for tmux users: focus jumps to the correct tmux pane.
 
 All required Windows items must pass before publishing the draft. Required macOS

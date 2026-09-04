@@ -9,18 +9,14 @@ const test = require("node:test");
 const { resolveTagName, verifyReleaseVersion } = require("../scripts/verify-release-version");
 
 function makeFixture(t, { packageVersion = "1.2.3", lockVersion = packageVersion,
-  rootVersion = packageVersion, releaseVersion = packageVersion } = {}) {
+  rootVersion = packageVersion } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-release-contract-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  fs.mkdirSync(path.join(root, "docs", "releases"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ version: packageVersion }));
   fs.writeFileSync(path.join(root, "package-lock.json"), JSON.stringify({
     version: lockVersion,
     packages: { "": { version: rootVersion } },
   }));
-  if (releaseVersion) {
-    fs.writeFileSync(path.join(root, "docs", "releases", `release-v${releaseVersion}.md`), "# release\n");
-  }
   return root;
 }
 
@@ -41,8 +37,8 @@ test("the authoritative draft smoke checklist tracks the current package version
   assert.match(processDoc, new RegExp("About shows `v" + escapedVersion + "`"));
 });
 
-test("package, lock root, release note, and tag must agree exactly", (t) => {
-  const root = makeFixture(t, { lockVersion: "1.2.2", rootVersion: "1.2.1", releaseVersion: "" });
+test("package, lock root, and tag must agree exactly", (t) => {
+  const root = makeFixture(t, { lockVersion: "1.2.2", rootVersion: "1.2.1" });
   const result = verifyReleaseVersion({
     root,
     env: { GITHUB_REF_TYPE: "tag", GITHUB_REF_NAME: "v1.2.4" },
@@ -51,7 +47,6 @@ test("package, lock root, release note, and tag must agree exactly", (t) => {
   assert.strictEqual(result.ok, false);
   assert.ok(result.errors.some((entry) => entry.includes("package-lock.json version")));
   assert.ok(result.errors.some((entry) => entry.includes("package-lock root version")));
-  assert.ok(result.errors.some((entry) => entry.includes("missing release note")));
   assert.ok(result.errors.some((entry) => entry.includes("must exactly equal")));
 });
 

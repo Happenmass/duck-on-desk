@@ -2,7 +2,7 @@
 
 [Back to README](../../README.md)
 
-Most lifecycle events from agents (Claude Code hooks, Codex JSONL, Copilot hooks) map to the same animation states.
+Most lifecycle events from agents (Claude Code hooks, Codex JSONL) map to the same animation states.
 
 Subagent events still map to the logical `juggling` state, but Duck now chooses a tiered asset by live subagent count: 1 subagent uses `duck-headphones-groove.svg`, while 2+ subagents use `duck-working-juggling.svg`. The old Duck conducting asset is retired; Calico and Cloudling still use their conducting animations for their 2+ subagent tier.
 
@@ -28,51 +28,6 @@ Duck also has a conditional Outlaw idle easter egg: while both the Western cowbo
 | WorktreeCreate | carrying | Carrying | <img src="../../assets/gif/duck-carrying.gif" width="160"> | <img src="../../assets/gif/calico-carrying.gif" width="130"> | <img src="../../assets/gif/cloudling-carrying.gif" width="140"> |
 | 60s mouse idle | sleeping | Sleep | <img src="../../assets/gif/duck-sleeping.gif" width="160"> | <img src="../../assets/gif/calico-sleeping.gif" width="130"> | <img src="../../assets/gif/cloudling-sleeping.gif" width="140"> |
 | SessionEnd | remove session; idle if no live sessions | No sleep transition | | | |
-
-## Kimi Code CLI (Kimi-CLI) Hook Events
-
-Kimi Code CLI (Kimi-CLI) now uses hook-only integration (`~/.kimi/config.toml`), and maps these 13 hook events to shared Duck states:
-
-| Kimi Hook Event | State |
-|---|---|
-| SessionStart | idle |
-| SessionEnd | remove session; idle if no live sessions |
-| UserPromptSubmit | thinking |
-| PreToolUse | working by default. Explicit payload approval signals (`permission_required` / `requires_approval` / `waiting_for_approval` / `is_permission_request`) always flip the permission animation immediately. Beyond that, the persistent mode decides how permission-gated tools are treated: **`suspect` (installer default)** arms a deferred heuristic — if no `PostToolUse` lands within the suspect window, Kimi is assumed blocked on its approval TUI and the cue fires; `explicit` reacts to explicit signals only (which current kimi-cli never emits — effectively no cues). The installer (`npm run install:kimi-hooks` and the auto-sync at startup) persists the mode as a `--permission-mode=<mode>` flag on the `command` field of `~/.kimi/config.toml`, preserving a previously chosen mode across re-syncs. Runtime env vars override the persisted flag: `DUCK_KIMI_PERMISSION_MODE=explicit\|suspect` (beats the persisted argv flag; `DUCK_KIMI_DISABLE_PRETOOL_PERMISSION` and `DUCK_KIMI_PERMISSION_IMMEDIATE` are checked before it), `DUCK_KIMI_PERMISSION_IMMEDIATE=1` forces immediate remap for gated tools, `DUCK_KIMI_PERMISSION_SUSPECT=1` (legacy alias) enables suspect for the current process, `DUCK_KIMI_PERMISSION_SUSPECT_MS=<ms>` tunes the suspect window, `DUCK_KIMI_DISABLE_PRETOOL_PERMISSION=1` keeps explicit-only behavior regardless of other switches. Queued gated calls are tracked in a per-session gate ledger: each answered approval re-arms the cue for the next pending one. |
-| PostToolUse | working |
-| PostToolUseFailure | error |
-| Stop | attention |
-| StopFailure | error |
-| SubagentStart | juggling |
-| SubagentStop | working |
-| PreCompact | sweeping |
-| PostCompact | attention |
-| Notification | notification |
-
-## Gemini CLI Hook Notes
-
-Gemini CLI stays on hook-only integration, but two Gemini-native events are intentionally not forced into the shared Claude/Codex semantics:
-
-| Gemini Hook Event | Duck behavior |
-|---|---|
-| AfterAgent | Recorded as `AfterAgent` and the session returns to `idle`. It does not remap to shared `Stop`, so Gemini turns no longer auto-show the `attention` / done animation. |
-| PreCompress | Recorded as `PreCompress` in session history, but does not switch the pet to `sweeping`. The current visible state (usually `thinking` or `working`) stays in place. |
-
-## ZCode Hook Events
-
-ZCode uses config-file hooks under `~/.zcode/cli/config.json`:
-
-| ZCode Hook Event | State |
-|---|---|
-| SessionStart | idle |
-| UserPromptSubmit | thinking |
-| PreToolUse | working |
-| PostToolUse | working |
-| PostToolUseFailure | error |
-| Stop | attention |
-| PermissionRequest | notification (fail-closed path only) |
-
-`PermissionRequest` is a blocking permission approval since Phase 2: the hook waits on Duck's local bubble or remote approval and answers a manual allow/deny via `hookSpecificOutput` on stdout. Permission automation deliberately defers for ZCode until its tool surface and session identity are audited. The `notification` mapping above only fires on the fail-closed path (missing/unknown tool name) or when Duck is not running; a real decision never posts `/state`. ZCode does not provide a `SessionEnd` hook in this integration, so completion relies on `Stop` plus Duck's normal process-liveness and stale-session cleanup. When Duck yields no decision (timeout, disconnect, DND, bubbles off), the hook prints `{}` and ZCode's own permission flow takes over.
 
 ## Pi Extension Events
 

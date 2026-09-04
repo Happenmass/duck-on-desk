@@ -39,17 +39,12 @@ function verifyReleaseVersion(options = {}) {
     errors.push(`package-lock root version ${JSON.stringify(lockRootVersion)} does not match ${JSON.stringify(version)}`);
   }
 
-  const releaseNote = path.join(root, "docs", "releases", `release-v${version}.md`);
-  if (!version || !fs.existsSync(releaseNote)) {
-    errors.push(`missing release note: docs/releases/release-v${version}.md`);
-  }
-
   const tag = resolveTagName(env);
   if (tag && tag !== `v${version}`) {
     errors.push(`release tag ${JSON.stringify(tag)} must exactly equal ${JSON.stringify(`v${version}`)}`);
   }
 
-  return { ok: errors.length === 0, version, tag, releaseNote, errors };
+  return { ok: errors.length === 0, version, tag, errors };
 }
 
 function main() {

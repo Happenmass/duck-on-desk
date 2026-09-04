@@ -189,7 +189,7 @@ Mini 状态映射：
 ### Test Result Reactions
 
 - Settings → General → Alerts & feedback 的“测试结果动画”是独立 opt-in，默认关闭
-- Claude Code（包括 Cursor 导入的兼容 hook）的 Bash `PostToolUse` / `PostToolUseFailure` 只在命令以常见测试 runner 开头、且结果可可靠判断时上报 `pass` / `fail`；命令和测试输出不会传给 renderer，server 也只接受这两个来源的结果标签
+- Claude Code 的 Bash `PostToolUse` / `PostToolUseFailure` 只在命令以常见测试 runner 开头、且结果可可靠判断时上报 `pass` / `fail`；命令和测试输出不会传给 renderer，server 也只接受这两个来源的结果标签
 - `pass` 在 `#pet-particle-layer` 播放一次像素纸屑，`fail` 只对 `#pet-facing-stage` 使用独立 `translate` / `rotate` 抖动，不覆盖 mini 镜像、漫步位移或跨屏 viewport offset
 - DND、隐藏桌宠、mini / mini transition、拖拽和 headless 会话都会压住测试结果动画；状态机本身仍照常处理测试事件
 
@@ -215,10 +215,8 @@ Mini 状态映射：
 - hook 脚本依赖 Node.js
 - Windows 终端聚焦依赖 `koffi`；macOS 依赖 `osascript`
 - Codex CLI 以 official hooks 为主、JSONL 轮询为 fallback；WebSearch / compaction / abort 等 hook 未覆盖事件仍可能有轮询延迟
-- Copilot CLI 自动同步 `<COPILOT_HOME 或 ~/.copilot>/hooks/hooks.json`；`disableAllHooks: true` 时 doctor warning 且不挂 Fix 按钮
-- ZCode 自动同步 `~/.zcode/cli/config.json` 的 `hooks.events.*`；显式全局或单项 `enabled:false` 保持不变，doctor warning 且不挂会覆盖用户选择的 Fix 按钮
-- Gemini 无权限气泡，除非未来提供兼容的阻塞式审批协议；Cursor 权限走 stdout；Kiro 没有 global hooks；opencode 与 MiMo Code 权限只能走 event hook + bridge
-- opencode child / subtask session 只有在 `session.created` 明确带 `event.properties.info.parentID` 时才会被标记为 headless；这类后台 child 不进入 HUD / focus / 多会话 fanout；MiMo Code 与 opencode 同源，child session 行为一致
+- opencode 权限只能走 event hook + bridge
+- opencode child / subtask session 只有在 `session.created` 明确带 `event.properties.info.parentID` 时才会被标记为 headless；这类后台 child 不进入 HUD / focus / 多会话 fanout
 - 进程存活检测依赖进程名匹配，非标准进程名可能漏检
 
 ## Do Not Fix This Again
