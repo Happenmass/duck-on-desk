@@ -1,0 +1,1614 @@
+"use strict";
+
+// ── Preferences (pure data layer) ──
+//
+// This module is the canonical schema definition + load/save/migrate/validate
+// for `clawd-prefs.json`. It has zero dependencies on Electron, the store, the
+// controller, or anything stateful — it deals in plain snapshots.
+//
+// `load(prefsPath)`  — read file, migrate to current version, validate, return snapshot
+// `save(prefsPath, snapshot)` — validate (lightly) + write JSON
+// `getDefaults()` — fresh defaults snapshot (every call returns a new object — never share refs)
+// `validate(snapshot)` — coerces an arbitrary object into a valid snapshot, dropping bad fields
+// `migrate(raw)` — applies version-to-version migrations, returns the upgraded raw snapshot
+//
+// Bad-file handling: readable invalid contents → backup as `clawd-prefs.json.bak` → return defaults.
+//   Unreadable file (EACCES/EIO/...) → defaults in memory, but `locked` so save() will not
+//   overwrite a file we were never able to read.
+// Future-version handling: read succeeds but version > current → warn + refuse to overwrite
+//   (caller still gets a valid snapshot, but `save()` becomes a no-op via the locked flag).
+
+const fs = require("fs");
+const path = require("path");
+const {
+  isCustomApplicationNamespace,
+  normalizeCustomApplications,
+} = require("./custom-applications");
+const { isPlainObject } = require("./theme-loader");
+const { normalizeShortcuts, getDefaultShortcuts } = require("./shortcut-actions");
+const { isValidDisplaySnapshot } = require("./work-area");
+const { normalizeRemoteSsh, getDefaults: getRemoteSshDefaults } = require("./remote-ssh-profile");
+const {
+  cloneDefaultTelegramApproval,
+  normalizeTelegramApproval,
+} = require("./telegram-approval-settings");
+const {
+  cloneDefaultDiscordPresence,
+  normalizeDiscordPresence,
+} = require("./discord-presence-settings");
+const {
+  cloneDefaultFeishuApproval,
+  normalizeFeishuApproval,
+} = require("./feishu-approval-settings");
+const {
+  cloneDefaultSlackNotify,
+  normalizeSlackNotify,
+} = require("./slack-notify-settings");
+const {
+  NOTIFICATION_DEFAULT_SECONDS,
+  UPDATE_DEFAULT_SECONDS,
+  PERMISSION_DEFAULT_SECONDS,
+  MAX_AUTO_CLOSE_SECONDS,
+} = require("./bubble-policy");
+const { normalizeSessionAliases } = require("./session-alias");
+const {
+  TEXT_SCALE_MIN,
+  TEXT_SCALE_MAX,
+  TEXT_SCALE_DEFAULT,
+  normalizeTextScaleByDisplay,
+} = require("./text-scale");
+const {
+  PET_TINT_IDS,
+  PET_ACCESSORY_IDS,
+  PET_MOUTH_ACCESSORY_IDS,
+} = require("./pet-customization-catalog");
+
+const CURRENT_VERSION = 19;
+const DEFAULT_INTEGRATION_INSTALLED_IDS = Object.freeze(["claude-code", "codex"]);
+const DEFAULT_INTEGRATION_INSTALLED_SET = new Set(DEFAULT_INTEGRATION_INSTALLED_IDS);
+
+function isDefaultIntegrationInstalled(agentId) {
+  return DEFAULT_INTEGRATION_INSTALLED_SET.has(agentId);
+}
+
+// ── Schema ──
+// Each field has: type, default OR defaultFactory, optional enum/normalize/validate.
+// `defaultFactory` is required for object/array fields so callers never share references.
+const SCHEMA = {
+  version: {
+    type: "number",
+    default: CURRENT_VERSION,
+  },
+  // Pet window state
+  x: { type: "number", default: 0, validate: (v) => Number.isFinite(v) },
+  y: { type: "number", default: 0, validate: (v) => Number.isFinite(v) },
+  positionSaved: { type: "boolean", default: false },
+  positionThemeId: { type: "string", default: "" },
+  positionVariantId: { type: "string", default: "" },
+  // Snapshot of the display the pet sat on at save time. Used on next launch
+  // to distinguish "monitor got unplugged" (saved position is now stranded on
+  // a phantom screen) from "monitor still here" (saved position is still
+  // safe, even if a generic clamp would nudge it). `null` when no snapshot
+  // was captured (legacy prefs, headless CI, startup race).
+  positionDisplay: {
+    type: "object",
+    defaultFactory: () => null,
+    normalize: normalizePositionDisplay,
+  },
+  // Last realized pixel bounds. Used to restore proportional mode exactly
+  // when keepSizeAcrossDisplays is enabled.
+  savedPixelWidth: { type: "number", default: 0, validate: (v) => Number.isFinite(v) && v >= 0 },
+  savedPixelHeight: { type: "number", default: 0, validate: (v) => Number.isFinite(v) && v >= 0 },
+  // #408: work area of the display the keep-size was *frozen* on (i.e. the
+  // realized origin). Kept separately from positionDisplay because that one
+  // tracks the LAST display the window sat on — after a "Send to display"
+  // the two diverge, and using positionDisplay as the frozen origin would
+  // clamp legitimate cross-display sizes back to the launch fallback.
+  savedPixelWorkArea: {
+    type: "object",
+    defaultFactory: () => null,
+    normalize: normalizeSavedPixelWorkArea,
+  },
+  // Normal-state geometry for the resizable Settings window. `null` means the
+  // user has not placed it yet, so the runtime centers it on the pet display.
+  // The Settings runtime prefers Electron's normal bounds so maximized,
+  // minimized, and fullscreen rectangles are not stored here.
+  settingsWindowBounds: {
+    type: "object",
+    defaultFactory: () => null,
+    normalize: normalizeSettingsWindowBounds,
+  },
+  // Normal-state geometry for the resizable Sessions/Dashboard window. Same
+  // contract as settingsWindowBounds: `null` means the user has not placed it
+  // yet, so the runtime keeps the computed pet/Settings-anchored placement.
+  dashboardWindowBounds: {
+    type: "object",
+    defaultFactory: () => null,
+    normalize: normalizeSettingsWindowBounds,
+  },
+  size: {
+    type: "string",
+    default: "P:9",
+    // Accept "S"/"M"/"L" (legacy) or "P:<num>" — full migration happens elsewhere.
+    validate: (v) =>
+      typeof v === "string" &&
+      (v === "S" || v === "M" || v === "L" || /^P:\d+(?:\.\d+)?$/.test(v)),
+  },
+  // Mini mode runtime state (persisted so Mini Mode survives restart)
+  miniMode: { type: "boolean", default: false },
+  miniEdge: { type: "string", default: "right", enum: ["left", "right"] },
+  preMiniX: { type: "number", default: 0, validate: (v) => Number.isFinite(v) },
+  preMiniY: { type: "number", default: 0, validate: (v) => Number.isFinite(v) },
+  // Pure data prefs
+  lang: { type: "string", default: "en", enum: ["en", "zh", "zh-TW", "ko", "ja", "pt-BR", "es"] },
+  showTray: { type: "boolean", default: true },
+  // Local activity recap is enabled by default for both fresh installs and
+  // upgrades. It stores only bounded aggregate/ticket data under ~/.clawd;
+  // there is no network export and the user can disable or clear it later.
+  recapEnabled: { type: "boolean", default: true },
+  // Default off (macOS): a fresh install runs as an accessory/agent app — pet +
+  // menu-bar icon, no Dock tile. Existing users keep their Dock — a persisted
+  // showDock is kept (save() bakes the full snapshot), and the v11->v12 migration
+  // backfills showDock=true for any pre-v12 file that lacks the key — so ONLY
+  // brand-new installs (which never run migrate) pick up this off default.
+  // showTray stays default-on so there is always one access point (menu bar).
+  showDock: { type: "boolean", default: false },
+  manageClaudeHooksAutomatically: { type: "boolean", default: true },
+  autoStartWithClaude: { type: "boolean", default: false },
+  // Fresh installs require an explicit opt-in before a local Codex
+  // SessionStart hook may cold-launch Clawd. The v17 -> v18 migration pins
+  // this on for existing users so an upgrade does not change prior behavior.
+  autoStartWithCodex: { type: "boolean", default: false },
+  // Codex approval awareness depends entirely on the official PermissionRequest
+  // hook (JSONL no longer infers approvals). These surface its health: the
+  // toggle gates the startup nudge, and LastNotified is the edge-trigger dedup
+  // signature (empty = healthy/never-warned) so a broken hook nags at most once
+  // per distinct breakage, not every launch. See codex-hook-health.js.
+  codexHookHealthNotifyEnabled: { type: "boolean", default: true },
+  codexHookHealthLastNotified: { type: "string", default: "" },
+  // Edge-triggered startup nudge for users whose retired Telegram sidecar
+  // requires native verification. Cleared after native activation or an
+  // explicit switch-off so a future migration requirement can warn once.
+  telegramMigrationLastNotified: { type: "string", default: "" },
+  // One-time upgrade nudge for Feishu/Lark credentials saved before platform
+  // and approver provenance binding existed. Cleared after repair or disable.
+  feishuApprovalMigrationLastNotified: { type: "string", default: "" },
+  // System-backed: actual truth lives in OS login items / autostart files.
+  // `openAtLoginHydrated` starts false; main.js's startup hydrate helper imports
+  // the current system value into prefs on first run, then flips this flag.
+  // Without hydration, an upgrading user with login-startup already enabled
+  // would see prefs report `false` and have it written back to the system.
+  openAtLogin: { type: "boolean", default: false },
+  openAtLoginHydrated: { type: "boolean", default: false },
+  bubbleFollowPet: { type: "boolean", default: false },
+  bubbleFollowPreference: { type: "string", default: "auto", enum: ["auto", "left", "right"] },
+  bubbleFixedCorner: {
+    type: "string",
+    default: "bottom-right",
+    enum: ["top-left", "top-right", "bottom-left", "bottom-right"],
+  },
+  sessionHudEnabled: { type: "boolean", default: true },
+  sessionHudShowStateLabels: { type: "boolean", default: true },
+  sessionHudShowElapsed: { type: "boolean", default: false },
+  sessionHudShowContextUsage: { type: "boolean", default: true },
+  sessionHudShowQuota: { type: "boolean", default: true },
+  // Preserve the historical used-percentage presentation for existing users;
+  // remaining is a display-only choice and never changes stored quota data.
+  quotaRingDisplayMode: { type: "string", default: "used", enum: ["used", "remaining"] },
+  // Empty by default, i.e. every connected provider draws — matching the
+  // behaviour before this preference existed. Storing what is HIDDEN rather
+  // than what is shown is the reason a newly connected provider appears on its
+  // own: an allow-list would leave it silently absent after the user pasted a
+  // key, which reads as a broken integration rather than a default.
+  quotaRingHiddenProviders: {
+    type: "array",
+    defaultFactory: () => [],
+    normalize: normalizeQuotaRingHiddenProviders,
+  },
+  // Claude Code exposes the reported context window and subscription limits
+  // through its visible, single-slot statusline. The historical key name is
+  // retained for compatibility, but it authorizes the whole local Claude
+  // statusline metadata stream. Keep it opt-in so a fresh Clawd install never
+  // changes the user's terminal UI without an explicit choice.
+  claudeQuotaCollectionEnabled: { type: "boolean", default: false },
+  // Kimi quota uses a separately encrypted API Key owned by the main process.
+  // This boolean is only the durable collection opt-in; the secret is never a
+  // preference and never enters a settings snapshot.
+  kimiQuotaCollectionEnabled: { type: "boolean", default: false },
+  quotaMergeSources: { type: "boolean", default: false },
+  sessionHudCleanupDetached: { type: "boolean", default: true },
+  sessionHudPinned: { type: "boolean", default: false },
+  // Stale-cleanup intervals (ms). Defaults match the historical constants in
+  // state-stale-cleanup.js so upgrading users see no behavioral change.
+  // sessionStaleMs = 0 means "never drop a session by idle age".
+  sessionStaleMs: {
+    type: "number",
+    default: 600000,
+    validate: (v) =>
+      Number.isInteger(v) && (v === 0 || (v >= 60_000 && v <= 86_400_000)),
+  },
+  workingStaleMs: {
+    type: "number",
+    default: 300000,
+    validate: (v) => Number.isInteger(v) && v >= 30_000 && v <= 86_400_000,
+  },
+  // Local Codex Desktop/CLI turns can remain legitimately silent while the
+  // model or network retries. Keep the historical 20-minute guard as the
+  // default, but make it explicit and independently disableable so it does
+  // not inherit Claude Code's missing-Stop fallback.
+  codexWorkingStaleMs: {
+    type: "number",
+    default: 1_200_000,
+    validate: (v) =>
+      Number.isInteger(v) && (v === 0 || (v >= 30_000 && v <= 86_400_000)),
+  },
+  detachedIdleStaleMs: {
+    type: "number",
+    default: 30000,
+    validate: (v) => Number.isInteger(v) && v >= 5_000 && v <= 300_000,
+  },
+  hideBubbles: { type: "boolean", default: false },
+  permissionBubblesEnabled: { type: "boolean", default: true },
+  // Global permission automation keeps the user's safe startup preference.
+  // `off` and `auto-tools` survive relaunches; `unattended` is a runtime-only
+  // elevation that validate() always downgrades to `auto-tools` for disk/load.
+  permissionAutomationMode: {
+    type: "string",
+    default: "off",
+    enum: ["off", "auto-tools", "unattended"],
+  },
+  // Risk acknowledgements persist independently from the selected mode.
+  // Each trust level is remembered separately so acknowledging auto-tools can
+  // never suppress the stronger unattended warning.
+  permissionAutomationAutoToolsWarningDismissed: { type: "boolean", default: false },
+  permissionAutomationUnattendedWarningDismissed: { type: "boolean", default: false },
+  // One-release tombstone for old files/tests. It can never become the current
+  // automation source: validation forces ephemeral fields to defaults, save()
+  // drops them, and no product writer targets this key.
+  autoApproveAllPermissions: { type: "boolean", default: false, ephemeral: true },
+  notificationBubbleAutoCloseSeconds: {
+    type: "number",
+    default: NOTIFICATION_DEFAULT_SECONDS,
+    validate: (v) => Number.isInteger(v) && v >= 0 && v <= MAX_AUTO_CLOSE_SECONDS,
+  },
+  permissionBubbleAutoCloseSeconds: {
+    type: "number",
+    default: PERMISSION_DEFAULT_SECONDS,
+    validate: (v) => Number.isInteger(v) && v >= 0 && v <= MAX_AUTO_CLOSE_SECONDS,
+  },
+  updateBubbleAutoCloseSeconds: {
+    type: "number",
+    default: UPDATE_DEFAULT_SECONDS,
+    validate: (v) => Number.isInteger(v) && v >= 0 && v <= MAX_AUTO_CLOSE_SECONDS,
+  },
+  soundMuted: { type: "boolean", default: false },
+  soundVolume: {
+    type: "number",
+    default: 1,
+    validate: (v) => Number.isFinite(v) && v >= 0 && v <= 1,
+  },
+  flashTaskbarOnComplete: { type: "boolean", default: true },
+  flashIntervalMs: {
+    type: "number",
+    default: 500,
+    validate: (v) => Number.isInteger(v) && v >= 200 && v <= 2000,
+  },
+  flashDurationMs: {
+    type: "number",
+    default: 5000,
+    validate: (v) => Number.isInteger(v) && v >= 0 && v <= 60000,
+  },
+  // Opt-in decorative feedback for recognized Claude Code Bash test runs.
+  // The hook sends only pass/fail, never the command or full test output.
+  testReactionsEnabled: { type: "boolean", default: false },
+  lowPowerIdleMode: { type: "boolean", default: false },
+  mobilePreviewEnabled: { type: "boolean", default: false },
+  // When true, prevent the OS from sleeping while any agent task is in
+  // progress (working/thinking/etc.); allow sleep again once tasks finish.
+  keepAwakeWhileWorking: { type: "boolean", default: false },
+  allowEdgePinning: { type: "boolean", default: false },
+  disableMiniMode: { type: "boolean", default: false },
+  // When true, moving the pet between displays does not trigger a
+  // proportional pixel-size recomputation. The pet keeps its current
+  // window size; the size slider still works (per-display proportional).
+  keepSizeAcrossDisplays: { type: "boolean", default: false },
+  // Free roam: when enabled and the pet is idle, it will wander around the screen
+  freeRoam: { type: "boolean", default: false },
+  // #686: constrain roam movement to horizontal or vertical only (axis-aligned).
+  // When enabled, each roam picks a random target that varies in only one axis.
+  roamConstrainAxis: { type: "boolean", default: false },
+  // #562: Windows-only. When ON, the pet floats ON TOP of a foreground
+  // fullscreen app (e.g. a borderless game) and stays draggable, instead of
+  // standing down below it (#538). Default ON — most users want to glance at
+  // the pet while gaming. OFF only restores the #538 stand-down, which depends
+  // on the game grabbing topmost: that fires for exclusive-fullscreen, but a
+  // borderless-fullscreen game never yields topmost, so the pet floats on top
+  // there regardless of this pref (a Windows platform limit — forcing the pet
+  // below via setAlwaysOnTop(false) scrambles z-order, so we don't). To remove
+  // the pet entirely the user hides it (Hide Pet). No settings UI as of #562
+  // (the toggle was a non-choice for borderless games — see
+  // settings-tab-general.js); this pref persists as an escape hatch and can be
+  // re-exposed.
+  fullscreenOverlay: { type: "boolean", default: true },
+  // #935: opt-in auto-hide — when a real fullscreen app owns the foreground
+  // (win-fullscreen-detect probe), hide the pet + its floating surfaces
+  // entirely and restore them when fullscreen ends. Takes precedence over
+  // fullscreenOverlay while active (a hidden pet has nothing to overlay).
+  // Windows-only in effect: the probe is constant false elsewhere. Default OFF
+  // so existing behavior — overlay by default, #538 stand-down as the escape
+  // hatch — is untouched.
+  fullscreenAutoHide: { type: "boolean", default: false },
+  // Text-window zoom (bubbles, HUD, dashboard, settings, resume input). The
+  // pet itself scales via `size` and is never zoomed. `textScale` is the
+  // global default; `textScaleByDisplay` overrides it per display id (the
+  // slider writes the entry for the display the settings window sits on, via
+  // the setTextScaleForDisplay command).
+  textScale: {
+    type: "number",
+    default: TEXT_SCALE_DEFAULT,
+    validate: (v) => Number.isFinite(v) && v >= TEXT_SCALE_MIN && v <= TEXT_SCALE_MAX,
+  },
+  textScaleByDisplay: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizeTextScaleByDisplay,
+  },
+  shortcuts: {
+    type: "object",
+    defaultFactory: () => getDefaultShortcuts(),
+    normalize: normalizeShortcuts,
+  },
+  // Theme
+  theme: { type: "string", default: "clawd" },
+  // Per-theme color filter choice, e.g. { clawd: "matcha", cloudling: "mono" }.
+  // Missing entries preserve the theme's native colors. The normalizer also
+  // accepts the short-lived pre-detail-view string shape and seeds supported
+  // built-ins with that value so Draft PR testers do not lose their choice.
+  petTint: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizePetTint,
+  },
+  // Per-theme wardrobe choice. Missing entries mean no accessory. The
+  // discarded PR #529 global scalar was never shipped, so it is deliberately
+  // not treated as a migration source.
+  petAccessory: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizePetAccessory,
+  },
+  // Per-theme mouth-slot choice. Missing entries mean no mouth accessory.
+  // This is intentionally independent from the legacy-stable head slot above.
+  petMouthAccessory: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizePetMouthAccessory,
+  },
+  // Per-theme opt-in for temporary date-based holiday accessories. Missing
+  // entries mean disabled; the saved manual petAccessory choice remains the
+  // source restored outside a holiday window.
+  holidayAccessoryEnabled: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizeHolidayAccessoryEnabled,
+  },
+  // Phase 2/3 placeholders — schema reserves the keys so future migrations don't need v2.
+  agents: {
+    type: "object",
+    defaultFactory: () => ({
+      // subagentPermissionsEnabled (#451): bubbles for PermissionRequests
+      // fired inside a Task subagent. Only claude-code carries the flag —
+      // normalizeAgents drops it for agents whose default entry lacks it.
+      "claude-code": { integrationInstalled: true, enabled: true, permissionsEnabled: true, subagentPermissionsEnabled: true, notificationHookEnabled: true },
+      "deepseek-harness": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      "codex": { integrationInstalled: true, enabled: true, permissionsEnabled: true, notificationHookEnabled: true, permissionMode: "intercept", nativeNotificationSoundEnabled: false },
+      "copilot-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      "cursor-agent": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      "gemini-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      // Antigravity is state-only post-D2 — Clawd never surfaces a permission
+      // bubble for agy regardless of this flag (see server-route-permission.js
+      // antigravity branch). Default kept as false so legacy reads don't see a
+      // stale "true" implying bubbles are enabled.
+      "antigravity-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: false },
+      "codebuddy": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true, customPermissionUrl: "" },
+      // WorkBuddy shares CodeBuddy's Claude-Code-compatible hook protocol but
+      // uses a distinct data dir (~/.workbuddy-ai; legacy: ~/.workbuddy). Opt-in like every other
+      // non-default agent — agent-gate.js fail-opens missing entries, so this
+      // default MUST exist or startup sync would auto-install for any user who
+      // merely has a WorkBuddy data directory. State + Notification only: the
+      // desktop app owns its permission loop natively, so permission bubbles
+      // default off (like qoderwork).
+      "workbuddy": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
+      // TraeCode is state-only: hook protocol is Claude Code-compatible but it
+      // has no PermissionRequest event, so permission bubbles default off.
+      "traecode": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
+      "kiro-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      "kimi-cli": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      "qwen-code": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      // ZCode (智谱/Z.ai desktop ADE) supports blocking PermissionRequest
+      // hooks since Phase 2, so permission bubbles default on like qwen. Its
+      // ~/.zcode/cli/config.json schema is distinct: config-file hooks live
+      // under hooks.events.* and use timeoutMs.
+      "zcode": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      "codewhale": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
+      "opencode": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      "mimocode": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      "pi": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
+      "openclaw": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
+      "hermes": { integrationInstalled: false, enabled: false, permissionsEnabled: true, notificationHookEnabled: true },
+      // Qoder is state-only (Phase 1) — permission bubbles default off.
+      "qoder": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
+      "reasonix": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
+      // QoderWork is state-only (Phase 1) — permission bubbles default off.
+      "qoderwork": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
+      // QwenWork (千问办公) is state-only (Phase 1) — permission bubbles default off.
+      "qwenwork": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: true },
+    }),
+    normalize: normalizeAgents,
+  },
+  customToolDiscoveryPaths: {
+    type: "array",
+    defaultFactory: () => [],
+    normalize: normalizePathList,
+  },
+  customApplications: {
+    type: "array",
+    defaultFactory: () => [],
+    normalize: normalizeCustomApplications,
+  },
+  dismissedAgentInstallHints: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizeDismissedAgentHintMap,
+  },
+  dismissedAgentCleanupHints: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizeDismissedAgentHintMap,
+  },
+  themeOverrides: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizeThemeOverrides,
+  },
+  // Phase 3b-swap: per-theme variant selection (e.g. {clawd: "chill", calico: "default"}).
+  // Missing key for a theme = use that theme's `default` variant. Unknown variantIds
+  // get lenient-fallback to default at load time (see theme-loader._resolveVariant).
+  themeVariant: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizeThemeVariant,
+  },
+  // #509: per-theme default idle visual (e.g. {clawd: "clawd-idle-reading.svg"}).
+  // Missing key for a theme = that theme's stock idle behavior. Values are bare
+  // filenames validated against the LOADED theme at resolve time
+  // (idle-visual.js), never here, so a theme update that drops the file
+  // degrades gracefully to the theme default.
+  idleVisual: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizeIdleVisual,
+  },
+  sessionAliases: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizeSessionAliases,
+  },
+  // Remote SSH (Phase 2 plan-remote-ssh-one-click v7). Stores user-defined
+  // SSH tunnel profiles. The runtime is owned by `remote-ssh-runtime.js` —
+  // this field is data only.
+  remoteSsh: {
+    type: "object",
+    defaultFactory: () => getRemoteSshDefaults(),
+    normalize: normalizeRemoteSsh,
+  },
+  tgApproval: {
+    type: "object",
+    defaultFactory: () => cloneDefaultTelegramApproval(),
+    normalize: normalizeTelegramApproval,
+  },
+  discordPresence: {
+    type: "object",
+    defaultFactory: () => cloneDefaultDiscordPresence(),
+    normalize: normalizeDiscordPresence,
+  },
+  feishuApproval: {
+    type: "object",
+    defaultFactory: () => cloneDefaultFeishuApproval(),
+    normalize: normalizeFeishuApproval,
+  },
+  slackNotify: {
+    type: "object",
+    defaultFactory: () => cloneDefaultSlackNotify(),
+    normalize: normalizeSlackNotify,
+  },
+  // v0.9.0 migration state. transport defaults to null (undecided) so v0.8.x
+  // users upgrading without this key fall onto the "detect legacy artefacts"
+  // path inside the migration reducer.
+  tgMigration: {
+    type: "object",
+    defaultFactory: () => ({
+      transport: null,
+      nativeVerifiedAt: null,
+      legacyEnabled: null,
+      migration: { importedAt: null, importError: null },
+    }),
+    normalize: (value) => {
+      if (!value || typeof value !== "object") {
+        return { transport: null, nativeVerifiedAt: null, legacyEnabled: null, migration: { importedAt: null, importError: null } };
+      }
+      return {
+        transport: ["legacy", "native", "off"].includes(value.transport) ? value.transport : null,
+        nativeVerifiedAt: typeof value.nativeVerifiedAt === "number" ? value.nativeVerifiedAt : null,
+        legacyEnabled: typeof value.legacyEnabled === "boolean" ? value.legacyEnabled : null,
+        migration: value.migration && typeof value.migration === "object"
+          ? {
+              importedAt: typeof value.migration.importedAt === "number" ? value.migration.importedAt : null,
+              importError: typeof value.migration.importError === "string" ? value.migration.importError : null,
+            }
+          : { importedAt: null, importError: null },
+      };
+    },
+  },
+  // Background update-check toggle. When true, the scheduler in updater.js
+  // runs a quiet GitHub discovery on a 12-hour cycle (packaged builds only).
+  // Default on per #329.
+  autoUpdateCheck: { type: "boolean", default: true },
+  // Last version the scheduler discovered that is newer than the running
+  // app. Empty string = none pending. Surfaced in the tray label and the
+  // About version-row hint. Cleared on install or by
+  // reconcilePendingOnStartup() when app.getVersion() catches up.
+  pendingUpdateVersion: { type: "string", default: "" },
+  // Versions the user explicitly dismissed (clicked Later on the scheduler
+  // bubble after actually seeing it). Object map of `{ "v0.9.0": true }`
+  // Keep this as a true-only object map so membership remains explicit and
+  // older prefs readers do not need array-specific dismissal semantics.
+  dismissedUpdateVersions: {
+    type: "object",
+    defaultFactory: () => ({}),
+    normalize: normalizeDismissedUpdateVersions,
+  },
+  // First-run tutorial gate: false until the user has seen (completed OR skipped)
+  // the onboarding tutorial once, then true forever. Persisted (NOT ephemeral),
+  // and intentionally NOT backfilled by any migration. Existing users' files have
+  // no tutorialSeen key, so validate() resolves it to the false default — meaning
+  // they ALSO get the tutorial once on their next launch after updating, exactly
+  // like a brand-new install. "Seen once → true → never shown again", across any
+  // future version update. (Contrast showDock, which is migration-backfilled so
+  // ONLY fresh installs pick up its new default.)
+  tutorialSeen: { type: "boolean", default: false },
+};
+
+const SCHEMA_KEYS = Object.freeze(Object.keys(SCHEMA));
+
+function defaultFor(field) {
+  if (typeof field.defaultFactory === "function") return field.defaultFactory();
+  return field.default;
+}
+
+// Build a fresh defaults snapshot. Each call returns a brand-new object so
+// callers can never accidentally mutate a shared default.
+function getDefaults() {
+  const out = {};
+  for (const key of SCHEMA_KEYS) {
+    out[key] = defaultFor(SCHEMA[key]);
+  }
+  return out;
+}
+
+function isValidValue(field, value) {
+  if (value === undefined || value === null) return false;
+  if (field.type === "array") return Array.isArray(value);
+  if (field.type === "object") {
+    return typeof value === "object" && !Array.isArray(value);
+  }
+  if (typeof value !== field.type) return false;
+  if (field.enum && !field.enum.includes(value)) return false;
+  if (typeof field.validate === "function" && !field.validate(value)) return false;
+  return true;
+}
+
+// Coerce an arbitrary object into a valid snapshot — drop bad fields, fill
+// missing fields from defaults, run normalize() on objects.
+function validate(raw) {
+  const out = getDefaults();
+  if (!raw || typeof raw !== "object") return out;
+  for (const key of SCHEMA_KEYS) {
+    if (!(key in raw)) continue;
+    const field = SCHEMA[key];
+    // Ephemeral (runtime-only) fields are never restored from a snapshot —
+    // they always reset to their default on load.
+    if (field.ephemeral) continue;
+    let value = raw[key];
+    if ((field.type === "object" || field.type === "array") && typeof field.normalize === "function") {
+      value = field.normalize(value, out[key]);
+    }
+    if (isValidValue(field, value)) {
+      out[key] = value;
+    }
+    // else: keep default already in `out`
+  }
+  // `unattended` is intentionally valid in the live settings store, but never
+  // as a startup state. validate() is used on both load and save, so this one
+  // normalization makes hand-edited files safe and writes the next-launch
+  // fallback while leaving the controller's current in-memory mode untouched.
+  if (out.permissionAutomationMode === "unattended") {
+    out.permissionAutomationMode = "auto-tools";
+  }
+  if (!("customToolDiscoveryPaths" in raw)) {
+    const legacy = raw.agents && raw.agents.custom && raw.agents.custom.customDiscoveryPaths;
+    out.customToolDiscoveryPaths = normalizePathList(legacy);
+  }
+  normalizeCustomAgentGates(out);
+  normalizeStaleTriple(out);
+  return out;
+}
+
+// Hand-edited-file fallback: if a user manually inverted the pair in
+// clawd-prefs.json, clamp workingStaleMs down to sessionStaleMs at load time
+// so the live mirror is consistent. Primary enforcement lives in the
+// per-key validators in settings-actions.js and the
+// commandRegistry["sessionCleanup.setTriple"] command — this function is
+// only the boot-time safety net for files that bypass the controller.
+function normalizeStaleTriple(out) {
+  if (
+    Number.isFinite(out.sessionStaleMs) &&
+    out.sessionStaleMs > 0 &&
+    Number.isFinite(out.workingStaleMs) &&
+    out.workingStaleMs > out.sessionStaleMs
+  ) {
+    out.workingStaleMs = out.sessionStaleMs;
+  }
+  return out;
+}
+
+// Apply version-to-version migrations on raw input. Returns the upgraded raw
+// object (still needs to be passed through validate()).
+//
+// v0 → v1: add `version`, `agents`, `themeOverrides` fields. Existing fields
+//   stay as-is and get re-validated downstream. Pre-existing prefs files have
+//   no `version` key — that's the v0 marker.
+// v1 → v2: historical Pi permission-subgate backfill. Version 2 is also the
+//   first schema version that includes Hermes in the built-in agent defaults.
+// v2 → v3: raise passive notification bubble default from 3s to 6s. Users
+//   who explicitly chose 3s in v2 are indistinguishable from defaulted-3 and
+//   are migrated too; other non-default values are preserved.
+// v3 → v4: Pi returns to a state-only integration. Clawd no longer inserts a
+//   permission prompt into Pi's default YOLO flow, so the Pi permission subgate
+//   is reset off.
+// v15 → v16: preserve the legacy meaning of literal `Control` shortcut tokens
+//   before v16 gives that token Electron's native Control meaning on macOS.
+function migrateLegacyControlShortcuts(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const migrated = { ...value };
+  for (const [actionId, accelerator] of Object.entries(migrated)) {
+    if (typeof accelerator !== "string") continue;
+    migrated[actionId] = accelerator
+      .split("+")
+      .map((token) => token.trim().toLowerCase() === "control" ? "CommandOrControl" : token)
+      .join("+");
+  }
+  return migrated;
+}
+
+function migrate(raw) {
+  if (!raw || typeof raw !== "object") return raw;
+  const originalAgentIds = raw.agents && typeof raw.agents === "object" && !Array.isArray(raw.agents)
+    ? new Set(Object.keys(raw.agents))
+    : new Set();
+  const out = { ...raw };
+  if (out.version === undefined || out.version === null) {
+    out.version = 1;
+    if (out.agents === undefined) {
+      out.agents = SCHEMA.agents.defaultFactory();
+    }
+    if (out.themeOverrides === undefined) {
+      out.themeOverrides = SCHEMA.themeOverrides.defaultFactory();
+    }
+  }
+  // v1 backfill: positionSaved didn't exist before this field was added.
+  // Existing users who have non-default x/y clearly had a saved position.
+  if (out.positionSaved === undefined) {
+    out.positionSaved =
+      (typeof out.x === "number" && out.x !== 0) ||
+      (typeof out.y === "number" && out.y !== 0);
+  }
+  // Backfill the split bubble settings from the old aggregate switch. This is
+  // intentionally field-level so users who already have the new keys keep them.
+  if (typeof out.hideBubbles === "boolean") {
+    if (out.permissionBubblesEnabled === undefined) {
+      out.permissionBubblesEnabled = !out.hideBubbles;
+    }
+    if (out.notificationBubbleAutoCloseSeconds === undefined) {
+      out.notificationBubbleAutoCloseSeconds = out.hideBubbles ? 0 : NOTIFICATION_DEFAULT_SECONDS;
+    }
+    if (out.updateBubbleAutoCloseSeconds === undefined) {
+      out.updateBubbleAutoCloseSeconds = out.hideBubbles ? 0 : UPDATE_DEFAULT_SECONDS;
+    }
+  }
+  // v1 -> v2 historical backfill for the short-lived Pi permission subgate.
+  // v4 below resets it off again because Pi is state-only.
+  if (out.version < 2) {
+    if (!out.agents || typeof out.agents !== "object") out.agents = {};
+    const currentPi = out.agents.pi && typeof out.agents.pi === "object" ? out.agents.pi : {};
+    out.agents.pi = {
+      ...currentPi,
+      enabled: typeof currentPi.enabled === "boolean" ? currentPi.enabled : true,
+      permissionsEnabled: typeof currentPi.permissionsEnabled === "boolean"
+        ? currentPi.permissionsEnabled
+        : true,
+      notificationHookEnabled: typeof currentPi.notificationHookEnabled === "boolean"
+        ? currentPi.notificationHookEnabled
+        : true,
+    };
+    out.version = 2;
+  }
+  if (out.version < 3) {
+    if (out.notificationBubbleAutoCloseSeconds === 3) {
+      out.notificationBubbleAutoCloseSeconds = NOTIFICATION_DEFAULT_SECONDS;
+    }
+    out.version = 3;
+  }
+  if (out.version < 4) {
+    if (!out.agents || typeof out.agents !== "object") out.agents = {};
+    const currentPi = out.agents.pi && typeof out.agents.pi === "object" ? out.agents.pi : {};
+    out.agents.pi = {
+      ...currentPi,
+      enabled: typeof currentPi.enabled === "boolean" ? currentPi.enabled : true,
+      permissionsEnabled: false,
+      notificationHookEnabled: typeof currentPi.notificationHookEnabled === "boolean"
+        ? currentPi.notificationHookEnabled
+        : true,
+    };
+    out.version = 4;
+  }
+  // v4 → v5: Session HUD hover/auto-hide mode removed in favor of explicit
+  // click-to-reveal. Users who explicitly opted out of auto-hide (
+  // `sessionHudAutoHide === false`, meaning "always show") get auto-pinned so
+  // their visual behavior is preserved. The deprecated field is dropped.
+  if (out.version < 5) {
+    if (out.sessionHudAutoHide === false && out.sessionHudPinned !== true) {
+      out.sessionHudPinned = true;
+    }
+    delete out.sessionHudAutoHide;
+    out.version = 5;
+  }
+  // v5 → v6: introduce autoUpdateCheck / pendingUpdateVersion /
+  // dismissedUpdateVersions for the #329 scheduler. No data conversion
+  // needed — new keys fill in from schema defaults via validate(); the
+  // version bump just records that the schema grew.
+  if (out.version < 6) {
+    out.version = 6;
+  }
+  // v6 → v7: Codex Native permission prompt sound now defaults off. Early
+  // builds may have written the old default true into prefs, so reset that
+  // default-like value during migration; users can turn the switch back on.
+  if (out.version < 7) {
+    if (out.agents && typeof out.agents === "object") {
+      const codex = out.agents.codex;
+      if (codex && typeof codex === "object") {
+        codex.nativeNotificationSoundEnabled = false;
+      }
+    }
+    out.version = 7;
+  }
+  // v7 -> v8: bare Telegram completion pings now default off. There was no
+  // UI for this flag, so a persisted true is overwhelmingly the old default
+  // rather than an explicit user opt-in.
+  if (out.version < 8) {
+    if (out.tgApproval && typeof out.tgApproval === "object") {
+      out.tgApproval.notifyOnComplete = false;
+    }
+    out.version = 8;
+  }
+  // v8 -> v9: introduce autoApproveAllPermissions ("auto-pilot"). Force the
+  // value OFF on upgrade — a v8 prefs file could not have legitimately set this
+  // key (it didn't exist yet), so any pre-existing value is stale or planted.
+  // Clearing it guarantees an upgrading user never silently inherits
+  // auto-approval; the only way to turn it on is the confirmation-gated path.
+  if (out.version < 9) {
+    out.autoApproveAllPermissions = false;
+    out.version = 9;
+  }
+  // v9 -> v10: sessionHudShowElapsed / sessionHudCleanupDetached flipped their
+  // schema defaults for FRESH INSTALLS ONLY (compact HUD by default). Existing
+  // files normally carry both keys explicitly (save() bakes the full
+  // snapshot), but a file written by a pre-HUD-toggle build or hand-trimmed
+  // by the user lacks them — without this backfill validate() would hand
+  // those users the new defaults and visibly change their HUD. Pin the old
+  // defaults for every pre-v10 file; fresh installs never run migrate().
+  if (out.version < 10) {
+    if (!("sessionHudShowElapsed" in out)) out.sessionHudShowElapsed = true;
+    if (!("sessionHudCleanupDetached" in out)) out.sessionHudCleanupDetached = false;
+    out.version = 10;
+  }
+  // v10 -> v11: agent integrations are installed on demand. Entries that were
+  // actually present in an old prefs file predate `integrationInstalled`, so
+  // keep them managed by Clawd. Missing entries fall through to v11 defaults
+  // instead of pretending that a never-seen/newer agent was installed.
+  if (out.version < 11) {
+    if (out.agents && typeof out.agents === "object") {
+      const defaults = SCHEMA.agents.defaultFactory();
+      for (const agentId of Object.keys(defaults)) {
+        if (!originalAgentIds.has(agentId)) continue;
+        const current = out.agents[agentId];
+        if (!current || typeof current !== "object") continue;
+        out.agents[agentId] = {
+          ...current,
+          integrationInstalled: true,
+        };
+      }
+    }
+    out.version = 11;
+  }
+  // v11 -> v12: showDock now defaults OFF for FRESH INSTALLS ONLY (a new install
+  // runs as a menu-bar/pet accessory with no Dock tile). Existing files normally
+  // carry showDock explicitly (save() bakes the full snapshot), but a file from a
+  // pre-showDock build or hand-trimmed by the user lacks it — without this
+  // backfill validate() would hand those users the new off default and hide their
+  // Dock. Pin the old on-default for every pre-v12 file; fresh installs never run
+  // migrate().
+  if (out.version < 12) {
+    if (!("showDock" in out)) out.showDock = true;
+    out.version = 12;
+  }
+  // v12 -> v13: Settings-window geometry persistence. No backfill is needed:
+  // an absent/null value intentionally keeps the existing centered placement.
+  if (out.version < 13) {
+    out.version = 13;
+  }
+  // v13 -> v14: Dashboard-window geometry persistence, same contract as the
+  // Settings step above.
+  if (out.version < 14) {
+    out.version = 14;
+  }
+  // v14 -> v15: ZCode Phase 2 permission bubbles. Phase 1 persisted
+  // permissionsEnabled:false while the Settings switch was never rendered
+  // (capabilities.permissionApproval was false), so no user intent exists
+  // behind that stored false — flip it to the new on-default. A false set on
+  // v15 or later is a real user choice and never migrates again.
+  if (out.version < 15) {
+    if (
+      out.agents
+      && typeof out.agents === "object"
+      && out.agents.zcode
+      && typeof out.agents.zcode === "object"
+      && out.agents.zcode.permissionsEnabled === false
+    ) {
+      out.agents.zcode.permissionsEnabled = true;
+    }
+    out.version = 15;
+  }
+  // v15 -> v16: `Control` used to be an accepted alias for
+  // `CommandOrControl`. Rewrite only pre-v16 persisted values before the
+  // parser starts using `Control` for macOS's distinct native Control key.
+  if (out.version < 16) {
+    out.shortcuts = migrateLegacyControlShortcuts(out.shortcuts);
+    out.version = 16;
+  }
+  // v16 -> v17: introduce an independent mouth-accessory map. Never infer a
+  // cigarette choice from the existing head accessory or from theme ids. A
+  // valid explicit map may exist in an unreleased v16 development snapshot;
+  // preserve it instead of erasing that selection during the version split.
+  if (out.version < 17) {
+    if (
+      !out.petMouthAccessory
+      || typeof out.petMouthAccessory !== "object"
+      || Array.isArray(out.petMouthAccessory)
+    ) {
+      out.petMouthAccessory = {};
+    }
+    out.version = 17;
+  }
+  // v17 -> v18: split Codex event intake from permission to cold-launch the
+  // desktop app. Existing installs previously got auto-start whenever Codex
+  // itself was enabled, so preserve that behavior on upgrade. Fresh installs
+  // never run migrate() and therefore keep the schema's opt-in default false.
+  if (out.version < 18) {
+    if (!Object.prototype.hasOwnProperty.call(out, "autoStartWithCodex")) {
+      out.autoStartWithCodex = true;
+    } else if (typeof out.autoStartWithCodex !== "boolean") {
+      // An explicitly-present malformed value is not reliable user consent.
+      out.autoStartWithCodex = false;
+    }
+    out.version = 18;
+  }
+  // v18 -> v19: recap is a local, privacy-minimized application history. Match
+  // Codex-style activity summaries by recording on upgrade without inserting
+  // a consent interstitial; Settings still exposes an immediate off switch.
+  if (out.version < 19) {
+    out.recapEnabled = typeof out.recapEnabled === "boolean" ? out.recapEnabled : true;
+    out.version = 19;
+  }
+  // Field-level migration also covers development snapshots that already have
+  // the current schema. Preserve the old effective Codex timeout only when no
+  // explicit independent value exists; fresh installs do not run migrate().
+  if (!Object.prototype.hasOwnProperty.call(out, "codexWorkingStaleMs")) {
+    const legacy = normalizeStaleTriple({
+      workingStaleMs: isValidValue(SCHEMA.workingStaleMs, out.workingStaleMs)
+        ? out.workingStaleMs : SCHEMA.workingStaleMs.default,
+      sessionStaleMs: isValidValue(SCHEMA.sessionStaleMs, out.sessionStaleMs)
+        ? out.sessionStaleMs : SCHEMA.sessionStaleMs.default,
+    });
+    out.codexWorkingStaleMs = Math.max(SCHEMA.codexWorkingStaleMs.default, legacy.workingStaleMs);
+  }
+  if ((typeof out.version === "number" ? out.version : 0) < CURRENT_VERSION) {
+    out.version = CURRENT_VERSION;
+  }
+  // Future migrations slot in here as `if (out.version < N) { ... out.version = N }`.
+  return out;
+}
+
+const AGENT_FLAGS = [
+  "integrationInstalled",
+  "enabled",
+  "permissionsEnabled",
+  "subagentPermissionsEnabled",
+  "notificationHookEnabled",
+  "nativeNotificationSoundEnabled",
+];
+const CODEX_PERMISSION_MODES = ["native", "intercept"];
+const MAX_CUSTOM_DISCOVERY_PATHS = 64;
+const MAX_CUSTOM_DISCOVERY_PATH_LENGTH = 2048;
+
+// Provider keys the user hid from the pet-side quota cluster. Display-only:
+// collection keeps running and the Dashboard keeps every provider, because the
+// cluster caps at four coins with no say over which ones survive while the
+// Dashboard has room for all of them.
+//
+// Unknown keys are kept, not dropped. The authoritative provider list lives in
+// quota-ring-geometry.js, and validating against it here would mean prefs.js
+// silently discarding a user's choice whenever load order, a rename, or a
+// not-yet-registered provider makes a key look unfamiliar — a hidden provider
+// would then reappear on its own. Consumers match by key, so a stale entry
+// costs nothing beyond a few bytes; the cap keeps that bounded.
+const MAX_HIDDEN_QUOTA_PROVIDERS = 32;
+function normalizeQuotaRingHiddenProviders(value) {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const entry of value) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.replace(/\0/g, "").trim().slice(0, 64);
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+    if (out.length >= MAX_HIDDEN_QUOTA_PROVIDERS) break;
+  }
+  return out;
+}
+
+function normalizePathList(value, options = {}) {
+  const raw = Array.isArray(value)
+    ? value
+    : (typeof value === "string" ? value.split(/[;\n]/g) : []);
+  const platform = typeof options.platform === "string" ? options.platform : process.platform;
+  const maxEntries = Number.isInteger(options.maxEntries) && options.maxEntries >= 0
+    ? options.maxEntries
+    : MAX_CUSTOM_DISCOVERY_PATHS;
+  const out = [];
+  const seen = new Set();
+  for (const entry of raw) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.replace(/\0/g, "").trim().slice(0, MAX_CUSTOM_DISCOVERY_PATH_LENGTH);
+    const compareKey = platform === "win32" ? trimmed.toLowerCase() : trimmed;
+    if (!trimmed || seen.has(compareKey)) continue;
+    seen.add(compareKey);
+    out.push(trimmed);
+    if (out.length >= maxEntries) break;
+  }
+  return out;
+}
+
+function normalizeOptionalHttpUrl(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? trimmed : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizeDismissedUpdateVersions(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out = {};
+  for (const key of Object.keys(value)) {
+    if (typeof key === "string" && key && value[key] === true) out[key] = true;
+  }
+  return out;
+}
+
+function normalizeDismissedAgentHintMap(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out = {};
+  for (const key of Object.keys(value)) {
+    if (typeof key === "string" && key && value[key] === true) out[key] = true;
+  }
+  return out;
+}
+
+function normalizeSavedPixelWorkArea(value) {
+  if (!value || typeof value !== "object") return null;
+  const w = Number(value.width);
+  const h = Number(value.height);
+  if (!Number.isFinite(w) || w <= 0) return null;
+  if (!Number.isFinite(h) || h <= 0) return null;
+  return { width: w, height: h };
+}
+
+function isValidSettingsWindowBounds(value) {
+  return !!value
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && Number.isSafeInteger(value.x)
+    && Number.isSafeInteger(value.y)
+    && Number.isSafeInteger(value.width)
+    && Number.isSafeInteger(value.height)
+    && value.width > 0
+    && value.height > 0;
+}
+
+function normalizeSettingsWindowBounds(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (
+    !Number.isFinite(value.x)
+    || !Number.isFinite(value.y)
+    || !Number.isFinite(value.width)
+    || !Number.isFinite(value.height)
+  ) {
+    return null;
+  }
+  const normalized = {
+    x: Math.round(value.x),
+    y: Math.round(value.y),
+    width: Math.round(value.width),
+    height: Math.round(value.height),
+  };
+  return isValidSettingsWindowBounds(normalized) ? normalized : null;
+}
+
+function normalizePositionDisplay(value) {
+  if (!isValidDisplaySnapshot(value)) return null;
+  const b = value.bounds;
+  const out = {
+    bounds: { x: b.x, y: b.y, width: b.width, height: b.height },
+  };
+  const wa = value.workArea;
+  if (wa && typeof wa === "object"
+    && Number.isFinite(wa.x) && Number.isFinite(wa.y)
+    && Number.isFinite(wa.width) && Number.isFinite(wa.height)) {
+    out.workArea = { x: wa.x, y: wa.y, width: wa.width, height: wa.height };
+  }
+  if (typeof value.id === "number" && Number.isFinite(value.id)) out.id = value.id;
+  if (typeof value.scaleFactor === "number" && Number.isFinite(value.scaleFactor)) {
+    out.scaleFactor = value.scaleFactor;
+  }
+  return out;
+}
+
+function normalizeAgents(value, defaultsValue) {
+  if (!value || typeof value !== "object") return defaultsValue;
+  const out = { ...defaultsValue };
+  for (const id of Object.keys(value)) {
+    // Early #652 builds stored shared path checks as a phantom agent. The
+    // dedicated top-level field now owns that data; never rehydrate this id.
+    if (id === "custom") continue;
+    const entry = value[id];
+    if (!entry || typeof entry !== "object") continue;
+    const base = (defaultsValue && defaultsValue[id])
+      || {
+        integrationInstalled: isDefaultIntegrationInstalled(id),
+        enabled: true,
+        permissionsEnabled: true,
+        notificationHookEnabled: true,
+      };
+    const merged = { ...base };
+    let touched = false;
+    const allowedFlags = AGENT_FLAGS.filter((flag) => Object.prototype.hasOwnProperty.call(base, flag));
+    for (const flag of allowedFlags) {
+      if (typeof entry[flag] === "boolean") {
+        merged[flag] = entry[flag];
+        touched = true;
+      }
+    }
+    if (id === "codex" && CODEX_PERMISSION_MODES.includes(entry.permissionMode)) {
+      merged.permissionMode = entry.permissionMode;
+      touched = true;
+    }
+    if (Object.prototype.hasOwnProperty.call(base, "customPermissionUrl")) {
+      const customPermissionUrl = normalizeOptionalHttpUrl(entry.customPermissionUrl);
+      if (customPermissionUrl || typeof entry.customPermissionUrl === "string") {
+        merged.customPermissionUrl = customPermissionUrl;
+        touched = true;
+      }
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(base, "customDiscoveryPaths")
+      || Object.prototype.hasOwnProperty.call(entry, "customDiscoveryPaths")
+    ) {
+      const customDiscoveryPaths = normalizePathList(entry.customDiscoveryPaths);
+      if (customDiscoveryPaths.length > 0 || Object.prototype.hasOwnProperty.call(entry, "customDiscoveryPaths")) {
+        merged.customDiscoveryPaths = customDiscoveryPaths;
+        touched = true;
+      }
+    }
+    if (touched) out[id] = merged;
+  }
+  return out;
+}
+
+function normalizeCustomAgentGates(out) {
+  const applications = Array.isArray(out.customApplications) ? out.customApplications : [];
+  const registeredIds = new Set(applications.map((application) => application.id));
+  const agents = out.agents && typeof out.agents === "object" ? { ...out.agents } : {};
+
+  for (const id of Object.keys(agents)) {
+    if (isCustomApplicationNamespace(id) && !registeredIds.has(id)) delete agents[id];
+  }
+  for (const application of applications) {
+    const current = agents[application.id];
+    agents[application.id] = {
+      integrationInstalled: false,
+      enabled: current && typeof current.enabled === "boolean" ? current.enabled : true,
+      permissionsEnabled: false,
+      notificationHookEnabled: current && typeof current.notificationHookEnabled === "boolean"
+        ? current.notificationHookEnabled
+        : true,
+    };
+  }
+  out.agents = agents;
+  return out;
+}
+
+function normalizeTransitionOverride(value) {
+  if (!isPlainObject(value)) return null;
+  const out = {};
+  if (typeof value.in === "number" && Number.isFinite(value.in)) out.in = value.in;
+  if (typeof value.out === "number" && Number.isFinite(value.out)) out.out = value.out;
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function normalizeSlotOverride(entry, { allowDisabled = true } = {}) {
+  if (!isPlainObject(entry)) return null;
+  const out = {};
+  if (allowDisabled && entry.disabled === true) out.disabled = true;
+  if (typeof entry.file === "string" && entry.file) out.file = entry.file;
+  if (typeof entry.sourceThemeId === "string" && entry.sourceThemeId) out.sourceThemeId = entry.sourceThemeId;
+  if (typeof entry.durationMs === "number" && Number.isFinite(entry.durationMs)) out.durationMs = entry.durationMs;
+  const transition = normalizeTransitionOverride(entry.transition);
+  if (transition) out.transition = transition;
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+const REACTION_KEYS = new Set(["drag", "clickLeft", "clickRight", "annoyed", "double"]);
+
+// Per-file hitbox override: { file.svg: boolean }.
+// true  = force the file INTO the wide-hitbox set (even if the theme author didn't list it)
+// false = force the file OUT of the wide-hitbox set (even if the theme author did list it)
+// absent = follow whatever the theme declares
+function normalizeHitboxOverrides(value) {
+  if (!isPlainObject(value)) return null;
+  const out = {};
+  if (isPlainObject(value.wide)) {
+    const wide = {};
+    for (const [file, enabled] of Object.entries(value.wide)) {
+      if (typeof file !== "string" || !file) continue;
+      if (typeof enabled !== "boolean") continue;
+      wide[file] = enabled;
+    }
+    if (Object.keys(wide).length > 0) out.wide = wide;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function normalizeReactionOverridesMap(value) {
+  if (!isPlainObject(value)) return null;
+  const out = {};
+  for (const [reactionKey, entry] of Object.entries(value)) {
+    if (!REACTION_KEYS.has(reactionKey)) continue;
+    const cleanEntry = normalizeSlotOverride(entry, { allowDisabled: false });
+    if (!cleanEntry) continue;
+    // drag has no duration semantically (it plays until pointer-up), so strip
+    // any durationMs written by a wayward import.
+    if (reactionKey === "drag" && Object.prototype.hasOwnProperty.call(cleanEntry, "durationMs")) {
+      delete cleanEntry.durationMs;
+    }
+    if (Object.keys(cleanEntry).length > 0) out[reactionKey] = cleanEntry;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function normalizeStateOverridesMap(value) {
+  if (!isPlainObject(value)) return null;
+  const out = {};
+  for (const [stateKey, entry] of Object.entries(value)) {
+    if (typeof stateKey !== "string" || !stateKey) continue;
+    const cleanEntry = normalizeSlotOverride(entry, { allowDisabled: true });
+    if (cleanEntry) out[stateKey] = cleanEntry;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+// Sound overrides are per-sound-name (complete / confirm / theme-author-defined).
+// Structurally simpler than state overrides: only `file` matters (no transition,
+// duration, disabled, or sourceThemeId). We reuse normalizeSlotOverride to
+// strip the animation-only fields, then enforce path-segment safety on both
+// the key (used as filename stem when copying) and the file (joined into the
+// overrides dir at load time) — defence in depth against malicious themes or
+// hand-edited pref files.
+// Strips any path segments and rejects traversal-only names. Returns null if
+// the result isn't a usable basename, otherwise the (optionally capped) name.
+function _safeBasename(raw, { maxLen } = {}) {
+  if (typeof raw !== "string" || !raw) return null;
+  let name = raw.replace(/^.*[\/\\]/, "");
+  if (maxLen && name.length > maxLen) name = name.slice(0, maxLen);
+  if (!name || name === "." || name === "..") return null;
+  return name;
+}
+
+function normalizeSoundOverridesMap(value) {
+  if (!isPlainObject(value)) return null;
+  const out = {};
+  for (const [soundName, entry] of Object.entries(value)) {
+    if (typeof soundName !== "string" || !soundName) continue;
+    if (!/^[a-zA-Z0-9_-]+$/.test(soundName)) continue;
+    const cleanEntry = normalizeSlotOverride(entry, { allowDisabled: false });
+    if (!cleanEntry) continue;
+    const safeFile = _safeBasename(cleanEntry.file);
+    if (!safeFile) continue;
+    const soundEntry = { file: safeFile };
+    // Preserves the user-picked filename; on-disk dest is renamed to
+    // `${soundName}${ext}`, so without this a same-ext replacement would
+    // render identically to the theme default in the UI.
+    if (isPlainObject(entry)) {
+      const safeOriginal = _safeBasename(entry.originalName, { maxLen: 256 });
+      if (safeOriginal) soundEntry.originalName = safeOriginal;
+    }
+    out[soundName] = soundEntry;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function normalizeFileKeyedOverrideMap(value) {
+  if (!isPlainObject(value)) return null;
+  const out = {};
+  for (const [originalFile, entry] of Object.entries(value)) {
+    if (typeof originalFile !== "string" || !originalFile) continue;
+    const cleanEntry = normalizeSlotOverride(entry, { allowDisabled: false });
+    if (cleanEntry) out[originalFile] = cleanEntry;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function normalizeAutoReturnOverrides(value) {
+  if (!isPlainObject(value)) return null;
+  const out = {};
+  for (const [stateKey, duration] of Object.entries(value)) {
+    if (typeof stateKey !== "string" || !stateKey) continue;
+    if (typeof duration !== "number" || !Number.isFinite(duration)) continue;
+    out[stateKey] = duration;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function normalizeThemeOverrides(value, defaultsValue) {
+  if (!isPlainObject(value)) return defaultsValue;
+  const out = {};
+  for (const themeId of Object.keys(value)) {
+    const themeMap = value[themeId];
+    if (!isPlainObject(themeMap)) continue;
+    const cleanThemeMap = {};
+
+    // Back-compat: older prefs wrote state entries directly under themeId.
+    const legacyStates = {};
+    for (const [key, entry] of Object.entries(themeMap)) {
+      if (key === "states" || key === "tiers" || key === "timings" || key === "idleAnimations" || key === "reactions" || key === "hitbox" || key === "sounds") continue;
+      const cleanEntry = normalizeSlotOverride(entry, { allowDisabled: true });
+      if (cleanEntry) legacyStates[key] = cleanEntry;
+    }
+
+    const explicitStates = normalizeStateOverridesMap(themeMap.states);
+    const states = explicitStates ? { ...legacyStates, ...explicitStates } : legacyStates;
+    if (Object.keys(states).length > 0) cleanThemeMap.states = states;
+
+    const tierGroups = isPlainObject(themeMap.tiers) ? themeMap.tiers : null;
+    const cleanTiers = {};
+    if (tierGroups) {
+      const working = normalizeFileKeyedOverrideMap(tierGroups.workingTiers);
+      const juggling = normalizeFileKeyedOverrideMap(tierGroups.jugglingTiers);
+      if (working) cleanTiers.workingTiers = working;
+      if (juggling) cleanTiers.jugglingTiers = juggling;
+    }
+    if (Object.keys(cleanTiers).length > 0) cleanThemeMap.tiers = cleanTiers;
+
+    const timings = isPlainObject(themeMap.timings) ? themeMap.timings : null;
+    if (timings) {
+      const cleanAutoReturn = normalizeAutoReturnOverrides(timings.autoReturn);
+      if (cleanAutoReturn) {
+        cleanThemeMap.timings = { autoReturn: cleanAutoReturn };
+      }
+    }
+
+    const idleAnimations = normalizeFileKeyedOverrideMap(themeMap.idleAnimations);
+    if (idleAnimations) cleanThemeMap.idleAnimations = idleAnimations;
+
+    const reactions = normalizeReactionOverridesMap(themeMap.reactions);
+    if (reactions) cleanThemeMap.reactions = reactions;
+
+    const hitbox = normalizeHitboxOverrides(themeMap.hitbox);
+    if (hitbox) cleanThemeMap.hitbox = hitbox;
+
+    const sounds = normalizeSoundOverridesMap(themeMap.sounds);
+    if (sounds) cleanThemeMap.sounds = sounds;
+
+    if (Object.keys(cleanThemeMap).length > 0) {
+      out[themeId] = cleanThemeMap;
+    }
+  }
+  return out;
+}
+
+function normalizeThemeVariant(value, defaultsValue) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return defaultsValue;
+  const out = {};
+  for (const themeId of Object.keys(value)) {
+    const variantId = value[themeId];
+    if (typeof themeId !== "string" || !themeId) continue;
+    if (typeof variantId !== "string" || !variantId) continue;
+    out[themeId] = variantId;
+  }
+  return out;
+}
+
+function normalizePetTint(value, defaultsValue) {
+  if (typeof value === "string") {
+    if (!PET_TINT_IDS.includes(value) || value === "none") return {};
+    return { clawd: value, cloudling: value };
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return defaultsValue;
+  const out = {};
+  for (const [themeId, tintId] of Object.entries(value)) {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(themeId)) continue;
+    if (!PET_TINT_IDS.includes(tintId)) continue;
+    if (tintId !== "none") out[themeId] = tintId;
+  }
+  return out;
+}
+
+function normalizePetAccessory(value, defaultsValue) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return defaultsValue;
+  const out = {};
+  for (const [themeId, accessoryId] of Object.entries(value)) {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(themeId)) continue;
+    if (!PET_ACCESSORY_IDS.includes(accessoryId)) continue;
+    if (accessoryId !== "none") out[themeId] = accessoryId;
+  }
+  return out;
+}
+
+function normalizePetMouthAccessory(value, defaultsValue) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return defaultsValue;
+  const out = {};
+  for (const [themeId, accessoryId] of Object.entries(value)) {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(themeId)) continue;
+    if (!PET_MOUTH_ACCESSORY_IDS.includes(accessoryId)) continue;
+    if (accessoryId !== "none") out[themeId] = accessoryId;
+  }
+  return out;
+}
+
+function normalizeHolidayAccessoryEnabled(value, defaultsValue) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return defaultsValue;
+  const out = {};
+  for (const [themeId, enabled] of Object.entries(value)) {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(themeId)) continue;
+    if (enabled === true) out[themeId] = true;
+  }
+  return out;
+}
+
+function normalizeIdleVisual(value, defaultsValue) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return defaultsValue;
+  const out = {};
+  for (const themeId of Object.keys(value)) {
+    const file = value[themeId];
+    if (typeof themeId !== "string" || !themeId) continue;
+    if (typeof file !== "string" || !file) continue;
+    // Bare filenames only — asset paths are resolved by the theme loader.
+    if (file.includes("/") || file.includes("\\")) continue;
+    out[themeId] = file;
+  }
+  return out;
+}
+
+// ── Disk I/O ──
+
+function backupInvalidPrefs(prefsPath, reason) {
+  try {
+    const bak = prefsPath + ".bak";
+    fs.copyFileSync(prefsPath, bak);
+    console.warn(`Clawd: invalid prefs file backed up to ${bak}:`, reason);
+    return true;
+  } catch (bakErr) {
+    console.warn("Clawd: invalid prefs file backup failed:", reason, bakErr.message);
+    return false;
+  }
+}
+
+// Read prefs from disk. Returns
+// `{ snapshot, locked, fresh?, recovered?, codexAutoStartAuthoritative? }`:
+//   - snapshot: a valid prefs object (always — falls back to defaults on any error)
+//   - locked: true when the on-disk file must not be overwritten, and save() should
+//             be a no-op. Two triggers: the file came from a future version, or the
+//             file exists and could not be read at all. Both mean "we do not know
+//             what is in there", which is the same reason not to write over it.
+//             The unreadable case also sets `recovered`, so `locked && recovered`
+//             together is a valid combination (the future-version case sets only
+//             `locked`, the unparseable case only `recovered`).
+//   - fresh: true ONLY when there was no prefs file at all (brand-new install).
+//            Callers use this to seed first-run-only state (e.g. UI language from
+//            the device locale) without ever overriding an existing user's choices.
+//            Absent/falsy on every other path — a corrupt or unreadable file is
+//            NOT treated as fresh, so we never clobber a returning user's language.
+//   - recovered: true when an existing file could not supply authoritative prefs
+//                and the snapshot is only a fail-safe defaults fallback. Callers
+//                must not publish permissive external gates from that snapshot.
+//   - codexAutoStartAuthoritative: false when the prefs root is otherwise
+//                recoverable but an explicitly-present Codex gate field has an
+//                invalid type. Missing legacy fields retain their historical
+//                default/migration behavior.
+function load(prefsPath) {
+  // Read and parse are separated on purpose. "We could not read the bytes" and
+  // "we read the bytes and they are not valid prefs" are different states, and
+  // only the second one justifies replacing the file with defaults.
+  let text;
+  try {
+    text = fs.readFileSync(prefsPath, "utf8");
+  } catch (err) {
+    // Missing file is normal on first run — return defaults silently, flagged
+    // fresh so the caller can seed device-locale language exactly once.
+    if (err && err.code === "ENOENT") {
+      return { snapshot: getDefaults(), locked: false, fresh: true };
+    }
+    // The file exists but could not be read (EACCES, EIO, a directory, ...).
+    // We do not know what it says, so a later save() must not overwrite it with
+    // defaults — that is exactly what `locked` already means for the
+    // future-version branch below ("save() should be a no-op to avoid
+    // clobbering it"). Reusing it here keeps the user's real prefs on disk.
+    //
+    // No backup is attempted on this path: copyFileSync would read the same
+    // unreadable file, so it could only fail and emit a second warning.
+    console.warn(
+      "Clawd: prefs file could not be read — keeping defaults in memory and refusing to overwrite it:",
+      err.message,
+    );
+    return { snapshot: getDefaults(), locked: true, recovered: true };
+  }
+
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch (err) {
+    // The file WAS readable and its contents are not valid JSON. Backing it up
+    // and continuing from defaults is the intended recovery. If backup fails,
+    // lock persistence so startup hydration cannot destroy the only copy.
+    const backupCreated = backupInvalidPrefs(prefsPath, err.message);
+    return {
+      snapshot: getDefaults(),
+      locked: !backupCreated,
+      recovered: true,
+      recoveryBackupFailed: !backupCreated,
+    };
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    const backupCreated = backupInvalidPrefs(prefsPath, "root must be a JSON object");
+    return {
+      snapshot: getDefaults(),
+      locked: !backupCreated,
+      recovered: true,
+      recoveryBackupFailed: !backupCreated,
+    };
+  }
+  const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+  const isObjectRecord = (value) => !!value && typeof value === "object" && !Array.isArray(value);
+  let codexAutoStartAuthoritative = true;
+  if (hasOwn(raw, "autoStartWithCodex") && typeof raw.autoStartWithCodex !== "boolean") {
+    codexAutoStartAuthoritative = false;
+  }
+  if (hasOwn(raw, "agents")) {
+    if (!isObjectRecord(raw.agents)) {
+      codexAutoStartAuthoritative = false;
+    } else if (hasOwn(raw.agents, "codex")) {
+      if (!isObjectRecord(raw.agents.codex)) {
+        codexAutoStartAuthoritative = false;
+      } else if (
+        (hasOwn(raw.agents.codex, "enabled") && typeof raw.agents.codex.enabled !== "boolean")
+        || (
+          hasOwn(raw.agents.codex, "integrationInstalled")
+          && typeof raw.agents.codex.integrationInstalled !== "boolean"
+        )
+      ) {
+        codexAutoStartAuthoritative = false;
+      }
+    }
+  }
+  const codexAuthorityMeta = codexAutoStartAuthoritative
+    ? {}
+    : { codexAutoStartAuthoritative: false };
+  // Future-version guard: refuse to overwrite a prefs file written by a newer version.
+  const incomingVersion = typeof raw.version === "number" ? raw.version : 0;
+  if (incomingVersion > CURRENT_VERSION) {
+    console.warn(
+      `Clawd: prefs file version ${incomingVersion} is newer than supported (${CURRENT_VERSION}). ` +
+      `Settings will be readable but not saved to avoid data loss.`
+    );
+    return { snapshot: validate(raw), locked: true, ...codexAuthorityMeta };
+  }
+  const migrated = migrate(raw);
+  return { snapshot: validate(migrated), locked: false, ...codexAuthorityMeta };
+}
+
+function save(prefsPath, snapshot) {
+  const validated = validate(snapshot);
+  // Ephemeral fields never touch disk. permissionAutomationMode is persisted
+  // separately: validate() keeps off/auto-tools and downgrades unattended to
+  // auto-tools, making full automation a current-process elevation only.
+  for (const key of SCHEMA_KEYS) {
+    if (SCHEMA[key].ephemeral) delete validated[key];
+  }
+  // Ensure parent directory exists (Electron userData is normally created by the
+  // framework, but we can't assume it for tests).
+  try {
+    fs.mkdirSync(path.dirname(prefsPath), { recursive: true });
+  } catch {}
+  fs.writeFileSync(prefsPath, JSON.stringify(validated, null, 2));
+}
+
+// Map an OS locale string (e.g. Electron's app.getLocale()) onto one of the
+// supported UI languages. Used ONLY to seed `lang` on a brand-new install from
+// the device locale — existing users keep whatever they picked. Unknown or empty
+// locales fall back to English. Pure (no Electron dependency) so it stays
+// unit-testable; the caller passes app.getLocale() in.
+function mapLocaleToLang(locale) {
+  if (typeof locale !== "string" || !locale) return "en";
+  const l = locale.toLowerCase().replace(/_/g, "-");
+  if (l === "zh" || l.startsWith("zh-")) {
+    // Traditional-script tags/regions → zh-TW; all other Chinese → zh.
+    if (/hant/.test(l) || /^zh-(tw|hk|mo)\b/.test(l)) return "zh-TW";
+    return "zh";
+  }
+  if (l === "ko" || l.startsWith("ko-")) return "ko";
+  if (l === "ja" || l.startsWith("ja-")) return "ja";
+  // Regional locale: only pt-BR itself auto-selects it.
+  if (l === "pt-br") return "pt-BR";
+  if (l === "es" || l.startsWith("es-")) return "es";
+  return "en";
+}
+
+module.exports = {
+  CURRENT_VERSION,
+  SCHEMA,
+  SCHEMA_KEYS,
+  AGENT_FLAGS,
+  CODEX_PERMISSION_MODES,
+  DEFAULT_INTEGRATION_INSTALLED_IDS,
+  getDefaults,
+  validate,
+  migrate,
+  load,
+  save,
+  mapLocaleToLang,
+  normalizeThemeOverrides,
+  normalizePetTint,
+  normalizePetMouthAccessory,
+  normalizeShortcuts,
+  normalizeOptionalHttpUrl,
+  normalizePathList,
+  isValidSettingsWindowBounds,
+  MAX_CUSTOM_DISCOVERY_PATHS,
+  MAX_HIDDEN_QUOTA_PROVIDERS,
+  MAX_CUSTOM_DISCOVERY_PATH_LENGTH,
+};

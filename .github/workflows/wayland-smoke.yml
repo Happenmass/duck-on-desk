@@ -1,0 +1,158 @@
+# Packaged Linux smoke tests for the XWayland auto-relaunch (issue #441).
+#
+# Build once, then download the exact same AppImage into fresh runner jobs.
+# Each scenario owns its HOME, Electron userData, D-Bus session, Weston/Xwayland
+# compositor and process namespace. This prevents a failed teardown or stale
+# singleton/runtime file in one scenario from contaminating another.
+#
+# Native Wayland remains a packaged contract check, not a full GUI-health
+# assertion: weston --backend=headless has no real input seat or DRM render
+# node, so requiring the complete Electron app and /state server there is
+# host-dependent. Real native-Wayland rendering still needs a VM/hardware field
+# test. The two XWayland scenarios remain full end-to-end health checks.
+name: Wayland smoke (issue 441)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/linux-wayland-xwayland-default]
+  pull_request:
+    paths:
+      - src/linux-ozone.js
+      - ci/wayland-smoke.sh
+      - .github/workflows/wayland-smoke.yml
+      - package.json
+      - package-lock.json
+      - scripts/verify-appimage-apprun.js
+      - test/appimage-apprun.test.js
+      - test/fixtures/appimage-apprun/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wayland-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-appimage:
+    name: Build AppImage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies and verify the Ozone resolver
+        run: |
+          npm ci
+          node --test test/linux-ozone.test.js
+          node --test test/appimage-apprun.test.js
+
+      - name: Build the AppImage from this ref
+        run: |
+          npx electron-builder --linux AppImage --publish never
+          node scripts/assert-no-retired-telegram-sidecar.js --resources-root dist/linux-unpacked/resources --output dist/telegram-retirement-manifest.json
+          ls -l dist/*.AppImage
+
+      - name: Verify final AppImage AppRun search paths
+        run: node scripts/verify-appimage-apprun.js --artifact dist/*.AppImage --output dist/appimage-apprun-manifests/linux-x64.json
+
+      - name: Upload AppImage for isolated smoke jobs
+        uses: actions/upload-artifact@v4
+        with:
+          # Preserve the established download name used by issue #441 field
+          # testers and the regular Linux build workflow.
+          name: linux-installer
+          path: |
+            dist/*.AppImage
+            dist/appimage-apprun-manifests/*.json
+          if-no-files-found: error
+          retention-days: 3
+
+  xwayland-smoke:
+    name: XWayland / ${{ matrix.scenario }}
+    needs: build-appimage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - manual-x11
+          - auto-xwayland
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-installer
+          path: dist
+
+      - name: Install isolated headless Wayland stack
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            dbus-x11 weston xwayland libfuse2t64 x11-utils xdotool
+
+      # Ubuntu 24.04 restricts unprivileged user namespaces (AppArmor), which
+      # breaks Chromium's sandbox. Keep the real sandboxed AppImage invocation
+      # instead of weakening it with --no-sandbox.
+      - name: Allow Chromium userns sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Run isolated ${{ matrix.scenario }} smoke
+        run: |
+          dbus-run-session -- \
+            bash ci/wayland-smoke.sh "${{ matrix.scenario }}" dist/*.AppImage
+
+      - name: Upload ${{ matrix.scenario }} diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wayland-smoke-${{ matrix.scenario }}-diagnostics
+          path: wayland-smoke-artifacts/${{ matrix.scenario }}/
+          if-no-files-found: warn
+          retention-days: 7
+
+  native-wayland-contract:
+    name: Native Wayland / packaged contract
+    needs: build-appimage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-installer
+          path: dist
+
+      - name: Install isolated headless Wayland stack
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            dbus-x11 weston xwayland libfuse2t64 x11-utils
+
+      - name: Allow Chromium userns sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Verify the packaged native-Wayland escape hatch
+        run: |
+          dbus-run-session -- \
+            bash ci/wayland-smoke.sh native-wayland-contract dist/*.AppImage
+
+      - name: Upload native-Wayland diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wayland-smoke-native-wayland-diagnostics
+          path: wayland-smoke-artifacts/native-wayland-contract/
+          if-no-files-found: warn
+          retention-days: 7

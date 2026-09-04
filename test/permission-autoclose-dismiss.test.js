@@ -1,0 +1,438 @@
+// Autoclose dismiss-without-decision semantics. The autoclose timer fires
+// resolvePermissionEntry(perm, "no-decision", reason); each agent branch
+// must dispose of the bubble without forwarding a synthetic user decision.
+//
+//   Claude Code / CodeBuddy → res.destroy()        (chat fallback)
+//   Codex                   → sendCodexNoDecisionResponse (204)
+//   Antigravity             → sendNoDecisionResponse (204, ask fallback)
+//   Elicitation             → res.destroy() + focusTerminalForSession
+//   opencode                → silent drop (no bridge POST)
+//
+// "no-decision" must NEVER fall through to sendPermissionResponse — that would
+// either auto-allow (default branch) or auto-deny the tool call, which codex
+// review round 2/3 explicitly rejected as substituting for the user.
+
+const { describe, it } = require("node:test");
+const assert = require("node:assert");
+
+const initPermission = require("../src/permission");
+const { computePermissionAutoCloseRemainingMs } = initPermission.__test;
+const { classifyPermissionInteraction } = require("../src/permission-automation-policy");
+
+function createMockResponse() {
+  const captured = {
+    statusCode: null,
+    headers: {},
+    body: null,
+    ended: false,
+    destroyCalls: 0,
+    listeners: {},
+  };
+  return {
+    captured,
+    writableEnded: false,
+    destroyed: false,
+    headersSent: false,
+    setHeader(key, value) { captured.headers[key] = value; },
+    writeHead(status, headers) {
+      captured.statusCode = status;
+      if (headers) Object.assign(captured.headers, headers);
+      this.headersSent = true;
+    },
+    write(chunk) { captured.body = (captured.body || "") + String(chunk); },
+    end(chunk) {
+      if (chunk !== undefined) captured.body = (captured.body || "") + String(chunk);
+      captured.ended = true;
+      this.writableEnded = true;
+    },
+    destroy() {
+      captured.destroyCalls++;
+      this.destroyed = true;
+    },
+    on(evt, fn) { (captured.listeners[evt] = captured.listeners[evt] || []).push(fn); },
+    removeListener(evt, fn) {
+      const arr = captured.listeners[evt] || [];
+      const idx = arr.indexOf(fn);
+      if (idx !== -1) arr.splice(idx, 1);
+    },
+  };
+}
+
+function makeCtx(overrides = {}) {
+  return {
+    focusTerminalCalls: [],
+    focusTerminalForSession(sessionId) { this.focusTerminalCalls.push(sessionId); },
+    getSettingsSnapshot: () => ({}),
+    isAgentPermissionsEnabled: () => true,
+    getBubblePolicy: () => ({ enabled: true, autoCloseMs: 0 }),
+    getPetWindowBounds: () => null,
+    getNearestWorkArea: () => ({ x: 0, y: 0, width: 1920, height: 1080 }),
+    getHitRectScreen: () => null,
+    getHudReservedOffset: () => 0,
+    guardAlwaysOnTop: () => {},
+    reapplyMacVisibility: () => {},
+    permDebugLog: null,
+    updateDebugLog: null,
+    sessionDebugLog: null,
+    repositionUpdateBubble: () => {},
+    win: null,
+    bubbleFollowPet: false,
+    petHidden: false,
+    doNotDisturb: false,
+    hideBubbles: false,
+    pendingPermissions: [],
+    sessions: new Map(),
+    resolvePermissionEntry: () => {},
+    sendPermissionResponse: () => {},
+    subscribeShortcuts: () => {},
+    reportShortcutFailure: () => {},
+    clearShortcutFailure: () => {},
+    STATE_SVGS: {},
+    setState: () => {},
+    updateSession: () => {},
+    ...overrides,
+  };
+}
+
+function makePermEntry(overrides = {}) {
+  return {
+    res: createMockResponse(),
+    abortHandler: () => {},
+    suggestions: [],
+    sessionId: "session-test",
+    bubble: null,
+    hideTimer: null,
+    toolName: "Bash",
+    toolInput: { command: "echo x" },
+    resolvedSuggestion: null,
+    createdAt: Date.now() - 5000, // > MIN_BUBBLE_DISPLAY_MS so no delay path
+    ...overrides,
+  };
+}
+
+describe("permission autoclose: no-decision dismiss semantics", () => {
+  it("subtracts completed and active confirmation pauses from real elapsed time", () => {
+    const entry = {
+      createdAt: 1_000,
+      autoClosePausedTotalMs: 1_500,
+      autoClosePauseStartedAt: 7_000,
+    };
+    assert.equal(
+      computePermissionAutoCloseRemainingMs(entry, 10_000, 9_000),
+      5_500
+    );
+    entry.autoClosePauseStartedAt = null;
+    entry.autoClosePausedTotalMs = 3_500;
+    assert.equal(
+      computePermissionAutoCloseRemainingMs(entry, 10_000, 9_000),
+      5_500
+    );
+    assert.equal(
+      computePermissionAutoCloseRemainingMs(entry, 4_000, 9_000),
+      0,
+      "a shorter live policy expires immediately after the pause"
+    );
+    assert.equal(
+      computePermissionAutoCloseRemainingMs(entry, 20_000, 9_000),
+      15_500,
+      "a longer live policy extends from the same pause-adjusted elapsed time"
+    );
+  });
+
+  it("does not re-arm while session trust confirmation is active", () => {
+    const ctx = makeCtx({
+      getBubblePolicy: () => ({ enabled: true, autoCloseMs: 60_000 }),
+    });
+    const api = initPermission(ctx);
+    const entry = makePermEntry({
+      agentId: "claude-code",
+      createdAt: Date.now(),
+      interaction: classifyPermissionInteraction({
+        agentId: "claude-code",
+        toolName: "Bash",
+      }),
+    });
+    api.pendingPermissions.push(entry);
+    assert.equal(api.beginSessionTrustConfirmation(entry), true);
+    api.refreshPermissionAutoCloseForPolicy();
+    assert.equal(entry.autoCloseTimer, null);
+    assert.equal(entry.trustConfirming, true);
+    api.endSessionTrustConfirmation(entry, { rearm: true });
+    assert.ok(entry.autoCloseTimer);
+    api.cleanup();
+  });
+
+  it("does not re-arm an expired entry after session trust confirmation returns", () => {
+    const ctx = makeCtx({
+      getBubblePolicy: () => ({ enabled: true, autoCloseMs: 60_000 }),
+    });
+    const api = initPermission(ctx);
+    const entry = makePermEntry({
+      agentId: "claude-code",
+      createdAt: Date.now(),
+      interaction: classifyPermissionInteraction({
+        agentId: "claude-code",
+        toolName: "Bash",
+      }),
+    });
+    api.pendingPermissions.push(entry);
+    assert.equal(api.beginSessionTrustConfirmation(entry), true);
+    api.pendingPermissions.splice(0, 1);
+    api.endSessionTrustConfirmation(entry, { rearm: true });
+    assert.equal(entry.autoCloseTimer, null);
+    api.cleanup();
+  });
+
+  it("never arms decision timers and clears any stale timer during policy refresh", () => {
+    const ctx = makeCtx({
+      getBubblePolicy: () => ({ enabled: true, autoCloseMs: 60000 }),
+    });
+    const api = initPermission(ctx);
+    const tool = makePermEntry({
+      agentId: "claude-code",
+      createdAt: Date.now(),
+      interaction: classifyPermissionInteraction({ agentId: "claude-code", toolName: "Bash" }),
+    });
+    const question = makePermEntry({
+      agentId: "claude-code",
+      toolName: "AskUserQuestion",
+      createdAt: Date.now(),
+      interaction: classifyPermissionInteraction({
+        agentId: "claude-code",
+        toolName: "AskUserQuestion",
+      }),
+    });
+    question.autoCloseTimer = setTimeout(() => {}, 60000);
+    api.pendingPermissions.push(tool, question);
+
+    api.refreshPermissionAutoCloseForPolicy();
+
+    assert.ok(tool.autoCloseTimer, "ordinary tool keeps the configured permission timer");
+    assert.strictEqual(question.autoCloseTimer, null, "decision timer is cleared and never re-armed");
+    api.cleanup();
+  });
+
+  it("CC default branch destroys the socket without sending a decision", () => {
+    const ctx = makeCtx();
+    const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
+    const permEntry = makePermEntry();
+    pendingPermissions.push(permEntry);
+
+    resolvePermissionEntry(permEntry, "no-decision", "Auto-closed");
+
+    assert.equal(permEntry.res.captured.destroyCalls, 1, "res.destroy() should fire");
+    assert.equal(permEntry.res.captured.ended, false, "no decision body should be written");
+    assert.equal(permEntry.res.captured.statusCode, null, "no writeHead should occur");
+    assert.equal(pendingPermissions.indexOf(permEntry), -1, "pending entry should be spliced");
+  });
+
+  it("Hermes allow/deny resolutions return the documented JSON response shape", () => {
+    for (const behavior of ["allow", "deny"]) {
+      const ctx = makeCtx();
+      const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
+      const permEntry = makePermEntry({ isHermes: true, agentId: "hermes" });
+      pendingPermissions.push(permEntry);
+
+      resolvePermissionEntry(permEntry, behavior);
+
+      assert.equal(permEntry.res.captured.statusCode, 200);
+      assert.equal(permEntry.res.captured.headers["Content-Type"], "application/json");
+      assert.deepEqual(JSON.parse(permEntry.res.captured.body), { decision: behavior });
+      assert.equal(permEntry.res.captured.destroyCalls, 0);
+      assert.equal(pendingPermissions.indexOf(permEntry), -1);
+    }
+  });
+
+  it("Hermes elicitation allow returns answers in the documented JSON response shape", () => {
+    const ctx = makeCtx();
+    const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
+    const permEntry = makePermEntry({
+      isHermes: true,
+      isElicitation: true,
+      agentId: "hermes",
+      resolvedUpdatedInput: { answers: { "Which approach?": "A" } },
+    });
+    pendingPermissions.push(permEntry);
+
+    resolvePermissionEntry(permEntry, "allow");
+
+    assert.equal(permEntry.res.captured.statusCode, 200);
+    assert.equal(permEntry.res.captured.headers["Content-Type"], "application/json");
+    assert.deepEqual(JSON.parse(permEntry.res.captured.body), {
+      decision: "allow",
+      answers: { "Which approach?": "A" },
+    });
+    assert.equal(permEntry.res.captured.destroyCalls, 0);
+    assert.equal(pendingPermissions.indexOf(permEntry), -1);
+  });
+
+  it("notifies when a resolved permission leaves the pending list", () => {
+    const changes = [];
+    const resolved = [];
+    const ctx = makeCtx({
+      onPermissionsChanged: (reason) => changes.push(reason),
+      onPermissionResolved: (entry, meta) => resolved.push({ entry, meta }),
+    });
+    const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
+    const permEntry = makePermEntry();
+    pendingPermissions.push(permEntry);
+
+    resolvePermissionEntry(permEntry, "allow");
+
+    assert.deepEqual(changes, ["resolved"]);
+    assert.deepEqual(resolved, [{
+      entry: permEntry,
+      meta: { reason: "resolved", hasPendingForSession: false },
+    }]);
+    assert.equal(pendingPermissions.indexOf(permEntry), -1);
+  });
+
+  it("reports when another permission for the same session is still pending", () => {
+    const resolved = [];
+    const ctx = makeCtx({
+      onPermissionResolved: (entry, meta) => resolved.push({ entry, meta }),
+    });
+    const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
+    const first = makePermEntry({ sessionId: "same-session" });
+    const second = makePermEntry({ sessionId: "same-session" });
+    pendingPermissions.push(first, second);
+
+    resolvePermissionEntry(first, "allow");
+
+    assert.deepEqual(resolved, [{
+      entry: first,
+      meta: { reason: "resolved", hasPendingForSession: true },
+    }]);
+    assert.deepEqual(pendingPermissions, [second]);
+  });
+
+  it("notifies when a permission enters the pending list through the runtime helper", () => {
+    const changes = [];
+    const perm = initPermission(makeCtx({
+      onPermissionsChanged: (reason) => changes.push(reason),
+    }));
+    const permEntry = makePermEntry();
+
+    assert.strictEqual(perm.addPendingPermission(permEntry), permEntry);
+
+    assert.deepEqual(changes, ["added"]);
+    assert.deepEqual(perm.pendingPermissions, [permEntry]);
+  });
+
+  it("Codex branch sends 204 no-decision instead of allow/deny", () => {
+    const ctx = makeCtx();
+    const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
+    const permEntry = makePermEntry({ isCodex: true });
+    pendingPermissions.push(permEntry);
+
+    resolvePermissionEntry(permEntry, "no-decision", "Auto-closed");
+
+    assert.equal(permEntry.res.captured.statusCode, 204, "Codex no-decision is 204");
+    assert.equal(permEntry.res.captured.destroyCalls, 0, "should not destroy socket on codex path");
+    assert.equal(pendingPermissions.indexOf(permEntry), -1);
+  });
+
+  it("Antigravity branch sends 204 no-decision", () => {
+    const ctx = makeCtx();
+    const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
+    const permEntry = makePermEntry({ isAntigravity: true, agentId: "antigravity-cli" });
+    pendingPermissions.push(permEntry);
+
+    resolvePermissionEntry(permEntry, "no-decision", "Auto-closed");
+
+    assert.equal(permEntry.res.captured.statusCode, 204);
+    assert.equal(permEntry.res.captured.destroyCalls, 0);
+    assert.equal(pendingPermissions.indexOf(permEntry), -1);
+  });
+
+  it("Elicitation branch destroys the socket and focuses the terminal", () => {
+    const ctx = makeCtx();
+    const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
+    const permEntry = makePermEntry({
+      isElicitation: true,
+      sessionId: "elicit-7",
+      toolName: "AskUserQuestion",
+      toolInput: { questions: [{ question: "Q?" }] },
+    });
+    pendingPermissions.push(permEntry);
+
+    resolvePermissionEntry(permEntry, "no-decision", "Auto-closed");
+
+    assert.equal(permEntry.res.captured.destroyCalls, 1, "elicitation socket destroyed");
+    assert.equal(permEntry.res.captured.ended, false, "no Elicitation deny body should be sent");
+    assert.deepEqual(ctx.focusTerminalCalls, ["elicit-7"], "originating terminal should be focused");
+    assert.equal(pendingPermissions.indexOf(permEntry), -1);
+  });
+
+  it("dismissInteractivePermissionBubbles clears any armed autoCloseTimer", () => {
+    // Direct-dismiss paths (DND, agent disable, "permission bubbles" toggle
+    // off) bypass resolvePermissionEntry entirely — see permission.js
+    // dismissInteractivePermissionWithoutDecision. Forgetting to clear
+    // perm.autoCloseTimer there leaks the entry/window/response references
+    // until the timer fires.
+    const changes = [];
+    let dependentRepositions = 0;
+    const ctx = makeCtx({
+      onPermissionsChanged: (reason) => changes.push(reason),
+      repositionUpdateBubble: () => { dependentRepositions++; },
+    });
+    const perm = initPermission(ctx);
+    const { dismissInteractivePermissionBubbles, pendingPermissions } = perm;
+    const permEntry = makePermEntry();
+    let timerFired = false;
+    permEntry.autoCloseTimer = setTimeout(() => { timerFired = true; }, 999999);
+    pendingPermissions.push(permEntry);
+
+    dismissInteractivePermissionBubbles();
+
+    assert.equal(permEntry.autoCloseTimer, null, "autoCloseTimer should be cleared on direct dismiss");
+    assert.equal(pendingPermissions.indexOf(permEntry), -1, "entry should be spliced");
+    assert.equal(timerFired, false, "timer must not have fired (clearTimeout effective)");
+    assert.deepEqual(changes, ["dismissed"]);
+    assert.equal(dependentRepositions, 1, "update bubble should refill the cleared permission-stack gap");
+  });
+
+  it("opencode branch silently drops without bridge POST", () => {
+    let bridgeReplyCalls = 0;
+    const ctx = makeCtx();
+    // opencode entries have res=null and route decisions through bridge.
+    // For no-decision we want zero outbound traffic (silent drop) so the TUI
+    // can prompt the user in-terminal. We can't fully assert "no bridge POST"
+    // without a network stub, but we can assert the entry is spliced and
+    // status code / destroy / focusTerminal stay untouched.
+    const { resolvePermissionEntry, pendingPermissions } = initPermission(ctx);
+    const permEntry = makePermEntry({
+      agentId: "opencode",
+      res: null,
+      familyRequestId: "per_test",
+      familyBridgeUrl: "http://127.0.0.1:1/reply", // intentionally unreachable
+      familyBridgeToken: "token",
+    });
+    pendingPermissions.push(permEntry);
+
+    resolvePermissionEntry(permEntry, "no-decision", "Auto-closed");
+
+    assert.equal(pendingPermissions.indexOf(permEntry), -1, "opencode entry should be spliced");
+    assert.equal(ctx.focusTerminalCalls.length, 0, "opencode does not focus terminal");
+  });
+
+  it("cleanup quits without rejecting Claude or opencode-family requests", () => {
+    const ctx = makeCtx();
+    const api = initPermission(ctx);
+    const claude = makePermEntry({ agentId: "claude-code" });
+    const opencode = makePermEntry({
+      agentId: "opencode",
+      res: null,
+      familyRequestId: "per_quit",
+      familyBridgeUrl: "http://127.0.0.1:1/reply",
+      familyBridgeToken: "token",
+    });
+    api.pendingPermissions.push(claude, opencode);
+
+    api.cleanup();
+
+    assert.equal(claude.res.captured.destroyCalls, 1, "Claude should fall back through socket close");
+    assert.equal(claude.res.captured.ended, false, "quit must not send an explicit denial");
+    assert.equal(api.pendingPermissions.length, 0, "all quit-time entries should be removed");
+  });
+});

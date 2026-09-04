@@ -1,0 +1,1459 @@
+"use strict";
+
+// Unit tests for hooks/clawd-hook.js pure helpers.
+// Tests `buildStateBody` and `extractSessionTitleFromTranscript`.
+// The top-level `main()` path (stdin read, HTTP post, process.exit) is not
+// tested here; its side effects are exercised by manual / end-to-end runs.
+
+const { describe, it, before, after } = require("node:test");
+const assert = require("node:assert");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const {
+  buildStateBody,
+  classifyTestResult,
+  isRecognizedTestCommand,
+  isClaudeHeadlessCommandLine,
+  attachStdinDiag,
+  STDIN_READ_TIMEOUT_MS: CLAWD_HOOK_STDIN_TIMEOUT_MS,
+  extractSessionTitleFromTranscript,
+  extractApiErrorFromEntries,
+  extractLastAssistantTextFromEntries,
+} = require("../hooks/clawd-hook.js");
+const { buildToolInputFingerprint } = require("../src/server").__test;
+
+function writeTmpJsonl(entries) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-hook-test-"));
+  const file = path.join(dir, "transcript.jsonl");
+  const body = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+  fs.writeFileSync(file, body);
+  return file;
+}
+
+const mockResolve = () => ({
+  stablePid: null,
+  agentPid: null,
+  detectedEditor: null,
+  pidChain: [],
+});
+
+describe("buildStateBody", () => {
+  it("returns null for unknown events", () => {
+    assert.strictEqual(buildStateBody("UnknownEvent", {}, mockResolve), null);
+  });
+
+  it("returns null for empty event name", () => {
+    assert.strictEqual(buildStateBody("", {}, mockResolve), null);
+  });
+
+  it("builds body with state + session_id + event + agent_id", () => {
+    const body = buildStateBody(
+      "SessionStart",
+      { session_id: "sid-1", cwd: "/tmp/p" },
+      mockResolve
+    );
+    assert.strictEqual(body.state, "idle");
+    assert.strictEqual(body.session_id, "sid-1");
+    assert.strictEqual(body.event, "SessionStart");
+    assert.strictEqual(body.agent_id, "claude-code");
+    assert.strictEqual(body.cwd, "/tmp/p");
+  });
+
+  it("attributes Cursor-imported Claude hooks to Cursor Agent (#773)", () => {
+    const body = buildStateBody(
+      "SessionStart",
+      {
+        conversation_id: "cursor-conversation-1",
+        session_id: "cursor-conversation-1",
+        hook_event_name: "SessionStart",
+        cursor_version: "3.13.25",
+        workspace_roots: ["/tmp/p"],
+        cwd: "/tmp/p",
+      },
+      mockResolve
+    );
+    assert.strictEqual(body.agent_id, "cursor-agent");
+  });
+
+  for (const [label, cursorVersion] of [
+    ["blank", " \t "],
+    ["overlong", "v".repeat(129)],
+    ["line break", "3.13.25\nspoofed"],
+    ["non-string", 31325],
+  ]) {
+    it(`rejects ${label} Cursor provenance and keeps Claude Code attribution (#773)`, () => {
+      const body = buildStateBody(
+        "SessionStart",
+        {
+          session_id: `malformed-cursor-version-${label.replace(/\s+/g, "-")}`,
+          cursor_version: cursorVersion,
+          cwd: "/tmp/p",
+        },
+        mockResolve
+      );
+      assert.strictEqual(body.agent_id, "claude-code");
+    });
+  }
+
+  it("keeps Claude Code launched from Cursor's terminal attributed to Claude Code (#773)", () => {
+    const resolveFromCursorTerminal = () => ({
+      stablePid: 12345,
+      agentPid: 67890,
+      detectedEditor: "cursor",
+      pidChain: [67890, 12345],
+    });
+    const body = buildStateBody(
+      "SessionStart",
+      { session_id: "claude-in-cursor-terminal", cwd: "/tmp/p" },
+      resolveFromCursorTerminal
+    );
+    assert.strictEqual(body.agent_id, "claude-code");
+    assert.strictEqual(body.editor, "cursor");
+  });
+
+  it("preserves Claude subagent provenance without replacing the canonical agent id", () => {
+    const body = buildStateBody(
+      "SessionEnd",
+      {
+        session_id: "sid-subagent",
+        agent_id: "agent-7f3a",
+        agent_type: "Explore",
+      },
+      mockResolve
+    );
+    assert.strictEqual(body.agent_id, "claude-code");
+    assert.strictEqual(body.subagent_id, "agent-7f3a");
+    assert.strictEqual(body.subagent_type, "Explore");
+  });
+
+  it("drops malformed subagent metadata", () => {
+    const body = buildStateBody(
+      "SessionEnd",
+      {
+        session_id: "sid-subagent",
+        agent_id: "bad\nagent",
+        agent_type: "Explore",
+      },
+      mockResolve
+    );
+    assert.strictEqual(body.subagent_id, undefined);
+    assert.strictEqual(body.subagent_type, undefined);
+  });
+
+  it("maps PreToolUse to working state", () => {
+    const body = buildStateBody("PreToolUse", { session_id: "s" }, mockResolve);
+    assert.strictEqual(body.state, "working");
+  });
+
+  it("maps current Agent and legacy Task tool starts to synthetic SubagentStart", () => {
+    for (const toolName of ["Agent", "Task"]) {
+      const body = buildStateBody(
+        "PreToolUse",
+        { session_id: "s", tool_name: toolName },
+        mockResolve
+      );
+      assert.strictEqual(body.state, "juggling");
+      assert.strictEqual(body.event, "SubagentStart");
+      assert.strictEqual(body.tool_name, toolName);
+      assert.strictEqual(body.subagent_lifecycle_source, "synthetic-tool");
+    }
+  });
+
+  it("marks native subagent lifecycle events and keeps stop continuation evidence", () => {
+    const start = buildStateBody(
+      "SubagentStart",
+      { session_id: "s", agent_id: "child-1", agent_type: "Explore" },
+      mockResolve
+    );
+    const stop = buildStateBody(
+      "SubagentStop",
+      { session_id: "s", agent_id: "child-1", stop_hook_active: true },
+      mockResolve
+    );
+    assert.strictEqual(start.subagent_lifecycle_source, "native");
+    assert.strictEqual(stop.subagent_lifecycle_source, "native");
+    assert.strictEqual(stop.stop_hook_active, true);
+  });
+
+  it("preserves a nested Agent originator id without calling it native", () => {
+    const body = buildStateBody(
+      "PreToolUse",
+      {
+        session_id: "s",
+        tool_name: "Agent",
+        tool_use_id: "tool-child",
+        agent_id: "parent-child",
+      },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "SubagentStart");
+    assert.strictEqual(body.subagent_lifecycle_source, "synthetic-tool");
+    assert.strictEqual(body.subagent_id, "parent-child");
+    assert.strictEqual(body.tool_use_id, "tool-child");
+  });
+
+  it("forwards the SessionStart source needed for scoped lifecycle reset", () => {
+    const body = buildStateBody(
+      "SessionStart",
+      { session_id: "s", source: "compact" },
+      mockResolve
+    );
+    assert.strictEqual(body.session_start_source, "compact");
+  });
+
+  it("keeps non-subagent PreToolUse as working", () => {
+    const body = buildStateBody(
+      "PreToolUse",
+      { session_id: "s", tool_name: "Bash" },
+      mockResolve
+    );
+    assert.strictEqual(body.state, "working");
+    assert.strictEqual(body.event, "PreToolUse");
+    assert.strictEqual(body.tool_name, "Bash");
+  });
+
+  it("keeps PostToolUse Agent/Task as working", () => {
+    for (const toolName of ["Agent", "Task"]) {
+      const body = buildStateBody(
+        "PostToolUse",
+        { session_id: "s", tool_name: toolName },
+        mockResolve
+      );
+      assert.strictEqual(body.state, "working");
+      assert.strictEqual(body.event, "PostToolUse");
+      assert.strictEqual(body.tool_name, toolName);
+    }
+  });
+
+  it("maps Stop to attention state", () => {
+    const body = buildStateBody("Stop", { session_id: "s" }, mockResolve);
+    assert.strictEqual(body.state, "attention");
+  });
+
+  it("maps PostCompact (auto / unspecified) to thinking, not attention (#406)", () => {
+    assert.strictEqual(
+      buildStateBody("PostCompact", { session_id: "s" }, mockResolve).state,
+      "thinking"
+    );
+    assert.strictEqual(
+      buildStateBody("PostCompact", { session_id: "s", trigger: "auto" }, mockResolve).state,
+      "thinking"
+    );
+  });
+
+  it("maps PostCompact (manual /compact) to idle (#406)", () => {
+    const body = buildStateBody(
+      "PostCompact",
+      { session_id: "s", trigger: "manual" },
+      mockResolve
+    );
+    assert.strictEqual(body.state, "idle");
+  });
+
+  it("forwards background_tasks / session_crons counts on Stop (#406)", () => {
+    const body = buildStateBody(
+      "Stop",
+      { session_id: "s", background_tasks: [{}, {}], session_crons: [{}] },
+      mockResolve
+    );
+    assert.strictEqual(body.background_tasks_count, 2);
+    assert.strictEqual(body.background_subagents_count, 0);
+    assert.strictEqual(body.session_crons_count, 1);
+  });
+
+  it("counts only exact typed one-shot background subagents and preserves known zero (#952)", () => {
+    const typed = buildStateBody(
+      "Stop",
+      {
+        session_id: "s",
+        background_tasks: [
+          { type: "subagent", id: "private-1", status: "running" },
+          { type: " SUBAGENT ", description: "private description" },
+          { type: "teammate" },
+          { type: "shell" },
+          { type: "monitor" },
+          { type: "subagent-extra" },
+          { type: 123 },
+          {},
+          null,
+          [],
+        ],
+      },
+      mockResolve
+    );
+    assert.strictEqual(typed.background_tasks_count, 10);
+    assert.strictEqual(typed.background_subagents_count, 2);
+
+    const knownZero = buildStateBody(
+      "Stop",
+      { session_id: "s", background_tasks: [{ type: "teammate" }] },
+      mockResolve
+    );
+    assert.strictEqual(knownZero.background_subagents_count, 0);
+
+    const empty = buildStateBody(
+      "Stop",
+      { session_id: "s", background_tasks: [] },
+      mockResolve
+    );
+    assert.strictEqual(empty.background_subagents_count, 0);
+
+    const absent = buildStateBody("Stop", { session_id: "s" }, mockResolve);
+    assert.ok(!Object.prototype.hasOwnProperty.call(absent, "background_subagents_count"));
+    const malformed = buildStateBody(
+      "Stop",
+      { session_id: "s", background_tasks: { type: "subagent" } },
+      mockResolve
+    );
+    assert.ok(!Object.prototype.hasOwnProperty.call(malformed, "background_subagents_count"));
+  });
+
+  it("derives the typed aggregate on SubagentStop without forwarding task details (#952)", () => {
+    const body = buildStateBody(
+      "SubagentStop",
+      {
+        session_id: "s",
+        background_tasks: [{ type: "subagent", id: "secret-child", command: "secret command" }],
+      },
+      mockResolve
+    );
+    assert.strictEqual(body.background_subagents_count, 1);
+    const serialized = JSON.stringify(body);
+    assert.ok(!serialized.includes("secret-child"));
+    assert.ok(!serialized.includes("secret command"));
+  });
+
+  it("forwards only counts — never background task command/description text (#406)", () => {
+    const body = buildStateBody(
+      "Stop",
+      {
+        session_id: "s",
+        background_tasks: [{
+          type: "teammate",
+          id: "secret-task-id",
+          agent_type: "secret-agent-type",
+          status: "secret-status",
+          command: "npm run secret-dev",
+          description: "do not leak",
+        }],
+      },
+      mockResolve
+    );
+    assert.strictEqual(body.background_tasks_count, 1);
+    assert.strictEqual(body.background_subagents_count, 0);
+    const serialized = JSON.stringify(body);
+    assert.ok(!serialized.includes("npm run secret-dev"), "task command must not leak");
+    assert.ok(!serialized.includes("do not leak"), "task description must not leak");
+    assert.ok(!serialized.includes("secret-task-id"), "task id must not leak");
+    assert.ok(!serialized.includes("secret-agent-type"), "agent type must not leak");
+    assert.ok(!serialized.includes("secret-status"), "task status must not leak");
+  });
+
+  it("forwards stop_hook_active on Stop (#406)", () => {
+    const body = buildStateBody("Stop", { session_id: "s", stop_hook_active: true }, mockResolve);
+    assert.strictEqual(body.stop_hook_active, true);
+  });
+
+  it("omits completion-gate fields on a plain Stop with no background work (#406)", () => {
+    const body = buildStateBody("Stop", { session_id: "s" }, mockResolve);
+    assert.ok(!("background_tasks_count" in body));
+    assert.ok(!("background_subagents_count" in body));
+    assert.ok(!("session_crons_count" in body));
+    assert.ok(!("stop_hook_active" in body));
+  });
+
+  it("maps SubagentStart to juggling state", () => {
+    const body = buildStateBody("SubagentStart", { session_id: "s" }, mockResolve);
+    assert.strictEqual(body.state, "juggling");
+  });
+
+  it("remaps SessionEnd + source=clear to sweeping state", () => {
+    const body = buildStateBody(
+      "SessionEnd",
+      { session_id: "sid-1", source: "clear" },
+      mockResolve
+    );
+    assert.strictEqual(body.state, "sweeping");
+  });
+
+  it("remaps SessionEnd + reason=clear to sweeping state", () => {
+    // `reason` is an alias for `source` per existing payload handling
+    const body = buildStateBody(
+      "SessionEnd",
+      { session_id: "sid-1", reason: "clear" },
+      mockResolve
+    );
+    assert.strictEqual(body.state, "sweeping");
+  });
+
+  it("keeps SessionEnd as sleeping when source is not clear", () => {
+    const body = buildStateBody(
+      "SessionEnd",
+      { session_id: "sid-1", source: "user" },
+      mockResolve
+    );
+    assert.strictEqual(body.state, "sleeping");
+  });
+
+  it("falls back to 'default' when session_id is missing", () => {
+    const body = buildStateBody("PreToolUse", {}, mockResolve);
+    assert.strictEqual(body.session_id, "default");
+  });
+
+  it("omits cwd field when payload has no cwd", () => {
+    const body = buildStateBody("PreToolUse", { session_id: "s" }, mockResolve);
+    assert.ok(!("cwd" in body));
+  });
+
+  it("includes source_pid from resolve() in non-remote mode", () => {
+    const resolveWithPid = () => ({
+      stablePid: 12345,
+      agentPid: null,
+      detectedEditor: null,
+      pidChain: [],
+    });
+    const body = buildStateBody("PreToolUse", { session_id: "s" }, resolveWithPid);
+    assert.strictEqual(body.source_pid, 12345);
+  });
+
+  it("includes editor when resolve() detects one", () => {
+    const resolveWithEditor = () => ({
+      stablePid: 1,
+      agentPid: null,
+      detectedEditor: "vscode",
+      pidChain: [],
+    });
+    const body = buildStateBody("PreToolUse", { session_id: "s" }, resolveWithEditor);
+    assert.strictEqual(body.editor, "vscode");
+  });
+
+  it("includes pid_chain when non-empty", () => {
+    const resolveWithChain = () => ({
+      stablePid: 1,
+      agentPid: null,
+      detectedEditor: null,
+      pidChain: [100, 200, 300],
+    });
+    const body = buildStateBody("PreToolUse", { session_id: "s" }, resolveWithChain);
+    assert.deepStrictEqual(body.pid_chain, [100, 200, 300]);
+  });
+
+  it("omits pid_chain when empty", () => {
+    const body = buildStateBody("PreToolUse", { session_id: "s" }, mockResolve);
+    assert.ok(!("pid_chain" in body));
+  });
+
+  it("applies the foreground WT HWND only on foreground-safe events, and only when the resolver surfaces one", () => {
+    // #634: buildStateBody is now the Claude adapter — the shared resolver
+    // decides whether a foreground WT handle exists (only a fresh SessionStart
+    // snapshot carries one; a prompt is cache-only and never does, the server
+    // samples it), and buildStateBody applies it only on a foreground-safe
+    // event. The fake models the resolver contract: null foregroundWtHwnd for
+    // the prompt lifecycle. This is now platform-independent — the resolver
+    // owns the Windows/non-Windows behavior; deterministic both-platform
+    // coverage lives in test/clawd-hook-pid-cache.test.js (forced reloads).
+    const resolveByLifecycle = (ctx) => ({
+      stablePid: 1,
+      agentPid: null,
+      detectedEditor: null,
+      pidChain: [],
+      foregroundWtHwnd: ctx && ctx.lifecycle === "prompt" ? null : "123456",
+    });
+
+    const startBody = buildStateBody("SessionStart", { session_id: "s" }, resolveByLifecycle);
+    const promptBody = buildStateBody("UserPromptSubmit", { session_id: "s" }, resolveByLifecycle);
+    const stopBody = buildStateBody("Stop", { session_id: "s" }, resolveByLifecycle);
+
+    assert.strictEqual(startBody.wt_hwnd, "123456", "SessionStart (start) surfaces the fresh handle");
+    assert.ok(!("wt_hwnd" in promptBody), "prompt is cache-only; the hook never reports wt_hwnd (server samples it)");
+    assert.ok(!("wt_hwnd" in stopBody), "Stop is not a foreground-safe event even when a handle is present");
+  });
+
+  // #681 split this in two. The -p/--print predicate moved out of the adapter
+  // and into the resolver (createPidResolver's headlessCheck), because the pid
+  // cache must store the derived boolean rather than the raw command line it was
+  // derived from. So the regex is now tested directly, and the adapter is tested
+  // for wiring — that it applies the resolver's boolean and does not re-derive.
+  describe("isClaudeHeadlessCommandLine — the -p/--print predicate", () => {
+    const cases = [
+      ["node claude-code -p", true, "-p at end of line"],
+      ["node claude-code -p some-prompt", true, "-p followed by a space"],
+      ["node claude-code --print", true, "--print"],
+      ["node claude-code --print > out.txt", true, "--print mid-line"],
+      ["node claude-code --port 3000", false, "-p must not match a longer option's prefix"],
+      ["node claude-code --printer", false, "--print must not match a longer option's prefix"],
+      ["node claude-code", false, "plain interactive"],
+      ["", false, "empty"],
+      [null, false, "null"],
+      [undefined, false, "undefined"],
+    ];
+    for (const [cmdline, expected, label] of cases) {
+      it(`${label} ⇒ ${expected}`, () => {
+        assert.strictEqual(isClaudeHeadlessCommandLine(cmdline), expected);
+      });
+    }
+  });
+
+  describe("agentPid and headless wiring", () => {
+    const makeResolve = (agentPid, extra = {}) =>
+      () => ({ stablePid: 1, agentPid, agentCommandLine: "", detectedEditor: null, pidChain: [], ...extra });
+
+    it("sets agent_pid and claude_pid when agentPid is present", () => {
+      const body = buildStateBody("PreToolUse", { session_id: "s" }, makeResolve(42));
+      assert.strictEqual(body.agent_pid, 42);
+      assert.strictEqual(body.claude_pid, 42);
+    });
+
+    it("omits agent_pid and claude_pid when agentPid is absent", () => {
+      const body = buildStateBody("PreToolUse", { session_id: "s" }, makeResolve(null));
+      assert.ok(!("agent_pid" in body));
+      assert.ok(!("claude_pid" in body));
+    });
+
+    it("sets headless from the resolver's derived boolean", () => {
+      const body = buildStateBody("PreToolUse", { session_id: "s" }, makeResolve(99, { headless: true }));
+      assert.strictEqual(body.headless, true);
+    });
+
+    it("omits headless when the resolver says false", () => {
+      const body = buildStateBody("PreToolUse", { session_id: "s" }, makeResolve(99, { headless: false }));
+      assert.ok(!("headless" in body));
+    });
+
+    it("omits headless when the resolver omits it entirely (no-arg / legacy shape)", () => {
+      const body = buildStateBody("PreToolUse", { session_id: "s" }, makeResolve(77));
+      assert.strictEqual(body.agent_pid, 77);
+      assert.ok(!("headless" in body), "must not crash, must not guess");
+    });
+
+    it("never re-derives from agentCommandLine — the boolean is authoritative", () => {
+      // A cache hit always carries agentCommandLine:"" (#681). If the adapter
+      // still parsed the line, headless would be lost on every cached event; if
+      // it parsed a line that IS present on a fresh result, the two paths could
+      // disagree. Only the resolver decides.
+      const body = buildStateBody("PreToolUse", { session_id: "s" },
+        () => ({ stablePid: 1, agentPid: 99, agentCommandLine: "node claude-code --print", headless: false, detectedEditor: null, pidChain: [] }));
+      assert.ok(!("headless" in body));
+    });
+
+    it("headless needs an agentPid — no agent, no claim about how it runs", () => {
+      const body = buildStateBody("PreToolUse", { session_id: "s" }, makeResolve(null, { headless: true }));
+      assert.ok(!("headless" in body));
+    });
+  });
+
+  it("passes through tool metadata for tool events", () => {
+    const payload = {
+      session_id: "s",
+      tool_name: "Read",
+      tool_use_id: "toolu_123",
+      tool_input: { file_path: "src/server.js" },
+      transcript_path: "/tmp/claude-transcript.jsonl",
+    };
+    const body = buildStateBody("PostToolUse", payload, mockResolve);
+    assert.strictEqual(body.tool_name, "Read");
+    assert.strictEqual(body.tool_use_id, "toolu_123");
+    assert.strictEqual(body.tool_input_fingerprint, buildToolInputFingerprint(payload.tool_input));
+    assert.strictEqual(body.transcript_path, "/tmp/claude-transcript.jsonl");
+  });
+
+  it("does not forward transcript_path on Stop after extracting completion data", () => {
+    const file = writeTmpJsonl([
+      { type: "assistant", sessionId: "sid-1", message: { content: "Done." } },
+    ]);
+    const body = buildStateBody(
+      "Stop",
+      { session_id: "sid-1", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(body.assistant_last_output, "Done.");
+    assert.ok(!("transcript_path" in body));
+  });
+
+  it("adds context_usage from transcript usage", () => {
+    const transcript = writeTmpJsonl([
+      {
+        type: "assistant",
+        message: {
+          model: "claude-sonnet-4-5",
+          usage: {
+            input_tokens: 1000,
+            output_tokens: 200,
+            cache_read_input_tokens: 3000,
+            cache_creation_input_tokens: 400,
+          },
+        },
+      },
+    ]);
+
+    const body = buildStateBody("PostToolUse", {
+      session_id: "s",
+      transcript_path: transcript,
+    }, mockResolve);
+
+    assert.deepStrictEqual(body.context_usage, {
+      used: 4400,
+      limit: 200000,
+      percent: 2,
+      source: "claude",
+    });
+  });
+
+  it("omits context_usage when transcript has no usage", () => {
+    const transcript = writeTmpJsonl([{ type: "user", message: { content: "hi" } }]);
+
+    const body = buildStateBody("PostToolUse", {
+      session_id: "s",
+      transcript_path: transcript,
+    }, mockResolve);
+
+    assert.ok(!("context_usage" in body));
+  });
+
+  it("scopes context_usage to the main session, ignoring trailing sidechain usage", () => {
+    const transcript = writeTmpJsonl([
+      {
+        type: "assistant",
+        sessionId: "s",
+        message: { model: "claude-sonnet-4-5", usage: { input_tokens: 150000 } },
+      },
+      {
+        type: "assistant",
+        sessionId: "s",
+        isSidechain: true,
+        message: { model: "claude-sonnet-4-5", usage: { input_tokens: 12000 } },
+      },
+    ]);
+
+    const body = buildStateBody("PostToolUse", {
+      session_id: "s",
+      transcript_path: transcript,
+    }, mockResolve);
+
+    assert.deepStrictEqual(body.context_usage, {
+      used: 150000,
+      limit: 200000,
+      percent: 75,
+      source: "claude",
+    });
+  });
+
+  it("accepts camelCase tool_use_id aliases", () => {
+    const body = buildStateBody("PreToolUse", {
+      session_id: "s",
+      tool_name: "Bash",
+      toolUseId: "toolu_alias",
+      tool_input: { command: "npm test" },
+    }, mockResolve);
+    assert.strictEqual(body.tool_use_id, "toolu_alias");
+  });
+
+  describe("test-result reaction metadata", () => {
+    it("recognizes common runner segments without matching echoed prose", () => {
+      for (const command of [
+        "npm test",
+        "npm run test:unit",
+        "cd app && pnpm run test -- --runInBand",
+        "NODE_ENV=test npx vitest run",
+        "python3 -m pytest tests/unit",
+        "go test ./...",
+        "cargo test --workspace",
+        "bundle exec rspec spec",
+        "./gradlew test",
+      ]) {
+        assert.strictEqual(isRecognizedTestCommand(command), true, command);
+      }
+      for (const command of [
+        "echo npm test",
+        "printf 'pytest passed'",
+        "printf 'setup; npm test'",
+        "node scripts/test-data.js",
+        "git commit -m 'run tests'",
+      ]) {
+        assert.strictEqual(isRecognizedTestCommand(command), false, command);
+      }
+    });
+
+    it("classifies positive and failure summaries with failures taking precedence", () => {
+      const base = { tool_name: "Bash", tool_input: { command: "npm test" } };
+      assert.strictEqual(classifyTestResult("PostToolUse", {
+        ...base,
+        tool_response: { stdout: "Tests: 12 passed, 12 total" },
+      }), "pass");
+      assert.strictEqual(classifyTestResult("PostToolUse", {
+        ...base,
+        tool_response: { stdout: "Tests: 11 passed, 1 failed, 12 total" },
+      }), "fail");
+      assert.strictEqual(classifyTestResult("PostToolUse", {
+        ...base,
+        tool_response: { stdout: "0 errors in setup\nTests: 11 passed, 1 failed, 12 total" },
+      }), "fail");
+      assert.strictEqual(classifyTestResult("PostToolUse", {
+        ...base,
+        tool_response: { content: [{ type: "text", text: "test result: ok. 3 passed; 0 failed" }] },
+      }), "pass");
+      assert.strictEqual(classifyTestResult("PostToolUse", {
+        ...base,
+        tool_response: { stderr: "Traceback (most recent call last):\nAssertionError" },
+      }), "fail");
+    });
+
+    it("treats a recognized PostToolUseFailure as fail even without output", () => {
+      assert.strictEqual(classifyTestResult("PostToolUseFailure", {
+        tool_name: "Bash",
+        tool_input: { command: "pytest" },
+      }), "fail");
+      assert.strictEqual(classifyTestResult("PostToolUseFailure", {
+        tool_name: "Bash",
+        tool_input: { command: "cd app && npm test" },
+      }), "fail");
+    });
+
+    it("does not blame a test for another segment's failure", () => {
+      for (const command of [
+        "npm run build && npm test",
+        "npm test && npm run lint",
+        "npm test && python scripts/package.py",
+        "npm test | tee test.log",
+      ]) {
+        assert.strictEqual(classifyTestResult("PostToolUseFailure", {
+          tool_name: "Bash",
+          tool_input: { command },
+          tool_response: {
+            stderr: command.includes("package.py")
+              ? "Traceback (most recent call last):\nAssertionError"
+              : "BUILD FAILED: 1 error",
+          },
+        }), null, command);
+      }
+    });
+
+    it("accepts a test-specific failure summary from a compound command", () => {
+      assert.strictEqual(classifyTestResult("PostToolUseFailure", {
+        tool_name: "Bash",
+        tool_input: { command: "npm test && npm run lint" },
+        tool_response: { stderr: "Tests: 1 failed, 11 passed, 12 total" },
+      }), "fail");
+    });
+
+    it("requires Bash, a recognized command, and a confident successful summary", () => {
+      assert.strictEqual(classifyTestResult("PostToolUse", {
+        tool_name: "Read",
+        tool_input: { command: "npm test" },
+        tool_response: "12 passed",
+      }), null);
+      assert.strictEqual(classifyTestResult("PostToolUse", {
+        tool_name: "Bash",
+        tool_input: { command: "echo npm test" },
+        tool_response: "12 passed",
+      }), null);
+      assert.strictEqual(classifyTestResult("PostToolUse", {
+        tool_name: "Bash",
+        tool_input: { command: "npm test" },
+        tool_response: "command finished",
+      }), null);
+    });
+
+    it("adds only the pass/fail tag to the state body", () => {
+      const body = buildStateBody("PostToolUse", {
+        session_id: "test-session",
+        tool_name: "Bash",
+        tool_input: { command: "node --test" },
+        tool_response: "# tests 4\n# pass 4\n# fail 0",
+      }, mockResolve);
+      assert.strictEqual(body.test_result, "pass");
+      assert.ok(!JSON.stringify(body).includes("# tests 4"));
+    });
+  });
+
+  describe("session_title extraction", () => {
+    it("passes through explicit payload.session_title", () => {
+      const body = buildStateBody(
+        "SessionStart",
+        { session_id: "s", session_title: "Fix login bug" },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title, "Fix login bug");
+    });
+
+    it("trims whitespace on payload.session_title", () => {
+      const body = buildStateBody(
+        "SessionStart",
+        { session_id: "s", session_title: "  Spaced Title  " },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title, "Spaced Title");
+    });
+
+    it("strips control characters and truncates payload.session_title", () => {
+      const body = buildStateBody(
+        "SessionStart",
+        { session_id: "s", session_title: `  Fix\tlogin\nbug ${"x".repeat(100)}  ` },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title.startsWith("Fix login bug "), true);
+      assert.strictEqual(body.session_title.length, 80);
+      assert.strictEqual(body.session_title.endsWith("…"), true);
+      assert.strictEqual(/[\u0000-\u001F\u007F-\u009F]/.test(body.session_title), false);
+    });
+
+    it("omits session_title field when payload has none and no transcript path", () => {
+      const body = buildStateBody("SessionStart", { session_id: "s" }, mockResolve);
+      assert.ok(!("session_title" in body));
+    });
+
+    it("uses the first prompt line for UserPromptSubmit when no title exists", () => {
+      const body = buildStateBody(
+        "UserPromptSubmit",
+        { session_id: "s", prompt: "Fix the Session HUD\nKeep the bell" },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title, "Fix the Session HUD");
+    });
+
+    it("uses the first non-empty prompt line for UserPromptSubmit fallback", () => {
+      const body = buildStateBody(
+        "UserPromptSubmit",
+        { session_id: "s", prompt: "\n  \nContinue AWS setup\nDetails later" },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title, "Continue AWS setup");
+    });
+
+    it("keeps prompt fallback titles compact", () => {
+      const body = buildStateBody(
+        "UserPromptSubmit",
+        { session_id: "s", prompt: `Configure ${"Lightsail ".repeat(10)}` },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title.length, 40);
+      assert.strictEqual(body.session_title.endsWith("…"), true);
+    });
+
+    it("skips prompt fallback titles that look like secrets", () => {
+      const body = buildStateBody(
+        "UserPromptSubmit",
+        { session_id: "s", prompt: "token=ghp_abcdefghijklmnopqrstuvwxyz123456\nFix deploy" },
+        mockResolve
+      );
+      assert.ok(!("session_title" in body));
+    });
+
+    it("falls back to transcript when payload.session_title is missing", () => {
+      const file = writeTmpJsonl([
+        { type: "user", message: { content: "hi" } },
+        { type: "custom-title", customTitle: "From Transcript" },
+      ]);
+      const body = buildStateBody(
+        "SessionStart",
+        { session_id: "s", transcript_path: file },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title, "From Transcript");
+    });
+
+    it("prefers payload.session_title over transcript", () => {
+      const file = writeTmpJsonl([
+        { type: "custom-title", customTitle: "Transcript Title" },
+      ]);
+      const body = buildStateBody(
+        "SessionStart",
+        { session_id: "s", session_title: "Payload Title", transcript_path: file },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title, "Payload Title");
+    });
+
+    it("prefers transcript title over prompt fallback", () => {
+      const file = writeTmpJsonl([
+        { type: "custom-title", customTitle: "Transcript Title" },
+      ]);
+      const body = buildStateBody(
+        "UserPromptSubmit",
+        { session_id: "s", prompt: "Prompt Title", transcript_path: file },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title, "Transcript Title");
+    });
+
+    it("ignores non-string session_title and falls back to transcript", () => {
+      const file = writeTmpJsonl([
+        { type: "custom-title", customTitle: "Transcript Title" },
+      ]);
+      const body = buildStateBody(
+        "SessionStart",
+        { session_id: "s", session_title: 123, transcript_path: file },
+        mockResolve
+      );
+      assert.strictEqual(body.session_title, "Transcript Title");
+    });
+  });
+
+  describe("remote mode (CLAWD_REMOTE=1)", () => {
+    before(() => { process.env.CLAWD_REMOTE = "1"; });
+    after(() => { delete process.env.CLAWD_REMOTE; });
+
+    it("includes host prefix instead of source_pid", () => {
+      const body = buildStateBody("SessionStart", { session_id: "sid-1" }, mockResolve);
+      assert.strictEqual(typeof body.host, "string");
+      assert.ok(body.host.length > 0);
+      assert.ok(!("source_pid" in body));
+      assert.ok(!("pid_chain" in body));
+    });
+
+    it("does not call resolve() in remote mode", () => {
+      let called = false;
+      const countingResolve = () => {
+        called = true;
+        return mockResolve();
+      };
+      buildStateBody("SessionStart", { session_id: "s" }, countingResolve);
+      assert.strictEqual(called, false);
+    });
+  });
+});
+
+describe("extractSessionTitleFromTranscript", () => {
+  it("returns the latest title from a tail with multiple rename events", () => {
+    const file = writeTmpJsonl([
+      { type: "user", message: { content: "hello" } },
+      { type: "custom-title", customTitle: "First Title" },
+      { type: "agent-name", agentName: "Renamed Later" },
+    ]);
+    assert.strictEqual(extractSessionTitleFromTranscript(file), "Renamed Later");
+  });
+
+  it("returns null for missing file", () => {
+    assert.strictEqual(extractSessionTitleFromTranscript("/no/such/path.jsonl"), null);
+  });
+
+  it("returns null when transcript has no title events", () => {
+    const file = writeTmpJsonl([
+      { type: "user", message: { content: "hi" } },
+      { type: "assistant", message: { content: "yo" } },
+    ]);
+    assert.strictEqual(extractSessionTitleFromTranscript(file), null);
+  });
+
+  it("supports custom_title (snake_case) variant", () => {
+    const file = writeTmpJsonl([
+      { type: "custom-title", custom_title: "Snake Title" },
+    ]);
+    assert.strictEqual(extractSessionTitleFromTranscript(file), "Snake Title");
+  });
+
+  it("supports agent_name (snake_case) variant", () => {
+    const file = writeTmpJsonl([
+      { type: "agent-name", agent_name: "Snake Agent" },
+    ]);
+    assert.strictEqual(extractSessionTitleFromTranscript(file), "Snake Agent");
+  });
+
+  it("supports plain title field", () => {
+    const file = writeTmpJsonl([
+      { type: "custom-title", title: "Plain Title Field" },
+    ]);
+    assert.strictEqual(extractSessionTitleFromTranscript(file), "Plain Title Field");
+  });
+
+  it("trims whitespace on extracted title", () => {
+    const file = writeTmpJsonl([
+      { type: "custom-title", customTitle: "  Padded  " },
+    ]);
+    assert.strictEqual(extractSessionTitleFromTranscript(file), "Padded");
+  });
+
+  it("strips control characters and truncates extracted titles", () => {
+    const file = writeTmpJsonl([
+      { type: "custom-title", customTitle: `  Fix\tlogin\nbug ${"x".repeat(100)}  ` },
+    ]);
+    const title = extractSessionTitleFromTranscript(file);
+    assert.strictEqual(title.startsWith("Fix login bug "), true);
+    assert.strictEqual(title.length, 80);
+    assert.strictEqual(title.endsWith("…"), true);
+    assert.strictEqual(/[\u0000-\u001F\u007F-\u009F]/.test(title), false);
+  });
+
+  it("ignores corrupt JSON lines and keeps scanning", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-hook-test-"));
+    const file = path.join(dir, "corrupt.jsonl");
+    fs.writeFileSync(
+      file,
+      [
+        JSON.stringify({ type: "user", message: { content: "hi" } }),
+        "{ not valid json at all",
+        JSON.stringify({ type: "custom-title", customTitle: "After Garbage" }),
+      ].join("\n") + "\n"
+    );
+    assert.strictEqual(extractSessionTitleFromTranscript(file), "After Garbage");
+  });
+
+  it("returns null for non-string path input", () => {
+    assert.strictEqual(extractSessionTitleFromTranscript(null), null);
+    assert.strictEqual(extractSessionTitleFromTranscript(undefined), null);
+    assert.strictEqual(extractSessionTitleFromTranscript(42), null);
+    assert.strictEqual(extractSessionTitleFromTranscript(""), null);
+  });
+
+  it("skips the truncated first line when reading a file larger than the tail window", () => {
+    // Write ~300KB of junk + a valid title event at the end.
+    // The tail window is 256KB, so the first line of what we read will be a
+    // truncated JSON fragment. extractSessionTitleFromTranscript must drop it
+    // rather than letting JSON.parse reject it loudly.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-hook-test-"));
+    const file = path.join(dir, "big.jsonl");
+    const padLine = JSON.stringify({ type: "user", message: { content: "x".repeat(400) } });
+    const parts = [];
+    for (let i = 0; i < 700; i++) parts.push(padLine); // ~300KB of padding
+    parts.push(JSON.stringify({ type: "custom-title", customTitle: "End Title" }));
+    fs.writeFileSync(file, parts.join("\n") + "\n");
+    assert.strictEqual(extractSessionTitleFromTranscript(file), "End Title");
+  });
+});
+
+describe("extractLastAssistantTextFromEntries", () => {
+  it("extracts only text blocks from the latest assistant entry", () => {
+    const result = extractLastAssistantTextFromEntries([
+      { type: "assistant", sessionId: "sid-1", message: { content: "older" } },
+      {
+        type: "assistant",
+        sessionId: "sid-1",
+        message: {
+          content: [
+            { type: "tool_use", name: "Read", input: { file_path: "secret.txt" } },
+            { type: "text", text: "Done with the fix." },
+            { type: "server_tool_use", name: "WebSearch" },
+            { type: "text", text: "Tests pass." },
+          ],
+        },
+      },
+    ], "sid-1");
+
+    assert.deepStrictEqual(result, {
+      text: "Done with the fix.\n\nTests pass.",
+      truncated: false,
+    });
+  });
+
+  it("skips API error, subagent, and other-session assistant entries", () => {
+    const result = extractLastAssistantTextFromEntries([
+      { type: "assistant", sessionId: "sid-1", message: { content: "root output" } },
+      { type: "assistant", sessionId: "sid-2", message: { content: "wrong session" } },
+      { type: "assistant", sessionId: "sid-1", isSidechain: true, message: { content: "subagent" } },
+      { type: "assistant", sessionId: "sid-1", isApiErrorMessage: true, message: { content: "API Error" } },
+    ], "sid-1");
+
+    assert.deepStrictEqual(result, { text: "root output", truncated: false });
+  });
+
+  it("returns null when the latest assistant messages only contain tool calls", () => {
+    const result = extractLastAssistantTextFromEntries([
+      {
+        type: "assistant",
+        sessionId: "sid-1",
+        message: { content: [{ type: "tool_use", name: "Bash", input: { command: "npm test" } }] },
+      },
+    ], "sid-1");
+
+    assert.strictEqual(result, null);
+  });
+
+  it("does not cross a user boundary to reuse an older assistant answer", () => {
+    const result = extractLastAssistantTextFromEntries([
+      { type: "assistant", sessionId: "sid-1", message: { content: "older answer" } },
+      { type: "user", sessionId: "sid-1", message: { content: "new prompt" } },
+      {
+        type: "assistant",
+        sessionId: "sid-1",
+        message: { content: [{ type: "tool_use", name: "Bash", input: { command: "npm test" } }] },
+      },
+    ], "sid-1");
+
+    assert.strictEqual(result, null);
+  });
+
+  it("clamps long assistant text with a truncation marker", () => {
+    const result = extractLastAssistantTextFromEntries([
+      { type: "assistant", sessionId: "sid-1", message: { content: "a".repeat(100) + "TAIL" } },
+    ], "sid-1", { maxLen: 40 });
+
+    assert.strictEqual(result.truncated, true);
+    assert.ok(result.text.includes("...[truncated]..."));
+    assert.ok(result.text.endsWith("TAIL"));
+    assert.ok(result.text.length <= 40);
+  });
+});
+
+// Helper: build an isApiErrorMessage transcript entry. Mirrors the real
+// schema observed in ~/.claude/projects/**/*.jsonl during Phase 0 investigation.
+function makeApiErrorEntry({ sessionId = "sid-1", error = "unknown", uuid = "err-uuid" }) {
+  return {
+    type: "assistant",
+    uuid,
+    parentUuid: "parent",
+    timestamp: "2026-05-26T00:00:00.000Z",
+    sessionId,
+    isApiErrorMessage: true,
+    error,
+    message: {
+      model: "<synthetic>",
+      role: "assistant",
+      content: [{ type: "text", text: `API Error: ${error}` }],
+    },
+  };
+}
+
+describe("extractApiErrorFromEntries", () => {
+  it("returns null for empty / missing entries", () => {
+    assert.strictEqual(extractApiErrorFromEntries(null, "sid-1"), null);
+    assert.strictEqual(extractApiErrorFromEntries([], "sid-1"), null);
+  });
+
+  it("returns null when sessionId is missing", () => {
+    const entries = [makeApiErrorEntry({ sessionId: "sid-1", error: "unknown" })];
+    assert.strictEqual(extractApiErrorFromEntries(entries, ""), null);
+  });
+
+  it("hits a current-turn error followed only by system marker", () => {
+    const entries = [
+      makeApiErrorEntry({ sessionId: "sid-1", error: "rate_limit", uuid: "e1" }),
+      { type: "system", parentUuid: "e1", sessionId: "sid-1" },
+    ];
+    assert.deepStrictEqual(
+      extractApiErrorFromEntries(entries, "sid-1"),
+      { api_error_type: "rate_limit" }
+    );
+  });
+
+  it("hits when error is the only entry (no metadata yet)", () => {
+    const entries = [makeApiErrorEntry({ sessionId: "sid-1", error: "server_error" })];
+    assert.deepStrictEqual(
+      extractApiErrorFromEntries(entries, "sid-1"),
+      { api_error_type: "server_error" }
+    );
+  });
+
+  it("ignores error from a different sessionId (cross-session contamination guard)", () => {
+    const entries = [
+      makeApiErrorEntry({ sessionId: "other-session", error: "unknown" }),
+    ];
+    assert.strictEqual(extractApiErrorFromEntries(entries, "sid-1"), null);
+  });
+
+  it("suppresses stale error when a user message follows (turn moved on)", () => {
+    const entries = [
+      makeApiErrorEntry({ sessionId: "sid-1", error: "unknown", uuid: "e1" }),
+      { type: "system", parentUuid: "e1", sessionId: "sid-1" },
+      { type: "user", sessionId: "sid-1", message: { content: "next prompt" } },
+    ];
+    assert.strictEqual(extractApiErrorFromEntries(entries, "sid-1"), null);
+  });
+
+  it("suppresses when a non-error assistant message follows (auto-retry succeeded)", () => {
+    const entries = [
+      makeApiErrorEntry({ sessionId: "sid-1", error: "unknown", uuid: "e1" }),
+      { type: "assistant", sessionId: "sid-1", message: { content: "ok" } },
+    ];
+    assert.strictEqual(extractApiErrorFromEntries(entries, "sid-1"), null);
+  });
+
+  it("allows benign metadata types after the error", () => {
+    const entries = [
+      makeApiErrorEntry({ sessionId: "sid-1", error: "invalid_request", uuid: "e1" }),
+      { type: "system", parentUuid: "e1", sessionId: "sid-1" },
+      { type: "last-prompt", sessionId: "sid-1" },
+      { type: "file-history-snapshot", sessionId: "sid-1" },
+    ];
+    assert.deepStrictEqual(
+      extractApiErrorFromEntries(entries, "sid-1"),
+      { api_error_type: "invalid_request" }
+    );
+  });
+
+  it("returns the latest current-turn error when multiple errors are stacked (same turn)", () => {
+    // Multiple isApiErrorMessage entries with no user/assistant break between
+    // them — auto-retry that kept failing. Expect the LAST one to win.
+    const entries = [
+      makeApiErrorEntry({ sessionId: "sid-1", error: "rate_limit", uuid: "e1" }),
+      { type: "system", parentUuid: "e1", sessionId: "sid-1" },
+      makeApiErrorEntry({ sessionId: "sid-1", error: "server_error", uuid: "e2" }),
+      { type: "system", parentUuid: "e2", sessionId: "sid-1" },
+    ];
+    assert.deepStrictEqual(
+      extractApiErrorFromEntries(entries, "sid-1"),
+      { api_error_type: "server_error" }
+    );
+  });
+
+  it("falls back to 'unknown' for error types outside the known enum", () => {
+    const entries = [
+      makeApiErrorEntry({ sessionId: "sid-1", error: "some_future_value" }),
+    ];
+    assert.deepStrictEqual(
+      extractApiErrorFromEntries(entries, "sid-1"),
+      { api_error_type: "unknown" }
+    );
+  });
+
+  it("falls back to 'unknown' when error field is missing entirely", () => {
+    const entries = [
+      {
+        type: "assistant",
+        sessionId: "sid-1",
+        isApiErrorMessage: true,
+        message: { content: [{ type: "text", text: "No response requested." }] },
+      },
+    ];
+    assert.deepStrictEqual(
+      extractApiErrorFromEntries(entries, "sid-1"),
+      { api_error_type: "unknown" }
+    );
+  });
+
+  it("supports all 9 enum values observed in claude.exe 2.1.150", () => {
+    const enumValues = [
+      "authentication_failed", "oauth_org_not_allowed", "billing_error",
+      "rate_limit", "invalid_request", "model_not_found", "server_error",
+      "unknown", "max_output_tokens",
+    ];
+    for (const t of enumValues) {
+      const entries = [makeApiErrorEntry({ sessionId: "sid-1", error: t })];
+      assert.deepStrictEqual(
+        extractApiErrorFromEntries(entries, "sid-1"),
+        { api_error_type: t },
+        `enum ${t} should pass through`
+      );
+    }
+  });
+});
+
+describe("buildStateBody — Stop → ApiError upgrade", () => {
+  it("adds assistant_last_output on normal Stop when transcript has final assistant text", () => {
+    const file = writeTmpJsonl([
+      { type: "assistant", sessionId: "sid-1", message: { content: "Implemented the fix.\nTests pass." } },
+    ]);
+    const body = buildStateBody(
+      "Stop",
+      { session_id: "sid-1", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "Stop");
+    assert.strictEqual(body.assistant_last_output, "Implemented the fix.\nTests pass.");
+    assert.ok(!("assistant_last_output_truncated" in body));
+  });
+
+  it("does not add stale assistant output when Stop upgrades to ApiError", () => {
+    const file = writeTmpJsonl([
+      { type: "assistant", sessionId: "sid-1", message: { content: "previous output" } },
+      makeApiErrorEntry({ sessionId: "sid-1", error: "rate_limit", uuid: "e1" }),
+      { type: "system", parentUuid: "e1", sessionId: "sid-1" },
+    ]);
+    const body = buildStateBody(
+      "Stop",
+      { session_id: "sid-1", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "ApiError");
+    assert.ok(!("assistant_last_output" in body));
+  });
+
+  it("upgrades Stop to ApiError when transcript shows a current-turn error", () => {
+    const file = writeTmpJsonl([
+      makeApiErrorEntry({ sessionId: "sid-1", error: "rate_limit", uuid: "e1" }),
+      { type: "system", parentUuid: "e1", sessionId: "sid-1" },
+    ]);
+    const body = buildStateBody(
+      "Stop",
+      { session_id: "sid-1", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "ApiError");
+    assert.strictEqual(body.state, "error");
+    assert.strictEqual(body.failure_kind, "api_error");
+    assert.strictEqual(body.api_error_type, "rate_limit");
+    assert.strictEqual(body.error_present, true);
+  });
+
+  it("does NOT upgrade Stop when the error is stale (user-followed)", () => {
+    const file = writeTmpJsonl([
+      makeApiErrorEntry({ sessionId: "sid-1", error: "unknown", uuid: "e1" }),
+      { type: "system", parentUuid: "e1", sessionId: "sid-1" },
+      { type: "user", sessionId: "sid-1", message: { content: "next prompt" } },
+    ]);
+    const body = buildStateBody(
+      "Stop",
+      { session_id: "sid-1", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "Stop");
+    assert.strictEqual(body.state, "attention");
+    assert.ok(!("failure_kind" in body));
+    assert.ok(!("api_error_type" in body));
+    assert.ok(!("error_present" in body));
+  });
+
+  it("does NOT upgrade events other than Stop even if transcript shows an error", () => {
+    const file = writeTmpJsonl([
+      makeApiErrorEntry({ sessionId: "sid-1", error: "unknown", uuid: "e1" }),
+      { type: "system", parentUuid: "e1", sessionId: "sid-1" },
+    ]);
+    const body = buildStateBody(
+      "UserPromptSubmit",
+      { session_id: "sid-1", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "UserPromptSubmit");
+    assert.ok(!("api_error_type" in body));
+  });
+
+  it("does NOT upgrade synthetic SubagentStart (PreToolUse Task)", () => {
+    // PreToolUse Task is remapped to SubagentStart; even if a transcript error
+    // exists, ApiError detection should not run for non-Stop branches.
+    const file = writeTmpJsonl([
+      makeApiErrorEntry({ sessionId: "sid-1", error: "unknown" }),
+    ]);
+    const body = buildStateBody(
+      "PreToolUse",
+      { session_id: "sid-1", tool_name: "Task", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "SubagentStart");
+    assert.ok(!("api_error_type" in body));
+  });
+
+  it("does NOT transmit raw error text or errorDetails (privacy)", () => {
+    const file = writeTmpJsonl([
+      {
+        ...makeApiErrorEntry({ sessionId: "sid-1", error: "invalid_request" }),
+        requestId: "req_secret_001",
+        errorDetails: '400 {"message":"prompt fragment leak","request_id":"req_xxx"}',
+      },
+    ]);
+    const body = buildStateBody(
+      "Stop",
+      { session_id: "sid-1", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "ApiError");
+    // PR1 must NOT include any of these fields
+    const serialized = JSON.stringify(body);
+    assert.ok(!serialized.includes("prompt fragment leak"), "text leaked");
+    assert.ok(!serialized.includes("req_secret_001"), "requestId leaked");
+    assert.ok(!serialized.includes("req_xxx"), "errorDetails leaked");
+    assert.ok(!("text" in body), "body.text must be absent");
+    assert.ok(!("errorDetails" in body), "body.errorDetails must be absent");
+    assert.ok(!("requestId" in body), "body.requestId must be absent");
+  });
+
+  it("ignores error from a different session (no upgrade)", () => {
+    const file = writeTmpJsonl([
+      makeApiErrorEntry({ sessionId: "other-sid", error: "unknown" }),
+    ]);
+    const body = buildStateBody(
+      "Stop",
+      { session_id: "sid-1", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "Stop");
+    assert.ok(!("api_error_type" in body));
+  });
+
+  it("survives a transcript with corrupted JSON lines", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-hook-test-"));
+    const file = path.join(dir, "corrupt.jsonl");
+    const errEntry = makeApiErrorEntry({ sessionId: "sid-1", error: "server_error", uuid: "e1" });
+    const body =
+      JSON.stringify(errEntry) + "\n" +
+      "{not-valid-json}\n" +
+      JSON.stringify({ type: "system", parentUuid: "e1", sessionId: "sid-1" }) + "\n";
+    fs.writeFileSync(file, body);
+    const result = buildStateBody(
+      "Stop",
+      { session_id: "sid-1", transcript_path: file },
+      mockResolve
+    );
+    assert.strictEqual(result.event, "ApiError");
+    assert.strictEqual(result.api_error_type, "server_error");
+  });
+
+  it("falls back to Stop when transcript path is missing", () => {
+    const body = buildStateBody(
+      "Stop",
+      { session_id: "sid-1" },
+      mockResolve
+    );
+    assert.strictEqual(body.event, "Stop");
+    assert.strictEqual(body.state, "attention");
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// attachStdinDiag (#583)
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("attachStdinDiag", () => {
+  const makeBody = () => ({ state: "idle", session_id: "default", event: "SessionStart" });
+
+  it("attaches diagnostics when the stdin payload had no session_id", () => {
+    const body = makeBody();
+    attachStdinDiag(body, {
+      payload: {},
+      bytes: 0,
+      timedOut: true,
+      parseError: null,
+      durationMs: 2001,
+    });
+    assert.deepStrictEqual(body.stdin_diag, { bytes: 0, timed_out: true, duration_ms: 2001 });
+  });
+
+  it("includes parse_error only when present", () => {
+    const body = makeBody();
+    attachStdinDiag(body, {
+      payload: {},
+      bytes: 17,
+      timedOut: false,
+      parseError: "Unexpected token",
+      durationMs: 3,
+    });
+    assert.deepStrictEqual(body.stdin_diag, {
+      bytes: 17,
+      timed_out: false,
+      duration_ms: 3,
+      parse_error: "Unexpected token",
+    });
+  });
+
+  it("does not attach anything when session_id arrived", () => {
+    const body = makeBody();
+    attachStdinDiag(body, {
+      payload: { session_id: "real-sid" },
+      bytes: 500,
+      timedOut: false,
+      parseError: null,
+      durationMs: 4,
+    });
+    assert.strictEqual(body.stdin_diag, undefined);
+  });
+});
+
+describe("clawd-hook stdin timeout budget (#583)", () => {
+  it("uses a 2s stdin window — safe only because install.js registers async:true + timeout:5", () => {
+    assert.strictEqual(CLAWD_HOOK_STDIN_TIMEOUT_MS, 2000);
+  });
+});
+
+describe("attachStdinDiag edge cases", () => {
+  it("treats an empty-string session_id as missing and attaches diagnostics", () => {
+    const body = { state: "idle", session_id: "default", event: "SessionStart" };
+    attachStdinDiag(body, {
+      payload: { session_id: "" },
+      bytes: 30,
+      timedOut: false,
+      parseError: null,
+      durationMs: 2,
+    });
+    assert.deepStrictEqual(body.stdin_diag, { bytes: 30, timed_out: false, duration_ms: 2 });
+  });
+});

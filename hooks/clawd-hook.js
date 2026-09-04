@@ -1,0 +1,855 @@
+#!/usr/bin/env node
+// Clawd Desktop Pet — Claude Code Hook Script
+// Usage: node clawd-hook.js <event_name>
+// Reads stdin JSON from Claude Code for session_id
+
+const crypto = require("crypto");
+const fs = require("fs");
+const { postStateToRunningServer, readHostPrefix, resolveWslDistro } = require("./server-config");
+const { fitStateBodyToByteBudget } = require("./state-payload-size");
+const { extractClaudeContextUsageFromEntries } = require("./context-usage");
+const { createPidResolver, readStdinJsonDetailed, getPlatformConfig, applyOrcaPaneKey } = require("./shared-process");
+const { updateRecoveryLeaseFromStateBody } = require("./session-recovery-lease");
+// #634: the pid cache + lifecycle orchestration is owned by the shared resolver
+// now (hooks/shared-process.js); this adapter no longer touches pid-cache,
+// processAlive, or isWin directly.
+
+const TRANSCRIPT_TAIL_BYTES = 262144; // 256 KB
+// #583: claude-code registers this hook with async:true and a 5s timeout
+// (hooks/install.js), so a 2s stdin window never stalls the agent. Do NOT
+// raise the shared default in shared-process.js instead — other agent hooks
+// run ~800ms stdout safety timers that must win against a slow stdin read.
+const STDIN_READ_TIMEOUT_MS = 2000;
+const ASSISTANT_OUTPUT_MAX = 2200;
+// Observed in Claude Code 2.1.150 StopFailure hook schema (tyq enum).
+// Unknown values from future versions fall back to "unknown".
+const API_ERROR_TYPES = new Set([
+  "authentication_failed",
+  "oauth_org_not_allowed",
+  "billing_error",
+  "rate_limit",
+  "invalid_request",
+  "model_not_found",
+  "server_error",
+  "unknown",
+  "max_output_tokens",
+]);
+const SESSION_TITLE_CONTROL_RE = /[\u0000-\u001F\u007F-\u009F]+/g;
+const SESSION_TITLE_MAX = 80;
+const PROMPT_TITLE_MAX = 40;
+const PROMPT_TITLE_SECRET_RE =
+  /\b(api[_-]?key|authorization|bearer|password|passwd|private[_-]?key|secret|token)\b|sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|[A-Za-z0-9+/=_-]{32,}/i;
+const TOOL_MATCH_STRING_MAX = 240;
+const TOOL_MATCH_ARRAY_MAX = 16;
+const TOOL_MATCH_OBJECT_KEYS_MAX = 32;
+const TOOL_MATCH_DEPTH_MAX = 6;
+const ASSISTANT_OUTPUT_CONTROL_RE = /[\u0000-\u0008\u000b\u000c\u000e-\u001F\u007F-\u009F]+/g;
+const CURSOR_VERSION_MAX = 128;
+
+function resolveReportingAgentId(payload) {
+  const cursorVersion = payload && typeof payload.cursor_version === "string"
+    ? payload.cursor_version.trim()
+    : "";
+  const isCursorCompatibilityHook =
+    cursorVersion.length > 0
+    && cursorVersion.length <= CURSOR_VERSION_MAX
+    && !/[\0\r\n]/.test(cursorVersion);
+  return isCursorCompatibilityHook ? "cursor-agent" : "claude-code";
+}
+
+function normalizeTitle(value) {
+  if (typeof value !== "string") return null;
+  const collapsed = value
+    .replace(SESSION_TITLE_CONTROL_RE, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!collapsed) return null;
+  return collapsed.length > SESSION_TITLE_MAX
+    ? `${collapsed.slice(0, SESSION_TITLE_MAX - 1)}\u2026`
+    : collapsed;
+}
+
+function normalizeTitleWithMax(value, maxLen) {
+  const title = normalizeTitle(value);
+  if (!title || title.length <= maxLen) return title;
+  return `${title.slice(0, maxLen - 1)}\u2026`;
+}
+
+function looksSecretishPromptTitle(value) {
+  if (typeof value !== "string") return false;
+  return PROMPT_TITLE_SECRET_RE.test(value);
+}
+
+function extractPromptTitle(prompt) {
+  if (typeof prompt !== "string") return null;
+  for (const line of prompt.split(/\r?\n/)) {
+    const candidate = line.trim();
+    if (!candidate) continue;
+    if (looksSecretishPromptTitle(candidate)) return null;
+    return normalizeTitleWithMax(candidate, PROMPT_TITLE_MAX);
+  }
+  return null;
+}
+
+// Read the tail of a Claude Code transcript JSONL and return parsed entries.
+// Skips the truncated first line when the tail is a partial read, and silently
+// drops lines that fail JSON.parse. Returns null if the file is missing or
+// unreadable.
+function readTranscriptTailEntries(transcriptPath) {
+  if (typeof transcriptPath !== "string" || !transcriptPath) return null;
+
+  let data;
+  let truncated = false;
+  let fd = null;
+  try {
+    const stat = fs.statSync(transcriptPath);
+    fd = fs.openSync(transcriptPath, "r");
+    const readLen = Math.min(stat.size, TRANSCRIPT_TAIL_BYTES);
+    truncated = stat.size > readLen;
+    const buf = Buffer.alloc(readLen);
+    fs.readSync(fd, buf, 0, readLen, Math.max(0, stat.size - readLen));
+    data = buf.toString("utf8");
+  } catch {
+    return null;
+  } finally {
+    if (fd !== null) {
+      try { fs.closeSync(fd); } catch {}
+    }
+  }
+
+  const lines = data.split("\n");
+  if (truncated && lines.length > 1) lines.shift();
+
+  const entries = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    let obj;
+    try { obj = JSON.parse(line); } catch { continue; }
+    if (obj && typeof obj === "object") entries.push(obj);
+  }
+  return entries;
+}
+
+function extractSessionTitleFromEntries(entries) {
+  if (!entries) return null;
+  let latest = null;
+  for (const obj of entries) {
+    const type = typeof obj.type === "string" ? obj.type : "";
+    if (type !== "custom-title" && type !== "agent-name") continue;
+    latest =
+      normalizeTitle(obj.customTitle) ||
+      normalizeTitle(obj.title) ||
+      normalizeTitle(obj.custom_title) ||
+      normalizeTitle(obj.agentName) ||
+      normalizeTitle(obj.agent_name) ||
+      latest;
+  }
+  return latest;
+}
+
+function extractSessionTitleFromTranscript(transcriptPath) {
+  return extractSessionTitleFromEntries(readTranscriptTailEntries(transcriptPath));
+}
+
+function normalizeAssistantOutputText(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/\r\n?/g, "\n")
+    .replace(ASSISTANT_OUTPUT_CONTROL_RE, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{4,}/g, "\n\n\n")
+    .trim();
+}
+
+function clampAssistantOutputText(text, maxLen = ASSISTANT_OUTPUT_MAX) {
+  const normalized = normalizeAssistantOutputText(text);
+  const max = Number.isInteger(maxLen) && maxLen > 0 ? maxLen : ASSISTANT_OUTPUT_MAX;
+  if (!normalized) return null;
+  if (normalized.length <= max) return { text: normalized, truncated: false };
+
+  const marker = "\n...[truncated]...\n";
+  if (max <= marker.length + 20) {
+    return { text: normalized.slice(Math.max(0, normalized.length - max)), truncated: true };
+  }
+  const keep = max - marker.length;
+  const head = Math.ceil(keep / 2);
+  const tail = Math.floor(keep / 2);
+  return {
+    text: `${normalized.slice(0, head)}${marker}${normalized.slice(normalized.length - tail)}`,
+    truncated: true,
+  };
+}
+
+function assistantEntryMatchesSession(entry, sessionId) {
+  if (!sessionId) return true;
+  if (!entry || typeof entry !== "object") return false;
+  return !entry.sessionId || entry.sessionId === sessionId;
+}
+
+function assistantEntryLooksSubagent(entry) {
+  if (!entry || typeof entry !== "object") return false;
+  return entry.isSidechain === true
+    || entry.isSubagent === true
+    || entry.is_subagent === true
+    || entry.subagent === true;
+}
+
+function assistantEntryIsTurnBoundary(entry, sessionId) {
+  if (!entry || typeof entry !== "object") return false;
+  if (entry.type !== "user") return false;
+  return assistantEntryMatchesSession(entry, sessionId);
+}
+
+function assistantTextPartsFromContent(content) {
+  if (typeof content === "string") return [content];
+  if (!Array.isArray(content)) return [];
+  const parts = [];
+  for (const block of content) {
+    if (typeof block === "string") {
+      parts.push(block);
+      continue;
+    }
+    if (!block || typeof block !== "object") continue;
+    const type = typeof block.type === "string" ? block.type : "";
+    if (type === "tool_use" || type === "server_tool_use") continue;
+    if ((type === "text" || type === "output_text") && typeof block.text === "string") {
+      parts.push(block.text);
+    }
+  }
+  return parts;
+}
+
+function assistantTextFromEntry(entry) {
+  if (!entry || typeof entry !== "object") return "";
+  const message = entry.message && typeof entry.message === "object" ? entry.message : null;
+  const content = message && Object.prototype.hasOwnProperty.call(message, "content")
+    ? message.content
+    : entry.content;
+  return normalizeAssistantOutputText(assistantTextPartsFromContent(content).join("\n\n"));
+}
+
+function extractLastAssistantTextFromEntries(entries, sessionId, options = {}) {
+  if (!Array.isArray(entries) || !entries.length) return null;
+  const maxLen = Number.isInteger(options.maxLen) && options.maxLen > 0
+    ? options.maxLen
+    : ASSISTANT_OUTPUT_MAX;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (!entry || typeof entry !== "object") continue;
+    if (assistantEntryIsTurnBoundary(entry, sessionId)) break;
+    if (entry.type !== "assistant") continue;
+    if (entry.isApiErrorMessage === true) continue;
+    if (!assistantEntryMatchesSession(entry, sessionId)) continue;
+    if (assistantEntryLooksSubagent(entry)) continue;
+    const text = assistantTextFromEntry(entry);
+    if (!text) continue;
+    return clampAssistantOutputText(text, maxLen);
+  }
+  return null;
+}
+
+// Find the most recent isApiErrorMessage entry for the current session, but
+// only if it belongs to the current turn. A current-turn API error has no
+// later "user" or non-error "assistant" entry — those indicate the turn has
+// moved on (user re-prompted or model recovered) and the error is stale.
+// See docs/investigations/api-error-race-condition.md for the 11-sample basis.
+function extractApiErrorFromEntries(entries, sessionId) {
+  if (!entries || !sessionId) return null;
+
+  let lastErrorIndex = -1;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const e = entries[i];
+    if (e.isApiErrorMessage !== true) continue;
+    if (e.sessionId !== sessionId) continue;
+    lastErrorIndex = i;
+    break;
+  }
+  if (lastErrorIndex < 0) return null;
+
+  for (let i = lastErrorIndex + 1; i < entries.length; i++) {
+    const e = entries[i];
+    const type = typeof e.type === "string" ? e.type : "";
+    if (type === "user") return null;
+    if (type === "assistant" && e.isApiErrorMessage !== true) return null;
+  }
+
+  const rawType = entries[lastErrorIndex].error;
+  const apiErrorType = API_ERROR_TYPES.has(rawType) ? rawType : "unknown";
+  return { api_error_type: apiErrorType };
+}
+
+function normalizeToolUseId(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function normalizeToolMatchValue(value, depth = 0) {
+  if (depth > TOOL_MATCH_DEPTH_MAX) return null;
+  if (Array.isArray(value)) {
+    return value
+      .slice(0, TOOL_MATCH_ARRAY_MAX)
+      .map((entry) => normalizeToolMatchValue(entry, depth + 1));
+  }
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const key of Object.keys(value).sort().slice(0, TOOL_MATCH_OBJECT_KEYS_MAX)) {
+      out[key] = normalizeToolMatchValue(value[key], depth + 1);
+    }
+    return out;
+  }
+  if (typeof value === "string") {
+    return value.length > TOOL_MATCH_STRING_MAX
+      ? `${value.slice(0, TOOL_MATCH_STRING_MAX - 1)}…`
+      : value;
+  }
+  return value;
+}
+
+function buildToolInputFingerprint(toolInput) {
+  if (!toolInput || typeof toolInput !== "object") return null;
+  const normalized = normalizeToolMatchValue(toolInput);
+  return crypto
+    .createHash("sha1")
+    .update(JSON.stringify(normalized))
+    .digest("hex");
+}
+
+function shouldReportForegroundWtHwnd(event) {
+  return event === "SessionStart" || event === "UserPromptSubmit";
+}
+
+const EVENT_TO_STATE = {
+  SessionStart: "idle",
+  SessionEnd: "sleeping",
+  UserPromptSubmit: "thinking",
+  PreToolUse: "working",
+  PostToolUse: "working",
+  PostToolUseFailure: "error",
+  Stop: "attention",
+  StopFailure: "error",
+  ApiError: "error",
+  SubagentStart: "juggling",
+  SubagentStop: "working",
+  PreCompact: "sweeping",
+  // PostCompact is "compaction finished", NOT turn completion (#406). Default to
+  // thinking so the pet stays busy until work resumes (auto-compact continues
+  // the task); buildStateBody downgrades a manual /compact to idle below. Either
+  // way it must not be "attention" — compacting is not task done.
+  PostCompact: "thinking",
+  Notification: "notification",
+  // PermissionRequest is handled by HTTP hook (blocking) — not command hook
+  Elicitation: "notification",
+  WorktreeCreate: "carrying",
+};
+
+// #634: maps a Claude hook event to a shared-resolver cache lifecycle. Only the
+// three boundary events are special; every other state event is an ordinary
+// `event` (cache hit = zero spawn, miss = one fresh). Stop is deliberately NOT
+// end — it is turn completion, and dropping the cache on it would force a
+// re-resolve (flash) on the next event. SessionEnd with source=clear still maps
+// to end, so the cache is dropped on /clear too (matrix §5.0).
+const EVENT_TO_LIFECYCLE = {
+  SessionStart: "start",
+  UserPromptSubmit: "prompt",
+  SessionEnd: "end",
+};
+
+function isSubagentToolStart(event, payload) {
+  // Claude Code reports subagent launches as PreToolUse(Task) on older builds
+  // or PreToolUse(Agent) today, sometimes without a native SubagentStart. Keep
+  // PostToolUse as working: state.js holds juggling until Stop/UserPromptSubmit,
+  // or until a real SubagentStop if Claude emits one.
+  return event === "PreToolUse"
+    && payload
+    && typeof payload.tool_name === "string"
+    && (payload.tool_name === "Task" || payload.tool_name === "Agent");
+}
+
+// Test-result reactions are deliberately conservative: only commands whose
+// shell segment STARTS with a known test runner qualify. This avoids reacting
+// to prose/echoes such as `echo "run npm test"`, while still supporting the
+// common `cd app && npm test` and `FOO=1 pytest` forms.
+const TEST_RUNNER_SEGMENT_RE = /^(?:(?:env\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=[^\s]+\s+)*)?(?:(?:npx|bunx|pnpm\s+(?:exec|dlx)|yarn\s+(?:exec|dlx)|npm\s+exec)\s+)?(?:npm\s+(?:run\s+)?test(?::[\w.-]+)?(?:\s|$)|npm\s+t(?:\s|$)|pnpm\s+(?:run\s+)?test(?::[\w.-]+)?(?:\s|$)|yarn\s+(?:run\s+)?test(?::[\w.-]+)?(?:\s|$)|bun\s+(?:run\s+)?test(?::[\w.-]+)?(?:\s|$)|jest(?:\s|$)|vitest(?:\s|$)|mocha(?:\s|$)|ava(?:\s|$)|tap(?:\s|$)|node\s+--test(?:\s|$)|pytest(?:\s|$)|py\.test(?:\s|$)|python(?:3(?:\.\d+)?)?\s+-m\s+pytest(?:\s|$)|uv\s+run\s+pytest(?:\s|$)|go\s+test(?:\s|$)|cargo\s+test(?:\s|$)|(?:bundle\s+exec\s+)?rspec(?:\s|$)|(?:\.\/vendor\/bin\/)?phpunit(?:\s|$)|(?:\.\/)?gradlew?\s+test(?:\s|$)|\.\/mvnw\s+test(?:\s|$)|mvn(?:\s+[^\s]+)*\s+test(?:\s|$)|dotnet\s+test(?:\s|$)|ctest(?:\s|$)|deno\s+test(?:\s|$)|rake\s+test(?:\s|$)|mix\s+test(?:\s|$)|swift\s+test(?:\s|$)|make\s+test(?:\s|$))/i;
+
+function splitShellSegments(command) {
+  const segments = [];
+  let start = 0;
+  let quote = null;
+  let escaped = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\" && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) quote = null;
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+
+    let operator = null;
+    if (char === "\n" || char === ";") operator = char;
+    else if (char === "&" && command[i + 1] === "&") operator = "&&";
+    else if (char === "|") operator = command[i + 1] === "|" ? "||" : "|";
+    if (!operator) continue;
+
+    segments.push({ text: command.slice(start, i).trim(), operator });
+    if (operator.length === 2) i++;
+    start = i + 1;
+  }
+  segments.push({ text: command.slice(start).trim(), operator: null });
+  return segments.filter((segment) => segment.text);
+}
+
+function isRecognizedTestCommand(command) {
+  if (typeof command !== "string" || !command.trim()) return false;
+  return splitShellSegments(command)
+    .map((segment) => segment.text)
+    .some((segment) => TEST_RUNNER_SEGMENT_RE.test(segment.trim()));
+}
+
+// A failed compound Bash call does not prove the test segment failed: setup
+// may have stopped before it, or a later lint/build step may be the culprit.
+// Only a direct test invocation, optionally preceded by `cd ... &&`, is
+// authoritative without a test summary.
+function isDirectTestCommand(command) {
+  if (typeof command !== "string" || !command.trim()) return false;
+  const segments = splitShellSegments(command);
+  if (!segments.length || !TEST_RUNNER_SEGMENT_RE.test(segments[segments.length - 1].text)) return false;
+  return segments.slice(0, -1).every((segment) => (
+    segment.operator === "&&" && /^cd(?:\s|$)/i.test(segment.text)
+  ));
+}
+
+function collectToolResponseText(response) {
+  if (typeof response === "string") return response;
+  if (!response || typeof response !== "object") return "";
+  const parts = [response.stdout, response.stderr, response.output, response.text]
+    .filter((value) => typeof value === "string");
+  if (typeof response.content === "string") parts.push(response.content);
+  else if (Array.isArray(response.content)) {
+    for (const item of response.content) {
+      if (item && typeof item.text === "string") parts.push(item.text);
+    }
+  }
+  return parts.join("\n");
+}
+
+// Classify a completed Bash test command as "pass" | "fail". A
+// PostToolUseFailure is authoritative only for a direct test invocation; a
+// compound command may have failed before or after its test segment. A
+// successful tool event still needs a recognizable test summary.
+function classifyTestResult(event, payload) {
+  if (!payload || payload.tool_name !== "Bash") return null;
+  const toolInput = payload.tool_input;
+  const command = toolInput && typeof toolInput.command === "string"
+    ? toolInput.command
+    : "";
+  if (!isRecognizedTestCommand(command)) return null;
+  const failedToolEvent = event === "PostToolUseFailure";
+  if (failedToolEvent && isDirectTestCommand(command)) return "fail";
+  if (!failedToolEvent && event !== "PostToolUse") return null;
+
+  const text = collectToolResponseText(payload.tool_response).slice(-8000);
+  if (!text) return null;
+
+  const hasExplicitRunnerFailureSummary =
+    /[1-9]\d*\s+(?:failed|failing)\b/i.test(text)
+    || /(?:^|\n)[#\s]*fail(?:ed|ures)?[:\s]+[1-9]\d*/i.test(text)
+    || /\bfailures?[:=]\s*[1-9]\d*/i.test(text)
+    || /test result:\s*FAILED|\btests? failed\b/.test(text);
+  if (hasExplicitRunnerFailureSummary) {
+    return "fail";
+  }
+  // A compound failed Bash command may have failed in a non-test segment.
+  // Generic build/exit/error summaries are safe only for a successful tool
+  // event whose recognized test runner actually completed.
+  if (failedToolEvent) return null;
+  if (/(?:^|\n)\s*(?:FAIL|FAILED|✗|✖|✘)\b|AssertionError|Traceback \(most recent|panic:/.test(text)
+      || /[1-9]\d*\s+errors?\b/i.test(text)
+      || /\bBUILD FAIL(?:ED|URE)\b/.test(text)
+      || /\bexit (?:code|status) [1-9]/.test(text)) return "fail";
+
+  const hasNonZeroPassCount =
+    /[1-9]\d*\s+pass(?:ed|ing)\b/i.test(text)
+    || /(?:^|\n)[#\s]*pass(?:ed)?[:\s]+[1-9]\d*/i.test(text);
+  if (hasNonZeroPassCount) return "pass";
+  if (/\b(?:all tests passed|test result:\s*ok|tests? passed)\b/i.test(text)
+      || /(?:^|\n)ok\s+\S/i.test(text)
+      || /(?:^|\n)\s*PASS\b/.test(text)
+      || /\bBUILD SUCCESS(?:FUL)?\b/.test(text)
+      || /(?:^|\n)\s*Passed!\s*$/m.test(text)
+      || /✓|✔/.test(text)) {
+    return "pass";
+  }
+  return null;
+}
+
+// Claude headless detection: `claude -p` / `claude --print` is a one-shot,
+// non-interactive run, which the HUD must not show as a live session.
+//
+// #681: this predicate is now handed to the resolver (createPidResolver's
+// headlessCheck) instead of being applied to a command line here. The reason is
+// storage, not tidiness — the pid cache used to persist the whole command line
+// so a later cache hit could re-run this regex, which meant every Claude
+// session's full argv sat in a %TEMP% file for the life of the session to
+// answer one yes/no question. The resolver derives the boolean in memory and
+// caches only that, so this function is the single source of truth for both a
+// fresh walk and a cache hit.
+function isClaudeHeadlessCommandLine(cmdline) {
+  return /\s(-p|--print)(\s|$)/.test(cmdline || "");
+}
+
+// #442-compat + #627: agent pid fields. `headless` comes from the resolver for
+// both the fresh and cache-hit paths, so they cannot drift.
+function applyAgentPidFields(body, agentPid, headless) {
+  if (!agentPid) return;
+  body.agent_pid = agentPid;
+  body.claude_pid = agentPid; // backward compat with older Clawd versions
+  if (headless === true) body.headless = true;
+}
+
+// Applies the shared resolver's process metadata to the body. Works for all
+// three resolver result shapes (#634):
+//   - fresh          → full fields, including pid_chain and (on SessionStart)
+//     the foreground WT handle;
+//   - cache hit / v1→v2 promotion → the stable subset only (pidChain is [],
+//     foregroundWtHwnd/tmuxClient are null in the returned object, so they are
+//     naturally omitted — the server MERGE keeps the SessionStart pid_chain);
+//   - empty (prompt/end miss) → every pid field is null/[], so source_pid,
+//     agent_pid, pid_chain, etc. are all left off (never a degraded
+//     process.ppid). source_pid is guarded so an empty result ships no null pid.
+function applyResolvedFields(body, resolved, event) {
+  const { stablePid, agentPid, headless, detectedEditor, pidChain, foregroundWtHwnd, tmuxSocket, tmuxClient } = resolved;
+  if (stablePid) body.source_pid = stablePid;
+  if (detectedEditor) body.editor = detectedEditor;
+  applyAgentPidFields(body, agentPid, headless);
+  if (pidChain && pidChain.length) body.pid_chain = pidChain;
+  if (tmuxSocket) body.tmux_socket = tmuxSocket;
+  if (tmuxClient) body.tmux_client = tmuxClient;
+  applyOrcaPaneKey(body);
+  if (shouldReportForegroundWtHwnd(event) && foregroundWtHwnd) {
+    body.wt_hwnd = String(foregroundWtHwnd);
+  }
+  if (resolved.agentProcessStartIdentity) {
+    Object.defineProperty(body, "_agentProcessStartIdentity", {
+      value: resolved.agentProcessStartIdentity,
+      enumerable: false,
+    });
+  }
+  if (resolved.sourceProcessStartIdentity) {
+    Object.defineProperty(body, "_sourceProcessStartIdentity", {
+      value: resolved.sourceProcessStartIdentity,
+      enumerable: false,
+    });
+  }
+}
+
+function buildStateBody(event, payload, resolve) {
+  const state = EVENT_TO_STATE[event];
+  if (!state) return null;
+
+  const sessionId = payload.session_id || "default";
+  const cwd = payload.cwd || "";
+  const source = payload.source || payload.reason || "";
+  const syntheticSubagentStart = isSubagentToolStart(event, payload);
+
+  // /clear triggers SessionEnd → SessionStart in quick succession;
+  // show sweeping (clearing context) instead of sleeping
+  // PostCompact: keep the EVENT_TO_STATE "thinking" for auto-compact (context
+  // full, work resumes right after), but settle a manual /compact to idle.
+  // Neither is "attention" anymore — see #406.
+  const postCompactState = event === "PostCompact"
+    ? (payload.trigger === "manual" ? "idle" : "thinking")
+    : null;
+  const resolvedState = syntheticSubagentStart
+    ? "juggling"
+    : (postCompactState
+        || ((event === "SessionEnd" && source === "clear") ? "sweeping" : state));
+  const resolvedEvent = syntheticSubagentStart ? "SubagentStart" : event;
+
+  const body = { state: resolvedState, session_id: sessionId, event: resolvedEvent };
+  if (syntheticSubagentStart) {
+    body.subagent_lifecycle_source = "synthetic-tool";
+  } else if (event === "SubagentStart" || event === "SubagentStop") {
+    body.subagent_lifecycle_source = "native";
+  }
+  if (event === "SessionStart" && source) {
+    body.session_start_source = source;
+  }
+  // Cursor imports Claude user hooks and adds cursor_version to the hook input.
+  // Use that explicit caller provenance instead of the process tree: a genuine
+  // Claude CLI launched inside Cursor's terminal must remain Claude Code.
+  body.agent_id = resolveReportingAgentId(payload);
+  // Claude-compatible command-hook payloads use agent_id/agent_type for
+  // subagent provenance. Keep the public Clawd agent_id canonical, but preserve
+  // that identity separately so a SubagentStop/PostToolUse event can settle
+  // only the matching subagent's pending permission.
+  const reportedSubagentId = typeof payload.agent_id === "string"
+    ? payload.agent_id.trim()
+    : "";
+  if (
+    reportedSubagentId
+    && reportedSubagentId !== "claude-code"
+    && reportedSubagentId.length <= 256
+    && !/[\0\r\n]/.test(reportedSubagentId)
+  ) {
+    body.subagent_id = reportedSubagentId;
+    const reportedSubagentType = typeof payload.agent_type === "string"
+      ? payload.agent_type.trim()
+      : "";
+    if (
+      reportedSubagentType
+      && reportedSubagentType.length <= 128
+      && !/[\0\r\n]/.test(reportedSubagentType)
+    ) {
+      body.subagent_type = reportedSubagentType;
+    }
+  }
+  if (cwd) body.cwd = cwd;
+  const toolName = typeof payload.tool_name === "string" && payload.tool_name ? payload.tool_name : null;
+  const toolUseId = normalizeToolUseId(payload.tool_use_id ?? payload.toolUseId ?? payload.toolUseID);
+  const toolInputFingerprint = buildToolInputFingerprint(
+    payload.tool_input && typeof payload.tool_input === "object" ? payload.tool_input : null
+  );
+  if (toolName) body.tool_name = toolName;
+  if (toolUseId) body.tool_use_id = toolUseId;
+  if (toolInputFingerprint) body.tool_input_fingerprint = toolInputFingerprint;
+  if (event === "PostToolUse" || event === "PostToolUseFailure") {
+    const testResult = classifyTestResult(event, payload);
+    if (testResult) body.test_result = testResult;
+  }
+  if (event !== "Stop" && typeof payload.transcript_path === "string" && payload.transcript_path) {
+    body.transcript_path = payload.transcript_path;
+  }
+  // Read transcript tail once and reuse for both session title extraction and
+  // API error detection (Stop only). Avoids two file reads per hook invocation.
+  const transcriptEntries = readTranscriptTailEntries(payload.transcript_path);
+  // Pass the raw session id (null when the hook payload omits it), not the
+  // "default" placeholder above: a transcript whose entries carry a real
+  // sessionId must not be filtered out just because session_id was missing.
+  const contextUsage = extractClaudeContextUsageFromEntries(
+    transcriptEntries,
+    payload.session_id || null,
+  );
+  if (contextUsage) body.context_usage = contextUsage;
+  const sessionTitle =
+    normalizeTitle(payload.session_title) ||
+    extractSessionTitleFromEntries(transcriptEntries);
+  if (sessionTitle) body.session_title = sessionTitle;
+  if (event === "UserPromptSubmit" && !body.session_title) {
+    const promptTitle = extractPromptTitle(payload.prompt);
+    if (promptTitle) {
+      body.session_title = promptTitle;
+      // The fallback is derived from prompt content. It is useful for the live
+      // snapshot but must never cross the durable recovery privacy boundary.
+      Object.defineProperty(body, "_sessionTitleFromPrompt", {
+        value: true,
+        enumerable: false,
+      });
+    }
+  }
+
+  // Claude Code synthesizes API errors into a fake assistant message tagged
+  // isApiErrorMessage:true and emits a regular Stop hook (not StopFailure).
+  // Upgrade Stop → ApiError when transcript tail shows a current-turn error.
+  // See docs/investigations/api-error-race-condition.md.
+  if (event === "Stop" && !syntheticSubagentStart) {
+    const apiError = extractApiErrorFromEntries(transcriptEntries, sessionId);
+    if (apiError) {
+      body.event = "ApiError";
+      body.state = "error";
+      body.failure_kind = "api_error";
+      body.api_error_type = apiError.api_error_type;
+      body.error_present = true;
+    } else {
+      const assistantOutput = extractLastAssistantTextFromEntries(transcriptEntries, sessionId);
+      if (assistantOutput && assistantOutput.text) {
+        body.assistant_last_output = assistantOutput.text;
+        if (assistantOutput.truncated) body.assistant_last_output_truncated = true;
+      }
+    }
+  }
+  // #406/#952 completion-gate inputs. A Stop that still has live background
+  // shells, cron wakeups or an exact typed one-shot subagent is not a real turn
+  // completion. Forward only counts + the boolean — never task ids, status,
+  // command or description text — so state.js can suppress the celebration
+  // without leaking background-task details into Clawd state.
+  //
+  // Presence of background_subagents_count is meaningful: an omitted field
+  // means this Claude payload had no usable background_tasks snapshot, while 0
+  // is an authoritative snapshot that contains no exact `type: "subagent"`
+  // entry. Keep the classifier intentionally narrow: teammate entries have
+  // different lifecycle semantics and must not become a completion gate.
+  if (body.event === "Stop" || body.event === "SubagentStop") {
+    const backgroundTasks = Array.isArray(payload.background_tasks)
+      ? payload.background_tasks
+      : null;
+    if (backgroundTasks) {
+      const subagentCount = backgroundTasks.reduce((count, entry) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return count;
+        const prototype = Object.getPrototypeOf(entry);
+        if (prototype !== Object.prototype && prototype !== null) return count;
+        const type = typeof entry.type === "string"
+          ? entry.type.trim().replace(/[A-Z]/g, (letter) => letter.toLowerCase())
+          : "";
+        return count + (type === "subagent" ? 1 : 0);
+      }, 0);
+      body.background_subagents_count = subagentCount;
+    }
+  }
+  if (body.event === "Stop") {
+    const bgCount = Array.isArray(payload.background_tasks) ? payload.background_tasks.length : 0;
+    const cronCount = Array.isArray(payload.session_crons) ? payload.session_crons.length : 0;
+    if (bgCount > 0) body.background_tasks_count = bgCount;
+    if (cronCount > 0) body.session_crons_count = cronCount;
+    if (payload.stop_hook_active === true) body.stop_hook_active = true;
+  } else if (body.event === "SubagentStop" && payload.stop_hook_active === true) {
+    // SubagentStop is a termination attempt: another hook may veto it and let
+    // the same child continue. Preserve the upstream marker for diagnostics;
+    // state.js also self-corrects when later activity for the same id arrives.
+    body.stop_hook_active = true;
+  }
+  const wslDistro = resolveWslDistro();
+  if (process.env.CLAWD_REMOTE) {
+    // Remote session: preserve existing host prefix, add WSL distro as
+    // separate metadata. Do NOT override the SSH host.
+    body.host = readHostPrefix();
+    if (wslDistro) body.wsl_distro = wslDistro;
+    applyOrcaPaneKey(body);
+  } else {
+    // #627/#634: the per-session pid cache + lifecycle orchestration now lives
+    // in the shared resolver (hooks/shared-process.js). This hook is the Claude
+    // adapter — it maps the event to a resolver lifecycle, declares the cache
+    // identity, and applies whatever process metadata the resolver returns:
+    //   - SessionStart → start (fresh once, prewarmed during stdin buffering;
+    //     writes the v2 cache),
+    //   - UserPromptSubmit → prompt (cache-only, NEVER spawns — even for a
+    //     non-cacheable session; the foreground WT handle it used to fresh for
+    //     is sampled server-side now, src/server-route-state.js),
+    //   - SessionEnd → end (cache-only, fills the final body then drops; never
+    //     spawns, never writes back),
+    //   - everything else → event (cache hit = zero spawn; a miss falls back to
+    //     one fresh resolve and repopulates).
+    // The Windows zero-spawn contracts, the double-PID liveness check, and the
+    // v1→v2 promotion all live in the resolver; mac/linux keep the
+    // fresh-every-event runtime behavior. The cache identity is Claude's raw
+    // session id + payload cwd (matrix §5.0): a "default" session id (#583) or
+    // an empty cwd is non-cacheable, which the resolver honors WITHOUT relaxing
+    // the prompt/end no-spawn contract. A miss ships a body with no
+    // process-metadata fields; the server MERGE (state.js) keeps whatever the
+    // session already had — never a degraded process.ppid.
+    const cacheCwd = cwd;
+    const resolved = resolve({
+      namespace: "claude-code",
+      sessionId,
+      cacheCwd,
+      lifecycle: EVENT_TO_LIFECYCLE[event] || "event",
+      cacheable: sessionId !== "default" && !!cacheCwd,
+    });
+    applyResolvedFields(body, resolved, event);
+
+    if (wslDistro) {
+      body.wsl_distro = wslDistro;
+      body.host = `wsl:${wslDistro}`;
+    }
+  }
+
+  return body;
+}
+
+// #583: a missing session_id means the agent's stdin JSON was lost or mangled
+// somewhere between the agent host and this process (every real session then
+// collapses to sid=default server-side). Attach what the stdin read actually
+// saw so session-debug.log can separate "never arrived" (bytes:0 + timeout)
+// from "arrived broken" (bytes>0 + parse error) without a repro rig.
+function attachStdinDiag(body, stdinRead) {
+  if (!body || !stdinRead) return body;
+  const payload = stdinRead.payload;
+  if (payload && payload.session_id) return body;
+  const diag = {
+    bytes: stdinRead.bytes,
+    timed_out: stdinRead.timedOut === true,
+    duration_ms: stdinRead.durationMs,
+  };
+  if (stdinRead.parseError) diag.parse_error = stdinRead.parseError;
+  body.stdin_diag = diag;
+  return body;
+}
+
+function main() {
+  const event = process.argv[2];
+  if (!EVENT_TO_STATE[event]) process.exit(0);
+  const eventAt = Date.now();
+
+  const config = getPlatformConfig();
+  const resolve = createPidResolver({
+    agentNames: { win: new Set(["claude.exe"]), mac: new Set(["claude"]) },
+    agentCmdlineCheck: (cmd) => cmd.includes("claude-code") || cmd.includes("@anthropic-ai"),
+    // #681: Claude is the only adapter that derives anything from the agent's
+    // command line, so it is the only one that passes this. The resolver applies
+    // it in memory and caches the boolean instead of the line.
+    headlessCheck: isClaudeHeadlessCommandLine,
+    platformConfig: config,
+  });
+
+  // Pre-resolve on SessionStart (runs during stdin buffering, not after)
+  // Remote mode: skip PID collection — remote PIDs are meaningless on the local machine
+  if (event === "SessionStart" && !process.env.CLAWD_REMOTE) resolve();
+
+  readStdinJsonDetailed({ timeoutMs: STDIN_READ_TIMEOUT_MS })
+    .then((stdinRead) => {
+      const payload = stdinRead.payload;
+      const body = buildStateBody(event, payload || {}, resolve);
+      if (!body) process.exit(0);
+      attachStdinDiag(body, stdinRead);
+      // Completion events (Stop) fire the happy animation, are low-frequency,
+      // and matter more than a few ms of latency. Give them a generous POST
+      // timeout so a momentarily slow (but alive) Clawd still receives them;
+      // connection-refused (Clawd not running) still fails instantly, so an
+      // idle machine is never penalized. High-frequency events keep 100ms so
+      // they never stall the agent.
+      const isCompletionEvent = body.event === "Stop";
+      const statePostTimeoutMs = isCompletionEvent ? 1500 : 100;
+      // Byte-fit the body so a long CJK assistant_last_output can't push it past
+      // the server's /state cap and trigger a headerless 413 (read back as
+      // posted=false, dropping the happy completion). hooks/state-payload-size.js.
+      const fitted = fitStateBodyToByteBudget(body);
+      // Persist the real session evidence before POST. If Clawd is restarting,
+      // the HTTP request may fail but the next process can still recover the
+      // same session id and last sustained state. This is best-effort and never
+      // changes the hook's stdout or exit contract.
+      updateRecoveryLeaseFromStateBody(body, { eventAt });
+      postStateToRunningServer(
+        JSON.stringify(fitted.body),
+        { timeoutMs: statePostTimeoutMs },
+        () => process.exit(0)
+      );
+    })
+    .catch(() => process.exit(0));
+}
+
+if (require.main === module) main();
+
+module.exports = {
+  buildStateBody,
+  classifyTestResult,
+  isRecognizedTestCommand,
+  isClaudeHeadlessCommandLine,
+  attachStdinDiag,
+  STDIN_READ_TIMEOUT_MS,
+  extractSessionTitleFromTranscript,
+  extractApiErrorFromEntries,
+  extractLastAssistantTextFromEntries,
+  readTranscriptTailEntries,
+};

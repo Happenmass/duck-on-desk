@@ -1,0 +1,423 @@
+const assert = require("node:assert");
+const Module = require("node:module");
+const path = require("node:path");
+const { describe, it } = require("node:test");
+
+const MENU_MODULE_PATH = require.resolve("../src/menu");
+
+function loadMenuWithElectron(fakeElectron, fakeTaskbar = null, platform = null) {
+  delete require.cache[MENU_MODULE_PATH];
+  const originalLoad = Module._load;
+  const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform");
+  if (platform) {
+    Object.defineProperty(process, "platform", { ...originalPlatform, value: platform });
+  }
+  Module._load = function patchedLoad(request, parent, isMain) {
+    if (request === "electron") return fakeElectron;
+    if (fakeTaskbar && request === "./taskbar") return fakeTaskbar;
+    return originalLoad.apply(this, arguments);
+  };
+  try {
+    return require("../src/menu");
+  } finally {
+    Module._load = originalLoad;
+    if (platform) Object.defineProperty(process, "platform", originalPlatform);
+  }
+}
+
+function fakeElectron() {
+  return {
+    app: { quit: () => {}, setActivationPolicy: () => {}, dock: { show: () => {}, hide: () => {} } },
+    BrowserWindow: function BrowserWindow() {},
+    Menu: {
+      buildFromTemplate(template) {
+        return { template };
+      },
+    },
+    Tray: function Tray() {},
+    nativeImage: {
+      createFromPath() {
+        return {
+          resize() { return this; },
+          setTemplateImage() {},
+        };
+      },
+    },
+    screen: {
+      getAllDisplays: () => [{ id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }],
+      getCursorScreenPoint: () => ({ x: 0, y: 0 }),
+      getDisplayNearestPoint: () => ({ id: 1 }),
+    },
+  };
+}
+
+function buildBaseCtx(overrides = {}) {
+  return {
+    win: { isDestroyed: () => false },
+    sessions: new Map(),
+    currentSize: "P:15",
+    doNotDisturb: false,
+    lang: "en",
+    showTray: true,
+    showDock: true,
+    openAtLogin: false,
+    bubbleFollowPet: false,
+    hideBubbles: false,
+    soundMuted: false,
+    menuOpen: false,
+    tray: null,
+    contextMenuOwner: null,
+    contextMenu: null,
+    isQuitting: false,
+    petHidden: false,
+    getMiniMode: () => false,
+    getMiniTransitioning: () => false,
+    getDisableMiniMode: () => false,
+    getActiveThemeCapabilities: () => ({ miniMode: true, petTint: true }),
+    openDashboard: () => {},
+    openSettingsWindow: () => {},
+    togglePetVisibility: () => {},
+    bringPetToPrimaryDisplay: () => {},
+    enableDoNotDisturb: () => {},
+    disableDoNotDisturb: () => {},
+    enterMiniViaMenu: () => {},
+    exitMiniMode: () => {},
+    miniHandleResize: () => false,
+    getPetWindowBounds: () => ({ x: 10, y: 20, width: 120, height: 120 }),
+    applyPetWindowBounds: () => {},
+    getCurrentPixelSize: () => ({ width: 200, height: 200 }),
+    isProportionalMode: () => true,
+    repositionBubbles: () => {},
+    syncHitWin: () => {},
+    flushRuntimeStateToPrefs: () => {},
+    reapplyMacVisibility: () => {},
+    getSettingsWindow: () => null,
+    clampToScreenVisual: (x, y) => ({ x, y }),
+    ...overrides,
+  };
+}
+
+describe("context menu hide pet action (#460)", () => {
+  it("exposes a Hide Pet item right before Quit that changes visibility", () => {
+    const initMenu = loadMenuWithElectron(fakeElectron());
+    const visCalls = [];
+    const ctx = buildBaseCtx({
+      setPetVisibility: (visible) => visCalls.push(visible),
+    });
+
+    const menu = initMenu(ctx);
+    menu.buildContextMenu();
+
+    const labels = ctx.contextMenu.template.map((item) => item.label);
+    const hideIdx = labels.indexOf("Hide Pet");
+    const quitIdx = labels.indexOf("Quit");
+    assert.ok(hideIdx !== -1, "context menu should expose Hide Pet");
+    assert.strictEqual(quitIdx, labels.length - 1, "Quit should stay the last item");
+    assert.strictEqual(hideIdx, quitIdx - 2, "Hide Pet should sit just above Quit");
+    assert.strictEqual(ctx.contextMenu.template[hideIdx + 1].type, "separator");
+
+    ctx.contextMenu.template[hideIdx].click();
+    assert.deepStrictEqual(visCalls, [false]);
+  });
+
+  it("labels the item Show Pet while the pet is hidden", () => {
+    const initMenu = loadMenuWithElectron(fakeElectron());
+    const ctx = buildBaseCtx({ petHidden: true });
+
+    const menu = initMenu(ctx);
+    menu.buildContextMenu();
+
+    const labels = ctx.contextMenu.template.map((item) => item.label);
+    assert.ok(labels.includes("Show Pet"), "hidden pet should flip the label to Show Pet");
+    assert.ok(!labels.includes("Hide Pet"));
+  });
+
+  it("popup close callback does not resurrect a pet the menu just hid", () => {
+    let ownerWindow = null;
+    const electron = fakeElectron();
+    electron.BrowserWindow = function BrowserWindow() {
+      ownerWindow = {
+        isDestroyed: () => false,
+        loadURL: () => {},
+        on: () => {},
+        setBounds: () => {},
+        show: () => {},
+        focus: () => {},
+        hide: () => {},
+      };
+      return ownerWindow;
+    };
+    const keepCalls = [];
+    const initMenu = loadMenuWithElectron(electron, {
+      keepOutOfTaskbar: (win) => keepCalls.push(win),
+    });
+
+    let restoredPet = false;
+    const ctx = buildBaseCtx({
+      win: {
+        isDestroyed: () => false,
+        showInactive: () => { restoredPet = true; },
+        setAlwaysOnTop: () => {},
+      },
+    });
+
+    initMenu(ctx).popupMenuAt({
+      popup({ callback }) {
+        // Simulate the Hide Pet click landing before the close callback.
+        ctx.petHidden = true;
+        callback();
+      },
+    });
+
+    assert.strictEqual(restoredPet, false, "hidden pet must stay hidden after the menu closes");
+    assert.deepStrictEqual(keepCalls, [ownerWindow], "only the owner window should be re-asserted");
+  });
+});
+
+describe("menu grouping invariants", () => {
+  function assertNoStraySeparators(template, label) {
+    assert.ok(template.length > 0, `${label}: template not empty`);
+    assert.notStrictEqual(template[0].type, "separator", `${label}: no leading separator`);
+    assert.notStrictEqual(template[template.length - 1].type, "separator", `${label}: no trailing separator`);
+    for (let i = 1; i < template.length; i += 1) {
+      if (template[i].type === "separator") {
+        assert.notStrictEqual(template[i - 1].type, "separator", `${label}: no doubled separator at index ${i}`);
+      }
+    }
+  }
+
+  it("context menu groups have no leading, trailing, or doubled separators", () => {
+    const initMenu = loadMenuWithElectron(fakeElectron());
+    const ctx = buildBaseCtx();
+    const menu = initMenu(ctx);
+    menu.buildContextMenu();
+    assertNoStraySeparators(ctx.contextMenu.template, "context menu");
+  });
+
+  it("tray menu groups have no leading, trailing, or doubled separators", () => {
+    const initMenu = loadMenuWithElectron(fakeElectron());
+    let trayTemplate = null;
+    const ctx = buildBaseCtx({
+      tray: { setContextMenu(menuObj) { trayTemplate = menuObj.template; } },
+    });
+    const menu = initMenu(ctx);
+    menu.buildTrayMenu();
+    assertNoStraySeparators(trayTemplate, "tray menu");
+  });
+});
+
+describe("pet color menu placement", () => {
+  it("keeps pet colors out of both tray and context quick menus", () => {
+    const initMenu = loadMenuWithElectron(fakeElectron());
+    let trayTemplate = null;
+    const ctx = buildBaseCtx({
+      tray: { setContextMenu(menuObj) { trayTemplate = menuObj.template; } },
+    });
+    const menu = initMenu(ctx);
+
+    menu.buildTrayMenu();
+    menu.buildContextMenu();
+    assert.ok(!trayTemplate.some((item) => item.label === "Pet Color"));
+    assert.ok(!ctx.contextMenu.template.some((item) => item.label === "Pet Color"));
+  });
+});
+
+describe("macOS visibility toggles live in the tray, not the right-click menu", () => {
+  it("drops Show in Dock / Show in Menu Bar from the context menu but keeps them in the tray", (t) => {
+    if (process.platform !== "darwin") {
+      t.skip("Dock / Menu Bar toggles are macOS-only");
+      return;
+    }
+    const initMenu = loadMenuWithElectron(fakeElectron());
+    let trayTemplate = null;
+    const ctx = buildBaseCtx({
+      tray: { setContextMenu(menuObj) { trayTemplate = menuObj.template; } },
+    });
+    const menu = initMenu(ctx);
+    menu.buildContextMenu();
+    menu.buildTrayMenu();
+    const ctxLabels = ctx.contextMenu.template.map((item) => item.label);
+    const trayLabels = trayTemplate.map((item) => item.label);
+    assert.ok(!ctxLabels.includes("Show in Dock"), "context menu drops Show in Dock");
+    assert.ok(!ctxLabels.includes("Show in Menu Bar"), "context menu drops Show in Menu Bar");
+    assert.ok(trayLabels.includes("Show in Dock"), "tray keeps Show in Dock");
+    assert.ok(trayLabels.includes("Show in Menu Bar"), "tray keeps Show in Menu Bar");
+  });
+});
+
+describe("macOS runtime Dock visibility", () => {
+  it("installs the padded Clawd icon before showing Dock after a tray-only launch", async () => {
+    const calls = [];
+    const electron = fakeElectron();
+    electron.app = {
+      quit() {},
+      setActivationPolicy(policy) { calls.push(["activation", policy]); },
+      dock: {
+        setIcon(iconPath) { calls.push(["setIcon", iconPath]); },
+        show() { calls.push(["show"]); return Promise.resolve(); },
+        hide() { calls.push(["hide"]); },
+      },
+    };
+    const initMenu = loadMenuWithElectron(electron, null, "darwin");
+    const ctx = buildBaseCtx({
+      showDock: true,
+      reapplyMacVisibility() { calls.push(["reapplyMacVisibility"]); },
+    });
+
+    await initMenu(ctx).applyDockVisibility();
+
+    assert.deepStrictEqual(calls, [
+      ["setIcon", path.join(__dirname, "../assets/dock-icon.png")],
+      ["activation", "regular"],
+      ["setIcon", path.join(__dirname, "../assets/dock-icon.png")],
+      ["reapplyMacVisibility"],
+    ]);
+  });
+
+  it("hides Dock through accessory policy without redundant icon writes", async () => {
+    const calls = [];
+    const electron = fakeElectron();
+    electron.app = {
+      quit() {},
+      setActivationPolicy(policy) { calls.push(["activation", policy]); },
+      dock: {
+        setIcon(iconPath) { calls.push(["setIcon", iconPath]); },
+        show() { calls.push(["show"]); },
+        hide() { calls.push(["hide"]); },
+      },
+    };
+    const initMenu = loadMenuWithElectron(electron, null, "darwin");
+    const ctx = buildBaseCtx({
+      showDock: false,
+      reapplyMacVisibility() { calls.push(["reapplyMacVisibility"]); },
+    });
+
+    await initMenu(ctx).applyDockVisibility();
+
+    assert.deepStrictEqual(calls, [
+      ["activation", "accessory"],
+      ["reapplyMacVisibility"],
+    ]);
+  });
+
+  it("lets packaged Tahoe render the bundle icon during Dock promotion", async () => {
+    const calls = [];
+    const electron = fakeElectron();
+    electron.app = {
+      isPackaged: true,
+      quit() {},
+      setActivationPolicy(policy) { calls.push(["activation", policy]); },
+      dock: {
+        setIcon(iconPath) { calls.push(["setIcon", iconPath]); },
+      },
+    };
+    const initMenu = loadMenuWithElectron(electron, null, "darwin");
+    const ctx = buildBaseCtx({
+      showDock: true,
+      getSystemVersion: () => "26.5.2",
+      reapplyMacVisibility() { calls.push(["reapplyMacVisibility"]); },
+    });
+
+    await initMenu(ctx).applyDockVisibility();
+
+    assert.deepStrictEqual(calls, [
+      ["activation", "regular"],
+      ["reapplyMacVisibility"],
+    ]);
+  });
+
+  it("retains the padded icon for packaged pre-Tahoe Dock promotion", async () => {
+    const calls = [];
+    const electron = fakeElectron();
+    electron.app = {
+      isPackaged: true,
+      quit() {},
+      setActivationPolicy(policy) { calls.push(["activation", policy]); },
+      dock: {
+        setIcon(iconPath) { calls.push(["setIcon", iconPath]); },
+      },
+    };
+    const initMenu = loadMenuWithElectron(electron, null, "darwin");
+    const ctx = buildBaseCtx({
+      showDock: true,
+      getSystemVersion: () => "25.9",
+      reapplyMacVisibility() { calls.push(["reapplyMacVisibility"]); },
+    });
+
+    await initMenu(ctx).applyDockVisibility();
+
+    assert.deepStrictEqual(calls, [
+      ["setIcon", path.join(__dirname, "../assets/dock-icon.png")],
+      ["activation", "regular"],
+      ["setIcon", path.join(__dirname, "../assets/dock-icon.png")],
+      ["reapplyMacVisibility"],
+    ]);
+  });
+});
+
+// The Show/Hide Pet items carry their intent from BUILD time. The fullscreen
+// auto-hide sync can restore (or hide) the pet from a background timer while a
+// built menu is still on screen — most easily on the tray: right-clicking the
+// tray icon moves the foreground off the fullscreen app, so the auto-restore
+// fires ~1s later, under the open menu. A live toggle would then invert the
+// labeled action (an item reading "Show Pet" would hide the pet). Applying the
+// captured intent instead makes the worst case an idempotent no-op that
+// matches what the user read.
+describe("show/hide pet intent is captured at menu build time", () => {
+  it("context menu: a click after a background restore shows, never re-hides", () => {
+    const initMenu = loadMenuWithElectron(fakeElectron());
+    const visCalls = [];
+    const ctx = buildBaseCtx({
+      petHidden: true,
+      setPetVisibility: (visible) => visCalls.push(visible),
+    });
+
+    const menu = initMenu(ctx);
+    menu.buildContextMenu();
+    const item = ctx.contextMenu.template.find((entry) => entry.label === "Show Pet");
+    assert.ok(item, "menu built while hidden should offer Show Pet");
+
+    // Background restore flips the live state while the menu is displayed.
+    ctx.petHidden = false;
+
+    item.click();
+    assert.deepStrictEqual(visCalls, [true], "click must apply the labeled intent (show)");
+  });
+
+  it("tray menu: a click after a background restore shows, never re-hides", () => {
+    const initMenu = loadMenuWithElectron(fakeElectron());
+    const visCalls = [];
+    let trayTemplate = null;
+    const ctx = buildBaseCtx({
+      petHidden: true,
+      setPetVisibility: (visible) => visCalls.push(visible),
+      tray: { setContextMenu(menuObj) { trayTemplate = menuObj.template; } },
+    });
+
+    initMenu(ctx).buildTrayMenu();
+    const item = trayTemplate.find((entry) => entry.label === "Show Pet");
+    assert.ok(item, "tray menu built while hidden should offer Show Pet");
+
+    ctx.petHidden = false;
+
+    item.click();
+    assert.deepStrictEqual(visCalls, [true], "click must apply the labeled intent (show)");
+  });
+
+  it("a click with unchanged state applies the labeled action as before", () => {
+    const initMenu = loadMenuWithElectron(fakeElectron());
+    const visCalls = [];
+    const ctx = buildBaseCtx({
+      petHidden: false,
+      setPetVisibility: (visible) => visCalls.push(visible),
+    });
+
+    const menu = initMenu(ctx);
+    menu.buildContextMenu();
+    const item = ctx.contextMenu.template.find((entry) => entry.label === "Hide Pet");
+    assert.ok(item, "menu built while visible should offer Hide Pet");
+
+    item.click();
+    assert.deepStrictEqual(visCalls, [false], "click must hide, matching the label");
+  });
+});
