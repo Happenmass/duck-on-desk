@@ -283,7 +283,6 @@ module.exports = function initMenu(ctx) {
         label: ctx.doNotDisturb ? t("wake") : t("sleep"),
         click: () => ctx.doNotDisturb ? ctx.disableDoNotDisturb() : ctx.enableDoNotDisturb(),
       },
-      buildMiniModeMenuItem(),
     ];
 
     // Quick noise toggles (bubbles + sound) kept together.
@@ -519,7 +518,6 @@ module.exports = function initMenu(ctx) {
     // danger auto-approve toggle into the work group instead of leaving it as a
     // prominent top-level entry.
     const stateGroup = [
-      { ...buildMiniModeMenuItem() },
       {
         label: ctx.doNotDisturb ? t("wake") : t("sleep"),
         click: () => ctx.doNotDisturb ? ctx.disableDoNotDisturb() : ctx.enableDoNotDisturb(),

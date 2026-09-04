@@ -20,11 +20,12 @@ function loadIcons() {
 
 // The sidebar tab ids declared in settings-renderer.js — every one of
 // these must resolve to a real icon, not the placeholder fallback.
+// Theme and Animation & Sound were dropped from the sidebar in Task 7 of
+// the 3D renderer plan (duck3d has no sprite files or mini mode to
+// configure); their icons and settings-tab-* modules stay for Plan 04.
 const SIDEBAR_TAB_IDS = [
   "general",
   "agents",
-  "theme",
-  "animOverrides",
   "shortcuts",
   "about",
 ];

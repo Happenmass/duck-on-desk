@@ -5,11 +5,14 @@ const core = globalThis.DuckSettingsCore;
 // Icons resolve via settings-icons.js at render time (keyed by tab id),
 // not as emoji/unicode glyphs \u2014 those rendered inconsistently across
 // system fonts and didn't dark-mode well.
+// duck3d is a single built-in theme with no sprite files, mini mode, or
+// per-state animation overrides to configure, so the Theme and Animation &
+// Sound tabs (and the anim-map subtab they host) have nothing left to show.
+// Their modules stay registered in core.tabs (Plan 04 removes them for good);
+// this list just keeps them out of the sidebar.
 const SIDEBAR_TABS = [
   { id: "general", labelKey: "sidebarGeneral", available: true },
   { id: "agents", labelKey: "sidebarAgents", available: true },
-  { id: "theme", labelKey: "sidebarTheme", available: true },
-  { id: "animOverrides", labelKey: "sidebarAnimOverrides", available: true },
   { id: "shortcuts", labelKey: "sidebarShortcuts", available: true },
   { id: "about", labelKey: "sidebarAbout", available: true },
 ];
