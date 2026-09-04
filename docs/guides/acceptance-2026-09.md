@@ -78,3 +78,64 @@ npm run install:codex-hooks && node scripts/check-codex-hooks.mjs
 | 6 | 验收后恢复 | 重新打开 Codex official hooks（或把 `hooks.json` 改回），`node scripts/check-codex-hooks.mjs` 退出码 0 | | |
 
 备注：
+
+---
+
+## Pi
+
+### 安装与核对
+
+```bash
+cd /Users/guhappen/自媒体运营/duck-on-desk
+npm run install:pi-extension && node scripts/check-pi-opencode.mjs
+```
+
+| # | 步骤 | 期望 | 实际 | 通过 |
+|---|---|---|---|---|
+| 1 | `npm run install:pi-extension` | 命令退出码 0；写入 `~/.pi/agent/extensions/duck-on-desk/` | | |
+| 2 | `node scripts/check-pi-opencode.mjs` 报告的 `pi` | `ok: true`、`missing: []`（三个受管文件 `index.ts`、`pi-extension-core.js`、`.duck-on-desk-managed.json` 齐备） | | |
+| 3 | 脚本退出码 | 装完 Pi 与 opencode 两侧后才为 0；只装 Pi 时仍为 1（opencode 未注册） | | |
+
+### 真实会话（`npm start` 后在任意终端运行 `pi`，让它完成一个小任务）
+
+Pi 是 state-only 集成：只驱动状态，不做权限往返，**不会**弹权限气泡，这是设计如此，不是缺陷。
+
+| # | 触发 | 期望状态 | 期望鸭子行为 | 实际 | 通过 |
+|---|---|---|---|---|---|
+| 1 | 提交提示词 | `thinking` | 面朝镜头（heading 0）东张西望，每 1.5 s 随机看一处 | | |
+| 2 | 工具开始执行 | `working` | 原地行走（forward 0.7，heading 0） | | |
+| 3 | Pi 需要确认某个操作 | — | **不出现**权限气泡；在 Pi 终端里自己决定（设计如此） | | |
+| 4 | 任务结束 | `attention` → `idle` | 叫一声后回到 AutonomyAdapter 自主动作 | | |
+
+备注：
+
+---
+
+## opencode
+
+### 安装与核对
+
+```bash
+cd /Users/guhappen/自媒体运营/duck-on-desk
+node hooks/opencode-install.js && node scripts/check-pi-opencode.mjs
+```
+
+| # | 步骤 | 期望 | 实际 | 通过 |
+|---|---|---|---|---|
+| 1 | `node hooks/opencode-install.js` | 命令退出码 0；把插件目录绝对路径写进全局配置的 `plugin` 数组 | | |
+| 2 | `node scripts/check-pi-opencode.mjs` 报告的 `opencode.file` | 命中 `~/.config/opencode/` 下的 `opencode.jsonc` / `opencode.json` / `config.json` 之一（按此优先级，`.jsonc` 最高） | | |
+| 3 | 同上报告的 `opencode.ok` 与 `plugins` | `ok: true`；`plugins` 里含一条以 `opencode-plugin` 结尾的绝对路径 | | |
+| 4 | 你原有的第三方 opencode 插件 | 仍在 `plugin` 数组里，未被覆盖或删除 | | |
+| 5 | 脚本退出码（Pi 与 opencode 都装好后） | 0 | | |
+
+### 真实会话（`npm start` 后在任意终端运行 `opencode`，让它完成一个写文件任务）
+
+| # | 触发 | 期望状态 | 期望鸭子行为 | 实际 | 通过 |
+|---|---|---|---|---|---|
+| 1 | 提交提示词 | `thinking` | 面朝镜头（heading 0）东张西望，每 1.5 s 随机看一处 | | |
+| 2 | 工具开始执行 | `working` | 原地行走（forward 0.7，heading 0） | | |
+| 3 | opencode 请求写文件权限 | `notification` | 权限气泡弹出（经 bridge 往返）；鸭子面朝镜头连续叫（每 2.5 s 一次 quack） | | |
+| 4 | 点 **Allow** | — | 气泡消失，opencode 终端继续执行并完成写入 | | |
+| 5 | 任务结束 | `attention` → `idle` | 叫一声后回到 AutonomyAdapter 自主动作 | | |
+
+备注：
