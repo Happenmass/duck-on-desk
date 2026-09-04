@@ -7,6 +7,7 @@ const {
   githubHandleForIdentity,
   parseReleaseIdentities,
   previousReleaseTag,
+  verifyReleaseContributors,
 } = require("../scripts/verify-release-contributors");
 
 test("release contributor audit selects the newest tag below the package version", () => {
@@ -30,4 +31,21 @@ test("release contributor audit maps noreply, direct-email, and co-author identi
 
 test("unknown direct-email authors cannot silently bypass contributor credit", () => {
   assert.strictEqual(githubHandleForIdentity("New Person", "new@example.com"), undefined);
+});
+
+test("a project's first release passes with no previous tag to diff against", () => {
+  const calls = [];
+  const result = verifyReleaseContributors({
+    version: "0.1.0",
+    runGit: (args) => {
+      calls.push(args);
+      if (args[0] === "tag") return "";
+      if (args[0] === "log") return "";
+      throw new Error(`unexpected git args: ${args.join(" ")}`);
+    },
+  });
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.previousTag, "");
+  assert.deepStrictEqual(result.handles, []);
+  assert.deepStrictEqual(calls[1], ["log", "HEAD", "--format=%aE%x00%aN%x00%B%x1e"]);
 });

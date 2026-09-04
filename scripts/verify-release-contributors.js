@@ -7,6 +7,7 @@ const vm = require("node:vm");
 const { execFileSync } = require("node:child_process");
 
 const IDENTITY_OVERRIDES = new Map(Object.entries({
+  "happenmass@gmail.com": null,
   "rullerzhou@gmail.com": null,
   "228746293+rullerzhou-afk@users.noreply.github.com": null,
   "cursoragent@cursor.com": null,
@@ -91,16 +92,16 @@ function verifyReleaseContributors(options = {}) {
   } catch (err) {
     return { ok: false, version, previousTag: "", handles: [], errors: [`could not read release tags: ${err.message}`] };
   }
+  // ponytail: no previous release tag means this is the project's first release (e.g. v0.1.0) —
+  // credit-check the whole history instead of failing the bootstrap case.
   const previousTag = previousReleaseTag(version, tags);
-  if (!previousTag) {
-    return { ok: false, version, previousTag: "", handles: [], errors: [`no previous release tag found before v${version}`] };
-  }
+  const range = previousTag ? `${previousTag}..HEAD` : "HEAD";
 
   let logText = "";
   try {
-    logText = runGit(["log", `${previousTag}..HEAD`, "--format=%aE%x00%aN%x00%B%x1e"]);
+    logText = runGit(["log", range, "--format=%aE%x00%aN%x00%B%x1e"]);
   } catch (err) {
-    return { ok: false, version, previousTag, handles: [], errors: [`could not inspect ${previousTag}..HEAD: ${err.message}`] };
+    return { ok: false, version, previousTag, handles: [], errors: [`could not inspect ${range}: ${err.message}`] };
   }
 
   const handles = new Set();
@@ -137,7 +138,7 @@ function main() {
     return;
   }
   console.log(
-    `Release contributor contract OK: ${result.previousTag}..HEAD (${result.handles.length} external contributors)`,
+    `Release contributor contract OK: ${result.previousTag || "(first release)"}..HEAD (${result.handles.length} external contributors)`,
   );
 }
 
