@@ -446,26 +446,6 @@ function buildSessionSnapshot(sessions, options = {}) {
     hudLastTitle: hudEntries.length ? hudEntries[0].displayTitle : null,
     lastSessionId: lastSession ? lastSession.id : null,
     lastTitle: lastSession ? lastSession.displayTitle : null,
-    // Session-independent per-source account quota (src/state-account-quota.js).
-    // Injected by the caller so this module stays a pure sessions mapper.
-    // Deep-cloned at this boundary: the snapshot must stay immutable even if
-    // a caller retains and mutates the array it passed in (the store's own
-    // snapshot() already clones, but this API must not depend on that).
-    accountQuota: Array.isArray(options.accountQuota)
-      ? JSON.parse(JSON.stringify(options.accountQuota))
-      : [],
-    // Provider icons for the quota strip (same agent icons the session rows
-    // use, resolved via the injected accessor). Static per run — excluded
-    // from the snapshot signature.
-    quotaAgentIcons: (() => {
-      const iconFor = typeof options.getAgentIconUrl === "function"
-        ? options.getAgentIconUrl
-        : () => null;
-      return {
-        claudeQuota: iconFor("claude-code"),
-        codexQuota: iconFor("codex"),
-      };
-    })(),
     sessionAutomationOrphans: automationRecords
       .filter((record) => !matchedAutomationGrantIds.has(record.grantId))
       .map((record) => ({
@@ -502,24 +482,6 @@ function sessionSnapshotSignature(snapshot) {
     hudLastTitle: snapshot.hudLastTitle,
     lastSessionId: snapshot.lastSessionId,
     lastTitle: snapshot.lastTitle,
-    // Account quota participates as groups + lastSeenAt: updatedAt moves
-    // exactly when its group changes (change-detected in the store) so it
-    // would be redundant, but lastSeenAt is minute-quantized in the store
-    // snapshot and is what keeps freshness labels honest for a reporter
-    // that confirms unchanged numbers — its once-a-minute move must reach
-    // the renderers, so it must move the signature too.
-    accountQuota: (snapshot.accountQuota || []).map((entry) => ({
-      host: entry.host,
-      claudeQuota: entry.claudeQuota
-        ? { group: entry.claudeQuota.group, lastSeenAt: entry.claudeQuota.lastSeenAt }
-        : null,
-      codexQuota: entry.codexQuota
-        ? { group: entry.codexQuota.group, lastSeenAt: entry.codexQuota.lastSeenAt }
-        : null,
-      codexSparkQuota: entry.codexSparkQuota
-        ? { group: entry.codexSparkQuota.group, lastSeenAt: entry.codexSparkQuota.lastSeenAt }
-        : null,
-    })),
     sessions: snapshot.sessions.map((entry) => ({
       id: entry.id,
       profileId: entry.profileId,

@@ -11,7 +11,6 @@ const SIDEBAR_TABS = [
   { id: "theme", labelKey: "sidebarTheme", available: true },
   { id: "animOverrides", labelKey: "sidebarAnimOverrides", available: true },
   { id: "shortcuts", labelKey: "sidebarShortcuts", available: true },
-  { id: "recap", labelKey: "sidebarRecap", available: true },
   { id: "about", labelKey: "sidebarAbout", available: true },
 ];
 
@@ -88,13 +87,13 @@ globalThis.ClawdSettingsTabTheme.init(core);
 globalThis.ClawdSettingsTabAnimMap.init(core);
 globalThis.ClawdSettingsTabAnimOverrides.init(core);
 globalThis.ClawdSettingsTabShortcuts.init(core);
-if (globalThis.ClawdSettingsTabRecap) globalThis.ClawdSettingsTabRecap.init(core);
 globalThis.ClawdSettingsTabAbout.init(core);
-if (globalThis.ClawdSettingsTabMobile) globalThis.ClawdSettingsTabMobile.init(core);
 
 core.ops.restoreNavigationState();
 function selectRequestedTab(tab) {
-  if (tab === "recap") core.ops.selectTab("recap", { persist: false });
+  if (SIDEBAR_TABS.some((entry) => entry.id === tab && entry.available)) {
+    core.ops.selectTab(tab, { persist: false });
+  }
 }
 if (window.settingsAPI && typeof window.settingsAPI.onRequestedTab === "function") {
   window.settingsAPI.onRequestedTab(selectRequestedTab);
@@ -114,13 +113,6 @@ if (window.settingsAPI && typeof window.settingsAPI.onAgentActivity === "functio
   window.settingsAPI.onAgentActivity((payload) => {
     const tab = core.tabs.agents;
     if (tab && typeof tab.applyAgentActivity === "function") tab.applyAgentActivity(payload);
-  });
-}
-
-if (window.settingsAPI && typeof window.settingsAPI.onRecapChanged === "function") {
-  window.settingsAPI.onRecapChanged(() => {
-    const tab = core.tabs.recap;
-    if (tab && typeof tab.applyDataChanged === "function") tab.applyDataChanged();
   });
 }
 

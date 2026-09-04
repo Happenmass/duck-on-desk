@@ -1624,11 +1624,11 @@ class CodexLogMonitor {
       ? (payload.call_id || payload.tool_use_id || payload.id)
       : null;
     const turnExtra = {
-      ...(effectiveTurnId ? { turnId: effectiveTurnId, recapDedupeId: effectiveTurnId } : {}),
-      ...(Number.isFinite(parsedOccurredAt) ? { recapOccurredAt: parsedOccurredAt } : {}),
+      ...(effectiveTurnId ? { turnId: effectiveTurnId } : {}),
+      ...(Number.isFinite(parsedOccurredAt) ? { occurredAt: parsedOccurredAt } : {}),
       ...(typeof rawToolUseId === "string" && rawToolUseId ? { toolUseId: rawToolUseId } : {}),
       ...(key === "response_item:function_call" && payload && payload.name === "web_search"
-        ? { recapIsWebSearch: true }
+        ? { isWebSearch: true }
         : {}),
     };
 
@@ -1989,7 +1989,7 @@ class CodexLogMonitor {
     if (record.phase === "request") {
       record.activity = {
         turnId: turnExtra.turnId || null,
-        recapOccurredAt: turnExtra.recapOccurredAt ?? null,
+        occurredAt: turnExtra.occurredAt ?? null,
         userInputReplay: this._isUserInputReplay(tracked, turnExtra),
       };
       // #707 follow-up review round 4: the recovery sweep's own age cap only
@@ -2022,7 +2022,7 @@ class CodexLogMonitor {
         // Correlate to the original request, not a newer active turn that may
         // already have started before this output is drained from the file.
         turnId: request.activity && request.activity.turnId || null,
-        recapOccurredAt: turnExtra.recapOccurredAt ?? null,
+        occurredAt: turnExtra.occurredAt ?? null,
         userInputReplay: this._isUserInputReplay(tracked, turnExtra),
       });
     }
@@ -2031,8 +2031,8 @@ class CodexLogMonitor {
 
   _isUserInputReplay(tracked, extra) {
     return !!(tracked.backfilling || tracked.initializingUserInputs)
-      || !Number.isSafeInteger(extra.recapOccurredAt)
-      || extra.recapOccurredAt < this._startedAtMs - 1500;
+      || !Number.isSafeInteger(extra.occurredAt)
+      || extra.occurredAt < this._startedAtMs - 1500;
   }
 
   // Drop any request_user_input still open for this session because its

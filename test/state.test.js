@@ -3045,207 +3045,6 @@ describe("updateSession()", () => {
     });
   });
 
-  // Account quota is not session state: it lives in the session-independent
-  // per-source store (src/state-account-quota.js), fed via updateAccountQuota
-  // and exported as snapshot.accountQuota — the headline case is "check a
-  // remote's quota before starting work" when no session exists at all.
-  it("updateAccountQuota stores per-source quota with no session required", () => {
-    const resetAt = Date.now() + 3600000;
-    const applied = api.updateAccountQuota("pi", {
-      claudeQuota: {
-        claudeFiveHour: { usedPercent: 24, resetAt },
-        claudeWeekly: { usedPercent: 41 },
-      },
-    });
-
-    assert.strictEqual(applied, true);
-    assert.strictEqual(api.sessions.size, 0, "quota must never create sessions");
-    const { snapshot } = api.emitSessionSnapshot({ force: true });
-    assert.strictEqual(snapshot.accountQuota.length, 1);
-    const entry = snapshot.accountQuota[0];
-    assert.strictEqual(entry.host, "pi");
-    assert.deepStrictEqual(entry.claudeQuota.group, {
-      claudeFiveHour: { usedPercent: 24, resetAt, lastSeenAt: 0 },
-      claudeWeekly: { usedPercent: 41, lastSeenAt: 0 },
-    });
-    assert.ok(Number.isFinite(entry.claudeQuota.updatedAt));
-  });
-
-  it("updateAccountQuota keeps sources independent and sorts local first", () => {
-    const resetAt = Date.now() + 3600000;
-    api.updateAccountQuota("pi", { codexQuota: { codexWeekly: { usedPercent: 43, resetAt } } });
-    api.updateAccountQuota(null, { codexQuota: { codexWeekly: { usedPercent: 7, resetAt } } });
-
-    const { snapshot } = api.emitSessionSnapshot({ force: true });
-    assert.deepStrictEqual(snapshot.accountQuota.map((e) => e.host), [null, "pi"]);
-    assert.strictEqual(snapshot.accountQuota[0].codexQuota.group.codexWeekly.usedPercent, 7);
-    assert.strictEqual(snapshot.accountQuota[1].codexQuota.group.codexWeekly.usedPercent, 43);
-  });
-
-  it("clearLocalClaudeQuota removes local + WSL Claude only and broadcasts once", () => {
-    const broadcasts = [];
-    const localApi = require("../src/state")(makeCtx({
-      broadcastSessionSnapshot: (snapshot) => broadcasts.push(snapshot),
-    }));
-    const resetAt = Date.now() + 3600000;
-    localApi.updateAccountQuota(null, {
-      claudeQuota: { claudeWeekly: { usedPercent: 41, resetAt } },
-      codexQuota: { codexWeekly: { usedPercent: 7, resetAt } },
-    });
-    localApi.updateAccountQuota("wsl:Ubuntu", {
-      claudeQuota: { claudeWeekly: { usedPercent: 42, resetAt } },
-    });
-    localApi.updateAccountQuota("remote:ssh-work", {
-      displayHost: "workbox",
-      claudeQuota: { claudeWeekly: { usedPercent: 90, resetAt } },
-    });
-    const before = broadcasts.length;
-
-    assert.strictEqual(localApi.clearLocalClaudeQuota(), 2);
-    assert.strictEqual(broadcasts.length, before + 1);
-    const snapshot = broadcasts.at(-1).accountQuota;
-    const local = snapshot.find((entry) => entry.host === null);
-    assert.strictEqual(local.claudeQuota, undefined);
-    assert.strictEqual(local.codexQuota.group.codexWeekly.usedPercent, 7);
-    assert.strictEqual(snapshot.some((entry) => entry.host === "wsl:Ubuntu"), false,
-      "an empty WSL source should disappear");
-    assert.strictEqual(
-      snapshot.find((entry) => entry.host === "workbox").claudeQuota.group.claudeWeekly.usedPercent,
-      90,
-      "Remote SSH Claude quota must survive local opt-out"
-    );
-
-    assert.strictEqual(localApi.clearLocalClaudeQuota(), 0);
-    assert.strictEqual(broadcasts.length, before + 1, "no-op cleanup must not rebroadcast");
-    localApi.cleanup();
-  });
-
-  it("cleans persisted local Claude quota on startup when collection is disabled", () => {
-    const persistPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "clawd-aq-optout-")), "account-quota.json");
-    const { createAccountQuotaStore } = require("../src/state-account-quota");
-    const seed = createAccountQuotaStore({ persistPath });
-    const resetAt = Date.now() + 3600000;
-    seed.update(null, {
-      claudeQuota: { claudeWeekly: { usedPercent: 41, resetAt } },
-      codexQuota: { codexWeekly: { usedPercent: 7, resetAt } },
-    });
-    seed.update("remote:ssh-work", {
-      displayHost: "workbox",
-      claudeQuota: { claudeWeekly: { usedPercent: 90, resetAt } },
-    });
-    seed.flush();
-
-    const localApi = require("../src/state")(makeCtx({
-      accountQuotaPersistPath: persistPath,
-      claudeQuotaCollectionEnabled: false,
-    }));
-    const snapshot = localApi.buildSessionSnapshot().accountQuota;
-    assert.strictEqual(snapshot.find((entry) => entry.host === null).claudeQuota, undefined);
-    assert.strictEqual(snapshot.find((entry) => entry.host === null).codexQuota.group.codexWeekly.usedPercent, 7);
-    assert.strictEqual(snapshot.find((entry) => entry.host === "workbox").claudeQuota.group.claudeWeekly.usedPercent, 90);
-    localApi.cleanup();
-
-    const reloaded = createAccountQuotaStore({ persistPath }).snapshot();
-    assert.strictEqual(reloaded.find((entry) => entry.host === null).claudeQuota, undefined,
-      "startup cleanup must be persisted synchronously");
-    assert.strictEqual(reloaded.find((entry) => entry.host === "workbox").claudeQuota.group.claudeWeekly.usedPercent, 90);
-  });
-
-  it("updateAccountQuota change-detects identical refreshes (no re-broadcast, no re-stamp)", () => {
-    const broadcasts = [];
-    const localApi = require("../src/state")(makeCtx({
-      broadcastSessionSnapshot: (snapshot) => broadcasts.push(snapshot),
-    }));
-    const resetAt = Date.now() + 3600000;
-    localApi.updateAccountQuota(null, { claudeQuota: { claudeWeekly: { usedPercent: 41, resetAt } } });
-    const before = broadcasts.length;
-    assert.ok(before > 0, "first quota report must broadcast");
-    const stampBefore = localApi.getLastSessionSnapshot().accountQuota[0].claudeQuota.updatedAt;
-
-    const applied = localApi.updateAccountQuota(null, {
-      claudeQuota: { claudeWeekly: { usedPercent: 41, resetAt } },
-    });
-
-    assert.strictEqual(applied, false);
-    assert.strictEqual(broadcasts.length, before, "identical refresh must not re-broadcast");
-    assert.strictEqual(
-      localApi.getLastSessionSnapshot().accountQuota[0].claudeQuota.updatedAt,
-      stampBefore,
-      "identical refresh must not look fresher"
-    );
-  });
-
-  it("broadcasts consecutive Spark-only quota changes for the same source", () => {
-    const broadcasts = [];
-    const localApi = require("../src/state")(makeCtx({
-      broadcastSessionSnapshot: (snapshot) => broadcasts.push(snapshot),
-    }));
-    const resetAt = Date.now() + 3600000;
-    localApi.updateAccountQuota(null, {
-      codexSparkQuota: {
-        codexWeekly: { usedPercent: 7, windowMinutes: 10080, resetAt },
-      },
-    });
-    const afterFirst = broadcasts.length;
-    assert.ok(afterFirst > 0, "first Spark report must broadcast");
-
-    localApi.updateAccountQuota(null, {
-      codexSparkQuota: {
-        codexWeekly: { usedPercent: 9, windowMinutes: 10080, resetAt },
-      },
-    });
-    assert.strictEqual(broadcasts.length, afterFirst + 1);
-    assert.strictEqual(
-      broadcasts.at(-1).accountQuota[0].codexSparkQuota.group.codexWeekly.usedPercent,
-      9
-    );
-    localApi.cleanup();
-  });
-
-  it("updateAccountQuota drops invalid groups", () => {
-    const applied = api.updateAccountQuota("pi", {
-      claudeQuota: { claudeFiveHour: { usedPercent: "not-a-number" } },
-    });
-
-    assert.strictEqual(applied, false);
-    const { snapshot } = api.emitSessionSnapshot({ force: true });
-    assert.deepStrictEqual(snapshot.accountQuota, []);
-  });
-
-  it("cleanup flushes pending account-quota writes to disk (before-quit path)", () => {
-    const persistPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "clawd-aq-")), "account-quota.json");
-    const localApi = require("../src/state")(makeCtx({ accountQuotaPersistPath: persistPath }));
-    localApi.updateAccountQuota("pi", {
-      claudeQuota: { claudeWeekly: { usedPercent: 41, resetAt: Date.now() + 3600000 } },
-    });
-    // The persist debounce has not fired yet — before-quit cleanup must not
-    // lose the final window of updates.
-    localApi.cleanup();
-
-    const persisted = JSON.parse(fs.readFileSync(persistPath, "utf8"));
-    assert.strictEqual(persisted.sources.length, 1);
-    assert.strictEqual(persisted.sources[0].host, "pi");
-  });
-
-  it("rejects incoming buckets whose resetAt already passed, keeps live siblings", () => {
-    api.updateAccountQuota(null, {
-      claudeQuota: {
-        // Already expired at write time: the number is wrong, not stale —
-        // the store refuses it outright. (Buckets that expire AFTER being
-        // stored are flagged instead; covered with a mocked clock in
-        // test/state-account-quota.test.js.)
-        claudeFiveHour: { usedPercent: 80, resetAt: Date.now() - 60000 },
-        claudeWeekly: { usedPercent: 41, resetAt: Date.now() + 3600000 },
-      },
-    });
-
-    const { snapshot } = api.emitSessionSnapshot({ force: true });
-    const group = snapshot.accountQuota[0].claudeQuota.group;
-    assert.strictEqual(group.claudeFiveHour, undefined);
-    assert.strictEqual(group.claudeWeekly.expired, undefined);
-    assert.strictEqual(group.claudeWeekly.usedPercent, 41);
-  });
-
   it("touchSessionActivity refreshes only a matching existing session and can revive proven work", () => {
     update(api, {
       id: "codex:s1",
@@ -3821,11 +3620,7 @@ describe("buildSessionSnapshot", () => {
     const snapshot = api.buildSessionSnapshot();
     // Icon URLs are absolute file:// paths (machine-dependent) — assert the
     // shape, then compare the rest exactly.
-    const { quotaAgentIcons, ...rest } = snapshot;
-    assert.deepStrictEqual(Object.keys(quotaAgentIcons).sort(), [
-      "claudeQuota", "codexQuota",
-    ]);
-    assert.deepStrictEqual(rest, {
+    assert.deepStrictEqual(snapshot, {
       sessions: [],
       groups: [],
       orderedIds: [],
@@ -3835,7 +3630,6 @@ describe("buildSessionSnapshot", () => {
       hudLastTitle: null,
       lastSessionId: null,
       lastTitle: null,
-      accountQuota: [],
       sessionAutomationOrphans: [],
     });
     assert.doesNotThrow(() => JSON.stringify(snapshot));
@@ -5662,41 +5456,30 @@ describe("DND mode", () => {
     assert.strictEqual(api.getCurrentState(), "collapsing");
   });
 
-  it("DND preserves pending completion arbitration and records it without sound", () => {
-    const { createMemoryRecapSink } = require("../src/recap-sink");
-    const recapSink = createMemoryRecapSink();
+  it("DND preserves pending completion arbitration without sound", () => {
     const sounds = [];
     api.cleanup();
-    ctx = makeCtx({ recapSink, playSound: (name) => sounds.push(name) });
+    ctx = makeCtx({ playSound: (name) => sounds.push(name) });
     api = require("../src/state")(ctx);
 
     update(api, { event: "UserPromptSubmit", state: "thinking", headless: true });
-    recapSink.clear();
     update(api, {
       event: "Stop",
       state: "attention",
       headless: true,
       assistantLastOutput: "done",
-      recapOccurredAt: 123456,
     });
-    assert.deepStrictEqual(recapSink.snapshot(), []);
 
     api.enableDoNotDisturb();
     mock.timers.tick(2000);
 
-    assert.deepStrictEqual(recapSink.snapshot().map((event) => event.metrics), [
-      ["activity", "turn-complete"],
-    ]);
-    assert.strictEqual(recapSink.snapshot()[0].occurredAt, 123456);
-    assert.notStrictEqual(api.getLastSessionSnapshot().sessions[0].lastEvent.at, 123456);
+    assert.strictEqual(api.getLastSessionSnapshot().sessions[0].badge, "done");
     assert.deepStrictEqual(sounds, []);
     assert.strictEqual(ctx.doNotDisturb, true);
     assert.strictEqual(api.getCurrentState(), "yawning");
   });
 
-  it("DND preserves Claude transcript completion fallback and records it without sound", () => {
-    const { createMemoryRecapSink } = require("../src/recap-sink");
-    const recapSink = createMemoryRecapSink();
+  it("DND preserves the Claude transcript completion fallback without sound", () => {
     const sounds = [];
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-claude-dnd-fallback-"));
     const transcript = path.join(dir, "transcript.jsonl");
@@ -5708,7 +5491,7 @@ describe("DND mode", () => {
     ].join("\n") + "\n");
 
     api.cleanup();
-    ctx = makeCtx({ recapSink, playSound: (name) => sounds.push(name) });
+    ctx = makeCtx({ playSound: (name) => sounds.push(name) });
     api = require("../src/state")(ctx);
     update(api, {
       id: sessionId,
@@ -5718,7 +5501,6 @@ describe("DND mode", () => {
       toolName: "AskUserQuestion",
       transcriptPath: transcript,
     });
-    recapSink.clear();
     api.enableDoNotDisturb();
     fs.appendFileSync(transcript, JSON.stringify({
       type: "assistant",
@@ -5728,9 +5510,6 @@ describe("DND mode", () => {
     mock.timers.tick(2000);
 
     assert.strictEqual(api.deriveSessionBadge(api.sessions.get(sessionId)), "done");
-    assert.deepStrictEqual(recapSink.snapshot().map((event) => event.metrics), [
-      ["activity", "turn-complete"],
-    ]);
     assert.deepStrictEqual(sounds, []);
     assert.strictEqual(ctx.doNotDisturb, true);
     assert.strictEqual(api.getCurrentState(), "yawning");

@@ -35,9 +35,6 @@ const {
 } = require("./server-agent-id");
 const { resolveCodexOfficialHookState } = require("./server-codex-official-turns");
 const { normalizeTranscriptPath } = require("./transcript-path");
-const { normalizeQuotaGroup } = require("../hooks/quota-bucket");
-const { CLAUDE_QUOTA_FIELDS } = require("../hooks/claude-rate-limits");
-const { CODEX_QUOTA_FIELDS } = require("../hooks/codex-rate-limits");
 const { normalizeCodexUserInputWire } = require("../hooks/codex-user-input");
 const { sanitizeShadowRecord } = require("./windows-process-chain-shadow-log");
 
@@ -144,16 +141,6 @@ function resolveStateContextUsageOrigin(agentId, contextUsage) {
   if (agentId === "claude-code" && contextUsage.source === "claude") return "claude-transcript";
   if (OPENCODE_FAMILY_AGENT_IDS.has(agentId) && contextUsage.source === "opencode") return "opencode-statusline";
   return null;
-}
-
-// Account-wide rate-limit quota. Re-validated here rather than trusted from
-// the hook, matching normalizeContextUsage.
-function normalizeClaudeQuota(value) {
-  return normalizeQuotaGroup(value, CLAUDE_QUOTA_FIELDS);
-}
-
-function normalizeCodexQuota(value) {
-  return normalizeQuotaGroup(value, CODEX_QUOTA_FIELDS);
 }
 
 function sendStateHealthResponse(res, options) {
@@ -310,10 +297,6 @@ function handleStatePost(req, res, options) {
         || data.session_start_source === "clear"
         || data.session_start_source === "compact"
       ) ? data.session_start_source : null;
-      // Closed provenance used only by recap metric mapping. Never forward a
-      // free-form upstream event name into state, snapshots or future storage.
-      const recapBoundary = null;
-      const recapIsSubagent = false;
       // #583: hook-reported stdin diagnostics, attached only when the hook's
       // stdin payload carried no session_id. Normalized here so state.js can
       // log it without trusting hook-side shapes.
@@ -339,9 +322,6 @@ function handleStatePost(req, res, options) {
       const rawTitle = typeof data.session_title === "string" ? data.session_title.trim() : "";
       const sessionTitle = rawTitle || null;
       const contextUsage = normalizeContextUsage(data.context_usage);
-      const claudeQuota = normalizeClaudeQuota(data.claude_quota);
-      const codexQuota = normalizeCodexQuota(data.codex_quota);
-      const codexSparkQuota = normalizeCodexQuota(data.codex_spark_quota);
       const assistantLastOutput = normalizeAssistantLastOutput(data.assistant_last_output);
       const assistantLastOutputTruncated = data.assistant_last_output_truncated === true;
       const transcriptPath = normalizeTranscriptPath(data.transcript_path);
@@ -352,7 +332,7 @@ function handleStatePost(req, res, options) {
         && (data.test_result === "pass" || data.test_result === "fail")
       ) ? data.test_result : null;
       // Statusline refresh POSTs are metadata, not lifecycle (#590 B2): they
-      // may only annotate an existing session with quota/context and must
+      // may only annotate an existing session with context usage and must
       // never create one, touch recentEvents, or bump updatedAt. state.js
       // updateSessionMetadata owns those guarantees; this flag just routes
       // around the full updateSession lifecycle machine.
@@ -388,26 +368,6 @@ function handleStatePost(req, res, options) {
       const localClaudeStatuslineMetadataAllowed = agentId !== "claude-code"
         || trustedProfileId !== "local"
         || isClaudeStatuslineMetadataAllowed() === true;
-      // Account quota goes to the session-independent per-source store,
-      // regardless of POST shape — it must survive with no live session at
-      // all ("check the remote's quota before starting work"), so it is
-      // never gated on the session lookup that contextUsage annotation
-      // performs. The source is the reporting host (null = this machine).
-      // `host` is client-supplied and cannot be origin-verified (every
-      // remote's reverse tunnel lands on the same local port) — same trust
-      // model as the session cards' host grouping: machines the user
-      // deployed Clawd hooks to. The store shape-sanitizes the label.
-      const acceptedClaudeQuota = localClaudeStatuslineMetadataAllowed ? claudeQuota : null;
-      if (typeof ctx.updateAccountQuota === "function"
-        && (acceptedClaudeQuota || codexQuota || codexSparkQuota)) {
-        const quotaSource = trustedProfileId === "local" ? host : `remote:${trustedProfileId}`;
-        ctx.updateAccountQuota(quotaSource, {
-          claudeQuota: acceptedClaudeQuota,
-          codexQuota,
-          ...(codexSparkQuota ? { codexSparkQuota } : {}),
-          ...(trustedProfileId === "local" ? {} : { displayHost: host }),
-        });
-      }
       if (agentId === "codex" && codexUserInput) {
         const sid = session_id || "default";
         if (codexUserInput.phase === "resolved") {
@@ -795,8 +755,6 @@ function handleStatePost(req, res, options) {
             ...(subagentType ? { subagentType } : {}),
             ...(subagentLifecycleSource ? { subagentLifecycleSource } : {}),
             ...(sessionStartSource ? { sessionStartSource } : {}),
-            ...(recapBoundary ? { recapBoundary } : {}),
-            ...((recapIsSubagent || codexHookState.headless === true) ? { recapIsSubagent: true } : {}),
             profileId: sessionIdentity.profileId,
             rawSessionId: sessionIdentity.rawSessionId,
             host,
@@ -815,12 +773,10 @@ function handleStatePost(req, res, options) {
             assistantLastOutput,
             assistantLastOutputTruncated,
             toolName,
-            ...(toolUseId ? { toolUseId } : {}),
             transcriptPath,
             preserveState,
             hookSource,
             ...(codexHookState.turnId ? { turnId: codexHookState.turnId } : {}),
-            ...(codexHookState.turnId ? { recapDedupeId: codexHookState.turnId } : {}),
             backgroundTasksCount,
             ...(backgroundSubagentsCount !== null ? { backgroundSubagentsCount } : {}),
             sessionCronsCount,

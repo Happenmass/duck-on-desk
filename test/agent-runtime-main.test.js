@@ -257,14 +257,14 @@ describe("agent-runtime-main", () => {
       sourcePid: 42,
       agentPid: 42,
       turnId: "live-question-turn",
-      recapOccurredAt: Date.now(),
+      occurredAt: Date.now(),
       headless: false,
       contextUsage: { used: 10, limit: 100, percent: 10, source: "codex" },
     };
 
     monitor.options.onUserInputRequest("codex:s1", request, extra);
     monitor.options.onUserInputResolved("codex:s1", "call_1", {
-      source: "function-call-output", turnId: extra.turnId, recapOccurredAt: extra.recapOccurredAt,
+      source: "function-call-output", turnId: extra.turnId, occurredAt: extra.occurredAt,
     });
 
     const expectedTouch = [
@@ -291,7 +291,6 @@ describe("agent-runtime-main", () => {
     assert.strictEqual(calls[2][4].profileId, "local");
     assert.strictEqual(calls[2][4].rawSessionId, "codex:s1");
     assert.strictEqual(calls[2][4].transientPermissionEvent, true);
-    assert.strictEqual(calls[2][4].recapSuppressed, true);
     assert.deepStrictEqual(calls[3], expectedTouch);
     assert.deepStrictEqual(calls[4], [
       "clear",
@@ -356,10 +355,9 @@ describe("agent-runtime-main", () => {
     ]]);
   });
 
-  it("routes JSONL generic and Spark quota to the account store, never updateSession opts", () => {
+  it("routes token_count context usage to session metadata, never updateSession opts", () => {
     const instances = [];
     const calls = [];
-    const quotaCalls = [];
     const metadataCalls = [];
     const FakeMonitor = makeFakeMonitorClass(instances);
     const runtime = createAgentRuntimeMain({
@@ -369,46 +367,24 @@ describe("agent-runtime-main", () => {
       updateSession: (...args) => calls.push(["update", ...args]),
       clearCodexNotifyBubbles: (...args) => calls.push(["clear", ...args]),
       getStateRuntime: () => ({
-        updateAccountQuota: (...args) => quotaCalls.push(args),
         updateSessionMetadata: (...args) => metadataCalls.push(args),
       }),
       codexSubagentClassifier: {},
     });
     const monitor = runtime.startCodexLogMonitor();
 
-    const codexQuota = {
-      codexFiveHour: { usedPercent: 1, resetAt: 1783669570000 },
-      codexWeekly: { usedPercent: 43, resetAt: 1784256370000 },
-    };
-    const codexSparkQuota = {
-      codexWeekly: { usedPercent: 7, resetAt: 1784256370000 },
-    };
     monitor.emit("codex:abc", "working", "event_msg:token_count", {
       cwd: "D:\\repo",
       contextUsage: { used: 23959, limit: 258400, percent: 9, source: "codex" },
-      codexQuota,
-      codexSparkQuota,
     });
-    // Quota-only refresh (no contextUsage): must not enter the updateSession
-    // lifecycle machine at all, only feed the store.
-    monitor.emit("codex:abc", "working", "event_msg:token_count", { codexSparkQuota });
 
-    // updateSession must never see account quota in its opts.
-    for (const call of calls) {
-      if (call[0] !== "update") continue;
-      assert.strictEqual(Object.prototype.hasOwnProperty.call(call[4], "codexQuota"), false);
-      assert.strictEqual(Object.prototype.hasOwnProperty.call(call[4], "codexSparkQuota"), false);
-    }
+    // A context-usage refresh is metadata: it must not enter the updateSession
+    // lifecycle machine at all.
     assert.strictEqual(calls.filter((c) => c[0] === "update").length, 0);
     assert.deepStrictEqual(metadataCalls, [[
       localSessionKey("codex:abc"),
       { contextUsage: { used: 23959, limit: 258400, percent: 9, source: "codex" } },
     ]]);
-    // Local monitor reports as the local source (null host).
-    assert.deepStrictEqual(quotaCalls, [
-      [null, { codexQuota, codexSparkQuota }],
-      [null, { codexSparkQuota }],
-    ]);
   });
 
   it("captures Ghostty terminal id for foreground session-start events", () => {
@@ -484,8 +460,6 @@ describe("agent-runtime-main", () => {
         cwd: "D:\\repo",
         agentId: "codex",
         sessionTitle: "Run tests",
-        recapIsSubagent: true,
-        recapSuppressed: true,
         headless: true,
         profileId: "local",
         rawSessionId: "sid",
@@ -493,19 +467,16 @@ describe("agent-runtime-main", () => {
     ]);
   });
 
-  it("records late WebSearch boundaries without reviving an officially completed turn", () => {
+  it("keeps late WebSearch boundaries from reviving an officially completed turn", () => {
     const instances = [];
     const updates = [];
-    const recapOnly = [];
     const FakeMonitor = makeFakeMonitorClass(instances);
     const runtime = createAgentRuntimeMain({
       loadCodexLogMonitor: () => FakeMonitor,
       loadCodexAgent: () => ({ id: "codex" }),
       codexSubagentClassifier: {},
       isAgentEnabled: (agentId) => agentId === "codex",
-      getStateRuntime: () => ({
-        recordRecapEventOnly: (input) => { recapOnly.push(input); return true; },
-      }),
+      getStateRuntime: () => ({}),
       updateSession: (...args) => updates.push(args),
     });
     const monitor = runtime.startCodexLogMonitor();
@@ -522,64 +493,22 @@ describe("agent-runtime-main", () => {
 
     monitor.emit("sid", "working", "response_item:function_call", {
       turnId: "turn-web",
-      recapOccurredAt: 1234,
-      recapIsWebSearch: true,
-      toolUseId: "search-1",
+      occurredAt: 1234,
+      isWebSearch: true,
     });
     monitor.emit("sid", "working", "response_item:web_search_call", {
       turnId: "turn-web",
-      recapOccurredAt: 1235,
-      toolUseId: "search-1",
+      occurredAt: 1235,
     });
     monitor.emit("sid", "working", "response_item:function_call", {
       turnId: "turn-web",
-      recapOccurredAt: 1236,
-      toolUseId: "shell-1",
-    });
-
-    const idlessSessionId = localSessionKey("sid-idless");
-    const idlessOfficialOptions = {
-      agentId: "codex",
-      hookSource: "codex-official",
-      profileId: "local",
-      rawSessionId: "sid-idless",
-      turnId: null,
-    };
-    runtime.updateSessionFromServer(
-      idlessSessionId,
-      "thinking",
-      "UserPromptSubmit",
-      idlessOfficialOptions
-    );
-    runtime.updateSessionFromServer(
-      idlessSessionId,
-      "attention",
-      "Stop",
-      idlessOfficialOptions
-    );
-    monitor.emit("sid-idless", "working", "response_item:function_call", {
-      recapOccurredAt: 2234,
-      recapIsWebSearch: true,
-      toolUseId: "search-idless",
-    });
-    monitor.emit("sid-idless", "working", "response_item:web_search_call", {
-      recapOccurredAt: 2235,
-      toolUseId: "search-idless",
+      occurredAt: 1236,
     });
 
     assert.deepStrictEqual(updates.map((call) => call[2]), [
       "UserPromptSubmit",
       "Stop",
-      "UserPromptSubmit",
-      "Stop",
     ]);
-    assert.deepStrictEqual(recapOnly.map((input) => [input.event, input.toolUseId]), [
-      ["response_item:function_call", "search-1"],
-      ["response_item:web_search_call", "search-1"],
-      ["response_item:function_call", "search-idless"],
-      ["response_item:web_search_call", "search-idless"],
-    ]);
-    assert.ok(recapOnly.every((input) => !Object.hasOwn(input, "recapIsWebSearch")));
   });
 
   it("shares canonical classifier identity from local JSONL to official hooks without leaking to remote profiles", () => {
@@ -867,7 +796,6 @@ describe("agent-runtime-main", () => {
         cwd: "D:\\repo",
         agentId: "codex",
         sessionTitle: "Codex turn",
-        recapSuppressed: true,
         headless: false,
         profileId: "local",
         rawSessionId: "codex:s1",

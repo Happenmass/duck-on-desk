@@ -19,15 +19,9 @@
     "sessionHudShowStateLabels",
     "sessionHudShowElapsed",
     "sessionHudShowContextUsage",
-    "sessionHudShowQuota",
-    "quotaRingDisplayMode",
     "permissionAutomationMode",
     "permissionAutomationAutoToolsWarningDismissed",
     "permissionAutomationUnattendedWarningDismissed",
-    // claudeQuotaCollectionEnabled is deliberately absent: the switch moved to
-    // the Claude card on the Agents tab, so General has nothing mounted to
-    // patch and must fall through to a full re-render.
-    "quotaMergeSources",
     "sessionHudCleanupDetached",
     "allowEdgePinning",
     "disableMiniMode",
@@ -472,7 +466,6 @@
     subtitle.className = "subtitle";
     subtitle.textContent = t("settingsSubtitle");
     parent.appendChild(subtitle);
-    parent.appendChild(buildTutorialReplayHint());
 
     // General tab IA: sections are ordered by how often they're touched, with
     // the danger section pinned last. Appearance stays first (language sits at
@@ -487,7 +480,6 @@
 
     parent.appendChild(helpers.buildSection(t("sectionSession"), [
       buildSessionHudGroup(),
-      buildQuotaRingGroup(),
       buildSessionCleanupGroup(),
       buildDashboardRow(),
     ]));
@@ -577,36 +569,6 @@
     parent.appendChild(helpers.buildSection(t("sectionPermissions"), [
       buildPermissionAutomationRow(),
     ]));
-  }
-
-  function buildTutorialReplayHint() {
-    const wrap = document.createElement("p");
-    wrap.className = "general-tutorial-hint";
-
-    const button = document.createElement("button");
-    button.className = "general-tutorial-link";
-    button.type = "button";
-    button.textContent = t("settingsTutorialReplayLink");
-    button.addEventListener("click", () => {
-      if (!window.settingsAPI || typeof window.settingsAPI.showTutorial !== "function") return;
-      button.disabled = true;
-      window.settingsAPI.showTutorial()
-        .then((result) => {
-          if (!result || result.status !== "ok") {
-            throw new Error((result && result.message) || t("settingsTutorialReplayFailed"));
-          }
-        })
-        .catch((err) => {
-          const message = t("settingsTutorialReplayFailed") + (err && err.message ? ": " + err.message : "");
-          ops.showToast(message, { ttl: 5000 });
-        })
-        .finally(() => {
-          button.disabled = false;
-        });
-    });
-
-    wrap.appendChild(button);
-    return wrap;
   }
 
   function readPermissionAutomationMode() {
@@ -834,221 +796,6 @@
       className: "session-hud-collapsible",
       children: [buildSessionHudOptionsList(sessionHudControlsEnabled)],
     });
-  }
-
-  // The quota ring is a sibling of the Session HUD under "Session management",
-  // not a child of it: its switches are never gated by the HUD master, so the
-  // ring can be used with the Session HUD turned off (and vice versa).
-  //
-  // This group answers ONE question: what does the ring look like. Collection
-  // ("should this provider be read at all") lives on each provider's own card
-  // under Agents, so "which providers am I reading" has one place to look.
-  // Keep it that way: a new provider's collection switch goes on its card.
-  function buildQuotaRingGroup() {
-    const enabledRow = helpers.buildSwitchRow({
-      key: "sessionHudShowQuota",
-      labelKey: "rowQuotaRingEnabled",
-      descKey: "rowQuotaRingEnabledDesc",
-    });
-    const mergeRow = helpers.buildSwitchRow({
-      key: "quotaMergeSources",
-      labelKey: "rowQuotaMergeSources",
-      descKey: "rowQuotaMergeSourcesDesc",
-    });
-    const displayModeRow = buildQuotaRingDisplayModeRow();
-    const providersBlock = buildQuotaRingProvidersBlock();
-    // "Merge across machines" only matters with more than one reporting source
-    // (WSL / SSH remotes). Hidden by default so single-machine users never see
-    // a confusing no-op switch; revealed once multiple sources are confirmed.
-    mergeRow.style.display = state.snapshot && state.snapshot.quotaMergeSources === true
-      ? ""
-      : "none";
-    const optionList = buildOptionList("quota-ring-option-list", [
-      enabledRow,
-      displayModeRow,
-      providersBlock.element,
-      mergeRow,
-    ]);
-    const group = helpers.buildCollapsibleGroup({
-      id: "general:quota-ring",
-      title: t("rowQuotaRingGroup"),
-      desc: t("rowQuotaRingGroupDesc"),
-      defaultCollapsed: true,
-      className: "quota-ring-collapsible",
-      children: [optionList],
-    });
-    if (window.settingsAPI && typeof window.settingsAPI.getQuotaSourceCount === "function") {
-      Promise.resolve(window.settingsAPI.getQuotaSourceCount())
-        .then((count) => {
-          if (Number(count) <= 1) return;
-          const revealMergeRow = () => {
-            mergeRow.style.display = "";
-            return mergeRow;
-          };
-          if (typeof group.mutateCollapsibleBody === "function") {
-            group.mutateCollapsibleBody(revealMergeRow);
-          } else {
-            revealMergeRow();
-          }
-        })
-        .catch(() => {});
-    }
-    providersBlock.load(group);
-    return group;
-  }
-
-  // Per-provider visibility for the pet-side cluster. This is display-only —
-  // collection stays on each provider's Agents card and the Dashboard keeps
-  // showing everything — because the cluster caps at four coins and the
-  // renderer simply takes the first four in provider order, so without this the
-  // user has no say over WHICH four survive. With remotes the count is sources
-  // × providers, which is where it stops being theoretical.
-  //
-  // The list is built from providers that actually report, so a fresh install
-  // sees nothing here rather than four checkboxes for things it never
-  // connected — the same rule that hides "merge across machines" on one machine.
-  function buildQuotaRingProvidersBlock() {
-    const element = document.createElement("div");
-    element.className = "quota-ring-providers";
-    element.style.display = "none";
-
-    const head = document.createElement("div");
-    head.className = "row quota-ring-providers-head";
-    const headText = document.createElement("div");
-    headText.className = "row-text";
-    const headLabel = document.createElement("span");
-    headLabel.className = "row-label";
-    headLabel.textContent = t("rowQuotaRingProviders");
-    const headDesc = document.createElement("span");
-    headDesc.className = "row-desc";
-    headDesc.textContent = t("rowQuotaRingProvidersDesc");
-    headText.append(headLabel, headDesc);
-    head.appendChild(headText);
-    element.appendChild(head);
-
-    function hiddenList() {
-      const raw = state.snapshot && state.snapshot.quotaRingHiddenProviders;
-      return Array.isArray(raw) ? raw.filter((key) => typeof key === "string" && key) : [];
-    }
-
-    function buildProviderRow(provider) {
-      const row = document.createElement("div");
-      row.className = "row row-sub quota-ring-provider-row";
-      row.dataset.providerKey = provider.key;
-      const text = document.createElement("div");
-      text.className = "row-text";
-      const label = document.createElement("span");
-      label.className = "row-label";
-      // Brand name, deliberately not translated — it identifies the provider.
-      label.textContent = provider.label || provider.key;
-      text.appendChild(label);
-      const control = document.createElement("div");
-      control.className = "row-control";
-      const sw = document.createElement("div");
-      sw.className = "switch";
-      sw.setAttribute("role", "switch");
-      sw.tabIndex = 0;
-      // ON means "shown", so the switch reads the way the label does. The pref
-      // stores the inverse (what is HIDDEN) — see prefs.js for why.
-      let shown = !hiddenList().includes(provider.key);
-      helpers.setSwitchVisual(sw, shown);
-      sw.setAttribute("aria-label", provider.label || provider.key);
-      control.appendChild(sw);
-      row.append(text, control);
-
-      helpers.attachActivation(sw, () => {
-        const next = !shown;
-        // Optimistic: the broadcast that confirms this rebuilds the tab, and
-        // leaving the switch stale until then reads as an ignored click.
-        shown = next;
-        helpers.setSwitchVisual(sw, shown, { pending: true });
-        const hidden = hiddenList().filter((key) => key !== provider.key);
-        if (!next) hidden.push(provider.key);
-        return Promise.resolve(
-          window.settingsAPI.update("quotaRingHiddenProviders", hidden)
-        ).catch(() => {
-          shown = !next;
-          helpers.setSwitchVisual(sw, shown);
-        });
-      });
-      return row;
-    }
-
-    function load(group) {
-      const api = window.settingsAPI;
-      if (!api || typeof api.getQuotaRingProviders !== "function") return;
-      Promise.resolve(api.getQuotaRingProviders())
-        .then((providers) => {
-          const list = Array.isArray(providers) ? providers : [];
-          // One connected provider cannot crowd anything out, so the control
-          // would be a no-op switch — the same reason merge stays hidden.
-          if (list.length <= 1) return;
-          const reveal = () => {
-            for (const provider of list) {
-              if (!provider || typeof provider.key !== "string") continue;
-              element.appendChild(buildProviderRow(provider));
-            }
-            element.style.display = "";
-            return element;
-          };
-          if (group && typeof group.mutateCollapsibleBody === "function") {
-            group.mutateCollapsibleBody(reveal);
-          } else {
-            reveal();
-          }
-        })
-        .catch(() => {});
-    }
-
-    return { element, load };
-  }
-
-  function buildQuotaRingDisplayModeRow() {
-    const row = document.createElement("div");
-    row.className = "row quota-ring-display-mode-row";
-
-    const text = document.createElement("div");
-    text.className = "row-text";
-    const label = document.createElement("span");
-    label.className = "row-label";
-    label.textContent = t("rowQuotaRingDisplayMode");
-    const desc = document.createElement("span");
-    desc.className = "row-desc";
-    desc.textContent = t("rowQuotaRingDisplayModeDesc");
-    text.append(label, desc);
-
-    const controlWrap = document.createElement("div");
-    controlWrap.className = "row-control";
-    const control = helpers.buildSegmentedRadio({
-      value: state.snapshot && state.snapshot.quotaRingDisplayMode,
-      ariaLabel: t("rowQuotaRingDisplayMode"),
-      className: "quota-ring-display-mode-choice",
-      options: [
-        { value: "used", label: t("quotaRingDisplayUsed") },
-        { value: "remaining", label: t("quotaRingDisplayRemaining") },
-      ],
-      onChange: (next) => {
-        if (!window.settingsAPI || typeof window.settingsAPI.update !== "function") {
-          ops.showToast(t("toastSaveFailed") + "settings API unavailable", { error: true });
-          return false;
-        }
-        return Promise.resolve()
-          .then(() => window.settingsAPI.update("quotaRingDisplayMode", next))
-          .then((result) => {
-            if (result && result.status === "ok") return true;
-            ops.showToast(t("toastSaveFailed") + ((result && result.message) || "unknown error"), { error: true });
-            return false;
-          })
-          .catch((err) => {
-            ops.showToast(t("toastSaveFailed") + (err && err.message), { error: true });
-            return false;
-          });
-      },
-    });
-    controlWrap.appendChild(control.element);
-    row.append(text, controlWrap);
-    state.mountedControls.quotaRingDisplayMode = control;
-    return row;
   }
 
   function buildOptionList(className, rows) {
@@ -2370,10 +2117,6 @@
       && !getMountedRoamMovementStyle()) {
       return false;
     }
-    if (keys.includes("quotaRingDisplayMode")) {
-      const control = state.mountedControls.quotaRingDisplayMode;
-      if (!control || !document.body.contains(control.element)) return false;
-    }
     if (keys.includes("permissionAutomationMode")) {
       const control = state.mountedControls.permissionAutomationMode;
       if (!control || !document.body.contains(control.element)) return false;
@@ -2402,7 +2145,6 @@
     }
     for (const key of keys) {
       if (key === "size" || key === "soundVolume" || key === "textScale" || key === "textScaleByDisplay") continue;
-      if (key === "quotaRingDisplayMode") continue;
       if (key === "permissionAutomationMode"
         || key === "permissionAutomationAutoToolsWarningDismissed"
         || key === "permissionAutomationUnattendedWarningDismissed") continue;
@@ -2420,12 +2162,6 @@
     }
     for (const key of keys) {
       if (key === "size") continue;
-      if (key === "quotaRingDisplayMode") {
-        state.mountedControls.quotaRingDisplayMode.setValue(
-          state.snapshot && state.snapshot.quotaRingDisplayMode
-        );
-        continue;
-      }
       if (key === "permissionAutomationMode") {
         state.mountedControls.permissionAutomationMode.syncFromSnapshot();
         continue;

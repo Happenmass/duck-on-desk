@@ -125,10 +125,6 @@ const SCHEMA = {
   // Pure data prefs
   lang: { type: "string", default: "en", enum: ["en", "zh", "zh-TW", "ko", "ja", "pt-BR", "es"] },
   showTray: { type: "boolean", default: true },
-  // Local activity recap is enabled by default for both fresh installs and
-  // upgrades. It stores only bounded aggregate/ticket data under ~/.clawd;
-  // there is no network export and the user can disable or clear it later.
-  recapEnabled: { type: "boolean", default: true },
   // Default off (macOS): a fresh install runs as an accessory/agent app — pet +
   // menu-bar icon, no Dock tile. Existing users keep their Dock — a persisted
   // showDock is kept (save() bakes the full snapshot), and the v11->v12 migration
@@ -167,27 +163,12 @@ const SCHEMA = {
   sessionHudShowStateLabels: { type: "boolean", default: true },
   sessionHudShowElapsed: { type: "boolean", default: false },
   sessionHudShowContextUsage: { type: "boolean", default: true },
-  sessionHudShowQuota: { type: "boolean", default: true },
-  // Preserve the historical used-percentage presentation for existing users;
-  // remaining is a display-only choice and never changes stored quota data.
-  quotaRingDisplayMode: { type: "string", default: "used", enum: ["used", "remaining"] },
-  // Empty by default, i.e. every connected provider draws — matching the
-  // behaviour before this preference existed. Storing what is HIDDEN rather
-  // than what is shown is the reason a newly connected provider appears on its
-  // own: an allow-list would leave it silently absent after the user pasted a
-  // key, which reads as a broken integration rather than a default.
-  quotaRingHiddenProviders: {
-    type: "array",
-    defaultFactory: () => [],
-    normalize: normalizeQuotaRingHiddenProviders,
-  },
   // Claude Code exposes the reported context window and subscription limits
   // through its visible, single-slot statusline. The historical key name is
   // retained for compatibility, but it authorizes the whole local Claude
   // statusline metadata stream. Keep it opt-in so a fresh Clawd install never
   // changes the user's terminal UI without an explicit choice.
   claudeQuotaCollectionEnabled: { type: "boolean", default: false },
-  quotaMergeSources: { type: "boolean", default: false },
   sessionHudCleanupDetached: { type: "boolean", default: true },
   sessionHudPinned: { type: "boolean", default: false },
   // Stale-cleanup intervals (ms). Defaults match the historical constants in
@@ -274,7 +255,6 @@ const SCHEMA = {
   // The hook sends only pass/fail, never the command or full test output.
   testReactionsEnabled: { type: "boolean", default: false },
   lowPowerIdleMode: { type: "boolean", default: false },
-  mobilePreviewEnabled: { type: "boolean", default: false },
   // When true, prevent the OS from sleeping while any agent task is in
   // progress (working/thinking/etc.); allow sleep again once tasks finish.
   keepAwakeWhileWorking: { type: "boolean", default: false },
@@ -444,15 +424,6 @@ const SCHEMA = {
     defaultFactory: () => ({}),
     normalize: normalizeDismissedUpdateVersions,
   },
-  // First-run tutorial gate: false until the user has seen (completed OR skipped)
-  // the onboarding tutorial once, then true forever. Persisted (NOT ephemeral),
-  // and intentionally NOT backfilled by any migration. Existing users' files have
-  // no tutorialSeen key, so validate() resolves it to the false default — meaning
-  // they ALSO get the tutorial once on their next launch after updating, exactly
-  // like a brand-new install. "Seen once → true → never shown again", across any
-  // future version update. (Contrast showDock, which is migration-backfilled so
-  // ONLY fresh installs pick up its new default.)
-  tutorialSeen: { type: "boolean", default: false },
 };
 
 const SCHEMA_KEYS = Object.freeze(Object.keys(SCHEMA));
@@ -771,11 +742,7 @@ function migrate(raw) {
     }
     out.version = 18;
   }
-  // v18 -> v19: recap is a local, privacy-minimized application history. Match
-  // Codex-style activity summaries by recording on upgrade without inserting
-  // a consent interstitial; Settings still exposes an immediate off switch.
   if (out.version < 19) {
-    out.recapEnabled = typeof out.recapEnabled === "boolean" ? out.recapEnabled : true;
     out.version = 19;
   }
   // Field-level migration also covers development snapshots that already have
@@ -808,33 +775,6 @@ const AGENT_FLAGS = [
 const CODEX_PERMISSION_MODES = ["native", "intercept"];
 const MAX_CUSTOM_DISCOVERY_PATHS = 64;
 const MAX_CUSTOM_DISCOVERY_PATH_LENGTH = 2048;
-
-// Provider keys the user hid from the pet-side quota cluster. Display-only:
-// collection keeps running and the Dashboard keeps every provider, because the
-// cluster caps at four coins with no say over which ones survive while the
-// Dashboard has room for all of them.
-//
-// Unknown keys are kept, not dropped. The authoritative provider list lives in
-// quota-ring-geometry.js, and validating against it here would mean prefs.js
-// silently discarding a user's choice whenever load order, a rename, or a
-// not-yet-registered provider makes a key look unfamiliar — a hidden provider
-// would then reappear on its own. Consumers match by key, so a stale entry
-// costs nothing beyond a few bytes; the cap keeps that bounded.
-const MAX_HIDDEN_QUOTA_PROVIDERS = 32;
-function normalizeQuotaRingHiddenProviders(value) {
-  if (!Array.isArray(value)) return [];
-  const out = [];
-  const seen = new Set();
-  for (const entry of value) {
-    if (typeof entry !== "string") continue;
-    const trimmed = entry.replace(/\0/g, "").trim().slice(0, 64);
-    if (!trimmed || seen.has(trimmed)) continue;
-    seen.add(trimmed);
-    out.push(trimmed);
-    if (out.length >= MAX_HIDDEN_QUOTA_PROVIDERS) break;
-  }
-  return out;
-}
 
 function normalizePathList(value, options = {}) {
   const raw = Array.isArray(value)
@@ -1447,6 +1387,5 @@ module.exports = {
   normalizePathList,
   isValidSettingsWindowBounds,
   MAX_CUSTOM_DISCOVERY_PATHS,
-  MAX_HIDDEN_QUOTA_PROVIDERS,
   MAX_CUSTOM_DISCOVERY_PATH_LENGTH,
 };

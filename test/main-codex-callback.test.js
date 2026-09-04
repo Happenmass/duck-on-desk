@@ -5,7 +5,6 @@ const assert = require("node:assert");
 
 const {
   buildCodexMonitorSessionOptions,
-  normalizeCodexMonitorAccountQuotas,
   isCodexMonitorMetadataOnlyEvent,
 } = require("../src/codex-monitor-callback");
 
@@ -24,60 +23,6 @@ describe("Codex monitor callback helpers", () => {
       }),
       false
     );
-  });
-
-  it("identifies token_count quota-only updates as metadata-only events", () => {
-    assert.strictEqual(
-      isCodexMonitorMetadataOnlyEvent("event_msg:token_count", {
-        codexQuota: { codexFiveHour: { usedPercent: 1 } },
-      }),
-      true
-    );
-    assert.strictEqual(
-      isCodexMonitorMetadataOnlyEvent("event_msg:token_count", {
-        codexSparkQuota: { codexWeekly: { usedPercent: 7 } },
-      }),
-      true
-    );
-  });
-
-  it("normalizes generic and Spark quota outside session options", () => {
-    const quotas = normalizeCodexMonitorAccountQuotas({
-      cwd: "/repo",
-      codexQuota: {
-        codexFiveHour: { usedPercent: 1.4, resetAt: 1783669570000 },
-        codexWeekly: { usedPercent: 43 },
-      },
-      codexSparkQuota: {
-        codexWeekly: { usedPercent: 7.4, windowMinutes: 10080 },
-      },
-    });
-    assert.deepStrictEqual(quotas, {
-      codexQuota: {
-        codexFiveHour: { usedPercent: 1, resetAt: 1783669570000 },
-        codexWeekly: { usedPercent: 43 },
-      },
-      codexSparkQuota: {
-        codexWeekly: { usedPercent: 7, windowMinutes: 10080 },
-      },
-    });
-    assert.strictEqual(
-      Object.prototype.hasOwnProperty.call(buildCodexMonitorSessionOptions({
-        cwd: "/repo",
-        codexQuota: quotas.codexQuota,
-        codexSparkQuota: quotas.codexSparkQuota,
-      }), "codexQuota"),
-      false
-    );
-  });
-
-  it("omits invalid quota groups from account quota updates", () => {
-    const quotas = normalizeCodexMonitorAccountQuotas({
-      cwd: "/repo",
-      codexQuota: { codexFiveHour: { usedPercent: "nope" } },
-      codexSparkQuota: { codexWeekly: { usedPercent: "nope" } },
-    });
-    assert.strictEqual(quotas, null);
   });
 
   it("passes headless for normal monitor state updates", () => {
@@ -173,41 +118,5 @@ describe("Codex monitor callback helpers", () => {
       sessionTitle: "State update",
     });
     assert.strictEqual(Object.prototype.hasOwnProperty.call(options, "headless"), false);
-  });
-
-  it("passes trusted JSONL recap time and ephemeral ids without quota fields", () => {
-    assert.deepStrictEqual(buildCodexMonitorSessionOptions({
-      cwd: "/repo",
-      recapOccurredAt: 1788013260000,
-      recapDedupeId: "turn-secret",
-      toolUseId: "call-secret",
-      syntheticBackfill: true,
-    }, { includeHeadless: true, includeRecap: true }), {
-      cwd: "/repo",
-      agentId: "codex",
-      sessionTitle: undefined,
-      recapOccurredAt: 1788013260000,
-      recapDedupeId: "turn-secret",
-      toolUseId: "call-secret",
-      recapSuppressed: true,
-      headless: false,
-    });
-  });
-
-  it("marks trusted headless JSONL lifecycle as subagent recap input", () => {
-    assert.deepStrictEqual(buildCodexMonitorSessionOptions({
-      cwd: "/repo",
-      recapOccurredAt: 1788013260000,
-      recapDedupeId: "subagent-turn-secret",
-      headless: true,
-    }, { includeHeadless: true, includeRecap: true }), {
-      cwd: "/repo",
-      agentId: "codex",
-      sessionTitle: undefined,
-      recapOccurredAt: 1788013260000,
-      recapDedupeId: "subagent-turn-secret",
-      recapIsSubagent: true,
-      headless: true,
-    });
   });
 });

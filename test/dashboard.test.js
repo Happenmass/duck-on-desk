@@ -1122,54 +1122,6 @@ describe("dashboard window", () => {
     assert.doesNotMatch(wiring, /settingsWindowBounds/);
   });
 
-  it("wires account quota (including Dashboard-only Spark) into the dashboard header", () => {
-    const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "dashboard-renderer.js"), "utf8");
-    const htmlSource = fs.readFileSync(path.join(__dirname, "..", "src", "dashboard.html"), "utf8");
-    const preloadSource = fs.readFileSync(path.join(__dirname, "..", "src", "preload-dashboard.js"), "utf8");
-
-    assert.match(htmlSource, /id="quotaSummary" class="quota-summary" hidden/);
-    // Quota renders from the session-independent per-source store
-    // (snapshot.accountQuota), grouped local + one row per remote host —
-    // never from per-session fields.
-    assert.match(rendererSource, /renderQuotaSummary\(snapshot\)/);
-    assert.match(rendererSource, /snapshot\.accountQuota/);
-    assert.doesNotMatch(rendererSource, /resolveQuotaForDisplay/);
-    assert.match(rendererSource, /buildQuotaSourceHeader/);
-    // Wall-clock expiry: a bucket whose resetAt passed must not keep showing
-    // the pre-reset high between snapshots.
-    assert.match(rendererSource, /isExpiredBucket/);
-    // Quiet sources are labeled instead of presenting old numbers as live.
-    assert.match(rendererSource, /QUOTA_STALE_AFTER_MS/);
-    // Codex can change which rate-limit windows it exposes. The Dashboard
-    // must use reporter metadata rather than the legacy slot label.
-    assert.match(rendererSource, /formatQuotaWindowLabel/);
-    assert.match(rendererSource, /bucket && bucket\.windowMinutes/);
-    assert.match(rendererSource, /source\.codexSparkQuota/);
-    for (const key of [
-      "dashboardQuotaSectionClaudeCode",
-      "dashboardQuotaSectionCodex",
-      "dashboardQuotaSectionCodexSpark",
-      "dashboardQuotaSourceLocal",
-      "dashboardQuotaAsOf",
-      "dashboardQuotaFiveHour",
-      "dashboardQuotaWeekly",
-      "dashboardQuotaResetIn",
-      "dashboardQuotaResetOn",
-      "dashboardQuotaResetHoursMinutes",
-      "dashboardQuotaResetMinutes",
-    ]) {
-      assert.match(rendererSource, new RegExp(key));
-    }
-  });
-
-  it("memoizes the quota summary rebuild instead of rebuilding on every 1s render tick", () => {
-    const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "dashboard-renderer.js"), "utf8");
-
-    assert.match(rendererSource, /computeQuotaSummarySignature\(accountQuota\)/);
-    assert.match(rendererSource, /if \(signature === lastQuotaSummarySignature\) return;/);
-    assert.match(rendererSource, /resetDateFormatterLang !== lang/);
-  });
-
   it("does not replace an open session automation select on the one-second render tick", () => {
     const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "dashboard-renderer.js"), "utf8");
 

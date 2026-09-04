@@ -165,25 +165,18 @@ describe("updateRegistry pure-data validators", () => {
   it("function-form boolean fields reject non-booleans", () => {
     const deps = { snapshot: baseSnapshot };
     for (const key of [
-      "sessionHudEnabled", "sessionHudShowElapsed", "sessionHudShowContextUsage", "sessionHudShowQuota", "sessionHudCleanupDetached",
+      "sessionHudEnabled", "sessionHudShowElapsed", "sessionHudShowContextUsage", "sessionHudCleanupDetached",
       "sessionHudShowStateLabels", "sessionHudPinned",
       "miniMode", "openAtLoginHydrated", "soundMuted", "bubbleFollowPet",
       "hideBubbles", "permissionBubblesEnabled", "lowPowerIdleMode",
       "testReactionsEnabled",
       "allowEdgePinning", "disableMiniMode", "keepSizeAcrossDisplays", "codexHookHealthNotifyEnabled",
-      "quotaMergeSources", "freeRoam", "roamConstrainAxis",
+      "freeRoam", "roamConstrainAxis",
     ]) {
       assert.strictEqual(updateRegistry[key](true, deps).status, "ok", `${key}(true)`);
       assert.strictEqual(updateRegistry[key](false, deps).status, "ok", `${key}(false)`);
       assert.strictEqual(updateRegistry[key]("yes", deps).status, "error", `${key}("yes")`);
     }
-  });
-
-  it("accepts only supported quota ring display modes", () => {
-    assert.strictEqual(updateRegistry.quotaRingDisplayMode("used").status, "ok");
-    assert.strictEqual(updateRegistry.quotaRingDisplayMode("remaining").status, "ok");
-    assert.strictEqual(updateRegistry.quotaRingDisplayMode("available").status, "error");
-    assert.strictEqual(updateRegistry.quotaRingDisplayMode(true).status, "error");
   });
 
   it("accepts only supported bubble placement enums", () => {
@@ -203,25 +196,6 @@ describe("updateRegistry pure-data validators", () => {
     assert.strictEqual(updateRegistry.codexHookHealthLastNotified("needs-review", deps).status, "ok");
     assert.strictEqual(updateRegistry.codexHookHealthLastNotified(null, deps).status, "error");
     assert.strictEqual(updateRegistry.codexHookHealthLastNotified(42, deps).status, "error");
-  });
-
-  it("hidden quota providers validate as a bounded list of non-empty strings", () => {
-    const entry = updateRegistry.quotaRingHiddenProviders;
-    const check = (value) => (typeof entry === "function" ? entry(value) : entry.validate(value));
-    assert.strictEqual(check([]).status, "ok");
-    assert.strictEqual(check(["codexQuota", "claudeQuota"]).status, "ok");
-    // Shape only — an unrecognized key is accepted on purpose, because
-    // rejecting it would un-hide the provider behind the user's back.
-    assert.strictEqual(check(["notAProviderYet"]).status, "ok");
-    assert.strictEqual(check("codexQuota").status, "error", "a bare string is not a list");
-    assert.strictEqual(check(null).status, "error");
-    assert.strictEqual(check([""]).status, "error");
-    assert.strictEqual(check(["  "]).status, "error");
-    assert.strictEqual(check([1]).status, "error");
-    assert.strictEqual(
-      check(Array.from({ length: 200 }, (_v, i) => `p${i}`)).status, "error",
-      "an unbounded list must be refused at the command boundary, not silently truncated"
-    );
   });
 
   it("Claude usage collection validates booleans and delegates the opt-in mutation", async () => {

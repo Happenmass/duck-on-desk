@@ -51,7 +51,6 @@
 const {
   CURRENT_VERSION,
   MAX_CUSTOM_DISCOVERY_PATHS,
-  MAX_HIDDEN_QUOTA_PROVIDERS,
   isValidSettingsWindowBounds,
   normalizePathList,
 } = require("./prefs");
@@ -209,8 +208,6 @@ const updateRegistry = {
 
   // ── Pure data prefs (function-form: validator only) ──
   lang: requireEnum("lang", ["en", "zh", "zh-TW", "ko", "ja", "pt-BR", "es"]),
-  recapEnabled: requireBoolean("recapEnabled"),
-  tutorialSeen: requireBoolean("tutorialSeen"),
   soundMuted: requireBoolean("soundMuted"),
   soundVolume: requireNumberInRange("soundVolume", 0, 1),
   textScale: requireNumberInRange("textScale", TEXT_SCALE_MIN, TEXT_SCALE_MAX),
@@ -322,26 +319,6 @@ const updateRegistry = {
   sessionHudShowStateLabels: requireBoolean("sessionHudShowStateLabels"),
   sessionHudShowElapsed: requireBoolean("sessionHudShowElapsed"),
   sessionHudShowContextUsage: requireBoolean("sessionHudShowContextUsage"),
-  sessionHudShowQuota: requireBoolean("sessionHudShowQuota"),
-  quotaRingDisplayMode: requireEnum("quotaRingDisplayMode", ["used", "remaining"]),
-  // Shape only — the entries are provider keys, and deliberately not checked
-  // against the ring's provider list here (see prefs.js: rejecting an
-  // unfamiliar key would un-hide a provider behind the user's back).
-  quotaRingHiddenProviders(value) {
-    if (!Array.isArray(value)) {
-      return { status: "error", message: "quotaRingHiddenProviders must be an array" };
-    }
-    if (value.length > MAX_HIDDEN_QUOTA_PROVIDERS) {
-      return {
-        status: "error",
-        message: `quotaRingHiddenProviders must contain at most ${MAX_HIDDEN_QUOTA_PROVIDERS} entries`,
-      };
-    }
-    if (value.some((entry) => typeof entry !== "string" || !entry.trim())) {
-      return { status: "error", message: "quotaRingHiddenProviders must contain non-empty strings" };
-    }
-    return { status: "ok" };
-  },
   claudeQuotaCollectionEnabled: {
     validate: requireBoolean("claudeQuotaCollectionEnabled"),
     effect(value, deps = {}) {
@@ -351,7 +328,6 @@ const updateRegistry = {
       return deps.setClaudeQuotaCollectionEnabled(value);
     },
   },
-  quotaMergeSources: requireBoolean("quotaMergeSources"),
   sessionHudCleanupDetached: requireBoolean("sessionHudCleanupDetached"),
   sessionHudPinned: requireBoolean("sessionHudPinned"),
   hideBubbles: requireBoolean("hideBubbles"),
@@ -443,7 +419,6 @@ const updateRegistry = {
   keepSizeAcrossDisplays: requireBoolean("keepSizeAcrossDisplays"),
   fullscreenOverlay: requireBoolean("fullscreenOverlay"),
   fullscreenAutoHide: requireBoolean("fullscreenAutoHide"),
-  mobilePreviewEnabled: requireBoolean("mobilePreviewEnabled"),
 
   // ── System-backed prefs (object-form: validate + effect pre-commit gate) ──
   autoStartWithClaude,

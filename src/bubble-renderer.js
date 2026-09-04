@@ -1691,7 +1691,7 @@ if (window.bubbleAPI && typeof window.bubbleAPI.setImeEditing === "function") {
   // reference — a routine CJK move). Without this, the editing flag would stay
   // set and reapplyMacVisibility() would strand the bubble out of always-on-top
   // for good. Mirror the window-blur listener used elsewhere in the app
-  // (hit-renderer.js, tutorial-renderer.js): restore normal topmost while the
+  // (hit-renderer.js): restore normal topmost while the
   // window is backgrounded, and re-drop it on return if a text field still
   // holds focus.
   window.addEventListener("blur", () => setImeEditing(false));

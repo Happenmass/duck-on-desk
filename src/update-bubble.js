@@ -302,9 +302,7 @@ module.exports = function initUpdateBubble(ctx) {
   let autoCloseElapsedVisibleMs = 0;
 
   function notifyOrbitGeometryChanged() {
-    const reposition = typeof ctx.repositionQuotaRing === "function"
-      ? ctx.repositionQuotaRing
-      : ctx.repositionSessionHud;
+    const reposition = ctx.repositionSessionHud;
     if (typeof reposition !== "function") return;
     try { reposition(); } catch {}
   }

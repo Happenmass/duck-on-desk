@@ -162,7 +162,7 @@ describe("CodexLogMonitor", () => {
       payload: { type: "function_call_output", call_id: "call_question", output: "{}" },
     }) + "\n");
     monitor._pollFile(testFile, path.basename(testFile));
-    assert.deepStrictEqual(resolved, [[EXPECTED_SID, "call_question", { source: "function-call-output", turnId: null, recapOccurredAt: null, userInputReplay: true }]]);
+    assert.deepStrictEqual(resolved, [[EXPECTED_SID, "call_question", { source: "function-call-output", turnId: null, occurredAt: null, userInputReplay: true }]]);
   });
 
   it("does not flash a request_user_input already resolved before initial attach", () => {
@@ -812,7 +812,7 @@ describe("CodexLogMonitor", () => {
     const resolved = [];
     monitor._onUserInputResolved = (...args) => resolved.push(args);
     monitor._pollFile(testFile, path.basename(testFile));
-    assert.deepStrictEqual(resolved, [[recovered.sessionId, "call_partial_tail", { source: "function-call-output", turnId: null, recapOccurredAt: null, userInputReplay: true }]]);
+    assert.deepStrictEqual(resolved, [[recovered.sessionId, "call_partial_tail", { source: "function-call-output", turnId: null, occurredAt: null, userInputReplay: true }]]);
   });
 
   it("seeds fileIdentity on the recovered tracker and mirrors it into the read-position ledger", () => {
@@ -868,7 +868,7 @@ describe("CodexLogMonitor", () => {
     const resolved = [];
     monitor._onUserInputResolved = (...args) => resolved.push(args);
     monitor._pollFile(testFile, path.basename(testFile));
-    assert.deepStrictEqual(resolved, [[tracked.sessionId, "call_identity_check", { source: "function-call-output", turnId: null, recapOccurredAt: null, userInputReplay: true }]]);
+    assert.deepStrictEqual(resolved, [[tracked.sessionId, "call_identity_check", { source: "function-call-output", turnId: null, occurredAt: null, userInputReplay: true }]]);
   });
 
   it("resets the recovery sweep on every real start(), not just the first one this instance ever saw", (_, done) => {
@@ -1179,7 +1179,7 @@ describe("CodexLogMonitor", () => {
     const resolved = [];
     monitor._onUserInputResolved = (...args) => resolved.push(args);
     monitor._pollFile(testFile, path.basename(testFile));
-    assert.deepStrictEqual(resolved, [[recovered.sessionId, "call_utf8_boundary", { source: "function-call-output", turnId: null, recapOccurredAt: null, userInputReplay: true }]]);
+    assert.deepStrictEqual(resolved, [[recovered.sessionId, "call_utf8_boundary", { source: "function-call-output", turnId: null, occurredAt: null, userInputReplay: true }]]);
   });
 
   it("caps the recovery sweep to RECOVERY_SWEEP_MAX_FILES, prioritizing the most recently modified candidates", (_, done) => {
@@ -1908,7 +1908,7 @@ describe("CodexLogMonitor", () => {
 
     assert.deepStrictEqual(events.map((entry) => entry.event), ["response_item:function_call"]);
     assert.strictEqual(events[0].extra.turnId, undefined);
-    assert.strictEqual(events[0].extra.recapOccurredAt, Date.parse(liveTimestamp));
+    assert.strictEqual(events[0].extra.occurredAt, Date.parse(liveTimestamp));
     assert.strictEqual(events[0].extra.toolUseId, "live-call");
     assert.strictEqual(monitor._tracked.get(testFile).activeTurnId, null);
     assert.strictEqual(monitor._tracked.get(testFile).turnBoundaryOpen, false);
@@ -4243,7 +4243,7 @@ describe("CodexLogMonitor", () => {
     setTimeout(() => {
       assert.deepStrictEqual(observed.map((entry) => entry.state), ["idle", "working"]);
       assert.strictEqual(observed[1].event, "response_item:function_call");
-      assert.strictEqual(observed[1].extra.recapIsWebSearch, true);
+      assert.strictEqual(observed[1].extra.isWebSearch, true);
       assert.strictEqual(JSON.stringify(observed[1].extra).includes("test"), false);
       assert.strictEqual(JSON.stringify(observed[1].extra).includes("web_search"), false);
       done();

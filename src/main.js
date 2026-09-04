@@ -90,7 +90,6 @@ const {
 } = require("./settings-size-preview-session");
 const { registerSettingsIpc } = require("./settings-ipc");
 const createSettingsEffectRouter = require("./settings-effect-router");
-const { createRecapRuntime } = require("./recap-runtime");
 const {
   getPetTintIdForTheme,
   resolvePetTintPayload,
@@ -154,7 +153,6 @@ const { WIN_TOPMOST_LEVEL } = createTopmostRuntime;
 const {
   createHitWindowActivationRuntime,
 } = require("./win-hit-window-activation");
-const { startMobilePreviewServerSafely } = require("./network/mobile-preview-lifecycle");
 const createThemeFadeSequencer = require("./theme-fade-sequencer");
 const createThemeRuntime = require("./theme-runtime");
 const createAgentRuntimeMain = require("./agent-runtime-main");
@@ -305,11 +303,6 @@ const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
 // closed until restart in either case.
 const _initialPrefsRecovered = _initialPrefsLoad.recovered === true;
 const _initialPrefsRecoveryBackupFailed = _initialPrefsLoad.recoveryBackupFailed === true;
-const _recapStartupAuthorityLost = (
-  _initialPrefsLoad.locked === true
-  || _initialPrefsRecovered
-  || _initialPrefsRecoveryBackupFailed
-);
 const _codexAutoStartAuthorityLost = (
   _initialPrefsLoad.locked === true
   || _initialPrefsRecovered
@@ -1089,11 +1082,7 @@ let sessionHudEnabled = _settingsController.get("sessionHudEnabled");
 let sessionHudShowStateLabels = _settingsController.get("sessionHudShowStateLabels");
 let sessionHudShowElapsed = _settingsController.get("sessionHudShowElapsed");
 let sessionHudShowContextUsage = _settingsController.get("sessionHudShowContextUsage");
-let sessionHudShowQuota = _settingsController.get("sessionHudShowQuota");
-let quotaRingDisplayMode = _settingsController.get("quotaRingDisplayMode");
-let quotaRingHiddenProviders = _settingsController.get("quotaRingHiddenProviders");
 let claudeQuotaCollectionEnabled = _settingsController.get("claudeQuotaCollectionEnabled");
-let quotaMergeSources = _settingsController.get("quotaMergeSources");
 let sessionHudCleanupDetached = _settingsController.get("sessionHudCleanupDetached");
 let sessionHudPinned = _settingsController.get("sessionHudPinned");
 let sessionStaleMs = _settingsController.get("sessionStaleMs");
@@ -1603,13 +1592,11 @@ let forceEyeResend = false;
 let forceEyeResendBoostUntil = 0;
 let requestFastTick = () => {};
 let repositionSessionHud = () => {};
-let repositionQuotaRing = () => {};
 let syncSessionHudVisibility = () => {};
 let broadcastSessionHudSnapshot = () => {};
 let sendSessionHudI18n = () => {};
 let getSessionHudReservedOffset = () => 0;
 let getSessionHudWindow = () => null;
-let getQuotaRingWindow = () => null;
 
 function getVisibleSessionHudBounds() {
   try {
@@ -1702,7 +1689,6 @@ const topmostRuntime = createTopmostRuntime({
   ),
   getUpdateBubbleWindow: () => _updateBubble.getBubbleWindow(),
   getSessionHudWindow: () => getSessionHudWindow(),
-  getQuotaRingWindow: () => getQuotaRingWindow(),
   getContextMenuOwner: () => contextMenuOwner,
   getNearestWorkArea,
   getPetWindowBounds,
@@ -1835,9 +1821,7 @@ const _permCtx = {
   clearShortcutFailure: (actionId) => shortcutRuntime.clearFailure(actionId),
   repositionFloatingBubbles: () => repositionFloatingBubbles(),
   repositionUpdateBubble: () => repositionUpdateBubble(),
-  // permission.js still calls this legacy-shaped callback after the update
-  // bubble has moved; only Orbit needs the second geometry pass here.
-  repositionSessionHud: () => repositionQuotaRing(),
+  repositionSessionHud: () => repositionSessionHud(),
   onPermissionResolved: (permEntry, options = {}) => {
     if (!_state || typeof _state.clearPermissionNotification !== "function") return;
     _state.clearPermissionNotification(permEntry && permEntry.sessionId, options);
@@ -1892,7 +1876,6 @@ const _updateBubbleCtx = {
   getTextScale: (workArea) => getTextScaleForBubbleWorkArea(workArea),
   guardAlwaysOnTop,
   reapplyMacVisibility,
-  repositionQuotaRing: () => repositionQuotaRing(),
   clipboard,
 };
 const _updateBubble = initUpdateBubble(_updateBubbleCtx);
@@ -1908,7 +1891,6 @@ floatingWindowRuntime = createFloatingWindowRuntime({
   repositionPermissionBubbles: () => repositionBubbles(),
   repositionUpdateBubble: () => repositionUpdateBubble(),
   repositionSessionHud: () => repositionSessionHud(),
-  repositionQuotaRing: () => repositionQuotaRing(),
   syncSessionHudVisibility: () => syncSessionHudVisibility(),
   syncUpdateBubbleVisibility: (hiddenOverride) => syncUpdateBubbleVisibility(hiddenOverride),
   suspendUpdateBubbleForPet: () => _updateBubble.suspendForPetHidden(),
@@ -2000,26 +1982,11 @@ function deliverRendererThemeConfig() {
   return !!finalizePetAccessorySlotsDelivery(delivery, delivered);
 }
 
-const recapRuntime = createRecapRuntime({
-  // A default-filled snapshot is not user authority when prefs were unreadable,
-  // recovered, or written by a future app version. Start paused in that case;
-  // a later explicit, controller-accepted toggle may still call setEnabled().
-  getEnabled: () => !_recapStartupAuthorityLost
-    && _settingsController.get("recapEnabled") !== false,
-  powerMonitor,
-  logWarn: console.warn,
-  onRecorded: () => settingsWindowRuntime.notifyRecapChanged(),
-});
-
 const _stateCtx = {
   get theme() { return getActiveTheme(); },
   get win() { return win; },
   get hitWin() { return hitWin; },
-  // Last-known account quota survives app restarts (state-account-quota.js).
-  accountQuotaPersistPath: require("./state-account-quota").DEFAULT_PERSIST_PATH,
-  recapSink: recapRuntime,
   get claudeQuotaCollectionEnabled() { return claudeQuotaCollectionEnabled; },
-  get quotaMergeSources() { return quotaMergeSources; },
   get doNotDisturb() { return doNotDisturb; },
   set doNotDisturb(v) { doNotDisturb = v; },
   get miniMode() { return _mini.getMiniMode(); },
@@ -2063,7 +2030,6 @@ const _stateCtx = {
     broadcastDashboardSessionSnapshot(snapshot);
     broadcastSessionHudSnapshot(snapshot);
     repositionFloatingBubbles();
-    if (_lanWss) { try { _lanWss.onSnapshot(); } catch {} }
   },
   // Phase 3b: 读 prefs.themeOverrides 判断某个 oneshot state 是否被用户禁用。
   // state.js gate 调这个做 early-return。不做白名单校验——settings-actions
@@ -2353,120 +2319,6 @@ showDashboard = _dashboard.showDashboard;
 broadcastDashboardSessionSnapshot = _dashboard.broadcastSessionSnapshot;
 sendDashboardI18n = _dashboard.sendI18n;
 
-// ── First-run onboarding tutorial ──
-// Buckets the installable agents for the tutorial's step 2. We call the
-// detector with skipDefaultIntegrations:false so the default integrations are
-// present in the report; the bucketer still exempts them from cleanup (#895 —
-// a missing ~/.codex is not evidence that a Codex hook is stale), so this flag
-// only affects the active/install buckets.
-function buildTutorialAgentOnboardingState() {
-  const { detectAgentInstallations } = require("./agent-installation-detector");
-  const { INSTALLABLE_AGENT_IDS } = require("./settings-actions-agents");
-  const { bucketAgentsForTutorial } = require("./tutorial-agent-buckets");
-  let detection = { agents: [] };
-  try {
-    detection = detectAgentInstallations({ skipDefaultIntegrations: false }) || detection;
-  } catch (err) {
-    console.warn("Clawd: tutorial agent detection failed:", err && err.message);
-  }
-  return bucketAgentsForTutorial({
-    detectionAgents: detection.agents,
-    agentsPref: _settingsController.get("agents") || {},
-    installableIds: INSTALLABLE_AGENT_IDS,
-    getAgentIconUrl,
-  });
-}
-
-// The editable shortcuts the tutorial teaches. Reflects the user's current
-// binding (null when they've unassigned it) and falls back to the shipped
-// default only when the key has never been touched.
-function buildTutorialShortcutsSummary() {
-  const { SHORTCUT_ACTIONS, SHORTCUT_ACTION_IDS } = require("./shortcut-actions");
-  const userShortcuts = _settingsController.get("shortcuts") || {};
-  return SHORTCUT_ACTION_IDS.map((id) => {
-    const action = SHORTCUT_ACTIONS[id] || {};
-    const accelerator = Object.prototype.hasOwnProperty.call(userShortcuts, id)
-      ? userShortcuts[id]
-      : action.defaultAccelerator;
-    return {
-      id,
-      label: translate(action.labelKey),
-      accelerator,
-      defaultAccelerator: action.defaultAccelerator,
-      persistent: !!action.persistent,
-    };
-  });
-}
-
-// The welcome screen uses the app icon so first run feels like product setup.
-// Keep this as a file URL so repeated tutorial state pushes don't clone the
-// 1.46 MB PNG as a base64 string on every agent/shortcut update.
-let _tutorialHeroSrcCache = null;
-function getTutorialHeroSrc() {
-  if (_tutorialHeroSrcCache != null) return _tutorialHeroSrcCache;
-  try {
-    _tutorialHeroSrcCache = pathToFileURL(path.join(__dirname, "..", "assets", "icon.png")).href;
-  } catch (err) {
-    console.warn("Clawd: failed to resolve tutorial icon:", err && err.message);
-    _tutorialHeroSrcCache = "";
-  }
-  return _tutorialHeroSrcCache;
-}
-
-let _tutorialDoneHeroSvgCache = null;
-function getTutorialDoneHeroSvg() {
-  if (_tutorialDoneHeroSvgCache != null) return _tutorialDoneHeroSvgCache;
-  try {
-    _tutorialDoneHeroSvgCache = fs.readFileSync(
-      path.join(__dirname, "..", "assets", "svg", "clawd-about-hero.svg"),
-      "utf8"
-    );
-  } catch (err) {
-    console.warn("Clawd: failed to read tutorial done hero:", err && err.message);
-    _tutorialDoneHeroSvgCache = "";
-  }
-  return _tutorialDoneHeroSvgCache;
-}
-
-const _tutorial = require("./tutorial")({
-  t: (key) => translate(key),
-  getI18n: () => getDashboardI18nPayload().translations,
-  getLang: () => lang,
-  getLangs: () => SUPPORTED_LANGS.slice(),
-  // Let the user override the (system-seeded) language right from the wizard.
-  // Persists as their chosen language; the set-lang IPC re-pushes state so the
-  // whole wizard re-localizes immediately.
-  setLang: (value) => {
-    if (typeof value === "string" && SUPPORTED_LANGS.includes(value)) {
-      _settingsController.applyUpdate("lang", value);
-    }
-  },
-  getHeroSrc: () => getTutorialHeroSrc(),
-  getDoneHeroSvg: () => getTutorialDoneHeroSvg(),
-  iconPath: settingsWindowRuntime.getIconPath(),
-  getAgentOnboardingState: () => buildTutorialAgentOnboardingState(),
-  // install/uninstall route through the controller's command API so the commit
-  // (integrationInstalled flag, hint cleanup, monitor start/stop) persists and
-  // validates exactly as the Settings → Agents path does.
-  installAgent: (agentId) => _settingsController.applyCommand("installAgentIntegration", { agentId }),
-  uninstallAgent: (agentId) => _settingsController.applyCommand("uninstallAgentIntegration", { agentId }),
-  registerShortcut: (payload) => _settingsController.applyCommand("registerShortcut", payload),
-  resetShortcut: (payload) => _settingsController.applyCommand("resetShortcut", payload),
-  openSettingsTab: (tab) => settingsWindowRuntime.open({ tab }),
-  markTutorialSeen: () => {
-    _settingsController.applyUpdate("tutorialSeen", true);
-  },
-  getShortcutsSummary: () => buildTutorialShortcutsSummary(),
-  getTextScale: () => effectiveTextScaleForKey(
-    getWindowDisplayKey(_tutorial ? _tutorial.getWindow() : null) || getPetDisplayKey()
-  ),
-});
-
-// Shared with session-hud.js on purpose: the Settings "show beside the pet"
-// list has to be built from the SAME provider table and draw rule that sizes
-// the cluster window, or the list can offer a provider that never draws.
-const _ringGeom = require("./quota-ring-geometry");
-
 const _sessionHud = require("./session-hud")({
   get win() { return win; },
   get petHidden() { return petWindowRuntime.isPetEffectivelyHidden(); },
@@ -2474,9 +2326,6 @@ const _sessionHud = require("./session-hud")({
   get sessionHudShowStateLabels() { return sessionHudShowStateLabels; },
   get sessionHudShowElapsed() { return sessionHudShowElapsed; },
   get sessionHudShowContextUsage() { return sessionHudShowContextUsage; },
-  get sessionHudShowQuota() { return sessionHudShowQuota; },
-  get quotaRingDisplayMode() { return quotaRingDisplayMode; },
-  get quotaRingHiddenProviders() { return quotaRingHiddenProviders; },
   get sessionHudPinned() { return sessionHudPinned; },
   get lowPowerIdleMode() { return lowPowerIdleMode; },
   getMiniMode: () => _mini.getMiniMode(),
@@ -2495,13 +2344,11 @@ const _sessionHud = require("./session-hud")({
   onReservedOffsetChange: () => repositionFloatingBubbles(),
 });
 repositionSessionHud = _sessionHud.repositionSessionHud;
-repositionQuotaRing = _sessionHud.repositionQuotaRing;
 syncSessionHudVisibility = _sessionHud.syncSessionHud;
 broadcastSessionHudSnapshot = _sessionHud.broadcastSessionSnapshot;
 sendSessionHudI18n = _sessionHud.sendI18n;
 getSessionHudReservedOffset = _sessionHud.getHudReservedOffset;
 getSessionHudWindow = _sessionHud.getWindow;
-getQuotaRingWindow = _sessionHud.getQuotaRingWindow;
 
 agentRuntime = createAgentRuntimeMain({
   getServer: () => _server,
@@ -2562,8 +2409,6 @@ const _serverCtx = {
   updateSession: agentRuntime.updateSessionFromServer,
   updateSessionMetadata: (sessionId, opts) => _state.updateSessionMetadata(sessionId, opts),
   clearClaudeStatuslineAuthority: (profileId) => _state.clearClaudeStatuslineAuthority(profileId),
-  clearLocalClaudeQuota: () => _state.clearLocalClaudeQuota(),
-  updateAccountQuota: (host, quotas) => _state.updateAccountQuota(host, quotas),
   resolvePermissionEntry,
   sendPermissionResponse,
   addPendingPermission,
@@ -2585,17 +2430,6 @@ const _serverCtx = {
 };
 const _server = require("./server")(_serverCtx);
 const { startHttpServer, getHookServerPort } = _server;
-
-// ── LAN WebSocket bridge for PWA mobile clients (lazy-loaded) ──
-let _lanWss = null;
-if (_settingsController.get("mobilePreviewEnabled") === true) {
-  const { initMobilePreviewServer } = require("./network/mobile-preview-server");
-  _lanWss = initMobilePreviewServer({
-    sessions,
-    getSettingsSnapshot: () => _settingsController.getSnapshot(),
-    isEnabled: () => _settingsController.get("mobilePreviewEnabled") === true,
-  });
-}
 
 function updateLog(msg) {
   if (!updateDebugLog) return;
@@ -2911,7 +2745,6 @@ const _menuCtx = {
   getActiveThemeCapabilities: () => themeRuntime.getActiveThemeCapabilities(),
   ensureUserThemesDir: () => themeLoader.ensureUserThemesDir(),
   openSettingsWindow: (options) => settingsWindowRuntime.open(options),
-  showTutorial: () => _tutorial.open(),
 };
 const _menu = require("./menu")(_menuCtx);
 const { t, buildContextMenu, buildTrayMenu, rebuildAllMenus, createTray,
@@ -2930,13 +2763,7 @@ const SETTINGS_MIRROR_SETTERS = {
   sessionHudShowStateLabels: (v) => { sessionHudShowStateLabels = v; },
   sessionHudShowElapsed: (v) => { sessionHudShowElapsed = v; },
   sessionHudShowContextUsage: (v) => { sessionHudShowContextUsage = v; },
-  sessionHudShowQuota: (v) => { sessionHudShowQuota = v; },
-  quotaRingDisplayMode: (v) => { quotaRingDisplayMode = v; },
-  // Normalized to an array here as well as in prefs: this mirror also takes the
-  // value straight from a settings broadcast, and every consumer indexes it.
-  quotaRingHiddenProviders: (v) => { quotaRingHiddenProviders = Array.isArray(v) ? v : []; },
   claudeQuotaCollectionEnabled: (v) => { claudeQuotaCollectionEnabled = v; },
-  quotaMergeSources: (v) => { quotaMergeSources = v; },
   sessionHudCleanupDetached: (v) => { sessionHudCleanupDetached = v; },
   sessionHudPinned: (v) => { sessionHudPinned = v; },
   sessionStaleMs: (v) => { sessionStaleMs = v; }, workingStaleMs: (v) => { workingStaleMs = v; },
@@ -2981,7 +2808,6 @@ const holidayAccessoryRuntime = createHolidayAccessoryRuntime({
 
 const settingsEffectRouter = createSettingsEffectRouter({
   settingsController: _settingsController,
-  recapRuntime,
   BrowserWindow,
   updateMirrors: updateSettingsMirrors,
   createTray,
@@ -2992,11 +2818,6 @@ const settingsEffectRouter = createSettingsEffectRouter({
   sendSessionHudI18n: () => sendSessionHudI18n(),
   syncWindowTitles: () => {
     settingsWindowRuntime.applyTitleToWindow();
-    // syncLocalization pushes BOTH the native title AND fresh renderer state
-    // (dictionary/lang), so an external language change from Settings keeps
-    // the tutorial body, buttons, and document.title in sync with the new
-    // language — not just the native title bar.
-    _tutorial.syncLocalization();
   },
   emitSessionSnapshot: (options) => _state.emitSessionSnapshot(options),
   cleanStaleSessions: () => _state.cleanStaleSessions(),
@@ -3031,32 +2852,9 @@ const settingsEffectRouter = createSettingsEffectRouter({
   refreshDisplayedVisual: refreshDisplayedVisualForLowPowerMode,
   rebuildAllMenus,
   reconcilePowerSaveBlocker,
-  setRecapEnabled: (enabled) => recapRuntime.setEnabled(enabled),
   logWarn: console.warn,
 });
 settingsEffectRouter.start();
-_settingsController.subscribeKey("mobilePreviewEnabled", (enabled) => {
-  if (enabled) {
-    if (!_lanWss) {
-      const { initMobilePreviewServer } = require("./network/mobile-preview-server");
-      _lanWss = initMobilePreviewServer({
-        sessions,
-        getSettingsSnapshot: () => _settingsController.getSnapshot(),
-        isEnabled: () => _settingsController.get("mobilePreviewEnabled") === true,
-      });
-    }
-    void startMobilePreviewServerSafely(_lanWss, {
-      source: "settings-enable",
-      onError: (err) => console.warn(
-        "Clawd mobile preview: settings start failed:",
-        err && err.message ? err.message : err,
-      ),
-    });
-  } else if (_lanWss) {
-    _lanWss.cleanup();
-  }
-});
-
 animationOverridesMain = createSettingsAnimationOverridesMain({
   app,
   BrowserWindow,
@@ -3202,12 +3000,6 @@ const settingsIpcRuntime = registerSettingsIpc({
   fs,
   path,
   settingsController: _settingsController,
-  recapRuntime,
-  getQuotaSourceCount: () => _state.getQuotaSourceCount(),
-  getQuotaRingProviders: () => _ringGeom.listQuotaRingProviders(
-    _state.buildSessionSnapshot(),
-    quotaRingHiddenProviders
-  ),
   themeLoader,
   codexPetMain,
   getSettingsWindow,
@@ -3238,12 +3030,7 @@ const settingsIpcRuntime = registerSettingsIpc({
     clipboard.writeText(copyText);
     return { status: "ok" };
   },
-  showTutorial: () => {
-    _tutorial.open();
-    return { status: "ok" };
-  },
   aboutHeroSvgPath: path.join(__dirname, "..", "assets", "svg", "clawd-about-hero.svg"),
-  getLanWsServer: () => _lanWss,
 });
 
 registerSessionIpc({
@@ -3278,7 +3065,6 @@ registerSessionIpc({
       console.warn("Clawd: failed to pin Session HUD:", result.message);
     }
   },
-  getLanWsServer: () => _lanWss,
 });
 
 function createWindow() {
@@ -3493,15 +3279,6 @@ function createWindow() {
       sessionLog(`startup recovery restored sessions=${restoredSessionIds.join(",")}`);
     }
   }).catch(() => {});
-  if (_settingsController.get("mobilePreviewEnabled") === true) {
-    void startMobilePreviewServerSafely(_lanWss, {
-      source: "app-startup",
-      onError: (err) => console.warn(
-        "Clawd mobile preview: startup failed:",
-        err && err.message ? err.message : err,
-      ),
-    });
-  }
   startStaleCleanup();
   // Wait for renderer to be ready before sending initial state
   // If hooks arrived during startup, respect them instead of forcing idle
@@ -3986,8 +3763,6 @@ if (!gotTheLock) {
       filePath: path.join(app.getPath("userData"), "windows-process-chain-shadow.log"),
     });
     createWindow();
-    try { recapRuntime.start(); }
-    catch (err) { console.warn("Clawd: local recap startup failed:", err && err.code ? err.code : "storage-error"); }
     notifyPrefsAuthorityFailure();
     holidayAccessoryRuntime.start();
     // WSL agent detection is NOT started here: scanning runs a command inside
@@ -4038,15 +3813,6 @@ if (!gotTheLock) {
     }
     if (shouldOpenSettingsWindowFromArgv(process.argv)) {
       settingsWindowRuntime.open();
-    }
-    // First-run onboarding: anyone who has never seen the tutorial gets it once.
-    // `tutorialSeen` is persisted but deliberately NOT migration-backfilled, so
-    // existing users who update also see it once on their next launch, then the
-    // flag flips to true forever (any dismissal counts). See prefs.js SCHEMA.
-    try {
-      if (!_settingsController.get("tutorialSeen")) _tutorial.open();
-    } catch (err) {
-      console.warn("Clawd: failed to open first-run tutorial:", err && err.message);
     }
     codexPetMain.enqueueImportUrlsFromArgv(process.argv);
     codexPetMain.flushPendingImportUrls().catch((err) => {
@@ -4105,10 +3871,8 @@ if (!gotTheLock) {
     }
     _perm.cleanup();
     _server.cleanup();
-    if (_lanWss) _lanWss.cleanup();
     _updateBubble.cleanup();
     if (displayedVisualProjection) displayedVisualProjection.dispose();
-    try { recapRuntime.dispose(); } catch {}
     _state.cleanup();
     _tick.cleanup();
     _mini.cleanup();

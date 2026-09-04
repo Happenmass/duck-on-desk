@@ -3,7 +3,6 @@
 const DefaultCodexSubagentClassifier = require("../agents/codex-subagent-classifier");
 const {
   buildCodexMonitorSessionOptions,
-  normalizeCodexMonitorAccountQuotas,
   isCodexMonitorMetadataOnlyEvent,
 } = require("./codex-monitor-callback");
 const { resolveSessionIdentity } = require("./session-key");
@@ -14,8 +13,9 @@ const createCodexOfficialActivity = require("./codex-official-activity");
 const CODEX_OFFICIAL_LOG_SUPPRESS_TTL_MS = 10 * 60 * 1000;
 // Intentionally excludes response_item:web_search_call. Codex official hooks
 // do not cover WebSearch, so JSONL is its only lifecycle/tool boundary today.
-// Keep this asymmetry under test: adding it here would silently drop web-search
-// recap; upstream adding an official WebSearch hook requires a new dedupe path.
+// Keep this asymmetry under test: adding it here would silently drop the
+// web-search boundary; upstream adding an official WebSearch hook requires a
+// new dedupe path.
 const CODEX_LOG_EVENTS_COVERED_BY_OFFICIAL_HOOKS = new Set([
   "session_meta",
   "event_msg:task_started",
@@ -130,39 +130,11 @@ function createAgentRuntimeMain(options = {}) {
     // Some Codex builds encode WebSearch as a generic function_call. Official
     // hooks do not expose that boundary, so keep this privacy-safe monitor bit
     // on the same fallback path as response_item:web_search_call.
-    if (event === "response_item:function_call" && extra && extra.recapIsWebSearch === true) return false;
+    if (event === "response_item:function_call" && extra && extra.isWebSearch === true) return false;
     if (!CODEX_LOG_EVENTS_COVERED_BY_OFFICIAL_HOOKS.has(event)) return false;
     if (!hasRecentCodexOfficialHookSession(sessionId, turnId)) return false;
     if (shouldAllowCodexJsonlCompletionFallback(sessionId, state, event)) return false;
     return true;
-  }
-
-  function isCodexWebSearchLogBoundary(event, extra) {
-    return event === "response_item:web_search_call"
-      || (event === "response_item:function_call" && extra && extra.recapIsWebSearch === true);
-  }
-
-  function recordCodexWebSearchRecapOnly(sessionIdentity, sessionOptions, event, extra) {
-    if (
-      !isCodexWebSearchLogBoundary(event, extra)
-      || sessionOptions.recapSuppressed === true
-      || !Number.isSafeInteger(sessionOptions.recapOccurredAt)
-    ) return false;
-    const stateRuntime = getStateRuntime();
-    if (!stateRuntime || typeof stateRuntime.recordRecapEventOnly !== "function") return false;
-    return stateRuntime.recordRecapEventOnly({
-      occurredAt: sessionOptions.recapOccurredAt,
-      sessionId: sessionIdentity.sessionId,
-      rawSessionId: sessionIdentity.rawSessionId,
-      agentId: "codex",
-      profileId: sessionIdentity.profileId,
-      event,
-      toolUseId: sessionOptions.toolUseId || null,
-      recapDedupeId: sessionOptions.recapDedupeId || null,
-      recapIsSubagent: sessionOptions.recapIsSubagent === true,
-      headless: sessionOptions.headless === true,
-      hookSource: "codex-jsonl",
-    });
   }
 
   function updateSessionFromServer(sessionId, state, event, opts = {}) {
@@ -227,8 +199,8 @@ function createAgentRuntimeMain(options = {}) {
 
   function touchLocalCodexUserInputActivity(sessionId, activity) {
     if (!activity || activity.userInputReplay === true
-      || !Number.isSafeInteger(activity.recapOccurredAt)
-      || activity.recapOccurredAt < 0 || activity.recapOccurredAt > now() + 1500) return false;
+      || !Number.isSafeInteger(activity.occurredAt)
+      || activity.occurredAt < 0 || activity.occurredAt > now() + 1500) return false;
     const snapshot = codexTurnFence.getSnapshot(sessionId);
     const turnId = normalizeCodexTurnId(activity.turnId);
     // An idless observer cannot prove it belongs to a known active turn.
@@ -281,24 +253,12 @@ function createAgentRuntimeMain(options = {}) {
       codexMonitor = new CodexLogMonitor(codexAgent, (sid, state, event, extra) => {
         const sessionIdentity = resolveSessionIdentity(sid, "local");
         const sessionId = sessionIdentity.sessionId;
-        // Subscription quota is account state, not session state: it goes
-        // to the session-independent per-source store (null host = this
-        // machine), never into updateSession opts — see state.js
-        // updateAccountQuota and src/state-account-quota.js.
         const sessionOptions = {
-          ...buildCodexMonitorSessionOptions(extra, { includeHeadless: true, includeRecap: true }),
+          ...buildCodexMonitorSessionOptions(extra, { includeHeadless: true }),
           profileId: sessionIdentity.profileId,
           rawSessionId: sessionIdentity.rawSessionId,
         };
-        const accountQuotas = normalizeCodexMonitorAccountQuotas(extra);
         recordCodexTurnIdCapture(sessionId, "jsonl", event, extra && extra.turnId);
-        const annotateCodexAccountQuota = () => {
-          if (!accountQuotas) return;
-          const stateRuntime = getStateRuntime();
-          if (stateRuntime && typeof stateRuntime.updateAccountQuota === "function") {
-            stateRuntime.updateAccountQuota(null, accountQuotas);
-          }
-        };
         const annotateCodexContextUsage = () => {
           if (!sessionOptions.contextUsage) return false;
           const stateRuntime = getStateRuntime();
@@ -309,7 +269,6 @@ function createAgentRuntimeMain(options = {}) {
         };
         if (isCodexMonitorMetadataOnlyEvent(event, extra)) {
           annotateCodexContextUsage();
-          annotateCodexAccountQuota();
           return;
         }
         const fenceDecision = codexTurnFence.observe({
@@ -322,24 +281,15 @@ function createAgentRuntimeMain(options = {}) {
           turnBoundaryOpen: extra && extra.turnBoundaryOpen === true,
         });
         if (!fenceDecision.accept) {
-          if (
-            fenceDecision.reason === "closed-turn-id"
-            || fenceDecision.reason === "terminal-latch"
-          ) {
-            recordCodexWebSearchRecapOnly(sessionIdentity, sessionOptions, event, extra);
-          }
           annotateCodexContextUsage();
-          annotateCodexAccountQuota();
           return;
         }
         if (shouldSuppressCodexLogEvent(sessionId, state, event, extra && extra.turnId, extra)) {
           annotateCodexContextUsage();
-          annotateCodexAccountQuota();
           return;
         }
         clearCodexNotifyBubbles(sessionId, `codex-state-transition:${state}`);
         updateSession(sessionId, state, event, sessionOptions);
-        annotateCodexAccountQuota();
       }, {
         classifier: localCodexSubagentClassifier,
         onUserInputRequest: (sid, request, extra) => {
@@ -362,10 +312,6 @@ function createAgentRuntimeMain(options = {}) {
             profileId: sessionIdentity.profileId,
             rawSessionId: sessionIdentity.rawSessionId,
             transientPermissionEvent: true,
-            // Card/focus recovery is independent of accepted activity. Only
-            // the fenced touch above may extend the session's lifetime, and
-            // this UI event must never enter recap with receipt time.
-            recapSuppressed: true,
           });
         },
         onUserInputResolved: (sid, callId, resolution = null) => {

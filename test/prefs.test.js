@@ -82,14 +82,7 @@ describe("prefs.getDefaults", () => {
     assert.strictEqual(d.sessionHudShowStateLabels, true);
     assert.strictEqual(d.sessionHudShowElapsed, false);
     assert.strictEqual(d.sessionHudShowContextUsage, true);
-    assert.strictEqual(d.sessionHudShowQuota, true);
-    assert.strictEqual(d.quotaRingDisplayMode, "used");
-    // Empty means every connected provider draws, matching the behaviour before
-    // the preference existed. Storing what is HIDDEN (not what is shown) is why
-    // a newly connected provider appears on its own instead of silently missing.
-    assert.deepStrictEqual(d.quotaRingHiddenProviders, []);
     assert.strictEqual(d.claudeQuotaCollectionEnabled, false);
-    assert.strictEqual(d.quotaMergeSources, false);
     assert.strictEqual(d.sessionHudCleanupDetached, true);
     assert.strictEqual("sessionHudAutoHide" in d, false);
     assert.strictEqual(d.sessionHudPinned, false);
@@ -187,7 +180,6 @@ describe("prefs.validate", () => {
       sessionHudShowStateLabels: "yes",
       sessionHudShowElapsed: "yes",
       sessionHudShowContextUsage: "yes",
-      quotaRingDisplayMode: "available",
       sessionHudCleanupDetached: "yes",
       hideBubbles: 0,        // wrong type
       permissionBubblesEnabled: "yes",
@@ -215,7 +207,6 @@ describe("prefs.validate", () => {
     assert.strictEqual(v.sessionHudShowStateLabels, true);
     assert.strictEqual(v.sessionHudShowElapsed, false);
     assert.strictEqual(v.sessionHudShowContextUsage, true);
-    assert.strictEqual(v.quotaRingDisplayMode, "used");
     assert.strictEqual(v.sessionHudCleanupDetached, true);
     assert.strictEqual(v.hideBubbles, false);
     assert.strictEqual(v.permissionBubblesEnabled, true);
@@ -228,11 +219,6 @@ describe("prefs.validate", () => {
     assert.strictEqual(v.savedPixelWidth, 0);
     assert.strictEqual(v.savedPixelHeight, 0);
     assert.strictEqual(v.savedPixelWorkArea, null);
-  });
-
-  it("preserves both supported quota ring display modes", () => {
-    assert.strictEqual(prefs.validate({ quotaRingDisplayMode: "used" }).quotaRingDisplayMode, "used");
-    assert.strictEqual(prefs.validate({ quotaRingDisplayMode: "remaining" }).quotaRingDisplayMode, "remaining");
   });
 
   it("validates bubble placement enums independently from the follow toggle", () => {
@@ -399,39 +385,6 @@ describe("prefs.validate", () => {
     assert.strictEqual(prefs.validate({ textScale: 2 }).textScale, 1);
     assert.strictEqual(prefs.validate({ textScale: "1.2" }).textScale, 1);
     assert.strictEqual(prefs.getDefaults().textScale, 1);
-  });
-
-  it("normalizes hidden quota providers without inventing or dropping choices", () => {
-    // Deliberately NOT validated against the ring's provider table. Rejecting an
-    // unfamiliar key here would silently un-hide a provider whenever a rename,
-    // load order, or a not-yet-registered provider made the key look wrong —
-    // the user's coin would come back on its own. Shape only; consumers match
-    // by key, so a stale entry is inert.
-    assert.deepStrictEqual(
-      prefs.validate({ quotaRingHiddenProviders: ["codexQuota", "somethingNew"] })
-        .quotaRingHiddenProviders,
-      ["codexQuota", "somethingNew"]
-    );
-    // Junk shapes collapse to "hide nothing" rather than throwing away the ring.
-    for (const raw of [undefined, null, "codexQuota", 7, {}]) {
-      assert.deepStrictEqual(
-        prefs.validate({ quotaRingHiddenProviders: raw }).quotaRingHiddenProviders, [],
-        `${JSON.stringify(raw)} should normalize to an empty list`
-      );
-    }
-    // Blank/duplicate/non-string entries are dropped; order is preserved.
-    assert.deepStrictEqual(
-      prefs.validate({
-        quotaRingHiddenProviders: ["claudeQuota", "", "  ", null, 3, "claudeQuota", "codexQuota"],
-      }).quotaRingHiddenProviders,
-      ["claudeQuota", "codexQuota"]
-    );
-    // Bounded, so a corrupt file cannot grow the preference without limit.
-    const flood = Array.from({ length: 200 }, (_v, i) => `p${i}`);
-    assert.strictEqual(
-      prefs.validate({ quotaRingHiddenProviders: flood }).quotaRingHiddenProviders.length,
-      prefs.MAX_HIDDEN_QUOTA_PROVIDERS
-    );
   });
 
   it("normalizes agents (drops malformed entries)", () => {
@@ -2217,32 +2170,6 @@ describe("prefs.save", () => {
       clickLeft: { file: "p.svg" },
       // explode: absent
     });
-  });
-});
-
-describe("prefs.tutorialSeen (first-run tutorial gate)", () => {
-  it("defaults to false on fresh defaults", () => {
-    assert.strictEqual(prefs.getDefaults().tutorialSeen, false);
-  });
-
-  it("persists true across a save/load round-trip", () => {
-    const p = makeTempPath();
-    prefs.save(p, { ...prefs.getDefaults(), tutorialSeen: true });
-    assert.strictEqual(prefs.load(p).snapshot.tutorialSeen, true);
-  });
-
-  it("resolves to false for an existing-user file lacking the key (they see it once too)", () => {
-    const p = makeTempPath();
-    // Pre-tutorial prefs file: current version, no tutorialSeen key at all.
-    fs.writeFileSync(p, JSON.stringify({ version: prefs.CURRENT_VERSION, showTray: true }));
-    assert.strictEqual(prefs.load(p).snapshot.tutorialSeen, false);
-  });
-
-  it("is NOT backfilled to true by migrate (unlike showDock)", () => {
-    const migrated = prefs.migrate({ version: 1 });
-    assert.notStrictEqual(migrated.tutorialSeen, true);
-    // migrate never adds it; validate fills the false default so the user is unseen.
-    assert.strictEqual(prefs.validate(migrated).tutorialSeen, false);
   });
 });
 

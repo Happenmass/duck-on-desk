@@ -139,7 +139,6 @@ async function loadDashboard(
     "title",
     "count",
     "content",
-    "quotaSummary",
   ]);
   const openCalls = [];
   const automationCalls = [];
@@ -183,7 +182,6 @@ async function loadDashboard(
   await flush();
   return {
     root: document.elements.get("content"),
-    quotaSummary: document.elements.get("quotaSummary"),
     openCalls,
     automationCalls,
     tickRender: () => { if (renderInterval) renderInterval(); },
@@ -247,44 +245,6 @@ test("Dashboard renders local/remote/webui reasons and only local folder action"
     "WebUI sessions do not have a local terminal window.",
   ]);
   assert.strictEqual(byClass(root, "open-folder-button").length, 1);
-});
-
-test("Dashboard renders no quota section when there is no quota data", async () => {
-  const dashboard = await loadDashboard([]);
-
-  assert.strictEqual(byClass(dashboard.quotaSummary, "quota-refresh-button").length, 0);
-  assert.strictEqual(byClass(dashboard.quotaSummary, "quota-section").length, 0);
-});
-
-test("Dashboard quota bars apply the same warn and hot boundaries as Orbit", async () => {
-  const dashboard = await loadDashboard([], { status: "ok" }, {
-    accountQuota: [{
-      host: null,
-      claudeQuota: {
-        lastSeenAt: Date.now(),
-        group: {
-          claudeFiveHour: { usedPercent: 59 },
-          claudeWeekly: { usedPercent: 60 },
-        },
-      },
-      codexQuota: {
-        lastSeenAt: Date.now(),
-        group: {
-          codexFiveHour: { usedPercent: 85 },
-          codexWeekly: { usedPercent: 86 },
-        },
-      },
-    }],
-  });
-
-  const classesByWidth = new Map(
-    byClass(dashboard.quotaSummary, "quota-bar-fill")
-      .map((fill) => [fill.style.width, fill.className])
-  );
-  assert.match(classesByWidth.get("59%"), /\bsev-ok\b/);
-  assert.match(classesByWidth.get("60%"), /\bsev-warn\b/);
-  assert.match(classesByWidth.get("85%"), /\bsev-warn\b/);
-  assert.match(classesByWidth.get("86%"), /\bsev-hot\b/);
 });
 
 test("Dashboard renders the resolved custom agent name instead of its raw id", async () => {

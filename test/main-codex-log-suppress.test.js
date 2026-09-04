@@ -32,7 +32,7 @@ describe("main Codex official hook JSONL suppression", () => {
         "working",
         "response_item:function_call",
         "turn-1",
-        { recapIsWebSearch: true },
+        { isWebSearch: true },
       ),
       false,
     );

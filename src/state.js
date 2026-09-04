@@ -38,28 +38,14 @@ const {
 const { getAgentIconUrl } = require("./state-agent-icons");
 const { resolveSessionIdentity } = require("./session-key");
 const { normalizeTranscriptPath } = require("./transcript-path");
-const { createAccountQuotaStore } = require("./state-account-quota");
-const { normalizeQuotaGroup } = require("../hooks/quota-bucket");
-const { CLAUDE_QUOTA_FIELDS } = require("../hooks/claude-rate-limits");
 const { getClaudeStopDisposition } = require("../hooks/claude-stop-disposition");
 const { getStartupRecoveryProcessNames } = require("../agents/registry");
-const { hasReusableDefaultIdentity, mapRecapMetrics } = require("./recap-metrics");
-const {
-  NOOP_RECAP_SINK,
-  recordCanonicalRecapEvent,
-} = require("./recap-sink");
 const {
   readTranscriptTailEntries: readClaudeTranscriptTailEntries,
   extractLastAssistantTextFromEntries: extractLastClaudeAssistantTextFromEntries,
 } = require("../hooks/clawd-hook");
 
 module.exports = function initState(ctx) {
-
-const recapSink = ctx.recapSink && typeof ctx.recapSink.record === "function"
-  ? ctx.recapSink
-  : NOOP_RECAP_SINK;
-const pendingClaudeRecapStarts = new Map();
-const MAX_PENDING_CLAUDE_RECAP_STARTS = 256;
 
 const _getCursor = ctx.getCursorScreenPoint || (screen ? () => screen.getCursorScreenPoint() : null);
 const _kill = ctx.processKill || process.kill.bind(process);
@@ -107,20 +93,6 @@ let DISPLAY_HINT_MAP = {};
 
 // ── Session tracking ──
 const sessions = new Map();
-// Account-wide rate-limit quota, keyed by reporting source — deliberately
-// NOT session state (see src/state-account-quota.js). Persistence is
-// opt-in via ctx so the many test-constructed state runtimes stay
-// filesystem-free; main.js passes the real path.
-const accountQuota = createAccountQuotaStore({
-  persistPath: ctx.accountQuotaPersistPath || null,
-  logWarn: console.warn,
-});
-// Upgrade cleanup: older builds retained the last local Claude quota even
-// after the user opted out. Remove that misleading cache before the first
-// snapshot while preserving Remote SSH and every non-Claude provider.
-if (ctx.claudeQuotaCollectionEnabled === false) {
-  clearLocalClaudeQuota({ broadcast: false });
-}
 const MAX_SESSIONS = 20;
 const ASSISTANT_OUTPUT_MAX = 2400;
 const CODEX_EXIT_PROBE_DELAYS_MS = [1000, 3000, 8000, 15000];
@@ -887,7 +859,6 @@ function buildSessionSnapshot() {
     sessionHudCleanupDetached: ctx.sessionHudCleanupDetached === true,
     focusHostPlatform: ctx.focusHostPlatform || process.platform,
     isProcessAlive,
-    accountQuota: accountQuota.snapshot({ mergeSources: ctx.quotaMergeSources === true }),
     sessionAutomationRecords: typeof ctx.getSessionAutomationRecords === "function"
       ? ctx.getSessionAutomationRecords()
       : [],
@@ -917,151 +888,6 @@ function emitSessionSnapshot(options = {}) {
     broadcastSessionSnapshot(snapshot);
   }
   return { changed, snapshot };
-}
-
-function resolveRecapScope(input) {
-  if (input && input.profileId && input.profileId !== "local") return "remote";
-  if (input && input.wslDistro) return "wsl";
-  return "local";
-}
-
-function resolveRecapScopeId(input) {
-  const scope = resolveRecapScope(input);
-  if (scope === "remote") return input.profileId;
-  if (scope === "wsl") return input.wslDistro || "wsl";
-  return "local";
-}
-
-function findSnapshotSession(snapshot, sessionId) {
-  const entries = snapshot && Array.isArray(snapshot.sessions) ? snapshot.sessions : [];
-  return entries.find((entry) => entry && entry.id === sessionId) || null;
-}
-
-function claudeRecapStartKey(input) {
-  if (!input || input.agentId !== "claude-code" || hasReusableDefaultIdentity(input.rawSessionId)) return null;
-  return `${resolveRecapScope(input)}\0${resolveRecapScopeId(input)}\0${input.rawSessionId}`;
-}
-
-function prunePendingClaudeRecapStarts() {
-  while (pendingClaudeRecapStarts.size > MAX_PENDING_CLAUDE_RECAP_STARTS) {
-    pendingClaudeRecapStarts.delete(pendingClaudeRecapStarts.keys().next().value);
-  }
-}
-
-function captureRecapRecordingToken() {
-  return recapSink && typeof recapSink.captureRecordingToken === "function"
-    ? recapSink.captureRecordingToken()
-    : undefined;
-}
-
-function hasCurrentRecapRecordingToken(input) {
-  // Minimal/testing sinks without recording controls retain their old contract.
-  return input.recapRecordingToken === undefined || !!(
-    recapSink && typeof recapSink.isRecordingTokenCurrent === "function"
-    && recapSink.isRecordingTokenCurrent(input.recapRecordingToken)
-  );
-}
-
-function persistRecapMetrics(input, metrics) {
-  if (!hasCurrentRecapRecordingToken(input)) return false;
-  let dedupeId = null;
-  if (metrics.includes("session-start")) {
-    dedupeId = `session-start:${input.rawSessionId}`;
-  } else if (metrics.includes("tool-call") && input.toolUseId) {
-    dedupeId = `tool-call:${input.toolUseId}`;
-  } else if (metrics.includes("turn-complete")) {
-    dedupeId = input.recapDedupeId ? `turn-complete:${input.recapDedupeId}` : null;
-  }
-  return recordCanonicalRecapEvent(recapSink, {
-    occurredAt: input.occurredAt,
-    agentId: input.agentId,
-    scope: resolveRecapScope(input),
-    metrics,
-  }, {
-    scopeId: resolveRecapScopeId(input),
-    sessionId: input.rawSessionId || input.sessionId,
-    dedupeId,
-    sessionStartPartial: hasReusableDefaultIdentity(input.rawSessionId),
-  });
-}
-
-function recordAcceptedRecapEvent(input, snapshot) {
-  if (!input || !input.agentId || !input.event) return false;
-  if (input.recapSuppressed === true) return false;
-  if (typeof ctx.isAgentEnabled === "function" && !ctx.isAgentEnabled(input.agentId)) return false;
-  // Remote Codex ordinary lifecycle does not yet have the local monitor's
-  // replay fence + authoritative line timestamp. Keep it out until that
-  // contract exists instead of stamping receipt time onto historical work.
-  if (
-    input.agentId === "codex"
-    && input.profileId
-    && input.profileId !== "local"
-    && input.hookSource !== "codex-official"
-  ) return false;
-
-  prunePendingClaudeRecapStarts();
-  const pendingKey = claudeRecapStartKey(input);
-  const isFreshClaudeStart = !!(
-    pendingKey
-    && input.event === "SessionStart"
-    && (input.sessionStartSource === "startup" || input.sessionStartSource === "clear")
-    && input.recapIsSubagent !== true
-    && !input.subagentId
-    && !input.subagentType
-  );
-  if (isFreshClaudeStart) {
-    const pending = pendingClaudeRecapStarts.get(pendingKey);
-    if (!pending || !hasCurrentRecapRecordingToken(pending.input)) {
-      pendingClaudeRecapStarts.set(pendingKey, {
-        input: { ...input, recapRecordingToken: captureRecapRecordingToken() },
-      });
-    }
-    prunePendingClaudeRecapStarts();
-    return false;
-  }
-  const pendingStart = pendingKey && pendingClaudeRecapStarts.get(pendingKey);
-  if (pendingStart && input.event === "SessionEnd") pendingClaudeRecapStarts.delete(pendingKey);
-  const confirmsPendingStart = !!(
-    pendingStart
-    && input.event !== "SessionStart"
-    && input.event !== "SessionEnd"
-  );
-
-  let completionAccepted = false;
-  if (input.completionCandidate === true) {
-    const entry = findSnapshotSession(snapshot, input.sessionId);
-    const lastEvent = entry && entry.lastEvent;
-    completionAccepted = !!(
-      entry
-      && entry.badge === "done"
-      && lastEvent
-      && lastEvent.rawEvent === input.event
-      && Number.isSafeInteger(input.snapshotEventAt)
-      && lastEvent.at === input.snapshotEventAt
-    );
-  }
-  const metrics = mapRecapMetrics({ ...input, completionAccepted });
-  if (!metrics) return false;
-
-  try {
-    if (confirmsPendingStart) {
-      pendingClaudeRecapStarts.delete(pendingKey);
-      persistRecapMetrics(pendingStart.input, ["activity", "session-start"]);
-    }
-    return persistRecapMetrics(input, metrics);
-  } catch (err) {
-    console.warn("recap event rejected:", err && err.message ? err.message : "invalid event");
-    return false;
-  }
-}
-
-function recordRecapEventOnly(input) {
-  // This narrow path is for a boundary that already passed source/replay
-  // arbitration but arrived too late to re-drive session state (currently a
-  // Codex WebSearch discovered after its official Stop). Never invent receipt
-  // time here: callers must carry the trusted source timestamp.
-  if (!input || !Number.isSafeInteger(input.occurredAt) || input.occurredAt < 0) return false;
-  return recordAcceptedRecapEvent(input, getLastSessionSnapshot());
 }
 
 function getLastSessionSnapshot() {
@@ -1323,8 +1149,7 @@ function touchSessionActivity(sessionId, opts = {}) {
 // updatedAt (a statusline refreshing every ~300ms would keep any session
 // eternally "fresh", defeating staleness sweeps and resurrecting completed
 // cards as idle). Context usage is the only per-session field a statusline
-// owns — account quota is not a session property and lives in the
-// session-independent store (updateAccountQuota below).
+// owns.
 // Broadcast goes through emitSessionSnapshot, whose signature dedup already
 // swallows no-op refreshes.
 function updateSessionMetadata(sessionId, opts = {}) {
@@ -1389,37 +1214,6 @@ function clearClaudeStatuslineAuthority(profileId = "local") {
   return cleared;
 }
 
-// Account-wide rate-limit quota reported by one source (host prefix for
-// remotes, null for this machine). Session-independent by design: the
-// numbers must survive session eviction and app restarts so "check the
-// remote's quota before starting work" has something honest to show — see
-// src/state-account-quota.js for the expiry/staleness contract.
-function updateAccountQuota(host, quotas = {}) {
-  const changed = accountQuota.update(host, quotas);
-  if (changed) emitSessionSnapshot();
-  return changed;
-}
-
-function clearLocalClaudeQuota(options = {}) {
-  const cleared = accountQuota.clearProvider(
-    "claudeQuota",
-    (sourceKey) => !sourceKey.startsWith("remote:")
-  );
-  if (!cleared) return 0;
-  // An explicit opt-out is a data-lifecycle boundary, not a routine refresh:
-  // persist it synchronously so a crash/restart cannot resurrect stale quota.
-  accountQuota.flush();
-  if (options.broadcast !== false) emitSessionSnapshot();
-  return cleared;
-}
-
-// Distinct reporting sources that currently carry quota (this machine + WSL /
-// SSH remotes), UNmerged. The settings UI hides the "merge across machines"
-// switch when there is only one source, since merging is then a no-op.
-function getQuotaSourceCount() {
-  return accountQuota.snapshot({ mergeSources: false }).length;
-}
-
 // ── #406 Stop completion gate ──
 // A Claude "Stop" maps to "attention" (celebrate + complete sound), but a Stop
 // is not always a real turn completion. Decidable-now signals (live crons,
@@ -1434,10 +1228,6 @@ function scheduleCompletionDebounce(sessionId, debounceMs, payload = {}) {
   const text = normalizeAssistantOutput(payload && payload.text);
   const record = {
     timer: null,
-    recapRecordingToken: captureRecapRecordingToken(),
-    occurredAt: Number.isSafeInteger(payload.occurredAt) && payload.occurredAt >= 0
-      ? payload.occurredAt
-      : Date.now(),
     assistantLastOutput: text,
     assistantLastOutputTruncated: !!(text && payload && payload.truncated === true),
   };
@@ -1445,8 +1235,6 @@ function scheduleCompletionDebounce(sessionId, debounceMs, payload = {}) {
     if (pendingCompletionDebounces.get(sessionId) !== record) return;
     pendingCompletionDebounces.delete(sessionId);
     promoteCompletion(sessionId, {
-      recapRecordingToken: record.recapRecordingToken,
-      occurredAt: record.occurredAt,
       text: record.assistantLastOutput,
       truncated: record.assistantLastOutputTruncated,
     });
@@ -1513,7 +1301,6 @@ function scheduleClaudeTranscriptCompletionProbe(sessionId, transcriptPath) {
   const startedAt = Date.now();
   const probe = {
     timer: null, transcriptPath: safePath, startedAt,
-    recapRecordingToken: captureRecapRecordingToken(),
   };
 
   const runProbe = () => {
@@ -1543,8 +1330,6 @@ function scheduleClaudeTranscriptCompletionProbe(sessionId, transcriptPath) {
       session.assistantLastOutputTruncated = assistantOutput.truncated === true;
       debugSession(`claude-transcript-stop-probe promote sid=${sessionId}`);
       promoteCompletion(sessionId, {
-        recapRecordingToken: probe.recapRecordingToken,
-        occurredAt: Date.now(),
         text: session.assistantLastOutput,
         truncated: session.assistantLastOutputTruncated,
       });
@@ -1573,10 +1358,6 @@ function promoteCompletion(sessionId, completionPayload = undefined) {
     debugSession(`completion-promote hold sid=${sessionId} reason=background-subagent`);
     return false;
   }
-  const suppliedOccurredAt = completionPayload && completionPayload.occurredAt;
-  const completionOccurredAt = Number.isSafeInteger(suppliedOccurredAt) && suppliedOccurredAt >= 0
-    ? suppliedOccurredAt
-    : Date.now();
   if (completionPayload !== undefined) {
     const text = normalizeAssistantOutput(completionPayload && completionPayload.text);
     session.assistantLastOutput = text;
@@ -1591,26 +1372,11 @@ function promoteCompletion(sessionId, completionPayload = undefined) {
   // attention cue. Record that distinction so a later duplicate Stop is
   // suppressed while an earlier idle-only terminal can still be upgraded.
   session.recentEvents = pushRecentEvent(session, "attention", "Stop");
-  const completionSnapshotEvent = session.recentEvents[session.recentEvents.length - 1] || null;
   session.state = "idle";
   session.updatedAt = Date.now();
   session.displayHint = null;
   session.awaitingInputSinceStop = true;
-  const recapSnapshot = emitSessionSnapshot({ force: true }).snapshot;
-  recordAcceptedRecapEvent({
-    occurredAt: completionOccurredAt,
-    recapRecordingToken: completionPayload && completionPayload.recapRecordingToken,
-    sessionId,
-    rawSessionId: session.rawSessionId || sessionId,
-    agentId: session.agentId,
-    profileId: session.profileId || "local",
-    host: session.host || null,
-    wslDistro: session.wslDistro || null,
-    event: "Stop",
-    snapshotEventAt: completionSnapshotEvent && completionSnapshotEvent.at,
-    recapDedupeId: completionPayload && completionPayload.recapDedupeId,
-    completionCandidate: true,
-  }, recapSnapshot);
+  emitSessionSnapshot({ force: true });
   if (hasConfirmedPermissionAnimationLock()) {
     const display = resolveDisplayState();
     setState(display, getSvgOverride(display));
@@ -1695,12 +1461,6 @@ function resolveIncomingSessionTitle(existing, incomingTitle) {
 }
 
 function updateSession(sessionId, state, event, opts = {}) {
-  const suppliedRecapOccurredAt = opts && opts.recapOccurredAt;
-  const recapTimestampTrusted = Number.isSafeInteger(suppliedRecapOccurredAt) && suppliedRecapOccurredAt >= 0;
-  const recapOccurredAt = recapTimestampTrusted
-    ? suppliedRecapOccurredAt
-    : Date.now();
-  let recapPendingInput = null;
   try {
   const {
     sourcePid = null,
@@ -1754,11 +1514,6 @@ function updateSession(sessionId, state, event, opts = {}) {
     subagentType = null,
     subagentLifecycleSource = null,
     sessionStartSource = null,
-    recapBoundary = null,
-    recapIsSubagent = false,
-    recapDedupeId = null,
-    toolUseId = null,
-    recapSuppressed = false,
     replaceProcessMetadata = false,
   } = opts;
   if (startupRecoveryActive) {
@@ -1799,29 +1554,6 @@ function updateSession(sessionId, state, event, opts = {}) {
     if (shouldStorePermissionAutomationIdentity) {
       sessionForPerm.sessionAutomationIdentity = normalizedSessionAutomationIdentity;
     }
-    // Observation is independent from the permission-bubble preference:
-    // disabling that UI must not erase the underlying accepted activity
-    // from recap.
-    recapPendingInput = {
-      occurredAt: recapOccurredAt,
-      sessionId,
-      rawSessionId: (sessionForPerm && sessionForPerm.rawSessionId) || rawSessionId || sessionId,
-      agentId: permAgentId,
-      profileId: (sessionForPerm && sessionForPerm.profileId) || profileId || "local",
-      host: host || (sessionForPerm && sessionForPerm.host) || null,
-      wslDistro: wslDistro || (sessionForPerm && sessionForPerm.wslDistro) || null,
-      event,
-      sessionStartSource,
-      recapBoundary,
-      recapIsSubagent,
-      recapDedupeId,
-      toolUseId,
-      hookSource,
-      recapSuppressed,
-      subagentId,
-      subagentType,
-      completionCandidate: false,
-    };
     const hasCodexPermissionMetadata = !!(
       sourcePid || wtHwnd || agentPid || (pidChain && pidChain.length) || cwd || host || wslDistro ||
       model || provider || codexOriginator || codexSource || platform || ghosttyTerminalId ||
@@ -2097,7 +1829,6 @@ function updateSession(sessionId, state, event, opts = {}) {
           );
         }
         scheduleCompletionDebounce(sessionId, debounceMs, {
-          occurredAt: recapOccurredAt,
           text: incomingAssistantLastOutput,
           truncated: assistantLastOutputTruncated === true,
         });
@@ -2120,32 +1851,6 @@ function updateSession(sessionId, state, event, opts = {}) {
       ? existing.recentEvents.slice()
       : markCompletionTailPresented(existing.recentEvents))
     : pushRecentEvent(existing, preservedState || state, event);
-  const recapSnapshotEvent = event && recentEvents.length > 0
-    ? recentEvents[recentEvents.length - 1]
-    : null;
-  if (event && !(duplicateCompletionVisualAtEntry && isDoneEvent(event))) {
-    recapPendingInput = {
-      occurredAt: recapOccurredAt,
-      sessionId,
-      rawSessionId: (existing && existing.rawSessionId) || rawSessionId || sessionId,
-      agentId: srcAgentId,
-      profileId: (existing && existing.profileId) || profileId || "local",
-      host: srcHost,
-      wslDistro: srcWslDistro,
-      event,
-      snapshotEventAt: recapSnapshotEvent && recapSnapshotEvent.at,
-      sessionStartSource,
-      recapBoundary,
-      recapIsSubagent,
-      recapDedupeId,
-      toolUseId,
-      hookSource,
-      recapSuppressed,
-      subagentId: normalizedSubagentId,
-      subagentType,
-      completionCandidate: !duplicateCompletionVisualAtEntry && isDoneEvent(event),
-    };
-  }
   const preserveCompletionAck =
     existing
     && existing.requiresCompletionAck === true
@@ -2243,7 +1948,6 @@ function updateSession(sessionId, state, event, opts = {}) {
   if (isSubagentStop || isSubagentScopedSessionEnd) {
     updateCodexExitProbe(sessionId, srcAgentId, event);
     if (!existing) {
-      recapPendingInput = null;
       debugSession(`subagent-stop ignore sid=${sessionId} reason=no-session`);
       cleanStaleSessions();
       const displayState = resolveDisplayState();
@@ -2496,8 +2200,7 @@ function updateSession(sessionId, state, event, opts = {}) {
       // visible.
       console.warn("reconcileAckFlag threw:", err);
     }
-    const recapSnapshot = emitSessionSnapshot().snapshot;
-    if (recapPendingInput) recordAcceptedRecapEvent(recapPendingInput, recapSnapshot);
+    emitSessionSnapshot();
   }
 }
 
@@ -2575,10 +2278,7 @@ function isProcessAlive(pid) {
 function cleanStaleSessions() {
   const now = Date.now();
   let changed = false;
-  // Quota is session-independent and can go stale while no hook events are
-  // arriving. The existing 10-second lifecycle sweep must therefore retire
-  // dead buckets too and force a snapshot refresh when it does.
-  let snapshotRefreshNeeded = accountQuota.prune();
+  let snapshotRefreshNeeded = false;
   const staleConfig = typeof ctx.getStaleConfig === "function" ? ctx.getStaleConfig() : null;
   for (const [id, s] of sessions) {
     const decision = getStaleSessionDecision(s, {
@@ -2864,8 +2564,8 @@ function enableDoNotDisturb() {
   if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; pendingState = null; }
   if (autoReturnTimer) { clearTimeout(autoReturnTimer); autoReturnTimer = null; }
   // DND suppresses presentation, not observation. Pending completion
-  // arbitration must finish so snapshots, recap and remote completion
-  // consumers still receive the accepted turn boundary.
+  // arbitration must finish so snapshots and remote completion consumers
+  // still receive the accepted turn boundary.
   stopWakePoll();
   if (ctx.miniMode) {
     applyState("mini-sleep");
@@ -2910,13 +2610,8 @@ function getCurrentHitBox() { return currentHitBox; }
 function getStartupRecoveryActive() { return startupRecoveryActive; }
 
 function cleanup() {
-  // The persist debounce timer is unref'd, so a quota update inside the
-  // final debounce window before quit would otherwise never reach disk
-  // (main.js before-quit calls this cleanup).
-  accountQuota.flush();
   if (pendingTimer) clearTimeout(pendingTimer);
   pendingState = null;
-  pendingClaudeRecapStarts.clear();
   if (autoReturnTimer) clearTimeout(autoReturnTimer);
   clearAllCompletionDebounces();
   clearAllClaudeTranscriptCompletionProbes();
@@ -2928,7 +2623,7 @@ function cleanup() {
 }
 
 return {
-  setState, applyState, updateSession, recordRecapEventOnly, restoreSessionFromLease, resolveDisplayState, resolveVisualBinding, setUpdateVisualState,
+  setState, applyState, updateSession, restoreSessionFromLease, resolveDisplayState, resolveVisualBinding, setUpdateVisualState,
   shouldDropForDnd,
   enableDoNotDisturb, disableDoNotDisturb,
   startStaleCleanup, stopStaleCleanup, startWakePoll, stopWakePoll,
@@ -2942,9 +2637,6 @@ return {
   touchSessionActivity,
   updateSessionMetadata,
   clearClaudeStatuslineAuthority,
-  updateAccountQuota,
-  clearLocalClaudeQuota,
-  getQuotaSourceCount,
   clearPermissionNotification,
   promoteCompletion,
   ackSessionCompletion,

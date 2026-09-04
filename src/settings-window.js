@@ -17,7 +17,6 @@ const MIN_HEIGHT = 480;
 const READY_TO_SHOW_FALLBACK_MS = 2000;
 const SETTINGS_FRONT_LIFT_MS = 200;
 const BOUNDS_SAVE_DEBOUNCE_MS = 500;
-const RECAP_CHANGED_DEBOUNCE_MS = 500;
 const FALLBACK_WORK_AREA = { x: 0, y: 0, width: 1280, height: 800 };
 
 function requiredDependency(value, name) {
@@ -94,7 +93,6 @@ function createSettingsWindowRuntime(options = {}) {
   let readyToShowFallbackTimer = null;
   let liftTimer = null;
   let saveBoundsTimer = null;
-  let recapChangedTimer = null;
   let lastSavedBounds = null;
   let showPendingSettingsWindow = null;
   let pendingRequestedTab = null;
@@ -106,7 +104,6 @@ function createSettingsWindowRuntime(options = {}) {
     "theme",
     "animOverrides",
     "shortcuts",
-    "recap",
     "about",
   ]);
 
@@ -160,12 +157,6 @@ function createSettingsWindowRuntime(options = {}) {
     if (!saveBoundsTimer) return;
     clearScheduled(saveBoundsTimer);
     saveBoundsTimer = null;
-  }
-
-  function clearRecapChangedTimer() {
-    if (!recapChangedTimer) return;
-    clearScheduled(recapChangedTimer);
-    recapChangedTimer = null;
   }
 
   function getIconPath() {
@@ -326,29 +317,6 @@ function createSettingsWindowRuntime(options = {}) {
     if (!wc || (typeof wc.isDestroyed === "function" && wc.isDestroyed())) return;
     if (typeof wc.send !== "function") return;
     try { wc.send("settings:text-scale-context-changed"); } catch {}
-  }
-
-  // Hook bursts often contain several activity boundaries for one tool call.
-  // Coalesce them before crossing IPC so an open Footprints page can update
-  // promptly without rebuilding itself for every individual hook event.
-  function notifyRecapChanged() {
-    const currentWindow = getWindow();
-    if (!settingsRendererLoaded || !isLiveWindow(currentWindow)) return false;
-    const currentWebContents = currentWindow.webContents;
-    if (!currentWebContents
-      || (typeof currentWebContents.isDestroyed === "function" && currentWebContents.isDestroyed())
-      || typeof currentWebContents.send !== "function") return false;
-    if (recapChangedTimer) return false;
-    recapChangedTimer = scheduleTimer(() => {
-      recapChangedTimer = null;
-      const win = getWindow();
-      if (!settingsRendererLoaded || !isLiveWindow(win)) return;
-      const wc = win.webContents;
-      if (!wc || (typeof wc.isDestroyed === "function" && wc.isDestroyed())) return;
-      if (typeof wc.send !== "function") return;
-      try { wc.send("settings:recap-changed"); } catch {}
-    }, RECAP_CHANGED_DEBOUNCE_MS);
-    return true;
   }
 
   // textScale changed while settings is open: re-zoom, raise the minimum
@@ -532,7 +500,6 @@ function createSettingsWindowRuntime(options = {}) {
         clearReadyToShowFallbackTimer();
         clearLiftTimer();
         clearSaveBoundsTimer();
-        clearRecapChangedTimer();
         if (moveTextScaleTimer) {
           clearScheduled(moveTextScaleTimer);
           moveTextScaleTimer = null;
@@ -553,7 +520,6 @@ function createSettingsWindowRuntime(options = {}) {
     openWhenReady,
     applyTextScaleToWindow,
     applyTitleToWindow,
-    notifyRecapChanged,
   };
 }
 

@@ -8,7 +8,7 @@ const HUD_TITLE_MAX_UNITS = 15;
 const RECENT_DONE_UNREAD_MS = 60 * 1000;
 const SESSION_ACTION_FEEDBACK_MS = 4000;
 
-let snapshot = { sessions: [], orderedIds: [], hudTotalNonIdle: 0, hudLastTitle: null, hudShowStateLabels: true, hudShowElapsed: true, hudShowContextUsage: true, hudShowQuota: true, hudPinned: false, accountQuota: [] };
+let snapshot = { sessions: [], orderedIds: [], hudTotalNonIdle: 0, hudLastTitle: null, hudShowStateLabels: true, hudShowElapsed: true, hudShowContextUsage: true, hudPinned: false };
 let i18nPayload = { lang: "en", translations: {} };
 
 const unreadSessions = new Set();
@@ -464,8 +464,6 @@ function render() {
   updateUnread(sessions);
   hudEl.replaceChildren();
   hudEl.classList.add("has-pin");
-  // The HUD shows sessions only; account quota now lives in the pet-attached
-  // quota ring window (quota-ring.html).
   if (!sessions.length) return;
 
   const now = Date.now();

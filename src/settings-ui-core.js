@@ -90,7 +90,6 @@
       settingsSelects: new Set(),
       segmentedRadios: new Set(),
       disposableScopes: new Map(),
-      quotaRingDisplayMode: null,
       permissionAutomationMode: null,
       aboutAutoUpdate: null,
       aboutUpdateStatus: null,
@@ -1286,7 +1285,6 @@
     state.mountedControls.textScale = null;
     state.mountedControls.roamMovementStyle = null;
     state.mountedControls.bubblePlacement = null;
-    state.mountedControls.quotaRingDisplayMode = null;
     state.mountedControls.permissionAutomationMode = null;
     state.mountedControls.roamArea = null;
     state.mountedControls.aboutAutoUpdate = null;
@@ -1497,11 +1495,8 @@
 
   function applyAgentMetadata(list) {
     runtime.agentMetadata = Array.isArray(list) ? list : [];
-    if (state.activeTab === "agents" || state.activeTab === "recap") {
-      requestRender({
-        content: true,
-        preserveScroll: state.activeTab === "recap",
-      });
+    if (state.activeTab === "agents") {
+      requestRender({ content: true });
     }
   }
 
@@ -1895,7 +1890,6 @@
           requestRender({
             sidebar: true,
             content: true,
-            preserveScroll: state.activeTab === "recap",
           });
         });
         return;
@@ -1907,7 +1901,6 @@
             sidebar: true,
             content: true,
             modal: true,
-            preserveScroll: state.activeTab === "recap",
           });
         });
         return;
@@ -1916,7 +1909,6 @@
       requestRender({
         sidebar: true,
         content: true,
-        preserveScroll: state.activeTab === "recap",
       });
       return;
     }
@@ -1928,7 +1920,6 @@
           sidebar: true,
           content: true,
           modal: true,
-          preserveScroll: state.activeTab === "recap",
         });
       });
       return;
@@ -1944,7 +1935,6 @@
     requestRender({
       sidebar: true,
       content: true,
-      preserveScroll: state.activeTab === "recap",
     });
   }
 

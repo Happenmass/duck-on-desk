@@ -314,9 +314,9 @@ test("settings window runtime reuses an existing non-destroyed Settings window",
   ]);
 });
 
-test("settings window holds a requested recap tab until the new renderer is ready", () => {
+test("settings window holds a requested tab until the new renderer is ready", () => {
   const { runtime } = createRuntime();
-  runtime.open({ tab: "recap" });
+  runtime.open({ tab: "agents" });
   const win = FakeBrowserWindow.instances[0];
   assert.equal(win.calls.some((call) => Array.isArray(call) && call[0] === "send"), false);
 
@@ -324,40 +324,21 @@ test("settings window holds a requested recap tab until the new renderer is read
   assert.deepStrictEqual(win.calls.find((call) => Array.isArray(call) && call[0] === "send"), [
     "send",
     "settings:select-tab",
-    "recap",
+    "agents",
   ]);
-});
-
-test("settings window coalesces live recap changes after the renderer is ready", () => {
-  const { runtime, timers } = createRuntime();
-  runtime.open();
-  const win = FakeBrowserWindow.instances[0];
-  assert.equal(runtime.notifyRecapChanged(), false);
-  assert.equal(timers.some((timer) => timer.delay === 500 && !timer.cleared), false);
-  win.emitWebContents("did-finish-load");
-  win.calls = [];
-
-  assert.equal(runtime.notifyRecapChanged(), true);
-  assert.equal(runtime.notifyRecapChanged(), false);
-  const refreshTimers = timers.filter((timer) => timer.delay === 500 && !timer.cleared);
-  assert.equal(refreshTimers.length, 1);
-  assert.equal(win.calls.length, 0);
-
-  refreshTimers[0].callback();
-  assert.deepStrictEqual(win.calls, [["send", "settings:recap-changed", undefined]]);
 });
 
 test("settings window deep-link survives a reopen before load and reaches a minimized live window", () => {
   const { runtime, timers } = createRuntime();
   runtime.open();
   const win = FakeBrowserWindow.instances[0];
-  runtime.open({ tab: "recap" });
+  runtime.open({ tab: "agents" });
   assert.equal(win.calls.some((call) => Array.isArray(call) && call[0] === "send"), false);
   win.emitWebContents("did-finish-load");
   assert.deepStrictEqual(win.calls.find((call) => Array.isArray(call) && call[0] === "send"), [
     "send",
     "settings:select-tab",
-    "recap",
+    "agents",
   ]);
 
   win.emit("ready-to-show");
@@ -365,9 +346,9 @@ test("settings window deep-link survives a reopen before load and reaches a mini
   if (lift) lift.callback();
   win.calls = [];
   win.minimized = true;
-  runtime.open({ tab: "recap" });
+  runtime.open({ tab: "agents" });
   assert.deepStrictEqual(win.calls, [
-    ["send", "settings:select-tab", "recap"],
+    ["send", "settings:select-tab", "agents"],
     "restore",
     "show",
     ["setAlwaysOnTop", true, undefined],

@@ -218,7 +218,6 @@ function createHarness(overrides = {}) {
     fs: overrides.fs || fs,
     path: overrides.path || path,
     settingsController,
-    recapRuntime: overrides.recapRuntime,
     themeLoader,
     codexPetMain,
     getSettingsWindow: () => settingsWindow,
@@ -235,7 +234,6 @@ function createHarness(overrides = {}) {
     getAllAgents: overrides.getAllAgents || (() => []),
     getHookServerPort: overrides.getHookServerPort,
     getRecentHookEvents: overrides.getRecentHookEvents,
-    getQuotaSourceCount: overrides.getQuotaSourceCount,
     detectAgentInstallations: overrides.detectAgentInstallations,
     checkForUpdates: overrides.checkForUpdates || ((manual) => {
       calls.push(["checkForUpdates", manual]);
@@ -247,12 +245,7 @@ function createHarness(overrides = {}) {
       calls.push(["copyUpdateError", text]);
       return { status: "ok" };
     }),
-    showTutorial: overrides.showTutorial || (() => {
-      calls.push(["showTutorial"]);
-      return { status: "ok" };
-    }),
     aboutHeroSvgPath: overrides.aboutHeroSvgPath || path.join(__dirname, "missing-about-hero.svg"),
-    getLanWsServer: overrides.getLanWsServer || (() => null),
     now: overrides.now || (() => 12345),
   });
   return { ipcMain, runtime, calls, activeTheme, settingsWindow };
@@ -262,9 +255,6 @@ test("settings IPC registers owned channels and leaves animation override channe
   const { ipcMain, runtime } = createHarness();
 
   assert.ok(ipcMain.handlers.has("settings:get-snapshot"));
-  assert.ok(ipcMain.handlers.has("settings:recap-query"));
-  assert.ok(ipcMain.handlers.has("settings:recap-clear"));
-  assert.ok(ipcMain.handlers.has("settings:get-quota-source-count"));
   assert.ok(ipcMain.handlers.has("settings:get-pet-tint-options"));
   assert.ok(ipcMain.handlers.has("settings:get-pet-accessory-options"));
   assert.ok(ipcMain.handlers.has("settings:get-pet-mouth-accessory-options"));
@@ -274,7 +264,6 @@ test("settings IPC registers owned channels and leaves animation override channe
   assert.ok(ipcMain.handlers.has("settings:pick-sound-file"));
   assert.ok(ipcMain.handlers.has("settings:list-themes"));
   assert.ok(ipcMain.handlers.has("settings:detect-agent-installations"));
-  assert.ok(ipcMain.handlers.has("settings:show-tutorial"));
   assert.ok(ipcMain.handlers.has("settings:clear-update-error"));
   assert.ok(ipcMain.handlers.has("settings:open-user-themes-dir"));
   assert.ok(ipcMain.handlers.has("settings:import-user-theme-zip"));
@@ -294,44 +283,6 @@ test("settings IPC registers owned channels and leaves animation override channe
 
   assert.strictEqual(ipcMain.handlers.size, 0);
   assert.strictEqual(ipcMain.listeners.size, 0);
-});
-
-test("recap IPC exposes only bounded queries and explicit clear to the trusted Settings window", async () => {
-  const calls = [];
-  const harness = createHarness({
-    recapRuntime: {
-      query(period) {
-        calls.push(["query", period]);
-        return { status: "ready", period, days: [] };
-      },
-      clear() {
-        calls.push(["clear"]);
-        return true;
-      },
-    },
-  });
-  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:recap-query", "year"), {
-    status: "ready",
-    period: "year",
-    days: [],
-  });
-  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:recap-query", "arbitrary"), {
-    status: "error",
-    reason: "invalid-period",
-  });
-  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:recap-clear"), { status: "ok" });
-  assert.deepStrictEqual(calls, [["query", "year"], ["clear"]]);
-
-  harness.ipcMain.invokeEvent = { sender: {}, senderFrame: null };
-  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:recap-query", "today"), {
-    status: "error",
-    message: "untrusted settings sender",
-  });
-  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:recap-clear"), {
-    status: "error",
-    message: "untrusted settings sender",
-  });
-  assert.equal(calls.length, 2);
 });
 
 test("settings IPC reads, selects, and clears the shared roam fence", async () => {
@@ -449,20 +400,6 @@ test("settings IPC preserves picker error codes and does not write an impossible
   assert.strictEqual(saveCalls, 0);
 });
 
-test("settings IPC reports quota source count and fails closed when the provider throws", async () => {
-  const ok = createHarness({ getQuotaSourceCount: () => 3 });
-  assert.strictEqual(await ok.ipcMain.invoke("settings:get-quota-source-count"), 3);
-  ok.runtime.dispose();
-
-  const broken = createHarness({
-    getQuotaSourceCount: () => {
-      throw new Error("quota store unavailable");
-    },
-  });
-  assert.strictEqual(await broken.ipcMain.invoke("settings:get-quota-source-count"), 0);
-  broken.runtime.dispose();
-});
-
 test("settings:list-themes uses active runtime capabilities over raw metadata", async () => {
   const { ipcMain } = createHarness({
     activeTheme: {
@@ -488,54 +425,6 @@ test("settings:list-themes uses active runtime capabilities over raw metadata", 
     active: true,
     capabilities: { petTint: true, accessories: false, reactions: true },
   }]);
-});
-
-test("settings IPC opens the tutorial from Settings", async () => {
-  const { ipcMain, runtime, calls } = createHarness();
-
-  const result = await ipcMain.invoke("settings:show-tutorial");
-
-  assert.deepStrictEqual(result, { status: "ok" });
-  assert.deepStrictEqual(calls, [["showTutorial"]]);
-  runtime.dispose();
-});
-
-test("mobile connection info reports starting until the LAN bridge has a port", async () => {
-  const token = "0123456789abcdef0123456789abcdef";
-  const { ipcMain, runtime } = createHarness({
-    getLanWsServer: () => ({
-      getPort: () => null,
-      getToken: () => token,
-    }),
-  });
-
-  const result = await ipcMain.invoke("settings:mobile-connection-info");
-
-  assert.deepStrictEqual(result, {
-    status: "starting",
-    message: "LAN bridge is starting",
-  });
-  runtime.dispose();
-});
-
-test("mobile connection info returns a ready pair URL only when port and token are available", async () => {
-  const token = "0123456789abcdef0123456789abcdef";
-  const { ipcMain, runtime } = createHarness({
-    getLanWsServer: () => ({
-      getPort: () => 23334,
-      getToken: () => token,
-    }),
-  });
-
-  const result = await ipcMain.invoke("settings:mobile-connection-info");
-
-  assert.strictEqual(result.status, "ok");
-  assert.strictEqual(result.port, 23334);
-  assert.strictEqual(result.token, token);
-  assert.ok(result.pairUrl.includes("port=23334"));
-  assert.ok(result.pairUrl.includes(`token=${token}`));
-  assert.ok(!result.pairUrl.includes("port=null"));
-  runtime.dispose();
 });
 
 test("settings IPC delegates controller and size preview handlers", async () => {

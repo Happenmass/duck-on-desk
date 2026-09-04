@@ -209,10 +209,6 @@ function registerSettingsIpc(options = {}) {
   const getUpdateCheckSnapshot = options.getUpdateCheckSnapshot || (() => ({ state: "idle" }));
   const clearUpdateError = options.clearUpdateError || (() => ({ state: "idle" }));
   const copyUpdateError = options.copyUpdateError || (() => ({ status: "error", message: "clipboard unavailable" }));
-  const showTutorial = options.showTutorial || (() => ({
-    status: "error",
-    message: "Tutorial is unavailable",
-  }));
   const now = options.now || (() => Date.now());
   const aboutHeroSvgPath = options.aboutHeroSvgPath
     || path.join(__dirname, "..", "assets", "svg", "clawd-about-hero.svg");
@@ -246,62 +242,6 @@ function registerSettingsIpc(options = {}) {
   }
 
   handle("settings:get-snapshot", () => settingsController.getSnapshot());
-  handle("settings:recap-query", async (event, period) => {
-    const rejected = rejectUntrustedSettingsEvent(event);
-    if (rejected) return rejected;
-    if (!["today", "week", "month", "year"].includes(period)) {
-      return { status: "error", reason: "invalid-period" };
-    }
-    const runtime = options.recapRuntime;
-    if (!runtime || typeof runtime.query !== "function") {
-      return { status: "error", reason: "runtime-unavailable" };
-    }
-    try {
-      if (typeof runtime.whenReady === "function") await runtime.whenReady();
-      return runtime.query(period);
-    }
-    catch { return { status: "error", reason: "query-failed" }; }
-  });
-  handle("settings:recap-clear", (event) => {
-    const rejected = rejectUntrustedSettingsEvent(event);
-    if (rejected) return rejected;
-    const runtime = options.recapRuntime;
-    if (!runtime || typeof runtime.clear !== "function") {
-      return { status: "error", reason: "runtime-unavailable" };
-    }
-    try {
-      return runtime.clear()
-        ? { status: "ok" }
-        : { status: "error", reason: "clear-failed" };
-    } catch {
-      return { status: "error", reason: "clear-failed" };
-    }
-  });
-  // Distinct quota-reporting sources (this machine + WSL / SSH remotes). The
-  // General tab uses it to hide the "merge across machines" switch when it is
-  // a single-machine no-op.
-  handle("settings:get-quota-source-count", () => {
-    try {
-      return typeof options.getQuotaSourceCount === "function" ? options.getQuotaSourceCount() : 0;
-    } catch (_err) {
-      return 0;
-    }
-  });
-  // Which providers the "show beside the pet" list should offer. Driven by the
-  // live snapshot, not by the static provider table, so the list never shows a
-  // checkbox for a provider the user has not connected — the same reasoning
-  // that keeps "merge across machines" hidden on a single-machine setup. An
-  // empty array is the honest failure mode: the settings row hides itself
-  // rather than rendering a list that claims nothing is connected.
-  handle("settings:get-quota-ring-providers", () => {
-    try {
-      return typeof options.getQuotaRingProviders === "function"
-        ? options.getQuotaRingProviders()
-        : [];
-    } catch (_err) {
-      return [];
-    }
-  });
   handle("settings:get-pet-tint-options", () => listPetTintOptions());
   handle("settings:get-pet-accessory-options", () => listPetAccessoryOptions());
   handle("settings:get-pet-mouth-accessory-options", () => listPetMouthAccessoryOptions());
@@ -689,14 +629,6 @@ function registerSettingsIpc(options = {}) {
     return copyUpdateError(boundedText);
   });
 
-  handle("settings:show-tutorial", async () => {
-    try {
-      const result = await showTutorial();
-      return result || { status: "ok" };
-    } catch (err) {
-      return { status: "error", message: (err && err.message) || String(err) };
-    }
-  });
 
 
   handle("settings:open-external", async (_event, url) => {
@@ -706,66 +638,6 @@ function registerSettingsIpc(options = {}) {
     try {
       await shell.openExternal(url);
       return { status: "ok" };
-    } catch (err) {
-      return { status: "error", message: (err && err.message) || String(err) };
-    }
-  });
-
-  handle("settings:mobile-connection-info", async () => {
-    try {
-      const lanWsServer = options.getLanWsServer ? options.getLanWsServer() : null;
-      if (!lanWsServer) return { status: "error", message: "LAN bridge not available" };
-      const port = lanWsServer.getPort();
-      const tok = lanWsServer.getToken();
-      if (!Number.isInteger(port) || port <= 0 || typeof tok !== "string" || !tok) {
-        return { status: "starting", message: "LAN bridge is starting" };
-      }
-      const os = require("os");
-      let lanIp = "127.0.0.1";
-      const interfaces = os.networkInterfaces();
-      const wlanPattern = /WLAN|Wi-?Fi|Wireless|无线/i;
-      // 1) 优先找 WLAN 接口
-      for (const name of Object.keys(interfaces)) {
-        if (wlanPattern.test(name)) {
-          for (const iface of interfaces[name]) {
-            if (iface.family === "IPv4" && !iface.internal) { lanIp = iface.address; break; }
-          }
-          if (lanIp !== "127.0.0.1") break;
-        }
-      }
-      // 2) fallback：第一个非 internal IPv4
-      if (lanIp === "127.0.0.1") {
-        for (const name of Object.keys(interfaces)) {
-          for (const iface of interfaces[name]) {
-            if (iface.family === "IPv4" && !iface.internal) { lanIp = iface.address; break; }
-          }
-          if (lanIp !== "127.0.0.1") break;
-        }
-      }
-      const pairUrl = `http://${lanIp}:${port}/mobile/?host=${lanIp}&port=${port}&token=${tok}`;
-      return { status: "ok", port, token: tok, lanIp, pairUrl };
-    } catch (err) {
-      return { status: "error", message: (err && err.message) || String(err) };
-    }
-  });
-
-  handle("settings:regenerate-mobile-token", async () => {
-    try {
-      const lanWsServer = options.getLanWsServer ? options.getLanWsServer() : null;
-      if (!lanWsServer) return { status: "error", message: "LAN bridge not available" };
-      const newToken = lanWsServer.regenerateToken();
-      return { status: "ok", token: newToken };
-    } catch (err) {
-      return { status: "error", message: (err && err.message) || String(err) };
-    }
-  });
-
-  handle("settings:reset-mobile-access", async () => {
-    try {
-      const lanWsServer = options.getLanWsServer ? options.getLanWsServer() : null;
-      if (!lanWsServer) return { status: "error", message: "LAN bridge not available" };
-      const newToken = lanWsServer.resetMobileAccess();
-      return { status: "ok", token: newToken };
     } catch (err) {
       return { status: "error", message: (err && err.message) || String(err) };
     }

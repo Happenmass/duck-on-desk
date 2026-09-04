@@ -101,7 +101,6 @@ function createSettingsEffectRouter(options = {}) {
   const refreshDisplayedVisual = options.refreshDisplayedVisual || noop;
   const rebuildAllMenus = options.rebuildAllMenus || noop;
   const reconcilePowerSaveBlocker = options.reconcilePowerSaveBlocker || noop;
-  const setRecapEnabled = options.setRecapEnabled || noop;
   const now = options.now || (() => new Date());
 
   setPetAccessoryFloatingSurfaceRepositioner(repositionFloatingBubbles);
@@ -197,9 +196,6 @@ function createSettingsEffectRouter(options = {}) {
     }
     if ("keepAwakeWhileWorking" in changes) {
       safeCall(logWarn, "Clawd: reconcilePowerSaveBlocker failed:", reconcilePowerSaveBlocker);
-    }
-    if ("recapEnabled" in changes) {
-      safeCall(logWarn, "Clawd: recap recording toggle failed:", setRecapEnabled, changes.recapEnabled);
     }
     if ("lang" in changes) {
       safeCall(logWarn, "Clawd: dashboard lang broadcast failed:", sendDashboardI18n);
@@ -306,28 +302,12 @@ function createSettingsEffectRouter(options = {}) {
       || "sessionHudShowStateLabels" in changes
       || "sessionHudShowElapsed" in changes
       || "sessionHudShowContextUsage" in changes
-      || "sessionHudShowQuota" in changes
-      || "quotaRingDisplayMode" in changes
-      // Hiding a provider changes the COIN COUNT, so this has to re-measure and
-      // re-place the cluster window, not just repaint it — a repaint alone
-      // would leave the transparent window (and its auto-hide hot zone) sized
-      // for coins that no longer draw.
-      || "quotaRingHiddenProviders" in changes
     ) {
       try {
         syncSessionHudVisibility();
         repositionFloatingBubbles();
       } catch (err) {
         warn(logWarn, "Clawd: session HUD setting sync failed:", err);
-      }
-    }
-    if ("quotaMergeSources" in changes) {
-      try {
-        // Snapshot CONTENT changes (merged vs per-source accountQuota), so a
-        // forced re-emit is needed for the Dashboard/HUD to pick it up.
-        emitSessionSnapshot({ force: true });
-      } catch (err) {
-        warn(logWarn, "Clawd: quota merge mode re-emit failed:", err);
       }
     }
     if ("sessionHudCleanupDetached" in changes && changes.sessionHudCleanupDetached === true) {

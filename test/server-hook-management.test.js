@@ -563,14 +563,12 @@ describe("server Claude hook operation queue (default, non-injected implementati
         syncClawdHooksImpl: undefined,
         claudeQuotaCollectionEnabled: false,
         clearClaudeStatuslineAuthority: (profileId) => calls.push(["clear-authority", profileId]),
-        clearLocalClaudeQuota: () => calls.push(["clear-local-claude-quota"]),
       });
       const result = await api.syncClawdHooks({ source: "startup", automatic: true });
       assert.strictEqual(result.status, "ok");
       assert.deepStrictEqual(calls.map((call) => Array.isArray(call) ? call[0] : call), [
         "unregister",
         "clear-authority",
-        "clear-local-claude-quota",
       ]);
     });
   });
@@ -604,7 +602,6 @@ describe("server Claude hook operation queue (default, non-injected implementati
       const { api } = makeServer({
         syncClawdHooksImpl: undefined,
         clearClaudeStatuslineAuthority: (profileId) => calls.push(["clear-authority", profileId]),
-        clearLocalClaudeQuota: () => calls.push(["clear-local-claude-quota"]),
       });
       assert.strictEqual(api.isClaudeStatuslineMetadataAllowed(), true);
       const result = await api.setClaudeQuotaCollectionEnabled({
@@ -613,10 +610,9 @@ describe("server Claude hook operation queue (default, non-injected implementati
       });
       assert.strictEqual(result.status, "ok");
       assert.strictEqual(result.removed, 1);
-      assert.strictEqual(calls.length, 3);
+      assert.strictEqual(calls.length, 2);
       assert.strictEqual(calls[0].backup, true);
       assert.deepStrictEqual(calls[1], ["clear-authority", "local"]);
-      assert.deepStrictEqual(calls[2], ["clear-local-claude-quota"]);
       assert.strictEqual(api.isClaudeStatuslineMetadataAllowed(), false);
     });
   });
@@ -801,12 +797,11 @@ describe("server Claude hook operation queue (default, non-injected implementati
         const { api } = makeServer({
           syncClawdHooksImpl: undefined,
           clearClaudeStatuslineAuthority: (profileId) => calls.push(["clear-authority", profileId]),
-          clearLocalClaudeQuota: () => calls.push(["clear-local-claude-quota"]),
         });
         const result = await api.uninstallClaudeHooks({ source, automatic: false });
         assert.strictEqual(result.status, "ok");
         assert.deepStrictEqual(calls, expectStatusline
-          ? ["unregister", "statusline-remove", ["clear-authority", "local"], ["clear-local-claude-quota"]]
+          ? ["unregister", "statusline-remove", ["clear-authority", "local"]]
           : ["unregister"], source);
       });
     }

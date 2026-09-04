@@ -136,8 +136,7 @@
       "hooks/**/*",
       "extensions/**/*",
       "agents/**/*",
-      "themes/**/*",
-      "pwa/**/*"
+      "themes/**/*"
     ],
     "asarUnpack": [
       "assets/svg/**/*",
