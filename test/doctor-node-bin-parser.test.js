@@ -142,9 +142,9 @@ describe("doctor hook command parser", () => {
 
   it("strips POSIX env prefixes", () => {
     const nodeBin = "/usr/local/bin/node";
-    const scriptPath = "/opt/clawd/hooks/kimi-hook.js";
+    const scriptPath = "/opt/clawd/hooks/codex-hook.js";
     const base = formatNodeHookCommand(nodeBin, scriptPath, { platform: "linux" });
-    const command = withCommandEnv(base, { CLAWD_KIMI_PERMISSION_MODE: "suspect" }, "linux");
+    const command = withCommandEnv(base, { CLAWD_HOOK_DEBUG: "1" }, "linux");
 
     assert.deepStrictEqual(
       validateHookCommand(command, {

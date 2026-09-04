@@ -97,9 +97,8 @@ function managedFileDescriptor(agentId, dirName) {
   };
 }
 
-// ZCode config-file hooks nest under hooks.events.* (NOT hooks.*), and require
-// hooks.enabled:true. The doctor's generic event scanner must follow
-// descriptor.hookEventsContainer=["hooks","events"] to find them.
+// Codex hooks.json nests each event's command under hooks.<Event>[].hooks[]
+// (descriptor.nested), with config.toml as the supplementary feature gate.
 function codexDescriptor() {
   const root = makeTempDir();
   const parentDir = path.join(root, ".codex");
@@ -162,11 +161,11 @@ describe("checkAgentIntegrations", () => {
   });
 
   it("reports not-managed before disabled for uninstalled agents", () => {
-    const descriptor = baseDescriptor({ agentId: "gemini-cli" });
+    const descriptor = baseDescriptor({ agentId: "opencode" });
     const detail = runOne(descriptor, {
       prefs: {
         agents: {
-          "gemini-cli": {
+          opencode: {
             integrationInstalled: false,
             enabled: false,
           },
@@ -178,7 +177,7 @@ describe("checkAgentIntegrations", () => {
     assert.strictEqual(detail.level, "info");
   });
 
-  it("keeps enabled Hermes missing install info-only when another integration is ok", () => {
+  it("keeps an enabled but missing install info-only when another integration is ok", () => {
     const okDescriptor = baseDescriptor({
       agentId: "ok-agent",
       marker: "ok-hook.js",
@@ -188,16 +187,15 @@ describe("checkAgentIntegrations", () => {
         Stop: [{ command: '"/node" "/app/hooks/ok-hook.js" Stop' }],
       },
     });
-    const hermesDescriptor = baseDescriptor({
-      agentId: "hermes",
-      marker: "clawd-on-desk",
-      configMode: "plugin-dir",
+    const missingDescriptor = baseDescriptor({
+      agentId: "opencode",
+      marker: "opencode-plugin",
     });
 
     const result = checkAgentIntegrations({
       fs,
-      prefs: { agents: { hermes: { enabled: true } } },
-      descriptors: [okDescriptor, hermesDescriptor],
+      prefs: { agents: { opencode: { enabled: true } } },
+      descriptors: [okDescriptor, missingDescriptor],
       validateCommand: () => ({
         ok: true,
         nodeBin: "/node",
@@ -205,10 +203,10 @@ describe("checkAgentIntegrations", () => {
       }),
     });
 
-    const hermes = result.details.find((detail) => detail.agentId === "hermes");
+    const missing = result.details.find((detail) => detail.agentId === "opencode");
     assert.strictEqual(result.status, "pass");
-    assert.strictEqual(hermes.status, "not-installed");
-    assert.strictEqual(hermes.level, "info");
+    assert.strictEqual(missing.status, "not-installed");
+    assert.strictEqual(missing.level, "info");
   });
 
   it("returns not-connected when config is missing for an auto-installed agent", () => {
@@ -537,25 +535,24 @@ describe("checkAgentIntegrations", () => {
     assert.deepStrictEqual(detail.fixAction, { type: "agent-integration", agentId: "test-agent" });
   });
 
-  it("lists both generation dirs when neither exists (#563)", () => {
+  it("lists every multi-home parent dir when none exists", () => {
     const root = makeTempDir();
-    const legacyDir = path.join(root, ".kimi");
-    const kimiCodeDir = path.join(root, ".kimi-code");
+    const legacyDir = path.join(root, ".codex");
+    const currentDir = path.join(root, ".codex-next");
     const descriptor = baseDescriptor({
-      agentId: "kimi-cli",
-      marker: "kimi-hook.js",
-      configMode: "toml-text",
+      agentId: "codex",
+      marker: "codex-hook.js",
       parentDir: legacyDir,
-      configPath: path.join(legacyDir, "config.toml"),
+      configPath: path.join(legacyDir, "hooks.json"),
       configTargets: [
-        { label: "kimi-code", parentDir: kimiCodeDir, configPath: path.join(kimiCodeDir, "config.toml") },
-        { label: "legacy", parentDir: legacyDir, configPath: path.join(legacyDir, "config.toml") },
+        { label: "current", parentDir: currentDir, configPath: path.join(currentDir, "hooks.json") },
+        { label: "legacy", parentDir: legacyDir, configPath: path.join(legacyDir, "hooks.json") },
       ],
     });
 
     const detail = runOne(descriptor);
     assert.strictEqual(detail.status, "not-installed");
-    assert.ok(detail.detail.includes(".kimi-code") && detail.detail.includes(".kimi"));
+    assert.ok(detail.detail.includes(".codex-next") && detail.detail.includes(".codex"));
   });
 
   it("turns Codex ok into warning when hooks=false", () => {
@@ -944,24 +941,24 @@ describe("checkAgentIntegrations", () => {
     return pluginPath;
   }
 
-  function mimocodeDescriptor(root, overrides = {}) {
-    const parentDir = path.join(root, ".config", "mimocode");
+  function jsoncDescriptor(root, overrides = {}) {
+    const parentDir = path.join(root, ".config", "opencode");
     fs.mkdirSync(parentDir, { recursive: true });
     return baseDescriptor({
-      agentId: "mimocode",
-      marker: "mimocode-plugin",
+      agentId: "opencode",
+      marker: "opencode-plugin",
       parentDir,
-      configPath: path.join(parentDir, "mimocode.jsonc"),
+      configPath: path.join(parentDir, "opencode.jsonc"),
       detection: "opencode-plugin",
       configJsonc: true,
       ...overrides,
     });
   }
 
-  it("parses mimocode's JSONC config (comments + trailing commas) as healthy, not config-corrupt", () => {
+  it("parses a jsonc: true family config (comments + trailing commas) as healthy, not config-corrupt", () => {
     const root = makeTempDir();
-    const pluginPath = makeValidFamilyPlugin(root, "mimocode-plugin");
-    const descriptor = mimocodeDescriptor(root);
+    const pluginPath = makeValidFamilyPlugin(root, "opencode-plugin");
+    const descriptor = jsoncDescriptor(root);
     fs.writeFileSync(
       descriptor.configPath,
       `{\n  // Clawd pet plugin\n  "plugin": [\n    ${JSON.stringify(pluginPath)},\n  ],\n}\n`,
@@ -972,9 +969,9 @@ describe("checkAgentIntegrations", () => {
     assert.strictEqual(detail.status, "ok", `expected ok, got ${detail.status}: ${detail.detail}`);
   });
 
-  it("still reports genuinely corrupt mimocode JSONC as config-corrupt", () => {
+  it("still reports genuinely corrupt family JSONC as config-corrupt", () => {
     const root = makeTempDir();
-    const descriptor = mimocodeDescriptor(root);
+    const descriptor = jsoncDescriptor(root);
     fs.writeFileSync(descriptor.configPath, '{\n  "plugin": [\n', "utf8");
 
     const detail = runOne(descriptor);
@@ -987,41 +984,41 @@ describe("checkAgentIntegrations", () => {
     // locks the routing to the descriptor flag rather than a blanket parser
     // swap (opencode.json stays strict JSON).
     const root = makeTempDir();
-    const descriptor = mimocodeDescriptor(root, { configJsonc: undefined });
+    const descriptor = jsoncDescriptor(root, { configJsonc: undefined });
     fs.writeFileSync(descriptor.configPath, '{\n  // comment\n  "plugin": [],\n}\n', "utf8");
 
     const detail = runOne(descriptor);
     assert.strictEqual(detail.status, "config-corrupt");
   });
 
-  function mimocodeMergedDescriptor(root, overrides = {}) {
-    const parentDir = path.join(root, ".config", "mimocode");
-    return mimocodeDescriptor(root, {
-      configCandidates: ["mimocode.jsonc", "mimocode.json", "config.json"].map((name) => path.join(parentDir, name)),
+  function mergedJsoncDescriptor(root, overrides = {}) {
+    const parentDir = path.join(root, ".config", "opencode");
+    return jsoncDescriptor(root, {
+      configCandidates: ["opencode.jsonc", "opencode.json", "config.json"].map((name) => path.join(parentDir, name)),
       ...overrides,
     });
   }
 
   it("merged view: validates the live plugin owner (.json) when .jsonc exists without plugin", () => {
     const root = makeTempDir();
-    const pluginPath = makeValidFamilyPlugin(root, "mimocode-plugin");
-    const descriptor = mimocodeMergedDescriptor(root);
-    fs.writeFileSync(path.join(path.dirname(descriptor.configPath), "mimocode.json"), JSON.stringify({ plugin: [pluginPath] }), "utf8");
-    fs.writeFileSync(descriptor.configPath, '{\n  // prefs only\n  "model": "mimo/base",\n}\n', "utf8");
+    const pluginPath = makeValidFamilyPlugin(root, "opencode-plugin");
+    const descriptor = mergedJsoncDescriptor(root);
+    fs.writeFileSync(path.join(path.dirname(descriptor.configPath), "opencode.json"), JSON.stringify({ plugin: [pluginPath] }), "utf8");
+    fs.writeFileSync(descriptor.configPath, '{\n  // prefs only\n  "model": "anthropic/claude-sonnet-4-6",\n}\n', "utf8");
 
     const detail = runOne(descriptor);
     assert.strictEqual(detail.status, "ok", `expected ok, got ${detail.status}: ${detail.detail}`);
-    assert.ok(detail.configPath.endsWith("mimocode.json"), "detail must point at the file whose plugin is live");
+    assert.ok(detail.configPath.endsWith("opencode.json"), "detail must point at the file whose plugin is live");
   });
 
   it("merged view: a managed entry MASKED by a higher-priority plugin array is not connected", () => {
     const root = makeTempDir();
-    const pluginPath = makeValidFamilyPlugin(root, "mimocode-plugin");
-    const descriptor = mimocodeMergedDescriptor(root);
+    const pluginPath = makeValidFamilyPlugin(root, "opencode-plugin");
+    const descriptor = mergedJsoncDescriptor(root);
     // .jsonc declares plugin (empty) → it REPLACES .json's array at runtime,
     // so the valid entry in .json is dead. The doctor must see the merge.
     fs.writeFileSync(descriptor.configPath, '{\n  "plugin": [],\n}\n', "utf8");
-    fs.writeFileSync(path.join(path.dirname(descriptor.configPath), "mimocode.json"), JSON.stringify({ plugin: [pluginPath] }), "utf8");
+    fs.writeFileSync(path.join(path.dirname(descriptor.configPath), "opencode.json"), JSON.stringify({ plugin: [pluginPath] }), "utf8");
 
     const detail = runOne(descriptor);
     assert.strictEqual(detail.status, "not-connected", `masked entry must not count: ${detail.detail}`);
@@ -1029,7 +1026,7 @@ describe("checkAgentIntegrations", () => {
 
   it("merged view: no candidate exists → not-connected missing", () => {
     const root = makeTempDir();
-    const descriptor = mimocodeMergedDescriptor(root);
+    const descriptor = mergedJsoncDescriptor(root);
     const detail = runOne(descriptor);
     assert.strictEqual(detail.status, "not-connected");
     assert.strictEqual(detail.configFileExists, false);
@@ -1037,13 +1034,13 @@ describe("checkAgentIntegrations", () => {
 
   it("merged view: a corrupt candidate is config-corrupt and names the file", () => {
     const root = makeTempDir();
-    const descriptor = mimocodeMergedDescriptor(root);
+    const descriptor = mergedJsoncDescriptor(root);
     fs.writeFileSync(descriptor.configPath, '{\n  "plugin": [],\n}\n', "utf8");
-    fs.writeFileSync(path.join(path.dirname(descriptor.configPath), "mimocode.json"), "{ broken", "utf8");
+    fs.writeFileSync(path.join(path.dirname(descriptor.configPath), "opencode.json"), "{ broken", "utf8");
 
     const detail = runOne(descriptor);
     assert.strictEqual(detail.status, "config-corrupt");
-    assert.ok(detail.detail.includes("mimocode.json"), `detail must name the corrupt file: ${detail.detail}`);
+    assert.ok(detail.detail.includes("opencode.json"), `detail must name the corrupt file: ${detail.detail}`);
   });
 
   // #825: opencode's global config is a MERGE of config.json → opencode.json →
@@ -1179,162 +1176,6 @@ describe("checkAgentIntegrations", () => {
     }
   });
 
-  function openClawDescriptor() {
-    const root = makeTempDir();
-    const parentDir = path.join(root, ".openclaw");
-    return baseDescriptor({
-      agentId: "openclaw",
-      agentName: "OpenClaw",
-      eventSource: "plugin-event",
-      parentDir,
-      configPath: path.join(parentDir, "openclaw.json"),
-      configMode: "openclaw-plugin",
-      marker: "openclaw-plugin",
-      pluginId: "clawd-on-desk",
-    });
-  }
-
-  function makeOpenClawPluginDir(root) {
-    const pluginDir = path.join(root, "hooks", "openclaw-plugin");
-    fs.mkdirSync(pluginDir, { recursive: true });
-    fs.writeFileSync(path.join(pluginDir, "index.js"), "export default { id: 'clawd-on-desk', register() {} };\n", "utf8");
-    writeJson(path.join(pluginDir, "openclaw.plugin.json"), {
-      id: "clawd-on-desk",
-      name: "Clawd on Desk",
-      description: "test",
-      activation: { onStartup: true },
-      configSchema: { type: "object", additionalProperties: false, properties: {} },
-    });
-    return pluginDir;
-  }
-
-  it("checks Hermes plugin directory files and enabled marker", () => {
-    const root = makeTempDir();
-    const parentDir = path.join(root, ".hermes");
-    const pluginDir = path.join(parentDir, "plugins", "clawd-on-desk");
-    const descriptor = baseDescriptor({
-      agentId: "hermes",
-      marker: "clawd-on-desk",
-      parentDir,
-      configPath: pluginDir,
-      configMode: "plugin-dir",
-      managedFiles: ["plugin.yaml", "__init__.py"],
-      configFilePath: path.join(parentDir, "config.yaml"),
-    });
-    fs.mkdirSync(pluginDir, { recursive: true });
-    fs.writeFileSync(path.join(pluginDir, "plugin.yaml"), "name: clawd-on-desk\n", "utf8");
-    fs.writeFileSync(path.join(pluginDir, "__init__.py"), "# plugin\n", "utf8");
-    fs.writeFileSync(descriptor.configFilePath, "plugins:\n  enabled:\n    - clawd-on-desk\n", "utf8");
-
-    const detail = runOne(descriptor, {
-      prefs: { agents: { hermes: { enabled: true } } },
-    });
-
-    assert.strictEqual(detail.status, "ok");
-    assert.strictEqual(detail.pluginEnabled, true);
-  });
-
-  it("reports Hermes plugin directory missing managed files as repairable", () => {
-    const root = makeTempDir();
-    const parentDir = path.join(root, ".hermes");
-    const pluginDir = path.join(parentDir, "plugins", "clawd-on-desk");
-    const descriptor = baseDescriptor({
-      agentId: "hermes",
-      marker: "clawd-on-desk",
-      parentDir,
-      configPath: pluginDir,
-      configMode: "plugin-dir",
-      managedFiles: ["plugin.yaml", "__init__.py"],
-      configFilePath: path.join(parentDir, "config.yaml"),
-    });
-    fs.mkdirSync(pluginDir, { recursive: true });
-    fs.writeFileSync(path.join(pluginDir, "plugin.yaml"), "name: clawd-on-desk\n", "utf8");
-
-    const detail = runOne(descriptor, {
-      prefs: { agents: { hermes: { enabled: true } } },
-    });
-
-    assert.strictEqual(detail.status, "not-connected");
-    assert.deepStrictEqual(detail.missingPluginFiles, ["__init__.py"]);
-    assert.deepStrictEqual(detail.fixAction, { type: "agent-integration", agentId: "hermes" });
-  });
-
-  it("does not report Hermes ok when clawd-on-desk appears only in disabled plugins", () => {
-    const root = makeTempDir();
-    const parentDir = path.join(root, ".hermes");
-    const pluginDir = path.join(parentDir, "plugins", "clawd-on-desk");
-    const descriptor = baseDescriptor({
-      agentId: "hermes",
-      marker: "clawd-on-desk",
-      parentDir,
-      configPath: pluginDir,
-      configMode: "plugin-dir",
-      managedFiles: ["plugin.yaml", "__init__.py"],
-      configFilePath: path.join(parentDir, "config.yaml"),
-    });
-    fs.mkdirSync(pluginDir, { recursive: true });
-    fs.writeFileSync(path.join(pluginDir, "plugin.yaml"), "name: clawd-on-desk\n", "utf8");
-    fs.writeFileSync(path.join(pluginDir, "__init__.py"), "# plugin\n", "utf8");
-    fs.writeFileSync(
-      descriptor.configFilePath,
-      "plugins:\n  enabled: []\n  disabled:\n    - clawd-on-desk\n",
-      "utf8"
-    );
-
-    const detail = runOne(descriptor, {
-      prefs: { agents: { hermes: { enabled: true } } },
-    });
-
-    assert.strictEqual(detail.status, "not-connected");
-    assert.strictEqual(detail.pluginEnabled, false);
-    assert.deepStrictEqual(detail.fixAction, { type: "agent-integration", agentId: "hermes" });
-  });
-
-  it("accepts Hermes inline enabled plugin lists", () => {
-    const root = makeTempDir();
-    const parentDir = path.join(root, ".hermes");
-    const pluginDir = path.join(parentDir, "plugins", "clawd-on-desk");
-    const descriptor = baseDescriptor({
-      agentId: "hermes",
-      marker: "clawd-on-desk",
-      parentDir,
-      configPath: pluginDir,
-      configMode: "plugin-dir",
-      managedFiles: ["plugin.yaml", "__init__.py"],
-      configFilePath: path.join(parentDir, "config.yaml"),
-    });
-    fs.mkdirSync(pluginDir, { recursive: true });
-    fs.writeFileSync(path.join(pluginDir, "plugin.yaml"), "name: clawd-on-desk\n", "utf8");
-    fs.writeFileSync(path.join(pluginDir, "__init__.py"), "# plugin\n", "utf8");
-    fs.writeFileSync(
-      descriptor.configFilePath,
-      "plugins:\n  enabled: [\"clawd-on-desk\"]\n  disabled: []\n",
-      "utf8"
-    );
-
-    const detail = runOne(descriptor, {
-      prefs: { agents: { hermes: { enabled: true } } },
-    });
-
-    assert.strictEqual(detail.status, "ok");
-    assert.strictEqual(detail.pluginEnabled, true);
-  });
-
-  it("keeps Hermes disabled as info-only by default", () => {
-    const descriptor = baseDescriptor({
-      agentId: "hermes",
-      marker: "clawd-on-desk",
-      configMode: "plugin-dir",
-    });
-
-    const detail = runOne(descriptor, {
-      prefs: { agents: { hermes: { enabled: false } } },
-    });
-
-    assert.strictEqual(detail.status, "disabled");
-    assert.strictEqual(detail.level, "info");
-  });
-
   it("adds a non-failing note when per-agent permission bubbles are disabled", () => {
     const descriptor = baseDescriptor({ agentId: "codex", marker: "codex-hook.js" });
     writeJson(descriptor.configPath, {
@@ -1389,32 +1230,18 @@ describe("checkAgentIntegrations", () => {
 });
 
 describe("findOpencodePluginEntry", () => {
-});
+  it("matches only absolute plugin entries by basename", () => {
+    const absEntry = "C:\\clawd\\hooks\\opencode-plugin";
+    assert.strictEqual(
+      findOpencodePluginEntry(["vendor/opencode-plugin", absEntry], "opencode-plugin"),
+      absEntry
+    );
+  });
 
-// Legacy-supplement checks: the generic command check only asserts "some
-// command exists and its script resolves"; these pin the completeness layer
-// (13 events + consistent --permission-mode flag) that the suspect-default
-// work depends on.
-describe("kimi legacy permission-mode supplement", () => {
-  function kimiDescriptor() {
-    const root = makeTempDir();
-    const legacyDir = path.join(root, ".kimi");
-    const kimiCodeDir = path.join(root, ".kimi-code");
-    return {
-      descriptor: baseDescriptor({
-        agentId: "kimi-cli",
-        marker: "kimi-hook.js",
-        configMode: "toml-text",
-        parentDir: legacyDir,
-        configPath: path.join(legacyDir, "config.toml"),
-        configTargets: [
-          { label: "kimi-code", parentDir: kimiCodeDir, configPath: path.join(kimiCodeDir, "config.toml") },
-          { label: "legacy", parentDir: legacyDir, configPath: path.join(legacyDir, "config.toml") },
-        ],
-      }),
-      legacyDir,
-      kimiCodeDir,
-    };
-  }
-
+  it("ignores package specifiers and relative paths that merely end in the marker", () => {
+    assert.strictEqual(
+      findOpencodePluginEntry(["opencode-plugin", "@scope/opencode-plugin", "./opencode-plugin"], "opencode-plugin"),
+      null
+    );
+  });
 });

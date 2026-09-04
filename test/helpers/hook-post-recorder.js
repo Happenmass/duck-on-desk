@@ -1,7 +1,6 @@
-// test/helpers/hook-post-recorder.js — preload for the WorkBuddy session_id
-// filter contract test (#618 / #648).
+// test/helpers/hook-post-recorder.js — preload for spawned-hook contract tests.
 //
-// Loaded via `node --require` in front of the REAL workbuddy-hook.js so the
+// Loaded via `node --require` in front of the REAL hook adapter so the
 // assertions run against the shipped adapter, not a re-implementation. Two jobs,
 // both before the hook's module body runs:
 //

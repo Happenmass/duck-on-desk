@@ -271,23 +271,23 @@ describe("permission Ask default expansion", () => {
   it("uses the shared Ask capability boundary without agent or tool-name special cases", () => {
     const cases = [
       {
-        name: "Hermes clarify",
+        name: "answerable Ask from another agent",
         expected: true,
-        mutate(entry) { entry.agentId = "hermes"; entry.toolName = "clarify"; },
+        mutate(entry) { entry.agentId = "pi"; entry.toolName = "clarify"; },
       },
       {
-        name: "ZCode non-answerable Ask",
+        name: "non-answerable Ask (codex)",
         expected: false,
         mutate(entry) {
-          entry.agentId = "zcode";
+          entry.agentId = "codex";
           entry.interaction.capabilities.answerQuestions = false;
         },
       },
       {
-        name: "Qwen non-answerable Ask",
+        name: "non-answerable Ask (opencode)",
         expected: false,
         mutate(entry) {
-          entry.agentId = "qwen-code";
+          entry.agentId = "opencode";
           entry.interaction.capabilities.answerQuestions = false;
         },
       },

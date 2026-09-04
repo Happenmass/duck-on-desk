@@ -1,35 +1,26 @@
 "use strict";
 
-// Unit tests for src/wsl-deploy.js (agent install script mapping, hooks dir resolution)
-// Does NOT require Windows or WSL.
+// Unit tests for src/wsl-deploy.js (agent install script mapping, hooks dir
+// resolution, deploy-path validation, byte-exact file piping). Does NOT
+// require Windows or WSL.
 
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
-const fs = require("node:fs");
-const os = require("node:os");
 const path = require("path");
-const { builtinModules } = require("node:module");
 const { EventEmitter } = require("node:events");
 const { PassThrough } = require("node:stream");
 
 const {
-  HERMES_RESULT_SENTINEL,
-  HERMES_TEMP_SENTINEL,
-  HERMES_WSL_FILES,
-  collectAgentWslFiles,
-  createHermesTempDir,
   deployToWsl,
   getAgentInstallArgs,
   getAgentInstallScriptName,
-  parseHermesInstallerResult,
-  parseHermesTempDir,
+  getAgentUninstallCommand,
+  parseConnectivityProbe,
   pipeFileToWsl,
   removeFromWsl,
   resolveHooksDir,
   validateDeployRelativePath,
 } = require("../src/wsl-deploy");
-
-const HOOKS_DIR = path.join(__dirname, "..", "hooks");
 
 describe("wsl-deploy", () => {
   describe("getAgentInstallScriptName", () => {
@@ -46,24 +37,19 @@ describe("wsl-deploy", () => {
       assert.strictEqual(getAgentInstallScriptName(""), null);
     });
 
-    it("excludes workbuddy (no standalone Linux/WSL runtime)", () => {
-      // WorkBuddy ships only as a macOS/Windows Electron desktop app, so there
-      // is no in-WSL settings.json to deploy hooks into. See AGENT_INSTALL_SCRIPT.
-      assert.strictEqual(getAgentInstallScriptName("workbuddy"), null);
+    it("keeps OpenCode and Pi unsupported until their WSL runtime is validated", () => {
+      assert.strictEqual(getAgentInstallScriptName("opencode"), null);
+      assert.strictEqual(getAgentInstallScriptName("pi"), null);
     });
-
   });
 
   describe("getAgentInstallArgs", () => {
     it("keeps the in-app Claude WSL deploy transcript-only (no automatic statusline)", () => {
       assert.strictEqual(getAgentInstallArgs("claude-code"), "");
     });
-
   });
 
   describe("getAgentUninstallCommand", () => {
-    const { getAgentUninstallCommand } = require("../src/wsl-deploy");
-
     it("uses uninstall.js for claude-code (install.js has no --uninstall flag)", () => {
       assert.strictEqual(getAgentUninstallCommand("claude-code"), "uninstall.js");
     });
@@ -78,9 +64,24 @@ describe("wsl-deploy", () => {
     });
   });
 
-  describe("parseConnectivityProbe", () => {
-    const { parseConnectivityProbe } = require("../src/wsl-deploy");
+  describe("deployToWsl / removeFromWsl guards", () => {
+    it("refuse to run off Windows before touching any dependency", async () => {
+      const notWindows = { isWindows: () => false };
+      assert.deepStrictEqual(await deployToWsl("Ubuntu", notWindows), {
+        ok: false, step: "platform", message: "WSL deploy only runs on Windows",
+      });
+      assert.deepStrictEqual(await removeFromWsl("Ubuntu", notWindows), {
+        ok: false, step: "platform", message: "WSL remove only runs on Windows",
+      });
+    });
 
+    it("rejects unsupported agents before resolving the hooks dir", async () => {
+      const result = await deployToWsl("Ubuntu", { isWindows: () => true, agentId: "pi" });
+      assert.deepStrictEqual(result, { ok: false, step: "unsupported", message: "WSL deploy is not supported for pi" });
+    });
+  });
+
+  describe("parseConnectivityProbe", () => {
     it("parses REACHABLE with port", () => {
       assert.deepStrictEqual(
         parseConnectivityProbe("REACHABLE 23333\n"),
@@ -128,4 +129,65 @@ describe("wsl-deploy", () => {
     });
   });
 
+  describe("validateDeployRelativePath", () => {
+    it("rejects unsafe relative paths", () => {
+      for (const value of ["", "/tmp/x", "../x", "a/../x", "a\\x", "a\0x", "a//x", "./x", "a/./x", "a\nx"]) {
+        assert.throws(() => validateDeployRelativePath(value), `must reject ${JSON.stringify(value)}`);
+      }
+    });
+
+    it("returns canonical top-level and nested paths unchanged", () => {
+      assert.strictEqual(validateDeployRelativePath("codex-hook.js"), "codex-hook.js");
+      assert.strictEqual(validateDeployRelativePath("vendor/helper.js"), "vendor/helper.js");
+    });
+  });
+
+  describe("pipeFileToWsl", () => {
+    function fakeSpawn(calls) {
+      return (_command, args) => {
+        const child = new EventEmitter();
+        child.stdin = new PassThrough();
+        child.stderr = new PassThrough();
+        const chunks = [];
+        child.stdin.on("data", (chunk) => chunks.push(chunk));
+        child.stdin.on("finish", () => {
+          calls.push({ args, content: Buffer.concat(chunks) });
+          queueMicrotask(() => child.emit("close", 0));
+        });
+        child.kill = () => {};
+        return child;
+      };
+    }
+
+    it("pipes nested payload bytes without text conversion", async () => {
+      const calls = [];
+      const payload = Buffer.from([0x00, 0xff, 0x41, 0x0a]);
+
+      const result = await pipeFileToWsl(
+        "Ubuntu",
+        "/home/u/.claude/hooks",
+        "vendor/helper.js",
+        payload,
+        { spawn: fakeSpawn(calls), timeout: 1000 }
+      );
+
+      assert.strictEqual(result.ok, true);
+      assert.strictEqual(result.fileName, "vendor/helper.js");
+      assert.strictEqual(calls.length, 1);
+      assert.deepStrictEqual(calls[0].content, payload);
+      assert.match(calls[0].args.at(-1), /mkdir -p -- '\/home\/u\/\.claude\/hooks\/vendor'/);
+      assert.match(calls[0].args.at(-1), /cat > '\/home\/u\/\.claude\/hooks\/vendor\/helper\.js'/);
+    });
+
+    it("refuses unsafe file names and destinations before spawning", async () => {
+      const calls = [];
+      const options = { spawn: fakeSpawn(calls), timeout: 1000 };
+      const badName = await pipeFileToWsl("Ubuntu", "/home/u/.claude/hooks", "../escape.js", "x", options);
+      assert.strictEqual(badName.ok, false);
+      const badDest = await pipeFileToWsl("Ubuntu", "relative/dir", "codex-hook.js", "x", options);
+      assert.strictEqual(badDest.ok, false);
+      assert.match(badDest.error, /invalid WSL destination directory/);
+      assert.strictEqual(calls.length, 0, "validation failures must never reach spawn");
+    });
+  });
 });

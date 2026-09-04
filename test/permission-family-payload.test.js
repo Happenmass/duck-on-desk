@@ -123,7 +123,7 @@ describe("opencode-family bubble payload", () => {
 describe("bubble-renderer family contract (static)", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "src", "bubble-renderer.js"), "utf8");
 
-  // Per this repo's convention (see bubble-kimi-cue.test.js) the renderer is
+  // Per this repo's convention (see bubble-format.test.js) the renderer is
   // asserted against its source rather than instantiated — but at STATEMENT
   // granularity inside the family branch, so breaking any rendering step
   // (detail chain, pill, Always wiring) fails a specific assertion instead of

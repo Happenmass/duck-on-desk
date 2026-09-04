@@ -110,6 +110,52 @@ describe("agent installation detector", () => {
     assert.strictEqual(byId(report, "opencode").detectedInstalled, true);
   });
 
+  it("detects supported agents from custom discovery paths", () => {
+    const homeDir = makeHome();
+    const customConfigDir = path.join(homeDir, "custom-codex-config");
+    mkdirp(customConfigDir);
+
+    const report = detectAgentInstallations({
+      homeDir,
+      now: 1,
+      snapshot: {
+        agents: {
+          codex: { customDiscoveryPaths: [customConfigDir] },
+        },
+      },
+    });
+    const codex = byId(report, "codex");
+
+    assert.strictEqual(codex.detectedInstalled, true);
+    assert.strictEqual(codex.confidence, "medium");
+    assert.strictEqual(codex.reason, "custom-path");
+    assert.match(codex.detail, /custom-codex-config/);
+    assert.match(codex.detail, /User-provided path/);
+  });
+
+  it("prefers a custom discovery path over the default parent dir and reports not-found when neither exists", () => {
+    const homeDir = makeHome();
+    mkdirp(path.join(homeDir, ".codex"));
+    const customConfigDir = path.join(homeDir, "custom-codex-config");
+    mkdirp(customConfigDir);
+
+    const custom = byId(detectAgentInstallations({
+      homeDir,
+      now: 1,
+      customDiscoveryPaths: { codex: [customConfigDir] },
+    }), "codex");
+    assert.strictEqual(custom.reason, "custom-path");
+    assert.deepStrictEqual(custom.paths.customDiscoveryPaths, [customConfigDir]);
+
+    const missing = byId(detectAgentInstallations({
+      homeDir: makeHome(),
+      now: 1,
+      customDiscoveryPaths: { codex: [path.join(homeDir, "does-not-exist")] },
+    }), "codex");
+    assert.strictEqual(missing.detectedInstalled, false);
+    assert.strictEqual(missing.reason, "not-found");
+  });
+
   it("reports the shared custom tool discovery slot separately", () => {
     const homeDir = makeHome();
     const customExe = path.join(homeDir, "CustomAI.exe");

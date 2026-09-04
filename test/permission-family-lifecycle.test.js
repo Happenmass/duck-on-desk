@@ -252,7 +252,7 @@ describe("opencode-family external lifecycle runtime", () => {
     });
     exactA.bubble = makeBubble();
     const sameSessionOtherRequest = familyEntry({ familyRequestId: "per-other" });
-    const otherAgent = familyEntry({ agentId: "mimocode" });
+    const otherAgent = familyEntry({ agentId: "other-family-agent" });
     api.pendingPermissions.push(exactA, sameSessionOtherRequest, exactB, otherAgent);
 
     let reverseRequests = 0;
@@ -309,7 +309,7 @@ describe("opencode-family external lifecycle runtime", () => {
       bridgeToken: entry.familyBridgeToken,
     };
     const bad = [
-      { agentId: "mimocode" },
+      { agentId: "other-family-agent" },
       { requestId: "per-other" },
       { sessionId: `${entry.sessionId}-other` },
       { bridgeUrl: "http://127.0.0.1:43211" },

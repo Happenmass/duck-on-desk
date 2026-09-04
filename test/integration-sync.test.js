@@ -434,18 +434,18 @@ describe("integration sync runtime", () => {
     const { runtime } = makeRuntime({
       ctx: {
         uninstallIntegrationImpls: {
-          "copilot-cli": (options) => {
-            uninstallCalls.push({ name: "copilot-uninstall", options });
+          opencode: (options) => {
+            uninstallCalls.push({ name: "opencode-uninstall", options });
             return { removed: 0, changed: false };
           },
         },
       },
     });
 
-    const result = runtime.uninstallIntegrationForAgent("copilot-cli");
+    const result = runtime.uninstallIntegrationForAgent("opencode");
 
     assert.deepStrictEqual(result, { removed: 0, changed: false });
-    assert.deepStrictEqual(uninstallCalls, [{ name: "copilot-uninstall", options: { silent: true } }]);
+    assert.deepStrictEqual(uninstallCalls, [{ name: "opencode-uninstall", options: { silent: true } }]);
   });
 
   it("uninstallIntegrationForAgent passes Codex cleanup markers on the real fallback path", () => {

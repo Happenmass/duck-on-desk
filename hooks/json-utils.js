@@ -493,7 +493,7 @@ function buildPortableStatuslineCommand(nodeBin, scriptPath, options = {}) {
  * (POSIX `/`, Windows `C:\`, or UNC `\\server`).
  *
  * Used as a shared primitive so installers that don't share a settings.hooks
- * shape (e.g. Kimi's TOML) can still preserve a user-repaired Node path.
+ * shape can still preserve a user-repaired Node path.
  *
  * @param {string[]} commands - Raw command strings (already unescaped)
  * @param {string}   marker   - Hook script filename to skip
@@ -539,7 +539,7 @@ function extractExistingNodeBinFromCommands(commands, marker) {
  * @param {string} marker   - Hook script filename to search for
  * @param {object} [options]
  * @param {boolean} [options.nested] - Also check entry.hooks[].command
- *   (CodeBuddy / Claude Code nested format)
+ *   (Claude Code nested format)
  * @returns {string|null}
  */
 function extractExistingNodeBin(settings, marker, options) {

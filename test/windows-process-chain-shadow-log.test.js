@@ -88,7 +88,7 @@ describe("windows process-chain shadow log", () => {
       sampleLimit: 2,
       append: (...args) => writes.push(args),
     });
-    const record = { channel: "state", agentId: "kiro-cli", event: "preToolUse" };
+    const record = { channel: "state", agentId: "codex", event: "preToolUse" };
     assert.strictEqual(log(record), true);
     assert.strictEqual(log(record), true);
     assert.strictEqual(log(record), false);

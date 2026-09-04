@@ -1,17 +1,12 @@
 // test/hook-adapter-offline-contract.test.js — #681 Slice A1, adapter contract.
 //
 // The claim this file has to earn: tightening the SHARED resolver to return an
-// unavailable shape is safe for all 16 adapters WITHOUT touching any of them.
+// unavailable shape is safe for every adapter WITHOUT touching any of them.
 //
-// It is not enough to assert the shape in isolation. Seven adapters (codex,
-// copilot, cursor, kimi, kiro, codebuddy, workbuddy) do a bare `pidChain.length`
-// with no Array.isArray guard, and three of those (cursor, codebuddy, workbuddy)
-// would swallow the resulting TypeError in a .catch() that rewrites their gating
-// stdout — cursor's {"continue":true} and codebuddy's {"decision":"allow"}
-// would silently become {}; WorkBuddy intentionally emits {} on every path.
-// A shape-only unit test cannot
-// see that. So each adapter is run here as its
-// REAL script, in a subprocess, with:
+// It is not enough to assert the shape in isolation: codex-hook.js does a
+// bare `pidChain.length` with no Array.isArray guard. A shape-only unit test
+// cannot see that. So each adapter is run here as its REAL script, in a
+// subprocess, with:
 //
 //   - USERPROFILE/HOME pointed at an empty dir  → no runtime.json → gate fires
 //   - CLAWD_REMOTE unset                        → the local Windows path, not remote
@@ -33,7 +28,7 @@ const { createSpawnedHookHarness } = require("./helpers/spawned-hook");
 const HOOKS_DIR = path.resolve(__dirname, "..", "hooks");
 
 // Every createPidResolver consumer. Cross-checked against
-// `grep -l createPidResolver hooks/*.js` — if an 18th adapter appears without a
+// `grep -l createPidResolver hooks/*.js` — if a new adapter appears without a
 // row here, the count assertion at the bottom fails.
 //
 // `stdout` is the EXACT bytes the agent must still receive while Clawd is
@@ -42,52 +37,14 @@ const HOOKS_DIR = path.resolve(__dirname, "..", "hooks");
 // agent parses. Empty string = this adapter gates on exit code and must stay
 // silent. null = not asserted here (its own suite owns the stdout contract).
 //
-// `argv` matters more than it looks. clawd-hook.js and copilot-hook.js take the
-// event name from process.argv[2], NOT from the stdin payload — omit it and they
-// exit before resolving anything, so a "zero spawn" assertion passes for the
-// wrong reason. A real-machine audit caught exactly that: copilot spawned 0
-// PowerShells whether Clawd was up or down, because it was never really running.
-// The vacuity guard at the bottom of this file exists to stop that recurring.
+// `argv` matters more than it looks. clawd-hook.js takes the event name from
+// process.argv[2], NOT from the stdin payload — omit it and it exits before
+// resolving anything, so a "zero spawn" assertion passes for the wrong reason.
+// A real-machine audit caught exactly that on a since-removed adapter. The
+// vacuity guard at the bottom of this file exists to stop that recurring.
 const ADAPTERS = [
   { name: "clawd-hook.js", argv: ["PreToolUse"], payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: "" },
   { name: "codex-hook.js", payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: "" },
-  { name: "copilot-hook.js", argv: ["sessionStart"], payload: { hook_event_name: "sessionStart", session_id: "s-681", cwd: "D:/repo" }, stdout: "" },
-  // #634: cursor's beforeSubmitPrompt now maps to the "prompt" lifecycle,
-  // which is cache-only and deliberately spawn-free — it can no longer anchor
-  // the one-spawn vacuity guard. preToolUse ("event" lifecycle: fresh on cache
-  // miss) keeps the guard meaningful, matching the other adapters' rows.
-  { name: "cursor-hook.js", payload: { hook_event_name: "preToolUse", cwd: "D:/repo" }, stdout: "{}\n" },
-  { name: "gemini-hook.js", payload: { hook_event_name: "SessionStart", cwd: "D:/repo" }, stdout: null },
-  { name: "kimi-hook.js", payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: "" },
-  { name: "kiro-hook.js", payload: { hook_event_name: "preToolUse", cwd: "D:/repo" }, stdout: "" },
-  { name: "codebuddy-hook.js", payload: { hook_event_name: "PreToolUse", cwd: "D:/repo" }, stdout: `${JSON.stringify({ decision: "allow" })}\n` },
-  { name: "antigravity-hook.js", payload: { hook_event_name: "PreToolUse", cwd: "D:/repo" }, stdout: null },
-  { name: "qoder-hook.js", payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: null },
-  { name: "qoderwork-hook.js", payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: null },
-  { name: "qwen-code-hook.js", payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: null },
-  // #843: QwenWork is state-only — stdout is "{}\n" on every path (offline,
-  // online, unmapped event, throw), so it is asserted exactly here. PreToolUse
-  // (not PermissionRequest/PermissionDenied) is the row that keeps the vacuity
-  // guard honest: the permission events deliberately skip pid resolution.
-  { name: "qwenwork-hook.js", payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: "{}\n" },
-  // Since Phase 2, zcode's PermissionRequest path resolves pid metadata (one
-  // spawn keeps the vacuity guard honest) and then blocks on /permission;
-  // offline that probe fails fast and stdout stays the exact "{}\n"
-  // no-decision the ZCode hook runner needs to fall back to its native flow.
-  { name: "zcode-hook.js", argv: ["PermissionRequest"], payload: { hook_event_name: "PermissionRequest", session_id: "s-681", cwd: "D:/repo", tool_name: "Bash", tool_input: { command: "echo hi" } }, stdout: "{}\n" },
-  // Reasonix blocking hooks are intentionally cache-only/zero-spawn even when
-  // Clawd is live. PostToolUse keeps this offline gate assertion non-vacuous.
-  { name: "reasonix-hook.js", payload: { event: "PostToolUse", sessionId: "s-681", cwd: "D:/repo", toolName: "bash" }, stdout: "" },
-  // WorkBuddy reads pidChain.length bare too, so the tightened resolver's
-  // []-not-null offline shape is still load-bearing here. session_id is
-  // REQUIRED: workbuddy-hook.js
-  // drops any event without one before it ever resolves (#618/#648), which would
-  // otherwise make the vacuity guard below see zero spawns and fail.
-  { name: "workbuddy-hook.js", payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: "{}\n" },
-  // TraeCode is state-only: every event emits {} (no permission gating).
-  // session_id is required so the resolver cache context is non-default and
-  // the vacuity guard sees the one PowerShell snapshot when Clawd is alive.
-  { name: "traecode-hook.js", payload: { hook_event_name: "PreToolUse", session_id: "s-681", cwd: "D:/repo" }, stdout: "{}\n" },
 ];
 
 let hookHarness;
@@ -142,10 +99,10 @@ describe("#681 — every adapter survives a clean offline with zero spawn", { sk
   // spawn when Clawd looks ALIVE — if it attempts zero either way, the row is
   // decoration and the offline assertion proves nothing about it.
   //
-  // This is not hypothetical: a real-machine audit found copilot-hook.js
-  // reporting zero spawns online AND offline, because it takes its event from
-  // argv[2] and the harness only fed it stdin. It had been passing this suite
-  // without ever running.
+  // This is not hypothetical: a real-machine audit found a since-removed
+  // adapter reporting zero spawns online AND offline, because it took its
+  // event from argv[2] and the harness only fed it stdin. It had been passing
+  // this suite without ever running.
   describe("the offline assertions are not vacuous", () => {
     for (const adapter of ADAPTERS) {
       it(`${adapter.name}: attempts exactly one spawn when Clawd is alive`, () => {
@@ -160,23 +117,22 @@ describe("#681 — every adapter survives a clean offline with zero spawn", { sk
     }
   });
 
-  it("covers every createPidResolver consumer in hooks/ (fails when an 18th adapter lands)", () => {
+  it("covers every createPidResolver consumer in hooks/ (fails when a new adapter lands)", () => {
     const consumers = fs.readdirSync(HOOKS_DIR)
       .filter((f) => f.endsWith("-hook.js"))
       .filter((f) => fs.readFileSync(path.join(HOOKS_DIR, f), "utf8").includes("createPidResolver("))
       .sort();
     assert.deepStrictEqual(consumers, ADAPTERS.map((a) => a.name).sort(),
       "a new createPidResolver adapter must be added to ADAPTERS above and proven offline-safe");
-    assert.strictEqual(consumers.length, 17, "traecode-hook.js and qwenwork-hook.js joined the createPidResolver consumers");
+    assert.strictEqual(consumers.length, 2, "clawd-hook.js and codex-hook.js are the createPidResolver consumers");
   });
 });
 
 describe("#681 — a stale runtime.json is not a live Clawd", { skip: process.platform !== "win32" }, () => {
-  // Rows chosen to cover both stdout-gating adapters (where a crash would be
-  // silent) plus a plain state adapter. Full coverage of the identity matrix
-  // itself lives in test/server-config.test.js; this is the end-to-end proof
-  // that the identity actually reaches the spawn decision inside a real hook.
-  const SAMPLE = ADAPTERS.filter((a) => ["cursor-hook.js", "codebuddy-hook.js", "kiro-hook.js"].includes(a.name));
+  // Full coverage of the identity matrix itself lives in
+  // test/server-config.test.js; this is the end-to-end proof that the identity
+  // actually reaches the spawn decision inside a real hook.
+  const SAMPLE = ADAPTERS;
   const STALE = [
     ["a crashed instance's leftover file (dead ownerPid)",
       { app: "clawd-on-desk", port: 23333, ownerPid: 2147483646 }],
@@ -198,7 +154,7 @@ describe("#681 — a stale runtime.json is not a live Clawd", { skip: process.pl
   }
 
   it("CLAWD_REMOTE suppresses the local walk even with a perfectly live runtime.json", () => {
-    const adapter = ADAPTERS.find((a) => a.name === "kiro-hook.js");
+    const adapter = ADAPTERS.find((a) => a.name === "codex-hook.js");
     const r = runHookOffline(adapter, {
       runtimeJson: { app: "clawd-on-desk", port: 23333, ownerPid: process.pid },
       env: { CLAWD_REMOTE: "1" },

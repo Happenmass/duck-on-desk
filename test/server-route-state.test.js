@@ -350,9 +350,9 @@ describe("server-route-state POST", () => {
     const otherSession = makePlanPermission("other-session");
     const otherAgent = {
       ...makePlanPermission("whole-session"),
-      agentId: "codebuddy",
+      agentId: "codex",
       interaction: classifyPermissionInteraction({
-        agentId: "codebuddy",
+        agentId: "codex",
         toolName: "ExitPlanMode",
       }),
     };
@@ -998,8 +998,8 @@ describe("server-route-state POST", () => {
       state: "idle",
       metadata_only: true,
       session_id: "agy-session",
-      agent_id: "antigravity-cli",
-      context_usage: { used: 32000, limit: 128000, percent: 25, source: "antigravity" },
+      agent_id: "codex",
+      context_usage: { used: 32000, limit: 128000, percent: 25, source: "codex" },
       contextUsageOrigin: "claude-statusline",
     }), {
       ctx: { updateSessionMetadata: acceptedMetadataSpy(metadataCalls) },
@@ -1502,7 +1502,7 @@ describe("server-route-state POST", () => {
       session_id: "stale:sid",
       event: "PreToolUse",
       agent_id: "custom-stale-0123456789ab",
-      hook_source: "copilot-hook",
+      hook_source: "clawd-hook",
     }));
 
     assert.strictEqual(res.statusCode, 204);
@@ -1703,13 +1703,13 @@ describe("server-route-state Windows B1a process metadata", () => {
       state: "working",
       session_id: "b1a-old-hook",
       event: "PreToolUse",
-      agent_id: "codebuddy",
+      agent_id: "codex",
       source_pid: 88,
     }), {
       headers: { [CLAWD_HOOK_PID_HEADER.toLowerCase()]: "4321" },
       options: {
         isWinHost: true,
-        windowsProcessChainRuntime: runtime("codebuddy", "b1a-authoritative"),
+        windowsProcessChainRuntime: runtime("codex", "b1a-authoritative"),
         resolveWindowsProcessMetadata: () => { resolverCalls++; return { status: "ok" }; },
       },
     });

@@ -4,7 +4,6 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
 const {
-  INTERNAL_WORKSPACE_AGENTS,
   deriveSessionBadge,
   deriveSourceInfo,
   isDoneEvent,
@@ -281,7 +280,7 @@ describe("sessionDisplayTitle cwd fallback", () => {
 
   it("derives normal project basenames independent of the host platform", () => {
     assert.strictEqual(
-      sessionDisplayTitle("qoderwork:abc123", session("working", { cwd: "/home/me/projects/myapp" })),
+      sessionDisplayTitle("codex:abc123", session("working", { cwd: "/home/me/projects/myapp" })),
       "myapp"
     );
     assert.strictEqual(
@@ -325,19 +324,6 @@ describe("sessionDisplayTitle cwd fallback", () => {
       );
     }
   });
-
-  it("keeps the cwd basename for non-QoderWork agents even inside a QoderWork workspace dir", () => {
-    assert.strictEqual(
-      sessionDisplayTitle("claude:xyz789", session("working", { agentId: "claude-code", cwd: "/Users/me/.qoderwork/workspace/mqgw60jiigjsjcid" })),
-      "mqgw60jiigjsjcid"
-    );
-  });
-
-  // ── #843: QwenWork's internal workspace ──────────────────────────────────
-  // qwenwork-hook.js correctly refuses to send cwd as session_title, but the
-  // server-side basename fallback below is what actually reaches the HUD /
-  // Dashboard / session menu — and it only knew about ~/.qoderwork/workspace,
-  // so ~/.QwenWorkCN/workspace/<id> still surfaced as "mqgw60jiigjsjcid".
 });
 
 describe("state-session-snapshot badges", () => {

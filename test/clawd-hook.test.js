@@ -61,26 +61,6 @@ describe("buildStateBody", () => {
     assert.strictEqual(body.cwd, "/tmp/p");
   });
 
-  for (const [label, cursorVersion] of [
-    ["blank", " \t "],
-    ["overlong", "v".repeat(129)],
-    ["line break", "3.13.25\nspoofed"],
-    ["non-string", 31325],
-  ]) {
-    it(`rejects ${label} Cursor provenance and keeps Claude Code attribution (#773)`, () => {
-      const body = buildStateBody(
-        "SessionStart",
-        {
-          session_id: `malformed-cursor-version-${label.replace(/\s+/g, "-")}`,
-          cursor_version: cursorVersion,
-          cwd: "/tmp/p",
-        },
-        mockResolve
-      );
-      assert.strictEqual(body.agent_id, "claude-code");
-    });
-  }
-
   it("keeps Claude Code launched from Cursor's terminal attributed to Claude Code (#773)", () => {
     const resolveFromCursorTerminal = () => ({
       stablePid: 12345,

@@ -245,3 +245,251 @@ describe("opencode JSONC installer — merged config semantics (#825)", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Shared JSONC edit-engine boundaries (hooks/opencode-family-jsonc.js), pinned
+// on the opencode entry (jsonc: true, candidates opencode.jsonc → opencode.json
+// → config.json). Fixtures live in opencode.jsonc — the top-priority candidate —
+// and the installer is handed the create-default (opencode.json) exactly like a
+// real install; it must find and edit the .jsonc that actually wins.
+// ---------------------------------------------------------------------------
+describe("opencode JSONC engine — element-level edits", () => {
+  // eslint-disable-next-line global-require
+  const { registerOpencodePlugin, unregisterOpencodePlugin } = require("../hooks/opencode-install");
+  const PLUGIN_DIR = "/abs/hooks/opencode-plugin";
+
+  function tmpConfig(text) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-opencode-jsonc-"));
+    const jsoncPath = path.join(dir, "opencode.jsonc");
+    if (text !== undefined) fs.writeFileSync(jsoncPath, text);
+    return { dir, jsoncPath, configPath: path.join(dir, "opencode.json") };
+  }
+  function register(configPath, extra = {}) {
+    return registerOpencodePlugin({ silent: true, configPath, pluginDir: PLUGIN_DIR, ...extra });
+  }
+  function unregister(configPath, extra = {}) {
+    return unregisterOpencodePlugin({ silent: true, configPath, pluginDir: PLUGIN_DIR, ...extra });
+  }
+  function pluginsOf(filePath) {
+    return parseJsonc(fs.readFileSync(filePath, "utf8")).plugin;
+  }
+
+  it("appends while PRESERVING comments and trailing commas", () => {
+    const { configPath, jsoncPath } = tmpConfig([
+      "{",
+      "  // my provider notes",
+      '  "model": "anthropic/claude-sonnet-4-6", /* inline note */',
+      '  "plugin": [',
+      '    "@vendor/some-plugin",',
+      "  ], // keep this array",
+      "}",
+    ].join("\n"));
+    const res = register(configPath);
+    assert.strictEqual(res.added, true);
+    assert.strictEqual(res.created, false);
+    assert.strictEqual(res.configPath, jsoncPath);
+    const text = fs.readFileSync(jsoncPath, "utf8");
+    for (const comment of ["// my provider notes", "/* inline note */", "// keep this array"]) {
+      assert.ok(text.includes(comment), `comment lost: ${comment}`);
+    }
+    assert.deepStrictEqual(parseJsonc(text).plugin, ["@vendor/some-plugin", PLUGIN_DIR]);
+  });
+
+  it("is idempotent — second register is byte-identical and reports skipped", () => {
+    const { configPath, jsoncPath } = tmpConfig('{\n  // note\n  "plugin": [],\n}');
+    register(configPath);
+    const afterFirst = fs.readFileSync(jsoncPath, "utf8");
+    const res = register(configPath);
+    assert.deepStrictEqual(res, { added: false, skipped: true, created: false, configPath: jsoncPath, pluginDir: PLUGIN_DIR });
+    assert.strictEqual(fs.readFileSync(jsoncPath, "utf8"), afterFirst, "skipped register must not rewrite the file");
+  });
+
+  it("updates a stale absolute path in place (basename match), keeping comments", () => {
+    const { configPath, jsoncPath } = tmpConfig('{\n  // stale install\n  "plugin": ["/old/place/hooks/opencode-plugin"],\n}');
+    const res = register(configPath);
+    assert.strictEqual(res.added, true);
+    const text = fs.readFileSync(jsoncPath, "utf8");
+    assert.ok(text.includes("// stale install"));
+    assert.deepStrictEqual(parseJsonc(text).plugin, [PLUGIN_DIR]);
+  });
+
+  it("adds the plugin property when missing, preserving sibling keys and comments", () => {
+    const { configPath, jsoncPath } = tmpConfig('{\n  // just a model\n  "model": "anthropic/claude-sonnet-4-6",\n}');
+    const res = register(configPath);
+    assert.strictEqual(res.added, true);
+    assert.strictEqual(res.configPath, jsoncPath, "an existing top-priority file wins over the create-default");
+    const text = fs.readFileSync(jsoncPath, "utf8");
+    assert.ok(text.includes("// just a model"));
+    assert.deepStrictEqual(parseJsonc(text), { model: "anthropic/claude-sonnet-4-6", plugin: [PLUGIN_DIR] });
+  });
+
+  it("replaces a non-array plugin value", () => {
+    const { configPath, jsoncPath } = tmpConfig('{\n  "plugin": "not-an-array",\n}');
+    register(configPath);
+    assert.deepStrictEqual(pluginsOf(jsoncPath), [PLUGIN_DIR]);
+  });
+
+  it("throws (and does not clobber) on genuinely corrupt JSONC — register and unregister", () => {
+    const original = '{\n  "plugin": [\n';
+    const { configPath, jsoncPath } = tmpConfig(original);
+    assert.throws(() => register(configPath), /Failed to (read|parse)/);
+    assert.throws(() => unregister(configPath), /Failed to (read|parse)/);
+    assert.strictEqual(fs.readFileSync(jsoncPath, "utf8"), original, "corrupt config must be left untouched");
+  });
+
+  it("removes ALL exact matches (high index → low), keeping comments and other entries", () => {
+    const { configPath, jsoncPath } = tmpConfig([
+      "{",
+      "  // header",
+      '  "plugin": [',
+      "    // third-party, keep me",
+      '    "@vendor/other",',
+      `    "${PLUGIN_DIR}",`,
+      `    "${PLUGIN_DIR}",`,
+      `    "${PLUGIN_DIR}",`,
+      "  ],",
+      "}",
+    ].join("\n"));
+    const res = unregister(configPath);
+    assert.strictEqual(res.removed, 3);
+    assert.strictEqual(res.changed, true);
+    assert.strictEqual(res.skipped, false);
+    const text = fs.readFileSync(jsoncPath, "utf8");
+    assert.ok(text.includes("// header"));
+    assert.ok(text.includes("// third-party, keep me"), "comments not adjacent-after a removed element must survive");
+    assert.deepStrictEqual(parseJsonc(text).plugin, ["@vendor/other"]);
+  });
+
+  it("preserves trivia FOLLOWING a removed element — span surgery, not modify()", () => {
+    // jsonc-parser's own removal would swallow both comments below; the
+    // module's span surgery removes only the element token + one comma.
+    const { configPath, jsoncPath } = tmpConfig([
+      "{",
+      '  "plugin": [',
+      `    "${PLUGIN_DIR}",`,
+      "    // note below the removed entry",
+      '    "@vendor/other", // boundary comment',
+      "  ],",
+      "}",
+    ].join("\n"));
+    const res = unregister(configPath);
+    assert.strictEqual(res.removed, 1);
+    const text = fs.readFileSync(jsoncPath, "utf8");
+    assert.ok(text.includes("// note below the removed entry"), "full-line comment after removed element must survive");
+    assert.ok(text.includes("// boundary comment"), "same-line trailing comment must survive");
+    assert.deepStrictEqual(parseJsonc(text).plugin, ["@vendor/other"]);
+  });
+
+  it("preserves file mode across register and unregister — incl. umask-sensitive bits", (t) => {
+    if (process.platform === "win32") return t.skip("posix file modes");
+    // 0600 has no bits a typical umask would strip — it passes even without
+    // real preservation. 0664 (group-write) is the honest probe: a 022 umask
+    // silently narrows it unless the writer chmods explicitly.
+    for (const mode of [0o600, 0o664]) {
+      const { configPath, jsoncPath } = tmpConfig(`{\n  // token inside\n  "plugin": ["${PLUGIN_DIR}", "@vendor/keep"],\n}`);
+      fs.chmodSync(jsoncPath, mode);
+
+      unregister(configPath);
+      assert.strictEqual(fs.statSync(jsoncPath).mode & 0o777, mode, `unregister must keep 0${mode.toString(8)}`);
+
+      register(configPath);
+      assert.strictEqual(fs.statSync(jsoncPath).mode & 0o777, mode, `register must keep 0${mode.toString(8)}`);
+    }
+  });
+
+  it("sweeps a MASKED stale path in a lower-priority file", () => {
+    const { configPath, jsoncPath } = tmpConfig(`{\n  "plugin": ["${PLUGIN_DIR}"],\n}`);
+    fs.writeFileSync(configPath, '{\n  "plugin": ["/old/install/hooks/opencode-plugin"]\n}');
+    const res = unregister(configPath);
+    assert.strictEqual(res.removed, 2, "current entry + masked stale path");
+    assert.deepStrictEqual(pluginsOf(jsoncPath), []);
+    assert.deepStrictEqual(pluginsOf(configPath), []);
+  });
+
+  it("tolerates ENOENT and a missing plugin array", () => {
+    const missing = tmpConfig(undefined);
+    assert.deepStrictEqual(
+      unregister(missing.configPath),
+      { removed: 0, changed: false, skipped: true, configPath: missing.configPath, pluginDir: PLUGIN_DIR }
+    );
+    const noArray = tmpConfig('{\n  // nothing here\n  "model": "anthropic/claude-sonnet-4-6",\n}');
+    const res = unregister(noArray.configPath);
+    assert.strictEqual(res.removed, 0);
+    assert.strictEqual(res.skipped, true);
+  });
+
+  it("writes a backup of the PRE-EDIT text when options.backup is set", () => {
+    const original = `{\n  // precious\n  "plugin": ["${PLUGIN_DIR}"],\n}`;
+    const { configPath } = tmpConfig(original);
+    const res = unregister(configPath, { backup: true });
+    assert.strictEqual(res.removed, 1);
+    assert.ok(res.backupPath, "backupPath must be reported when backup: true");
+    assert.strictEqual(fs.readFileSync(res.backupPath, "utf8"), original, "backup must hold the pre-edit text");
+  });
+
+  it("survives SINGLE-LINE plugin arrays on removal (jsonc-parser 3.3.1 emits corrupt edits there)", () => {
+    // Upstream modify() drops a dangling quote when removing elements from a
+    // one-line array — the module must fall back to whole-array replacement.
+    const { configPath, jsoncPath } = tmpConfig(`{\n  "plugin": ["${PLUGIN_DIR}", "@vendor/keep", "${PLUGIN_DIR}"]\n}`);
+    const res = unregister(configPath);
+    assert.strictEqual(res.removed, 2);
+    assert.deepStrictEqual(pluginsOf(jsoncPath), ["@vendor/keep"]);
+  });
+
+  it("matches the target file's TAB indentation when inserting", () => {
+    const { configPath, jsoncPath } = tmpConfig(`{\n\t// tabs not spaces\n\t"plugin": [\n\t\t"@vendor/x"\n\t]\n}`);
+    register(configPath);
+    const text = fs.readFileSync(jsoncPath, "utf8");
+    assert.ok(text.includes(`\t"${PLUGIN_DIR}"`), `inserted element must be tab-indented: ${JSON.stringify(text)}`);
+    assert.ok(!/\n {2}"/.test(text), "no space-indented lines may be introduced into a tab file");
+    assert.deepStrictEqual(parseJsonc(text).plugin, ["@vendor/x", PLUGIN_DIR]);
+  });
+
+  it("merges overlapping spans when the last two adjacent elements share a comma", () => {
+    // Element N eats its FOLLOWING comma; the last element eats its
+    // PRECEDING one — removing both claims the same comma. Without the span
+    // union the second slice would use stale offsets and corrupt the file.
+    const { configPath, jsoncPath } = tmpConfig(`{\n  "plugin": [\n    "@vendor/keep",\n    "${PLUGIN_DIR}",\n    "${PLUGIN_DIR}"\n  ]\n}`);
+    const res = unregister(configPath);
+    assert.strictEqual(res.removed, 2);
+    assert.deepStrictEqual(pluginsOf(jsoncPath), ["@vendor/keep"]);
+  });
+
+  it("keeps the file VALID when a comment sits between the removed element and its comma", () => {
+    // The comma scan must cross trivia; stopping at the comment used to
+    // strand a dangling comma and corrupt the file.
+    const { configPath, jsoncPath } = tmpConfig(`{\n  "plugin": [\n    "${PLUGIN_DIR}" /* mid */,\n    "@vendor/keep"\n  ]\n}`);
+    const res = unregister(configPath);
+    assert.strictEqual(res.removed, 1);
+    assert.deepStrictEqual(pluginsOf(jsoncPath), ["@vendor/keep"]);
+  });
+
+  it("leaves no blank line after removing a middle element from a CRLF file", () => {
+    const { configPath, jsoncPath } = tmpConfig(`{\r\n  "plugin": [\r\n    "@vendor/a",\r\n    "${PLUGIN_DIR}",\r\n    "@vendor/b"\r\n  ]\r\n}`);
+    const res = unregister(configPath);
+    assert.strictEqual(res.removed, 1);
+    const text = fs.readFileSync(jsoncPath, "utf8");
+    assert.ok(!/\n[ \t]+\r?\n/.test(text), `no whitespace-only line may remain: ${JSON.stringify(text)}`);
+    assert.deepStrictEqual(parseJsonc(text).plugin, ["@vendor/a", "@vendor/b"]);
+  });
+
+  it("refuses to unregister from a file with DUPLICATE top-level plugin keys", () => {
+    // parse() resolves duplicates to the LAST value, but element edits land
+    // on the FIRST property node — unregister would count one array while
+    // deleting from another. Ambiguous configs are refused untouched.
+    const unregText = `{\n  "plugin": ["@vendor/user"],\n  "plugin": ["${PLUGIN_DIR}"]\n}`;
+    const { configPath, jsoncPath } = tmpConfig(unregText);
+    assert.throws(() => unregister(configPath), /duplicate top-level "plugin" keys/);
+    assert.strictEqual(fs.readFileSync(jsoncPath, "utf8"), unregText);
+  });
+
+  it("tolerates a UTF-8 BOM and CRLF line endings in the target file", () => {
+    const bomCrlf = "\uFEFF{\r\n  // windows-authored\r\n  \"plugin\": [\"@vendor/keep\"],\r\n}";
+    const { configPath, jsoncPath } = tmpConfig(bomCrlf);
+    const res = register(configPath);
+    assert.strictEqual(res.added, true);
+    const text = fs.readFileSync(jsoncPath, "utf8");
+    assert.ok(text.includes("// windows-authored"), "CRLF comments must survive");
+    assert.deepStrictEqual(parseJsonc(text).plugin, ["@vendor/keep", PLUGIN_DIR]);
+  });
+});

@@ -74,7 +74,7 @@ test("store isolates identical raw-looking ids across agents and sessions", () =
   const store = createSessionAutomationStore();
   const records = [
     ["claude-code", "same", "g-claude"],
-    ["qwen-code", "same", "g-qwen"],
+    ["opencode", "same", "g-opencode"],
     ["claude-code", "other", "g-other"],
   ];
   for (const [agentId, sessionId, grantId] of records) {
@@ -85,7 +85,7 @@ test("store isolates identical raw-looking ids across agents and sessions", () =
     ).status, "applied");
   }
   assert.equal(store.get(identity("claude-code", "same")).grantId, "g-claude");
-  assert.equal(store.get(identity("qwen-code", "same")).grantId, "g-qwen");
+  assert.equal(store.get(identity("opencode", "same")).grantId, "g-opencode");
   assert.equal(store.get(identity("claude-code", "other")).grantId, "g-other");
 });
 

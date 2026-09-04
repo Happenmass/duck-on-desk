@@ -100,8 +100,6 @@ const BUBBLE_STRINGS = {
     otherPlaceholder: "Type your answer…",
     codexPermission: "Codex Permission",
     codexToolApproval: "Codex Tool Approval",
-    kimiPermission: "Kimi Permission",
-    checkKimiTerminal: "Approve or reject this request in the Kimi terminal.",
     gotIt: "Got it",
     codexNeedsInput: "Codex Needs Input",
     goToCodex: "Go to Codex",
@@ -150,8 +148,6 @@ const BUBBLE_STRINGS = {
     otherPlaceholder: "\u8F93\u5165\u4F60\u7684\u56DE\u7B54\u2026",
     codexPermission: "Codex \u6743\u9650\u8BF7\u6C42",
     codexToolApproval: "Codex \u5DE5\u5177\u8C03\u7528\u5BA1\u6279",
-    kimiPermission: "Kimi \u6743\u9650\u8BF7\u6C42",
-    checkKimiTerminal: "\u8BF7\u5728 Kimi \u7EC8\u7AEF\u4E2D\u6279\u51C6\u6216\u62D2\u7EDD\u8BE5\u8BF7\u6C42\u3002",
     gotIt: "\u77E5\u9053\u4E86",
     codexNeedsInput: "Codex \u9700\u8981\u4F60\u7684\u56DE\u7B54",
     goToCodex: "\u524D\u5F80 Codex",
@@ -200,8 +196,6 @@ const BUBBLE_STRINGS = {
     otherPlaceholder: "輸入你的回答…",
     codexPermission: "Codex 權限請求",
     codexToolApproval: "Codex 工具呼叫審批",
-    kimiPermission: "Kimi 權限請求",
-    checkKimiTerminal: "請在 Kimi 終端機中允許或拒絕此請求。",
     gotIt: "了解",
     codexNeedsInput: "Codex 需要你的回答",
     goToCodex: "前往 Codex",
@@ -250,8 +244,6 @@ const BUBBLE_STRINGS = {
     otherPlaceholder: "\uC9C1\uC811 \uC785\uB825\u2026",
     codexPermission: "Codex \uAD8C\uD55C \uC694\uCCAD",
     codexToolApproval: "Codex \uB3C4\uAD6C \uD638\uCD9C \uC2B9\uC778",
-    kimiPermission: "Kimi \uAD8C\uD55C \uC694\uCCAD",
-    checkKimiTerminal: "Kimi \uD130\uBBF8\uB110\uC5D0\uC11C \uC774 \uC694\uCCAD\uC744 \uD5C8\uC6A9\uD558\uAC70\uB098 \uAC70\uBD80\uD558\uC138\uC694.",
     gotIt: "\uD655\uC778",
     codexNeedsInput: "Codex\uC5D0 \uC785\uB825\uC774 \uD544\uC694\uD569\uB2C8\uB2E4",
     goToCodex: "Codex\uB85C \uC774\uB3D9",
@@ -300,8 +292,6 @@ const BUBBLE_STRINGS = {
     otherPlaceholder: "回答を入力…",
     codexPermission: "Codex 権限リクエスト",
     codexToolApproval: "Codex ツール呼び出しの承認",
-    kimiPermission: "Kimi 権限リクエスト",
-    checkKimiTerminal: "Kimi ターミナルでこのリクエストを許可または拒否してください。",
     gotIt: "了解",
     codexNeedsInput: "Codex に入力が必要",
     goToCodex: "Codex へ移動",
@@ -350,8 +340,6 @@ const BUBBLE_STRINGS = {
     otherPlaceholder: "Digite sua resposta…",
     codexPermission: "Permissão do Codex",
     codexToolApproval: "Aprovação de ferramenta do Codex",
-    kimiPermission: "Permissão do Kimi",
-    checkKimiTerminal: "Aprove ou recuse este pedido no terminal do Kimi.",
     gotIt: "Entendi",
     codexNeedsInput: "O Codex precisa de resposta",
     goToCodex: "Ir para o Codex",
@@ -400,8 +388,6 @@ const BUBBLE_STRINGS = {
     otherPlaceholder: "Escribe tu respuesta…",
     codexPermission: "Permiso de Codex",
     codexToolApproval: "Aprobación de herramienta de Codex",
-    kimiPermission: "Permiso de Kimi",
-    checkKimiTerminal: "Aprueba o rechaza esta solicitud en la terminal de Kimi.",
     gotIt: "Entendido",
     codexNeedsInput: "Codex necesita una respuesta",
     goToCodex: "Ir a Codex",
@@ -1022,10 +1008,8 @@ function renderElicitationTerminalFallback(data) {
     btn.textContent = "...";
     disableAll();
     // Claude elicitation requires an explicit deny response to hand control
-    // back to its terminal prompt. Hermes clarify instead treats deny as
-    // cancellation; deny-and-focus is normalized to a bodyless no-decision,
-    // which lets Hermes open its native clarification UI.
-    window.bubbleAPI.decide(data && data.isHermes ? "deny-and-focus" : "deny");
+    // back to its terminal prompt.
+    window.bubbleAPI.decide("deny");
   });
   footerSecondary.appendChild(btn);
   footerSecondary.classList.toggle("visible", currentExpanded);
@@ -1184,7 +1168,6 @@ function renderCodexUserInputPreview(data) {
 
 function show(data) {
   const isPassiveRefresh = data.toolName === "CodexExec"
-    || data.toolName === "KimiPermission"
     || data.isCodexUserInputNotify === true;
   if (currentData && !isPassiveRefresh) {
     currentData = {
@@ -1377,46 +1360,6 @@ function show(data) {
     return;
   }
 
-  // Kimi notify mode — informational bubble with Dismiss button only
-  if (data.toolName === "KimiPermission") {
-    headerTitle.textContent = bubbleText(data.lang, "kimiPermission");
-    // A native Kimi Code request forwards the real tool name plus a
-    // whitelisted tool_input subset. When both are present, reuse the
-    // standard cue path (formatDetail / detectIrreversible / real tool pill)
-    // — display-only, the card stays dismiss-only. Without them (legacy
-    // Python CLI, shape drift) this renders exactly the old generic card.
-    const kimiTool = typeof data.kimiToolName === "string" && data.kimiToolName ? data.kimiToolName : null;
-    const kimiInput = data.kimiToolInput && typeof data.kimiToolInput === "object" ? data.kimiToolInput : null;
-    if (kimiTool && kimiInput) {
-      const kimiMcp = parseMcpToolName(kimiTool);
-      toolPillText.textContent = kimiMcp ? kimiMcp.display : kimiTool;
-      toolPill.setAttribute("data-tool", kimiTool);
-      // The fallbacks are defense-in-depth only: formatDetail's generic
-      // last-resort loop returns non-empty for any server-normalized input.
-      commandBlock.textContent = formatDetail(kimiTool, kimiInput)
-        || (data.toolInput && data.toolInput.command)
-        || bubbleText(data.lang, "checkKimiTerminal");
-      const kimiIrreversible = detectIrreversible(kimiTool, kimiInput);
-      if (kimiIrreversible) {
-        irreversibleBadge.textContent = "\u26A0 " + bubbleText(data.lang, "irreversibleHint");
-        irreversibleBadge.setAttribute("data-reason", kimiIrreversible.tag);
-        irreversibleBadge.style.display = "";
-      }
-      // No else branch: resetBubbleContent() above already hid the badge.
-    } else {
-      toolPillText.textContent = "KIMI";
-      toolPill.setAttribute("data-tool", "KimiPermission");
-      commandBlock.textContent = (data.toolInput && data.toolInput.command) || bubbleText(data.lang, "checkKimiTerminal");
-    }
-    toolPill.style.display = "";
-    btnAllow.textContent = bubbleText(data.lang, "goToTerminal");
-    btnAllow.disabled = false;
-    btnDeny.style.display = "none";
-    suggestionsContainer.innerHTML = "";
-    revealCard();
-    return;
-  }
-
   const isPlanReview = interactionIntent === "plan-review";
   const canPlanFeedback = isPlanReview && interactionCapabilities.planFeedback === true;
   // Issue #445: an MCP tool call (e.g. Codex + Vercel MCP) is not an OS
@@ -1503,10 +1446,7 @@ function show(data) {
       footerSecondary.classList.add("visible");
     }
     renderSessionTrustError(data.sessionTrustError);
-    // Hermes and DSH permission cards get no generic terminal action. Hermes
-    // has no native approval prompt; DSH's native web answerer is reached by
-    // an explicit no-decision fallback, not a user allow/deny action.
-    if (!data.isHermes && !data.isDsh) renderRegularTerminalFallback(data.lang);
+    renderRegularTerminalFallback(data.lang);
   }
   // Re-enable buttons
   btnAllow.disabled = false;

@@ -300,11 +300,7 @@ describe("server-route-permission POST", () => {
   it("stamps a valid tool-approval interaction on every entry-producing adapter", async () => {
     const cases = [
       { agentId: "claude-code", body: {} },
-      { agentId: "codebuddy", body: {} },
       { agentId: "codex", body: {} },
-      { agentId: "qwen-code", body: {} },
-      { agentId: "copilot-cli", body: {} },
-      { agentId: "hermes", body: {} },
       {
         agentId: "opencode",
         body: {
@@ -342,12 +338,7 @@ describe("server-route-permission POST", () => {
     const command = `${"printf x; ".repeat(260)}${marker}`;
     const cases = [
       { agentId: "claude-code", body: {} },
-      { agentId: "codebuddy", body: {} },
       { agentId: "codex", body: { tool_input_description: "Run a generated command" } },
-      { agentId: "qwen-code", body: {} },
-      { agentId: "zcode", body: {} },
-      { agentId: "copilot-cli", body: {} },
-      { agentId: "hermes", body: {} },
       {
         agentId: "opencode",
         body: {
@@ -608,10 +599,9 @@ describe("server-route-permission POST", () => {
   it("never forges a deny for oversized permission bodies (connection closed, native fallback)", async () => {
     const res = await callPermissionPost("x".repeat(MAX_PERMISSION_BODY_BYTES + 1));
 
-    // A transport-level rejection happens before the agent is identified, and
-    // qwen/zcode hooks pass hookSpecificOutput denies straight through as real
-    // decisions — so the only safe answer is no answer: destroy the socket so
-    // CC/CodeBuddy fall back to their chat prompt and qwen/zcode emit "{}".
+    // A transport-level rejection happens before the agent is identified, so
+    // the only safe answer is no answer: destroy the socket so Claude Code
+    // falls back to its chat prompt.
     assert.deepStrictEqual(res.ctx.calls.sendPermissionResponse, []);
     assert.strictEqual(res.destroyed, true);
   });
@@ -1034,7 +1024,7 @@ describe("server-route-permission POST", () => {
     assert.strictEqual(ctx.pendingPermissions[0].familyRequestId, "per-sync");
   });
 
-  it("destroys the Claude/CodeBuddy connection during DND", async () => {
+  it("destroys the Claude connection during DND", async () => {
     const res = await callPermissionPost(JSON.stringify({
       tool_name: "Bash",
       tool_input: { command: "npm test" },
@@ -1158,7 +1148,7 @@ describe("server-route-permission POST", () => {
   it("rejects stale custom ids without creating a Claude permission bubble", async () => {
     const res = await callPermissionPost(JSON.stringify({
       agent_id: "custom-stale-0123456789ab",
-      hook_source: "copilot-hook",
+      hook_source: "clawd-hook",
       session_id: "stale:sid",
       tool_name: "Bash",
       tool_input: { command: "npm test" },
@@ -1485,54 +1475,6 @@ describe("server-route-permission POST", () => {
       assert.deepStrictEqual(res.ctx.calls.maybeStartRemoteApproval, [], item.body.tool_name);
     }
   });
-
-  // ── Copilot CLI branch ──
-  // Phase 0 locked: empty stdout + exit 0 means "no decision, native flow".
-  // Every Clawd fallback (DND / disabled / bubble bypass / bubble failure /
-  // abort) must end with 204 so the hook emits empty stdout and Copilot's
-  // native menu owns the decision. v1 explicitly excludes Telegram remote
-  // approval (plan §6, Phase 6 lifecycle table).
-
-  it("resolves Copilot abort as no-decision (NOT deny) when the connection closes", async () => {
-    const res = await callPermissionPost(JSON.stringify({
-      agent_id: "copilot-cli",
-      session_id: "copilot:s1",
-      tool_name: "edit",
-      tool_input: { filePath: "a.txt" },
-    }));
-
-    assert.strictEqual(res.ctx.pendingPermissions.length, 1);
-    const entry = res.ctx.pendingPermissions[0];
-    res.emit("close");
-
-    assert.strictEqual(res.ctx.calls.resolved.length, 1);
-    assert.strictEqual(res.ctx.calls.resolved[0].entry, entry);
-    assert.strictEqual(res.ctx.calls.resolved[0].behavior, "no-decision");
-  });
-
-  // ── Hermes Agent branch ──
-  // Hermes permissions behave like Copilot: every Clawd fallback (DND /
-  // disabled / subgate / bubble failure / abort) emits 204 so the Hermes
-  // plugin falls back to its native clarify or terminal-based approval.
-
-  it("resolves Hermes abort as no-decision when the connection closes", async () => {
-    const res = await callPermissionPost(JSON.stringify({
-      agent_id: "hermes",
-      session_id: "hermes:s1",
-      tool_name: "execute_bash",
-      tool_input: { command: "rm -rf /tmp/test" },
-    }));
-
-    assert.strictEqual(res.ctx.pendingPermissions.length, 1);
-    const entry = res.ctx.pendingPermissions[0];
-    res.emit("close");
-
-    assert.strictEqual(res.ctx.calls.resolved.length, 1);
-    assert.strictEqual(res.ctx.calls.resolved[0].entry, entry);
-    assert.strictEqual(res.ctx.calls.resolved[0].behavior, "no-decision");
-  });
-
-  // ── DeepSeek Harness branch ──
 
 });
 

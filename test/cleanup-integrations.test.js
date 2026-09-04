@@ -81,7 +81,6 @@ describe("cleanupIntegrations", () => {
         env: { CODEX_HOME: codexDir },
         backup: true,
         silent: true,
-        hermesCommand: false,
       });
       const codex = result.agents.find((entry) => entry.agentId === "codex");
 
@@ -174,7 +173,6 @@ describe("cleanupIntegrations", () => {
         homeDir,
         backup: true,
         silent: true,
-        hermesCommand: false,
         claudeCleanupResult: { status: "ok", removed: 3, changed: true, backupPaths: ["/fake/backup.bak"] },
       });
 
@@ -222,7 +220,7 @@ describe("cleanupIntegrations", () => {
 
   it("gives every managed agent a cleaner, path overrides and a display name", () => {
     const homeDir = path.join(os.tmpdir(), "clawd-cleanup-completeness-home");
-    const plan = buildCleanupOptionsForHome(homeDir, { hermesCommand: false, silent: true });
+    const plan = buildCleanupOptionsForHome(homeDir, { silent: true });
 
     const missingCleaner = MANAGED_AGENT_IDS.filter((id) => typeof AGENT_CLEANERS[id] !== "function");
     const missingOptions = MANAGED_AGENT_IDS.filter((id) => !plan.byAgent[id]);
@@ -241,7 +239,6 @@ describe("cleanupIntegrations", () => {
       homeDir,
       backup: true,
       silent: true,
-      hermesCommand: false,
       claudeCleanupResult: { status: "error", message: "queue disposed" },
     });
 
@@ -251,16 +248,3 @@ describe("cleanupIntegrations", () => {
     assert.strictEqual(result.summary.failed >= 1, true);
   });
 });
-
-// ═════════════════════════════════════════════════════════════════════════════
-// #843 — QwenWork uninstall must close the loop all the way to disk.
-//
-// The PR wired qwenwork into INSTALLABLE_AGENT_IDS (Settings Install/Uninstall)
-// and MANAGED_CLEANUP_AGENT_IDS (About cleanup), but not into
-// cleanup-integrations. integration-sync's REAL uninstall fallback resolves its
-// cleaner from AGENT_CLEANERS, so Uninstall returned
-// "No automatic integration uninstall is available for qwenwork" and About
-// cleanup flipped the prefs flags to false while ~/.QwenWorkCN/settings.json
-// kept every Clawd hook. These tests run the real fallback — an injected fake
-// uninstall impl would have passed against the broken build.
-// ═════════════════════════════════════════════════════════════════════════════

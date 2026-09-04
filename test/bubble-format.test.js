@@ -160,7 +160,7 @@ describe("bubble-format parseMcpToolName (issue #445)", () => {
   });
 
   it("returns null for non-MCP tool names (raw fallback path)", () => {
-    for (const name of ["Bash", "Edit", "CodexExec", "KimiPermission", "ExitPlanMode", "AskUserQuestion"]) {
+    for (const name of ["Bash", "Edit", "CodexExec", "ExitPlanMode", "AskUserQuestion"]) {
       assert.strictEqual(parseMcpToolName(name), null, `${name} must not be treated as MCP`);
     }
   });

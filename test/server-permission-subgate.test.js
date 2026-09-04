@@ -37,7 +37,6 @@ describe("shouldBypassCCBubble", () => {
   it("bypasses when the sub-gate is off for a normal permission tool", () => {
     const ctx = makeCtx({ enabled: false });
     assert.strictEqual(shouldBypassCCBubble(ctx, ccInteraction("Bash"), "claude-code"), true);
-    assert.strictEqual(shouldBypassCCBubble(ctx, ccInteraction("Edit", "codebuddy"), "codebuddy"), true);
   });
 
   it("never bypasses ExitPlanMode — Plan Review would break", () => {
@@ -57,13 +56,11 @@ describe("shouldBypassCCBubble", () => {
   it("bypasses when hideBubbles is on, even if the per-agent gate is on", () => {
     const ctx = makeCtx({ enabled: true, hideBubbles: true });
     assert.strictEqual(shouldBypassCCBubble(ctx, ccInteraction("Bash"), "claude-code"), true);
-    assert.strictEqual(shouldBypassCCBubble(ctx, ccInteraction("Edit", "codebuddy"), "codebuddy"), true);
   });
 
   it("bypasses normal permission tools when the split permission category is off", () => {
     const ctx = makeCtx({ enabled: true, permissionBubblesEnabled: false });
     assert.strictEqual(shouldBypassCCBubble(ctx, ccInteraction("Bash"), "claude-code"), true);
-    assert.strictEqual(shouldBypassCCBubble(ctx, ccInteraction("Edit", "codebuddy"), "codebuddy"), true);
   });
 
   it("hideBubbles does NOT bypass ExitPlanMode or AskUserQuestion — those would hang CC", () => {

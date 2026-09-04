@@ -7,9 +7,9 @@
 // route-permission.js), so they still win: by the time showPermissionBubble
 // runs, a gated request never reaches it. Headless fallback is deliberately
 // agent-specific: some agents get no-decision/native fallback, opencode gets
-// silent TUI fallback, and Claude/CodeBuddy keep their existing auto-deny.
+// silent TUI fallback, and Claude keeps its existing auto-deny.
 //
-// Exclusions: passive codex/kimi notifications are not approvals and must
+// Exclusions: passive codex notifications are not approvals and must
 // NOT be auto-resolved.
 
 const { describe, it } = require("node:test");
@@ -70,7 +70,7 @@ function makePermEntry(overrides = {}) {
   };
   entry.interaction = overrides.interaction || classifyPermissionInteraction({
     agentId: entry.agentId,
-    eventKind: entry.isCodexNotify || entry.isKimiNotify ? "passive-notification" : "permission",
+    eventKind: entry.isCodexNotify ? "passive-notification" : "permission",
     toolName: entry.toolName,
   });
   return entry;

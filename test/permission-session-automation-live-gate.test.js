@@ -98,7 +98,7 @@ describe("permission session automation live gate", () => {
   });
 
   it("fails closed for reverse-bridge entries without adapter-specific liveness", () => {
-    for (const agentId of ["opencode", "mimocode"]) {
+    for (const agentId of ["opencode"]) {
       const { permission, entry } = makeRuntime({}, {
         res: null,
         agentId,

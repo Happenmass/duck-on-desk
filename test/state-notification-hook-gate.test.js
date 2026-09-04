@@ -35,8 +35,6 @@ function makeCtx({ notificationHookEnabled = true } = {}) {
     pendingPermissions: [],
     resolvePermissionEntry: () => {},
     focusTerminalWindow: () => {},
-    showKimiNotifyBubble: () => {},
-    clearKimiNotifyBubbles: () => {},
     processKill: () => { const e = new Error("ESRCH"); e.code = "ESRCH"; throw e; },
     getCursorScreenPoint: () => ({ x: 100, y: 100 }),
     isAgentNotificationHookEnabled: () => notificationHookEnabled,
@@ -68,8 +66,8 @@ describe("updateSession: Notification hook gate", () => {
 
   it("mutes Notification bell + animation when the per-agent flag is off", () => {
     // Presentation-layer mute: session bookkeeping still runs (so the agent
-    // stays visible in the Sessions menu, stale timers keep refreshing, and
-    // Kimi hold-release cleanup still fires) — only the notification visual
+    // stays visible in the Sessions menu and stale timers keep refreshing) —
+    // only the notification visual
     // and confirm sound are skipped. Mirrors the Animation Map "events still
     // fire" contract.
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
@@ -185,32 +183,32 @@ describe("updateSession: Notification hook gate", () => {
     assert.deepStrictEqual(ctx._soundsPlayed, ["confirm"], "normal-mode wait-for-input alert should still chime");
   });
 
-  it("mutes Gemini Notification bell + animation when the per-agent flag is off", () => {
+  it("mutes a non-Claude Notification bell + animation when the per-agent flag is off", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
     api = require("../src/state")(ctx);
 
-    api.updateSession("gemini-1", "notification", "Notification", { agentId: "gemini-cli" });
+    api.updateSession("pi-1", "notification", "Notification", { agentId: "pi" });
 
-    assert.strictEqual(api.sessions.has("gemini-1"), true, "Gemini session must still be registered");
-    assert.strictEqual(api.sessions.get("gemini-1").state, "idle", "Gemini Notification must still resolve bookkeeping");
+    assert.strictEqual(api.sessions.has("pi-1"), true, "session must still be registered");
+    assert.strictEqual(api.sessions.get("pi-1").state, "idle", "Notification must still resolve bookkeeping");
     const stateChanges = ctx._rendererEvents.filter(([ch]) => ch === "state-change");
     assert.ok(stateChanges.length >= 1, "pet must still get a state-change broadcast");
-    assert.notStrictEqual(stateChanges[0][1], "notification", "Gemini mute must skip notification state");
-    assert.deepStrictEqual(ctx._soundsPlayed, [], "Gemini mute must suppress confirm sound");
+    assert.notStrictEqual(stateChanges[0][1], "notification", "mute must skip notification state");
+    assert.deepStrictEqual(ctx._soundsPlayed, [], "mute must suppress confirm sound");
   });
 
-  it("lets Gemini Notification through when the per-agent flag is on", () => {
+  it("lets a non-Claude Notification through when the per-agent flag is on", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
     api = require("../src/state")(ctx);
 
-    api.updateSession("gemini-1", "notification", "Notification", { agentId: "gemini-cli" });
+    api.updateSession("pi-1", "notification", "Notification", { agentId: "pi" });
 
     const stateChanges = ctx._rendererEvents.filter(([ch]) => ch === "state-change");
-    assert.ok(stateChanges.length >= 1, "Gemini notification state must be broadcast");
+    assert.ok(stateChanges.length >= 1, "notification state must be broadcast");
     assert.strictEqual(stateChanges[0][1], "notification");
-    assert.deepStrictEqual(ctx._soundsPlayed, ["confirm"], "Gemini notification must play confirm sound");
+    assert.deepStrictEqual(ctx._soundsPlayed, ["confirm"], "notification must play confirm sound");
   });
 
   it("mutes Qoder state-only permission notifications when the per-agent flag is off", () => {
@@ -426,7 +424,7 @@ describe("updateSession: Notification hook gate", () => {
     // resolve the agent from the prior session entry (same pattern used by
     // PermissionRequest gating above).
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-    const perAgent = { "claude-code": false, "kimi-cli": true };
+    const perAgent = { "claude-code": false, pi: true };
     ctx = makeCtx({ notificationHookEnabled: true });
     ctx.isAgentNotificationHookEnabled = (id) => perAgent[id] !== false;
     api = require("../src/state")(ctx);

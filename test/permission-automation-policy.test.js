@@ -106,7 +106,7 @@ describe("permission automation interaction classifier", () => {
       toolName: "CodexUserInput",
     });
     const notification = classifyPermissionInteraction({
-      agentId: "kimi-cli",
+      agentId: "codex",
       eventKind: "notification",
       toolName: "PermissionRequest",
     });

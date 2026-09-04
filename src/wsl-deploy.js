@@ -1,16 +1,14 @@
 "use strict";
 
-// One-click WSL integration deployment. Persistent command-hook integrations
-// keep their historical ~/.claude/hooks payload.
+// One-click WSL integration deployment. Command-hook integrations keep their
+// historical ~/.claude/hooks payload.
 
 const childProcess = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const wslUtils = require("./wsl-utils");
 
-const AGENT_WSL_OPTIONS = Object.freeze({});
-
-// All top-level .js files are retained for existing persistent hook agents.
+// Every top-level .js file in hooks/ is deployed.
 function collectHookFiles(hooksDir) {
   const files = [];
   try {
@@ -42,42 +40,6 @@ function validateDeployRelativePath(value) {
   return normalized;
 }
 
-function collectAgentWslFiles(hooksDir, agentId) {
-  const agentOptions = AGENT_WSL_OPTIONS[agentId];
-  if (!agentOptions || !Array.isArray(agentOptions.files)) return collectHookFiles(hooksDir);
-
-  const root = path.resolve(hooksDir);
-  const seen = new Set();
-  const files = [];
-  for (const configuredPath of agentOptions.files) {
-    const relativePath = validateDeployRelativePath(configuredPath);
-    if (seen.has(relativePath)) throw new Error(`duplicate deploy destination: ${relativePath}`);
-    seen.add(relativePath);
-
-    const sourcePath = path.resolve(root, ...relativePath.split("/"));
-    if (sourcePath !== root && !sourcePath.startsWith(`${root}${path.sep}`)) {
-      throw new Error(`deploy source escapes hooks directory: ${relativePath}`);
-    }
-    let stat;
-    try {
-      stat = fs.lstatSync(sourcePath);
-    } catch (err) {
-      if (err && err.code === "ENOENT") throw new Error(`required WSL deploy file is missing: ${relativePath}`);
-      throw err;
-    }
-    if (stat.isSymbolicLink() || !stat.isFile()) {
-      throw new Error(`WSL deploy source must be a regular non-symlink file: ${relativePath}`);
-    }
-    files.push({
-      name: relativePath,
-      relativePath,
-      path: sourcePath,
-      content: fs.readFileSync(sourcePath),
-    });
-  }
-  return files;
-}
-
 // Map agentId to the install script that runs in WSL.
 const AGENT_INSTALL_SCRIPT = {
   "claude-code": "install.js",
@@ -85,10 +47,6 @@ const AGENT_INSTALL_SCRIPT = {
   // OpenCode / Pi remain unsupported until their complete WSL runtime
   // behavior is independently validated.
 };
-
-function getAgentWslOptions(agentId) {
-  return AGENT_WSL_OPTIONS[agentId] || null;
-}
 
 function getInstallScript(agentId) {
   return getAgentInstallScriptName(agentId);
@@ -213,19 +171,6 @@ function parseConnectivityProbe(stdout) {
   return { reachable: null, port: null };
 }
 
-function appendWarning(result, warning, field = "warning") {
-  if (!warning) return result;
-  const warnings = Array.isArray(result.warnings) ? [...result.warnings, warning] : [warning];
-  return { ...result, [field]: field === "warning" ? warnings.join("\n") : warning, warnings };
-}
-
-function mergeCleanupResult(operation, cleanup) {
-  if (cleanup && cleanup.ok) return { ...operation, stagingRemoved: true };
-  const warning = `WSL staging cleanup failed: ${(cleanup && cleanup.error) || "unknown error"}`;
-  if (operation && operation.ok) return { ...appendWarning(operation, warning), stagingRemoved: false };
-  return { ...appendWarning(operation || { ok: false }, warning, "cleanupWarning"), stagingRemoved: false };
-}
-
 async function copyEntriesToWsl(distro, targetDir, entries, options, emit) {
   const upload = getDependency(options, "pipeFileToWsl", pipeFileToWsl);
   let copied = 0;
@@ -337,7 +282,7 @@ async function deployToWsl(distro, options = {}) {
   let entries;
   try {
     hooksDir = options.hooksDir || resolveHooksDir(options);
-    entries = collectAgentWslFiles(hooksDir, agentId);
+    entries = collectHookFiles(hooksDir);
   } catch (err) {
     const message = err && err.message ? err.message : String(err);
     emit("verify-files", "fail", message);
@@ -399,14 +344,11 @@ function getAgentInstallScriptName(agentId) {
 }
 
 module.exports = {
-  collectAgentWslFiles,
   collectHookFiles,
   deployToWsl,
   getAgentInstallArgs,
   getAgentInstallScriptName,
   getAgentUninstallCommand,
-  getAgentWslOptions,
-  mergeCleanupResult,
   parseConnectivityProbe,
   pipeFileToWsl,
   removeFromWsl,

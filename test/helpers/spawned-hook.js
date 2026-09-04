@@ -64,11 +64,7 @@ function createSpawnedHookHarness(options = {}) {
     }
     for (const key of [
       "CODEX_HOME",
-      "COPILOT_HOME",
-      "HERMES_HOME",
-      "KIMI_CODE_HOME",
       "NODE_OPTIONS",
-      "REASONIX_HOME",
       "TMUX",
       "TMUX_PANE",
     ]) {

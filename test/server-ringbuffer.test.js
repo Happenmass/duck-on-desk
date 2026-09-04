@@ -454,7 +454,7 @@ describe("server hook event ringbuffer", () => {
     const buffer = new Map();
     recordHookEventInBuffer(buffer, hookIdentity("codex"), { agent_id: "codex", event: "Old" }, "state", "accepted", { now: () => 10 });
     recordHookEventInBuffer(buffer, hookIdentity("codex"), { agent_id: "codex", event: "New" }, "state", "accepted", { now: () => 20 });
-    recordHookEventInBuffer(buffer, hookIdentity("gemini-cli"), { agent_id: "gemini-cli", event: "Other" }, "state", "accepted", { now: () => 30 });
+    recordHookEventInBuffer(buffer, hookIdentity("opencode"), { agent_id: "opencode", event: "Other" }, "state", "accepted", { now: () => 30 });
 
     const events = getRecentHookEventsFromBuffer(buffer, { agentId: "codex", since: 20 });
 

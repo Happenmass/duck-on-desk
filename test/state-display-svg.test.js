@@ -45,7 +45,7 @@ describe("display_svg session hints (updateSession path)", () => {
       cwd: "/tmp",
       editor: "cursor",
       agentPid: pid,
-      agentId: "cursor-agent",
+      agentId: "claude-code",
       ...overrides,
     };
   }

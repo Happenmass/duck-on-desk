@@ -204,18 +204,6 @@ describe("permission bubble terminal fallback (issue #689)", () => {
     });
   }
 
-  it("does not offer a terminal fallback when Hermes has no native approval prompt", () => {
-    const harness = createHarness();
-    harness.show({
-      toolName: "Bash",
-      isHermes: true,
-      interaction: interaction("tool-approval", { allowDeny: true }),
-    });
-
-    assert.strictEqual(harness.terminalButtons().length, 0);
-    assert.deepStrictEqual(harness.decisions, []);
-  });
-
   it("shows exactly one fallback for opencode-family cards and preserves the Always action", () => {
     const harness = createHarness();
     // Family cards are selected by familyAgentId (the post-#706 payload
@@ -237,13 +225,11 @@ describe("permission bubble terminal fallback (issue #689)", () => {
     assert.deepStrictEqual(harness.decisions, ["deny-and-focus"]);
   });
 
-  for (const toolName of ["CodexExec", "KimiPermission"]) {
-    it(`does not add a terminal fallback to passive ${toolName} notifications`, () => {
-      const harness = createHarness();
-      harness.show({ toolName });
-      assert.strictEqual(harness.terminalButtons().length, 0);
-    });
-  }
+  it("does not add a terminal fallback to passive CodexExec notifications", () => {
+    const harness = createHarness();
+    harness.show({ toolName: "CodexExec" });
+    assert.strictEqual(harness.terminalButtons().length, 0);
+  });
 
   it("keeps elicitation's single terminal action and deny semantics", () => {
     const harness = createHarness();
@@ -258,22 +244,6 @@ describe("permission bubble terminal fallback (issue #689)", () => {
     assert.strictEqual(buttons.length, 1);
     buttons[0].click();
     assert.deepStrictEqual(harness.decisions, ["deny"]);
-  });
-
-  it("hands Hermes clarification back to its native UI and focuses the terminal", () => {
-    const harness = createHarness();
-    harness.show({
-      isElicitation: true,
-      isHermes: true,
-      toolName: "clarify",
-      toolInput: { questions: [] },
-      interaction: interaction("human-question", { answerQuestions: true, nativeFallback: true }),
-    });
-
-    const buttons = harness.terminalButtons();
-    assert.strictEqual(buttons.length, 1);
-    buttons[0].click();
-    assert.deepStrictEqual(harness.decisions, ["deny-and-focus"]);
   });
 
   it("keeps plan review's single terminal action and deny-and-focus semantics", () => {

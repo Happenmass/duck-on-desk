@@ -74,11 +74,6 @@ function makeCtx(overrides = {}) {
 
     // Hook sync impls — keep them all as no-ops
     syncClawdHooksImpl: () => {},
-    syncGeminiHooksImpl: () => {},
-    syncCursorHooksImpl: () => {},
-    syncCodeBuddyHooksImpl: () => {},
-    syncKiroHooksImpl: () => {},
-    syncQwenHooksImpl: () => {},
     syncOpencodePluginImpl: () => {},
 
     // /state handler deps

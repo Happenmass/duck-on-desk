@@ -578,9 +578,8 @@ function buildStateBody(event, payload, resolve) {
   if (event === "SessionStart" && source) {
     body.session_start_source = source;
   }
-  // Cursor imports Claude user hooks and adds cursor_version to the hook input.
-  // Use that explicit caller provenance instead of the process tree: a genuine
-  // Claude CLI launched inside Cursor's terminal must remain Claude Code.
+  // Every payload this hook reports belongs to Claude Code, regardless of the
+  // terminal or editor the CLI was launched from.
   body.agent_id = resolveReportingAgentId(payload);
   // Claude-compatible command-hook payloads use agent_id/agent_type for
   // subagent provenance. Keep the public Clawd agent_id canonical, but preserve

@@ -2,9 +2,8 @@
 // resolvePermissionEntry(perm, "no-decision", reason); each agent branch
 // must dispose of the bubble without forwarding a synthetic user decision.
 //
-//   Claude Code / CodeBuddy → res.destroy()        (chat fallback)
+//   Claude Code             → res.destroy()        (chat fallback)
 //   Codex                   → sendCodexNoDecisionResponse (204)
-//   Antigravity             → sendNoDecisionResponse (204, ask fallback)
 //   Elicitation             → res.destroy() + focusTerminalForSession
 //   opencode                → silent drop (no bridge POST)
 //

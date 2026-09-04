@@ -70,11 +70,6 @@ function makeCtx(overrides = {}) {
     clearRuntimeConfig: () => true,
     readRuntimePort: () => null,
     syncClawdHooksImpl: () => {},
-    syncGeminiHooksImpl: () => {},
-    syncCursorHooksImpl: () => {},
-    syncCodeBuddyHooksImpl: () => {},
-    syncKiroHooksImpl: () => {},
-    syncQwenHooksImpl: () => {},
     syncOpencodePluginImpl: () => {},
     STATE_SVGS: {
       working: "x.svg",
@@ -94,7 +89,7 @@ function makeCtx(overrides = {}) {
     ...overrides,
   };
   ctx.pendingPermissions = (ctx.pendingPermissions || []).map((entry) => {
-    const agentId = entry.agentId || (entry.isQwenCode ? "qwen-code" : "claude-code");
+    const agentId = entry.agentId || "claude-code";
     return {
       ...entry,
       agentId,

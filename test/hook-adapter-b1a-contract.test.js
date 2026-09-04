@@ -25,10 +25,6 @@ const RUNTIME = () => ({
     instanceGeneration: GENERATION,
     agents: {
       codex: "b1a-authoritative",
-      "cursor-agent": "b1a-authoritative",
-      "kiro-cli": "b1a-authoritative",
-      codebuddy: "b1a-authoritative",
-      reasonix: "b1a-authoritative",
     },
   },
 });
@@ -59,34 +55,6 @@ const CASES = [
     },
     agentId: "codex",
     path: "/permission",
-  },
-  {
-    name: "Cursor",
-    script: "cursor-hook.js",
-    payload: { hook_event_name: "preToolUse", conversation_id: "cursor-b1a", cwd: "D:\\repo" },
-    agentId: "cursor-agent",
-    path: "/state",
-  },
-  {
-    name: "Kiro",
-    script: "kiro-hook.js",
-    payload: { hook_event_name: "preToolUse", cwd: "D:\\repo" },
-    agentId: "kiro-cli",
-    path: "/state",
-  },
-  {
-    name: "CodeBuddy",
-    script: "codebuddy-hook.js",
-    payload: { hook_event_name: "PreToolUse", session_id: "codebuddy-b1a", cwd: "D:\\repo" },
-    agentId: "codebuddy",
-    path: "/state",
-  },
-  {
-    name: "Reasonix",
-    script: "reasonix-hook.js",
-    payload: { event: "PreToolUse", sessionId: "reasonix-b1a", cwd: "D:\\repo" },
-    agentId: "reasonix",
-    path: "/state",
   },
 ];
 

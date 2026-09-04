@@ -1,17 +1,12 @@
 // Wire-level tests for the "Go to Terminal" (deny-and-focus) action on
 // regular permission cards (issue #689). The renderer DOM half of the chain
 // is covered by bubble-go-to-terminal.test.js; these tests pin the backend
-// half: handleDecide → per-protocol wire outcome. They guard the two P0s
-// found in the first cut of the fix:
-//   1. CC/CodeBuddy block on the PermissionRequest HTTP hook (600s) and show
-//      nothing in the terminal while it is pending. The socket must be
-//      DESTROYED (dropped connection = non-blocking hook error → native
-//      prompt takes over immediately), never parked until the hook timeout,
-//      and never answered with a deny on the user's behalf.
-//   2. Hermes has no native approval prompt for opt-in permission tools, so
-//      the payload must forward isHermes for the renderer to suppress the
-//      misleading action. Its defensive backend branch must never fabricate
-//      a deny; the plugin converts no-decision into a retryable block.
+// half: handleDecide → per-protocol wire outcome. They guard the P0 found in
+// the first cut of the fix: Claude Code blocks on the PermissionRequest HTTP
+// hook (600s) and shows nothing in the terminal while it is pending. The
+// socket must be DESTROYED (dropped connection = non-blocking hook error →
+// native prompt takes over immediately), never parked until the hook
+// timeout, and never answered with a deny on the user's behalf.
 
 "use strict";
 
@@ -178,7 +173,7 @@ describe("go-to-terminal wire semantics (issue #689)", () => {
     assert.strictEqual(pendingPermissions.length, 0);
   });
 
-  for (const agentId of ["opencode", "mimocode"]) {
+  for (const agentId of ["opencode"]) {
     it(`${agentId}: deny-and-focus leaves the family bridge unanswered`, () => {
       const ctx = makeCtx();
       const perm = initPermission(ctx);

@@ -57,22 +57,6 @@ function statPath(fsImpl, filePath) {
   }
 }
 
-function lstatPath(fsImpl, filePath) {
-  if (!filePath) return { kind: "missing", size: 0 };
-  try {
-    const stat = fsImpl.lstatSync(filePath);
-    if (stat.isSymbolicLink()) return { kind: "symlink", size: stat.size };
-    if (stat.isDirectory()) return { kind: "dir", size: stat.size };
-    if (stat.isFile()) return { kind: "file", size: stat.size };
-    return { kind: "other", size: stat.size };
-  } catch (err) {
-    if (err && (err.code === "ENOENT" || err.code === "ENOTDIR")) {
-      return { kind: "missing", size: 0 };
-    }
-    return { kind: "unreadable", size: 0 };
-  }
-}
-
 function readText(fsImpl, filePath) {
   try {
     return fsImpl.readFileSync(filePath, "utf8");
@@ -168,10 +152,6 @@ function notFound(detail = "No local installation signal found") {
   return installationResult(false, LOW_CONFIDENCE, "not-found", detail);
 }
 
-function insufficient(detail = "Local files exist, but no accepted product installation signal was found") {
-  return installationResult(null, LOW_CONFIDENCE, "insufficient-evidence", detail);
-}
-
 function hasClawdMarkerText(text, marker) {
   if (typeof text !== "string" || typeof marker !== "string" || !marker) return false;
   if (commandMatchesMarker(text, marker)) return true;
@@ -193,25 +173,6 @@ function hasClawdMarkerText(text, marker) {
     return false;
   };
   return containsCommandMarker(parsed);
-}
-
-function isObject(value) {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-
-function parseExactJsonObject(fsImpl, configPath) {
-  const pathInfo = lstatPath(fsImpl, configPath);
-  if (pathInfo.kind !== "file") return { pathInfo, raw: null, parsed: null, status: pathInfo.kind };
-  if (pathInfo.size === 0) return { pathInfo, raw: "", parsed: null, status: "empty" };
-  const raw = readText(fsImpl, configPath);
-  if (raw === null) return { pathInfo, raw: null, parsed: null, status: "unreadable" };
-  try {
-    const parsed = JSON.parse(raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw);
-    if (!isObject(parsed)) return { pathInfo, raw, parsed: null, status: "invalid-shape" };
-    return { pathInfo, raw, parsed, status: "parsed" };
-  } catch {
-    return { pathInfo, raw, parsed: null, status: "parse-failed" };
-  }
 }
 
 function detectInstallation(descriptor, paths, options) {

@@ -10,8 +10,6 @@ const {
   CODEX_LOCAL_WORKING_STALE_FLOOR_MS,
   isWorkingLikeState,
   isLocalCodexWorkingLikeSession,
-  isLocalZcodeDesktopIdleSession,
-  isLocalTraeDesktopIdleSession,
   getStaleSessionDecision,
 } = require("../src/state-stale-cleanup");
 
@@ -32,24 +30,6 @@ function desktopSession(overrides = {}) {
     codexOriginator: "codex_work_desktop",
     agentPid: 10,
     sourcePid: 10,
-    ...overrides,
-  });
-}
-
-function zcodeDesktopSession(overrides = {}) {
-  return session({
-    agentId: "zcode",
-    agentPid: 30,
-    sourcePid: 31,
-    ...overrides,
-  });
-}
-
-function traeDesktopSession(overrides = {}) {
-  return session({
-    agentId: "traecode",
-    agentPid: 40,
-    sourcePid: 41,
     ...overrides,
   });
 }
@@ -252,70 +232,6 @@ describe("state stale cleanup decisions", () => {
 
     for (const target of cases) {
       assert.deepStrictEqual(decision(target, { alivePids, staleConfig }).result, { action: null });
-    }
-  });
-
-  it("keeps ZCode conversations before the cutoff or when the cutoff is disabled", () => {
-    const alivePids = new Set([30, 31]);
-    assert.deepStrictEqual(decision(zcodeDesktopSession({
-      updatedAt: 1000000 - 59_999,
-    }), {
-      alivePids,
-      staleConfig: { sessionStaleMs: 60_000 },
-    }).result, { action: null });
-    assert.deepStrictEqual(decision(zcodeDesktopSession({
-      updatedAt: 1000000 - 24 * 60 * 60 * 1000,
-    }), {
-      alivePids,
-      staleConfig: { sessionStaleMs: 0 },
-    }).result, { action: null });
-  });
-
-  it("does not apply the ZCode idle timeout to remote, headless, or working sessions", () => {
-    const updatedAt = 1000000 - 60_001;
-    const alivePids = new Set([30, 31]);
-    const staleConfig = { sessionStaleMs: 60_000 };
-    const cases = [
-      zcodeDesktopSession({ host: "remote-box", updatedAt }),
-      zcodeDesktopSession({ headless: true, updatedAt }),
-      zcodeDesktopSession({ state: "working", updatedAt }),
-    ];
-    for (const target of cases) {
-      const result = decision(target, { alivePids, staleConfig }).result;
-      assert.notStrictEqual(result.reason, "zcode-desktop-idle-timeout");
-    }
-  });
-
-  it("keeps TraeCode conversations before the cutoff or when the cutoff is disabled", () => {
-    const alivePids = new Set([40, 41]);
-    assert.deepStrictEqual(decision(traeDesktopSession({
-      updatedAt: 1000000 - 59_999,
-    }), {
-      alivePids,
-      staleConfig: { sessionStaleMs: 60_000 },
-    }).result, { action: null });
-    assert.deepStrictEqual(decision(traeDesktopSession({
-      updatedAt: 1000000 - 24 * 60 * 60 * 1000,
-    }), {
-      alivePids,
-      staleConfig: { sessionStaleMs: 0 },
-    }).result, { action: null });
-  });
-
-  it("does not apply the TraeCode idle timeout to remote, headless, or working sessions", () => {
-    const updatedAt = 1000000 - 60_001;
-    const alivePids = new Set([40, 41]);
-    const staleConfig = { sessionStaleMs: 60_000 };
-    const cases = [
-      traeDesktopSession({ host: "remote-box", updatedAt }),
-      traeDesktopSession({ headless: true, updatedAt }),
-      traeDesktopSession({ state: "working", updatedAt }),
-      // Not traecode — e.g. claude-code idling in the same directory.
-      session({ agentId: "claude-code", agentPid: 40, sourcePid: 41, updatedAt }),
-    ];
-    for (const target of cases) {
-      const result = decision(target, { alivePids, staleConfig }).result;
-      assert.notStrictEqual(result.reason, "traecode-desktop-idle-timeout");
     }
   });
 
@@ -576,11 +492,11 @@ describe("state stale cleanup decisions", () => {
     assert.deepStrictEqual(headlessResult, { action: "idle", reason: "working-timeout", updateTimestamp: true });
   });
 
-  it("does not extend local MiMo Code working sessions", () => {
+  it("does not extend local Pi working sessions", () => {
     const now = 2_000_000;
     const { result } = decision(session({
       state: "working",
-      agentId: "mimocode",
+      agentId: "pi",
       updatedAt: now - WORKING_STALE_MS - 1,
     }), { now });
 

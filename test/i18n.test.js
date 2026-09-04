@@ -482,8 +482,8 @@ describe("i18n locales", () => {
     assert.strictEqual(
       es.toastAgentInstallHintPartialSkipped
         .replace("{success}", "1")
-        .replace("{agents}", "Codex y Kimi Code"),
-      "Instalaciones completadas: 1. No se encontró instalación local de Codex y Kimi Code."
+        .replace("{agents}", "Codex y OpenCode"),
+      "Instalaciones completadas: 1. No se encontró instalación local de Codex y OpenCode."
     );
   });
 
@@ -506,7 +506,7 @@ describe("i18n locales", () => {
       remoteSshConnectWarnNoDeploy: "Los hooks no están desplegados para este destino. Ejecuta primero Desplegar / Reparar hooks; Conectar permanecerá desactivado hasta que el despliegue esté listo.",
       agentsSubtitle: "Descubre automáticamente herramientas de IA en este equipo y en WSL, o añade manualmente una IA que Clawd aún no incluya. Una vez conectada, gestiona aquí su estado, sus solicitudes de permiso y sus notificaciones.",
       shortcutLabelPetReveal: "Clic en la mascota: Mostrar superposiciones de la mascota",
-      bubbleNotificationDesc: "El interruptor controla los avisos pasivos de Codex / Kimi Code. Los segundos fijan el límite máximo de cierre automático; estados de sesión posteriores pueden descartarlo antes. 0 los oculta.",
+      bubbleNotificationDesc: "El interruptor controla los avisos pasivos de Codex. Los segundos fijan el límite máximo de cierre automático; estados de sesión posteriores pueden descartarlo antes. 0 los oculta.",
       langChinese: "简体中文",
       langTraditionalChinese: "繁體中文",
       themeSubtitle: "Elige y personaliza tu mascota de escritorio.",

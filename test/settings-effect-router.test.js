@@ -60,7 +60,6 @@ function createHarness(options = {}) {
     dismissInteractivePermissionBubbles: () => calls.push(["dismissInteractivePermissionBubbles"]),
     clearCodexNotifyBubbles: (...args) => calls.push(["clearCodexNotifyBubbles", ...args]),
     clearCodexUserInputBubbles: (...args) => calls.push(["clearCodexUserInputBubbles", ...args]),
-    clearKimiNotifyBubbles: (...args) => calls.push(["clearKimiNotifyBubbles", ...args]),
     refreshPassiveNotifyAutoClose: () => calls.push(["refreshPassiveNotifyAutoClose"]),
     hideUpdateBubbleForPolicy: () => calls.push(["hideUpdateBubbleForPolicy"]),
     refreshUpdateBubbleAutoClose: () => calls.push(["refreshUpdateBubbleAutoClose"]),
@@ -141,7 +140,6 @@ describe("settings-effect-router", () => {
       ["dismissInteractivePermissionBubbles"],
       ["clearCodexNotifyBubbles", undefined, "settings-policy-disabled"],
       ["clearCodexUserInputBubbles", undefined, undefined, "settings-policy-disabled"],
-      ["clearKimiNotifyBubbles", undefined, "settings-policy-disabled"],
       ["hideUpdateBubbleForPolicy"],
       ["rebuildAllMenus"],
     ]);
@@ -208,7 +206,6 @@ describe("settings-effect-router", () => {
       ["updateMirrors", { notificationBubbleAutoCloseSeconds: 0 }],
       ["clearCodexNotifyBubbles", undefined, "settings-policy-disabled"],
       ["clearCodexUserInputBubbles", undefined, undefined, "settings-policy-disabled"],
-      ["clearKimiNotifyBubbles", undefined, "settings-policy-disabled"],
       ["rebuildAllMenus"],
     ]);
   });

@@ -68,9 +68,9 @@ describe("isAgentEnabled", () => {
 
 describe("isAgentIntegrationInstalled", () => {
   it("defaults true for missing legacy snapshots", () => {
-    assert.strictEqual(isAgentIntegrationInstalled(null, "copilot-cli"), true);
-    assert.strictEqual(isAgentIntegrationInstalled({ lang: "en" }, "copilot-cli"), true);
-    assert.strictEqual(isAgentIntegrationInstalled({ agents: { "copilot-cli": {} } }, "copilot-cli"), true);
+    assert.strictEqual(isAgentIntegrationInstalled(null, "pi"), true);
+    assert.strictEqual(isAgentIntegrationInstalled({ lang: "en" }, "pi"), true);
+    assert.strictEqual(isAgentIntegrationInstalled({ agents: { pi: {} } }, "pi"), true);
   });
 
   it("reads explicit installed intent from normalized prefs", () => {
@@ -511,7 +511,7 @@ describe("setAgentFlag command", () => {
   it("does not let the generic flag command fake installed state", () => {
     const { deps } = makeDeps();
     const r = commandRegistry.setAgentFlag(
-      { agentId: "copilot-cli", flag: "integrationInstalled", value: true },
+      { agentId: "pi", flag: "integrationInstalled", value: true },
       deps
     );
     assert.strictEqual(r.status, "error");
@@ -572,7 +572,7 @@ describe("setAgentFlag command", () => {
 
   it("enabling an uninstalled agent starts the monitor without syncing integration files", () => {
     const seeded = prefs.getDefaults();
-    seeded.agents["copilot-cli"] = {
+    seeded.agents.pi = {
       integrationInstalled: false,
       enabled: false,
       permissionsEnabled: true,
@@ -580,14 +580,14 @@ describe("setAgentFlag command", () => {
     };
     const { deps, calls } = makeDeps({ snapshot: seeded });
     const r = commandRegistry.setAgentFlag(
-      { agentId: "copilot-cli", flag: "enabled", value: true },
+      { agentId: "pi", flag: "enabled", value: true },
       deps
     );
     assert.strictEqual(r.status, "ok");
     assert.deepStrictEqual(calls.syncIntegrationForAgent, []);
-    assert.deepStrictEqual(calls.startMonitorForAgent, ["copilot-cli"]);
-    assert.strictEqual(r.commit.agents["copilot-cli"].enabled, true);
-    assert.strictEqual(r.commit.agents["copilot-cli"].integrationInstalled, false);
+    assert.deepStrictEqual(calls.startMonitorForAgent, ["pi"]);
+    assert.strictEqual(r.commit.agents.pi.enabled, true);
+    assert.strictEqual(r.commit.agents.pi.integrationInstalled, false);
   });
 
   it("disabling Claude Code stops its integration watcher before commit", () => {
@@ -627,15 +627,14 @@ describe("setAgentFlag command", () => {
   });
 
   it("rejects subagentPermissionsEnabled for non-claude agents before any side effect (#451)", () => {
-    // Yunbao review E: a kimi-cli call would otherwise reach
-    // agent-runtime-main's dismissPermissionsByAgent, whose Kimi branch
-    // disposes permission state regardless of options/removed count.
+    // A non-Claude call must be rejected before it reaches
+    // agent-runtime-main's dismissPermissionsByAgent.
     const dismissCalls = [];
     const { deps } = makeDeps({
       dismissPermissionsByAgent: (id, options) => dismissCalls.push([id, options]),
     });
     const r = commandRegistry.setAgentFlag(
-      { agentId: "kimi-cli", flag: "subagentPermissionsEnabled", value: false },
+      { agentId: "codex", flag: "subagentPermissionsEnabled", value: false },
       deps
     );
     assert.strictEqual(r.status, "error");
@@ -732,11 +731,11 @@ describe("setAgentFlag command", () => {
   });
 
   it("missing side-effect deps are tolerated (simulates hook-only agent)", () => {
-    // Hook-based agents like Copilot / Cursor have no monitor — the command
-    // should still succeed; the route layer enforces the gate.
+    // An agent without a monitor — the command should still succeed; the
+    // route layer enforces the gate.
     const seeded = prefs.getDefaults();
-    seeded.agents["copilot-cli"] = {
-      ...seeded.agents["copilot-cli"],
+    seeded.agents.pi = {
+      ...seeded.agents.pi,
       integrationInstalled: true,
       enabled: true,
     };
@@ -744,11 +743,11 @@ describe("setAgentFlag command", () => {
     delete deps.startMonitorForAgent;
     delete deps.stopMonitorForAgent;
     const r = commandRegistry.setAgentFlag(
-      { agentId: "copilot-cli", flag: "enabled", value: false },
+      { agentId: "pi", flag: "enabled", value: false },
       deps
     );
     assert.strictEqual(r.status, "ok");
-    assert.strictEqual(r.commit.agents["copilot-cli"].enabled, false);
+    assert.strictEqual(r.commit.agents.pi.enabled, false);
   });
 
   it("accepts notificationHookEnabled as a pure data flip — no side effects", () => {

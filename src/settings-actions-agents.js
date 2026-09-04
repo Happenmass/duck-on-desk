@@ -81,8 +81,7 @@ function setAgentFlag(payload, deps) {
   // #451: the subagent sub-gate is claude-code-scoped. normalizeAgents already
   // strips the flag for other agents on persist; reject here too so a direct
   // command-API call can't trigger the { subagentOnly } dismiss side effect
-  // for agents whose dismissal path has agent-specific cleanup (e.g. Kimi's
-  // permission-state disposal in agent-runtime-main.js).
+  // for an agent that never owns subagent permission state.
   if (flag === "subagentPermissionsEnabled" && agentId !== "claude-code") {
     return {
       status: "error",

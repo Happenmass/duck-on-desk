@@ -769,10 +769,10 @@ describe("#862 juggling tier counts subagents, not sessions", () => {
     assert.strictEqual(shown(), JUGGLE);
   });
 
-  it("bounds anonymous Cursor/Kimi lanes at one and restores on first stop", () => {
+  it("bounds anonymous lanes at one and restores on first stop", () => {
     for (const [id, agentId] of [
-      ["cursor", "cursor-agent"],
-      ["kimi", "kimi-cli"],
+      ["codex", "codex"],
+      ["opencode", "opencode"],
     ]) {
       anonymousStart(id, agentId);
       anonymousStart(id, agentId);
@@ -814,9 +814,9 @@ describe("#862 juggling tier counts subagents, not sessions", () => {
     assert.strictEqual(shown(), TYPING);
   });
 
-  it("treats Reasonix's unmatched anonymous stop as inert", () => {
-    anonymousStop("reasonix-only-stop", "reasonix");
-    assert.strictEqual(api.sessions.has("reasonix-only-stop"), false);
+  it("treats an unmatched anonymous stop as inert", () => {
+    anonymousStop("only-stop", "codex");
+    assert.strictEqual(api.sessions.has("only-stop"), false);
     assert.strictEqual(api.resolveDisplayState(), "idle");
   });
 
@@ -4415,15 +4415,13 @@ describe("Stop completion gate (#406)", () => {
     ctx = makeCtx({
       processKill: () => true,
       isAgentPermissionsEnabled: () => true,
-      showKimiNotifyBubble: () => {},
-      clearKimiNotifyBubbles: () => {},
     });
     api = require("../src/state")(ctx);
     update(api, {
-      id: "kimi-permission",
+      id: "pending-permission",
       state: "notification",
       event: "PermissionRequest",
-      agentId: "kimi-cli",
+      agentId: "claude-code",
     });
     update(api, { id: "completed", state: "working", event: "PreToolUse" });
 
@@ -6034,32 +6032,6 @@ describe("requiresCompletionAck lifecycle", () => {
     assert.notStrictEqual(api.sessions.get("s1").requiresCompletionAck, true);
   });
 
-  it("Kimi PermissionRequest early-return still reconciles the flag", () => {
-    // §3.11 test #38: state.js:750-813 PermissionRequest path takes an
-    // early return — must still go through the finally reconciler.
-    // Pre-seed a flagged remote codex session, then deliver a Kimi
-    // PermissionRequest gated off — flag MUST clear.
-    api.sessions.set("s1", rawSession("idle", {
-      agentId: "codex",
-      host: "ssh:example.com",
-      updatedAt: Date.now(),
-    }));
-    api.sessions.get("s1").requiresCompletionAck = true;
-
-    const ctxNoKimi = makeCtx({ isAgentPermissionsEnabled: () => false });
-    const api2 = require("../src/state")(ctxNoKimi);
-    api2.sessions.set("s1", rawSession("idle", {
-      agentId: "codex",
-      host: "ssh:example.com",
-      updatedAt: Date.now(),
-    }));
-    api2.sessions.get("s1").requiresCompletionAck = true;
-    update(api2, { id: "s1", state: "notification", event: "PermissionRequest", agentId: "kimi-cli" });
-    // The Kimi gate early-returns, but flag should be cleared via finally.
-    assert.strictEqual(api2.sessions.get("s1").requiresCompletionAck, false);
-    api2.cleanup();
-  });
-
   it("Object.assign ONESHOT path still reconciles the flag on non-Stop events", () => {
     // §3.11 test #39: ONESHOT_STATES branch at state.js:910-916 mutates
     // the existing entry in place via Object.assign; flag survival across
@@ -6150,20 +6122,3 @@ describe("evictOldestSessionIfNeeded two-phase", () => {
     }
   });
 });
-
-// ═════════════════════════════════════════════════════════════════════════════
-// Qwen Code 0.16.1 self-submit filter — qwen's agentic loop fires a synthetic
-// UserPromptSubmit ~900-1000ms after PostToolUse to feed the tool result back
-// to the model. Without filtering this flashes "thinking" between working and
-// idle. Measured twice in dogfood (908ms non-interactive, 945ms interactive).
-// Window = 2000ms default, overridable via CLAWD_QWEN_SELF_SUBMIT_WINDOW_MS.
-// Two timestamps: lastToolBoundaryAt (PostToolUse / PostToolUseFailure) and
-// lastStopAt (Stop). Filter only fires while a recent tool boundary has NOT
-// yet been followed by Stop. See project_qwen_0_16_1_event_semantics canary.
-// ═════════════════════════════════════════════════════════════════════════════
-
-// ═════════════════════════════════════════════════════════════════════════════
-// Antigravity 1.0.6 can emit a trailing PostToolUse after Stop. Once Stop has
-// marked the session awaiting input, that stale tool boundary must not resurrect
-// the mascot into a stuck typing/working state.
-// ═════════════════════════════════════════════════════════════════════════════

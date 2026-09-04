@@ -168,21 +168,4 @@ describe("detectRunningAgentProcesses() agent coverage", () => {
     });
   }
 
-  it("does not scan when the only enabled agent has an empty process surface", async () => {
-    api.cleanup();
-    api = require("../src/state")(makeCtx({
-      hasAnyEnabledAgent: () => true,
-      isAgentEnabled: (agentId) => agentId === "cursor-agent",
-    }));
-    let calls = 0;
-    childProcess.execFile = () => { calls++; };
-    Object.defineProperty(process, "platform", { value: "win32" });
-
-    const found = await new Promise((resolve) => {
-      api.detectRunningAgentProcesses((result) => resolve(result));
-    });
-
-    assert.strictEqual(found, false);
-    assert.strictEqual(calls, 0);
-  });
 });

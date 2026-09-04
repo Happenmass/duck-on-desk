@@ -537,8 +537,247 @@ test("every opencode-family member is installable AND auto-repairable (R10 P3)",
   }
 });
 
-test("failed Hermes WSL Pair does not open ingress", async () => {
-  const result = await agentCommands.deployToWsl({ agentId: "hermes", distro: "Ubuntu" }, {
+test("settings agent actions save discovery overrides on a registered agent", () => {
+  const snapshot = prefs.getDefaults();
+  const result = agentCommands.setAgentCustomDiscoveryPaths({
+    agentId: "opencode",
+    value: "C:\\Tools\\OpenCode",
+  }, { snapshot });
+
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(result.commit.agents.opencode.customDiscoveryPaths, ["C:\\Tools\\OpenCode"]);
+  assert.strictEqual(result.commit.customToolDiscoveryPaths, undefined);
+});
+
+test("settings agent actions install an integration and enable ingress", async () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.agents.opencode = {
+    integrationInstalled: false,
+    enabled: false,
+    permissionsEnabled: true,
+    notificationHookEnabled: true,
+  };
+  const calls = [];
+  const deps = {
+    snapshot,
+    syncIntegrationForAgent: async (agentId) => {
+      calls.push(agentId);
+      return { status: "ok", message: "installed" };
+    },
+    startMonitorForAgent: (agentId) => calls.push(`monitor:${agentId}`),
+  };
+
+  const result = await agentCommands.installAgentIntegration({ agentId: "opencode" }, deps);
+
+  assert.strictEqual(result.status, "ok");
+  assert.strictEqual(result.message, "installed");
+  assert.deepStrictEqual(calls, ["opencode", "monitor:opencode"]);
+  assert.strictEqual(result.commit.agents.opencode.integrationInstalled, true);
+  assert.strictEqual(result.commit.agents.opencode.enabled, true);
+  assert.deepStrictEqual(result.commit.dismissedAgentInstallHints, {});
+  assert.deepStrictEqual(result.commit.dismissedAgentCleanupHints, {});
+});
+
+test("settings agent actions clear hint dismissals after a manual install", async () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.dismissedAgentInstallHints = { opencode: true, pi: true };
+  snapshot.dismissedAgentCleanupHints = { opencode: true, pi: true };
+
+  const result = await agentCommands.installAgentIntegration({ agentId: "opencode" }, {
+    snapshot,
+    syncIntegrationForAgent: async () => ({ status: "ok" }),
+  });
+
+  assert.strictEqual(result.status, "ok");
+  assert.strictEqual(result.commit.agents.opencode.integrationInstalled, true);
+  assert.deepStrictEqual(result.commit.dismissedAgentInstallHints, { pi: true });
+  assert.deepStrictEqual(result.commit.dismissedAgentCleanupHints, { pi: true });
+});
+
+test("settings agent actions return skipped without committing installed intent when install skips", async () => {
+  const result = await agentCommands.installAgentIntegration({ agentId: "pi" }, {
+    snapshot: prefs.getDefaults(),
+    syncIntegrationForAgent: async () => ({ status: "skipped", message: "Pi missing" }),
+  });
+
+  assert.strictEqual(result.status, "skipped");
+  assert.strictEqual(result.commit, undefined);
+  assert.match(result.message, /Pi missing/);
+});
+
+test("settings agent actions uninstall an integration and disable ingress", async () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.agents.opencode = {
+    integrationInstalled: true,
+    enabled: true,
+    permissionsEnabled: true,
+    notificationHookEnabled: true,
+  };
+  snapshot.dismissedAgentCleanupHints = { opencode: true, pi: true };
+  const calls = [];
+  const deps = {
+    snapshot,
+    uninstallIntegrationForAgent: async (agentId) => {
+      calls.push(agentId);
+      return { removed: 0, changed: false };
+    },
+    stopMonitorForAgent: (agentId) => calls.push(`stop:${agentId}`),
+    clearSessionAutomationByAgent: (agentId) => calls.push(`automation:${agentId}`),
+    clearSessionsByAgent: (agentId) => calls.push(`clear:${agentId}`),
+    dismissPermissionsByAgent: (agentId) => calls.push(`dismiss:${agentId}`),
+  };
+
+  const result = await agentCommands.uninstallAgentIntegration({ agentId: "opencode" }, deps);
+
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(calls, [
+    "opencode",
+    "stop:opencode",
+    "automation:opencode",
+    "clear:opencode",
+    "dismiss:opencode",
+  ]);
+  assert.strictEqual(result.commit.agents.opencode.integrationInstalled, false);
+  assert.strictEqual(result.commit.agents.opencode.enabled, false);
+  assert.deepStrictEqual(result.commit.dismissedAgentInstallHints, { opencode: true });
+  assert.deepStrictEqual(result.commit.dismissedAgentCleanupHints, { pi: true });
+});
+
+test("settings agent actions can uninstall without suppressing the next install hint", async () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.agents.opencode = {
+    integrationInstalled: true,
+    enabled: true,
+    permissionsEnabled: true,
+    notificationHookEnabled: true,
+  };
+  snapshot.dismissedAgentInstallHints = { opencode: true, pi: true };
+
+  const result = await agentCommands.uninstallAgentIntegration({
+    agentId: "opencode",
+    dismissInstallHint: false,
+  }, {
+    snapshot,
+    uninstallIntegrationForAgent: async () => ({ status: "ok" }),
+  });
+
+  assert.strictEqual(result.status, "ok");
+  assert.strictEqual(result.commit.agents.opencode.integrationInstalled, false);
+  assert.deepStrictEqual(result.commit.dismissedAgentInstallHints, { pi: true });
+});
+
+test("settings agent actions dismiss agent install hints in one commit", () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.dismissedAgentInstallHints = { pi: true };
+
+  const result = agentCommands.dismissAgentInstallHints({
+    agentIds: ["opencode", "pi", "opencode"],
+  }, { snapshot });
+
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(result.commit.dismissedAgentInstallHints, {
+    pi: true,
+    opencode: true,
+  });
+});
+
+test("settings agent actions dismiss agent cleanup hints in one commit", () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.dismissedAgentCleanupHints = { pi: true };
+
+  const result = agentCommands.dismissAgentCleanupHints({
+    agentIds: ["opencode", "pi", "opencode"],
+  }, { snapshot });
+
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(result.commit.dismissedAgentCleanupHints, {
+    pi: true,
+    opencode: true,
+  });
+});
+
+test("settings agent actions clear agent cleanup hints in one commit", () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.dismissedAgentCleanupHints = { opencode: true, pi: true };
+
+  const result = agentCommands.clearAgentCleanupHints({
+    agentIds: ["opencode", "codex"],
+  }, { snapshot });
+
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(result.commit.dismissedAgentCleanupHints, { pi: true });
+});
+
+test("settings agent actions clear agent install hints in one commit", () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.dismissedAgentInstallHints = { opencode: true, pi: true };
+
+  const result = agentCommands.clearAgentInstallHints({
+    agentIds: ["opencode", "codex"],
+  }, { snapshot });
+
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(result.commit.dismissedAgentInstallHints, { pi: true });
+});
+
+test("settings agent actions do not commit uninstall failures", async () => {
+  const result = await agentCommands.uninstallAgentIntegration({ agentId: "opencode" }, {
+    snapshot: prefs.getDefaults(),
+    uninstallIntegrationForAgent: async () => ({ status: "error", message: "write failed" }),
+  });
+
+  assert.strictEqual(result.status, "error");
+  assert.strictEqual(result.commit, undefined);
+  assert.match(result.message, /write failed/);
+});
+
+test("settings agent actions block repair for uninstalled integrations", async () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.agents.opencode.integrationInstalled = false;
+  snapshot.agents.opencode.enabled = true;
+  const result = await agentCommands.repairAgentIntegration({ agentId: "opencode" }, {
+    snapshot,
+    repairIntegrationForAgent: async () => {
+      throw new Error("should not run");
+    },
+  });
+
+  assert.strictEqual(result.status, "error");
+  assert.match(result.message, /not installed/);
+});
+
+test("successful Codex WSL Pair reports ok with warning and connectivity, without committing prefs", async () => {
+  const snapshot = prefs.getDefaults();
+  const seen = [];
+  const result = await agentCommands.deployToWsl({ agentId: "codex", distro: "Ubuntu" }, {
+    snapshot,
+    deployHooksToWsl: async (distro, agentId) => {
+      seen.push([distro, agentId]);
+      return { ok: true, distro, agentId, message: "Codex hooks installed", warning: "one profile failed", connectivity: false };
+    },
+  });
+
+  assert.deepStrictEqual(seen, [["Ubuntu", "codex"]]);
+  assert.strictEqual(result.status, "ok", "warning must stay top-level ok");
+  assert.strictEqual(result.message, "Codex hooks installed");
+  assert.strictEqual(result.warning, "one profile failed");
+  assert.strictEqual(result.wslConnectivity, false);
+  assert.strictEqual(result.commit, undefined, "WSL pairing is not a Windows-local install");
+});
+
+test("successful Codex WSL Pair falls back to the default message and omits absent connectivity", async () => {
+  const result = await agentCommands.deployToWsl({ agentId: "codex", distro: "Ubuntu" }, {
+    snapshot: prefs.getDefaults(),
+    deployHooksToWsl: async () => ({ ok: true }),
+  });
+  assert.strictEqual(result.status, "ok");
+  assert.strictEqual(result.message, "Deployed to WSL Ubuntu");
+  assert.strictEqual("wslConnectivity" in result, false);
+  assert.strictEqual("warning" in result, false);
+});
+
+test("failed Codex WSL Pair does not open ingress", async () => {
+  const result = await agentCommands.deployToWsl({ agentId: "codex", distro: "Ubuntu" }, {
     snapshot: prefs.getDefaults(),
     deployHooksToWsl: async () => ({ ok: false, message: "enable failed" }),
   });
@@ -547,3 +786,21 @@ test("failed Hermes WSL Pair does not open ingress", async () => {
   assert.match(result.message, /enable failed/);
 });
 
+test("Codex WSL Unpair propagates warnings without disabling the global gate", async () => {
+  const snapshot = prefs.getDefaults();
+  snapshot.agents.codex.enabled = true;
+  const result = await agentCommands.removeFromWsl({ agentId: "codex", distro: "Ubuntu" }, {
+    snapshot,
+    removeHooksFromWsl: async () => ({ ok: true, message: "removed", warning: "disable failed" }),
+  });
+  assert.strictEqual(result.status, "ok");
+  assert.strictEqual(result.warning, "disable failed");
+  assert.strictEqual(result.commit, undefined);
+  assert.strictEqual(snapshot.agents.codex.enabled, true);
+});
+
+test("WSL commands report a missing dependency instead of throwing", async () => {
+  const result = await agentCommands.deployToWsl({ agentId: "codex", distro: "Ubuntu" }, { snapshot: prefs.getDefaults() });
+  assert.strictEqual(result.status, "error");
+  assert.match(result.message, /deployHooksToWsl dep not available/);
+});

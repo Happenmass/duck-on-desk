@@ -99,14 +99,13 @@ function createRollbackHarness({ throwAt }) {
   return { api, createdWindows };
 }
 
-function makeZcodeEntry(api) {
+function makeBashEntry(api) {
   const entry = {
-    sessionId: "zcode:s1",
-    agentId: "zcode",
-    isZcode: true,
+    sessionId: "claude:s1",
+    agentId: "claude-code",
     toolName: "Bash",
     toolInput: { command: "npm test" },
-    interaction: classifyPermissionInteraction({ agentId: "zcode", toolName: "Bash" }),
+    interaction: classifyPermissionInteraction({ agentId: "claude-code", toolName: "Bash" }),
     suggestions: [],
     bubble: null,
     hideTimer: null,
@@ -143,7 +142,7 @@ function makeAskEntry(api, sessionId) {
 describe("showPermissionBubble partial-create rollback", () => {
   it("destroys the window and rethrows when a post-create step throws", () => {
     const { api, createdWindows } = createRollbackHarness({ throwAt: "showInactive" });
-    const entry = makeZcodeEntry(api);
+    const entry = makeBashEntry(api);
 
     assert.throws(() => api.showPermissionBubble(entry), /showInactive boom/);
 
@@ -157,7 +156,7 @@ describe("showPermissionBubble partial-create rollback", () => {
 
   it("leaves no window behind when nothing throws (control)", () => {
     const { api, createdWindows } = createRollbackHarness({ throwAt: null });
-    const entry = makeZcodeEntry(api);
+    const entry = makeBashEntry(api);
 
     api.showPermissionBubble(entry);
 

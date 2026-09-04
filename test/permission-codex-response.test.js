@@ -206,9 +206,8 @@ describe("Codex permission response sanitizer", () => {
 
     api.handleDecide({ sender: { __window: bubble } }, "allow");
 
-    // The focus-on-dismiss affordance is Kimi-only: Codex notify stays a plain
-    // acknowledge. Pins the shared passive-notify branch against accidental
-    // scope creep.
+    // Codex notify stays a plain acknowledge: no focus-on-dismiss affordance.
+    // Pins the shared passive-notify branch against accidental scope creep.
     assert.deepStrictEqual(focusCalls, []);
     assert.strictEqual(bubble.hidden, true);
     assert.strictEqual(api.pendingPermissions.length, 0);

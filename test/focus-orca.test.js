@@ -219,13 +219,8 @@ describe("orcaPaneKeyFromEnv / applyOrcaPaneKey", () => {
     };
     walk(hooksDir);
 
-    // AGENTS.md:155 — OpenClaw's Phase 1 integration is state-only, with no
-    // permission bubble and no terminal focus, so it has nothing to focus.
-    const stateOnly = new Set([path.join("openclaw-plugin", "index.js")]);
-
     const missing = [];
     for (const file of files) {
-      if (stateOnly.has(path.relative(hooksDir, file))) continue;
       const src = fs.readFileSync(file, "utf8");
       // pid_chain, not tmux_client: a producer that reports a process chain is one
       // whose sessions can be focus targets, whether or not it ever grew tmux

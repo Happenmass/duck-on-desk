@@ -610,13 +610,13 @@ describe("prefs.validate", () => {
     assert.strictEqual(v.agents["claude-code"].subagentPermissionsEnabled, true);
   });
 
-  it("normalizes agents: preserves Hermes permission/notification flags", () => {
+  it("normalizes agents: preserves Pi permission/notification flags", () => {
     const v = prefs.validate({
       agents: {
-        hermes: { enabled: true, permissionsEnabled: true, notificationHookEnabled: true },
+        pi: { enabled: true, permissionsEnabled: true, notificationHookEnabled: true },
       },
     });
-    assert.deepStrictEqual(v.agents.hermes, {
+    assert.deepStrictEqual(v.agents.pi, {
       integrationInstalled: false,
       enabled: true,
       permissionsEnabled: true,
@@ -759,20 +759,20 @@ describe("prefs.validate", () => {
   it("normalizes dismissed agent hint maps as true-only maps", () => {
     const v = prefs.validate({
       dismissedAgentInstallHints: {
-        "qwen-code": true,
-        hermes: false,
+        opencode: true,
+        codex: false,
         "": true,
         pi: "yes",
       },
       dismissedAgentCleanupHints: {
-        "copilot-cli": true,
-        openclaw: false,
+        codex: true,
+        opencode: false,
         "": true,
       },
     });
 
-    assert.deepStrictEqual(v.dismissedAgentInstallHints, { "qwen-code": true });
-    assert.deepStrictEqual(v.dismissedAgentCleanupHints, { "copilot-cli": true });
+    assert.deepStrictEqual(v.dismissedAgentInstallHints, { opencode: true });
+    assert.deepStrictEqual(v.dismissedAgentCleanupHints, { codex: true });
   });
 
   it("normalizes agents: fills missing Codex nativeNotificationSoundEnabled from defaults", () => {
@@ -1330,7 +1330,7 @@ describe("prefs.migrate v10 → v11 (on-demand agent integrations)", () => {
     const validated = prefs.validate(prefs.migrate({
       version: prefs.CURRENT_VERSION,
       agents: {
-        "copilot-cli": {
+        codex: {
           integrationInstalled: false,
           enabled: false,
           permissionsEnabled: true,
@@ -1338,8 +1338,8 @@ describe("prefs.migrate v10 → v11 (on-demand agent integrations)", () => {
         },
       },
     }));
-    assert.strictEqual(validated.agents["copilot-cli"].integrationInstalled, false);
-    assert.strictEqual(validated.agents["copilot-cli"].enabled, false);
+    assert.strictEqual(validated.agents.codex.integrationInstalled, false);
+    assert.strictEqual(validated.agents.codex.enabled, false);
   });
 });
 

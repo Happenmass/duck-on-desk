@@ -1557,7 +1557,6 @@ function loadAgentsTabForTest({
           rowCodexNativeNotificationSound: "Native sound",
           rowCodexNativeNotificationSoundDesc: "Native sound desc",
           badgePermissionBubble: "Permission bubble",
-          traecodeEnableHint: "Enable hooks in Trae before they fire.",
           eventSourceHook: "Hook",
           eventSourceLogPoll: "Log poll",
           eventSourcePlugin: "Plugin",
@@ -10350,7 +10349,6 @@ describe("settings renderer browser environment", () => {
     assert.ok(i18nSource.includes('rowPermissionAutomation: "Permission request handling"'));
     assert.ok(i18nSource.includes('rowPermissionAutomation: "权限请求处理"'));
     assert.ok(i18nSource.includes("permissionAutomationAutoToolsConfirmTitle"));
-    assert.ok(i18nSource.includes("CodeBuddy"));
     assert.ok(!generalSource.includes("autoApproveAllPermissions"));
     // Lives in its own Permissions section, not under Bubbles.
     assert.ok(generalSource.includes('t("sectionPermissions")'));
@@ -11320,21 +11318,6 @@ describe("settings renderer browser environment", () => {
     autoStart = harness.core.state.mountedControls.generalSwitches.get("autoStartWithClaude");
     assert.strictEqual(autoStart.element.classList.contains("disabled"), false);
     assert.strictEqual(autoStart.extraElement, null);
-  });
-
-  it("omits the TraeCode enable-in-Trae hint until the integration is installed", () => {
-    const harness = loadAgentsTabForTest({
-      snapshot: {
-        agents: { traecode: { integrationInstalled: false, enabled: false } },
-      },
-      agentMetadata: [
-        { id: "traecode", name: "TraeCode", eventSource: "hook", capabilities: {} },
-      ],
-    });
-
-    harness.core.ops.requestRender({ content: true });
-
-    assert.strictEqual(harness.content.querySelector(".agent-traecode-hint"), null);
   });
 
   it("keeps Start with Codex independent and commits through the preference API", async () => {
@@ -13157,18 +13140,6 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(harness.getContentRenderCount(), renderCountBeforeActivity);
   });
 
-  it("keeps Agent management capability-driven for Gemini wait-for-input alerts", () => {
-    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
-    assert.ok(agentsSource.includes("if (caps.notificationHook) {"));
-    assert.ok(agentsSource.includes('flag: "notificationHookEnabled"'));
-    assert.ok(!agentsSource.includes('agent.id === "gemini-cli"'));
-    assert.ok(!agentsSource.includes('agent.id !== "gemini-cli"'));
-    assert.ok(!agentsSource.includes("Gemini CLI"));
-    assert.ok(!agentsSource.includes("if (disabled || btn.classList.contains(\"active\")) return;"));
-    assert.ok(agentsSource.includes("if (btn.disabled || btn.classList.contains(\"active\")) return;"));
-    assert.ok(!agentsSource.includes("codex-permission-mode-transitioning"));
-  });
-
   it("confirms before uninstalling an agent integration", () => {
     const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
     const i18nSource = fs.readFileSync(path.join(SRC_DIR, "settings-i18n.js"), "utf8");
@@ -14097,29 +14068,29 @@ describe("settings renderer browser environment", () => {
     assert.ok(permissionsSwitch, "CodeBuddy permission switch should still be mounted");
   });
 
-  it("does not render a permission toggle on the WorkBuddy row (state-only, #618)", () => {
+  it("does not render a permission toggle on a state-only agent row", () => {
     // The desktop app owns the permission loop in its native sandbox + GUI, so
     // capabilities.permissionApproval is false and the row must offer no
     // permission switch — only the notification (waiting) toggle.
     const harness = loadAgentsTabForTest({
       snapshot: {
         agents: {
-          workbuddy: {
+          "state-only": {
             enabled: true,
             notificationHookEnabled: true,
           },
         },
       },
       agentMetadata: [{
-        id: "workbuddy",
-        name: "WorkBuddy",
+        id: "state-only",
+        name: "State Only",
         eventSource: "hook",
         capabilities: {
           notificationHook: true,
         },
       }],
       collapsedGroups: {
-        "agents:workbuddy": false,
+        "agents:state-only": false,
       },
     });
 
@@ -14127,15 +14098,15 @@ describe("settings renderer browser environment", () => {
     harness.raf.flush();
 
     const permissionsSwitch = [...harness.core.state.mountedControls.agentSwitches.values()]
-      .find((meta) => meta.agentId === "workbuddy" && meta.flag === "permissionsEnabled");
+      .find((meta) => meta.agentId === "state-only" && meta.flag === "permissionsEnabled");
     assert.strictEqual(
       permissionsSwitch,
       undefined,
-      "WorkBuddy is state-only, so no permission toggle should be mounted"
+      "a state-only agent must not mount a permission toggle"
     );
     const notificationSwitch = [...harness.core.state.mountedControls.agentSwitches.values()]
-      .find((meta) => meta.agentId === "workbuddy" && meta.flag === "notificationHookEnabled");
-    assert.ok(notificationSwitch, "WorkBuddy waiting-notification switch should still be mounted");
+      .find((meta) => meta.agentId === "state-only" && meta.flag === "notificationHookEnabled");
+    assert.ok(notificationSwitch, "the waiting-notification switch should still be mounted");
   });
 
   it("slides the Codex permission mode pill when mode broadcasts patch in place", () => {
@@ -16901,22 +16872,22 @@ describe("settings renderer browser environment", () => {
       "only Pair when nothing is deployed");
   });
 
-  it("Hermes WSL rows use per-agent evidence instead of Claude staging markers", () => {
-    function renderHermes(integrationFilesPresent) {
+  it("Codex WSL rows use per-agent evidence instead of Claude staging markers", () => {
+    function renderCodex(integrationFilesPresent) {
       const detectionResult = {
         checkedAt: 3,
-        agents: [{ agentId: "hermes", detectedInstalled: false, confidence: "low" }],
+        agents: [{ agentId: "codex", detectedInstalled: false, confidence: "low" }],
         skippedAgentIds: [],
         wslAgents: [{
-          agentId: "hermes",
-          agentName: "Hermes Agent",
+          agentId: "codex",
+          agentName: "Codex",
           distro: "Ubuntu",
           detectedInstalled: true,
           confidence: "high",
           reason: "parent-dir",
           detail: "",
           wslHome: "/home/u",
-          wslParentDir: "/home/u/.hermes",
+          wslParentDir: "/home/u/.codex",
           hooksDeployed: true,
           hooksFilesPresent: true,
           integrationFilesPresent,
@@ -16927,11 +16898,11 @@ describe("settings renderer browser environment", () => {
       };
       const harness = loadAgentsTabForTest({
         snapshot: {
-          agents: { hermes: { integrationInstalled: false, enabled: false } },
+          agents: { codex: { integrationInstalled: false, enabled: false } },
           dismissedAgentInstallHints: {},
         },
         agentMetadata: [
-          { id: "hermes", name: "Hermes Agent", eventSource: "plugin", capabilities: {} },
+          { id: "codex", name: "Codex", eventSource: "hook", capabilities: {} },
         ],
         settingsAPI: { detectAgentInstallations: () => Promise.resolve(detectionResult) },
       });
@@ -16941,17 +16912,17 @@ describe("settings renderer browser environment", () => {
       return harness;
     }
 
-    let harness = renderHermes(true);
+    let harness = renderCodex(true);
     assert.strictEqual(harness.content.querySelectorAll(".agent-instance-deployed").length, 0,
-      "Claude registration must never render a Hermes deployed badge");
+      "Claude registration must never render a Codex deployed badge");
     assert.strictEqual(harness.content.querySelectorAll(".agent-instance-action").length, 2,
-      "Hermes managed files expose Pair and Unpair without shared staging");
+      "Codex managed files expose Pair and Unpair without shared staging");
 
-    harness = renderHermes(false);
+    harness = renderCodex(false);
     assert.strictEqual(harness.content.querySelectorAll(".agent-instance-action").length, 1,
       "explicit false must not inherit Claude hooksFilesPresent");
 
-    harness = renderHermes(null);
+    harness = renderCodex(null);
     assert.strictEqual(harness.content.querySelectorAll(".agent-instance-action").length, 1,
       "unknown evidence conservatively keeps Pair but hides Unpair");
   });

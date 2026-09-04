@@ -175,7 +175,6 @@ describe("permission passive notify auto-close refresh", () => {
 
     const permEntry = {
       isCodexNotify: true,
-      isKimiNotify: false,
       sessionId: "codex-a",
       bubble: null,
       hideTimer: null,
@@ -200,7 +199,6 @@ describe("permission passive notify auto-close refresh", () => {
 
     const permEntry = {
       isCodexNotify: true,
-      isKimiNotify: false,
       sessionId: "codex-a",
       bubble: null,
       hideTimer: null,
@@ -230,7 +228,6 @@ describe("permission passive notify auto-close refresh", () => {
 
     const interactiveEntry = {
       isCodexNotify: false,
-      isKimiNotify: false,
       sessionId: "claude-a",
       bubble: null,
       hideTimer: null,
@@ -253,7 +250,6 @@ describe("permission passive notify auto-close refresh", () => {
 
     api.pendingPermissions.push({
       isCodexNotify: true,
-      isKimiNotify: false,
       sessionId: "codex-a",
       bubble: null,
       hideTimer: null,
@@ -372,7 +368,6 @@ describe("permission passive notify auto-close refresh", () => {
 
     const permEntry = {
       isCodexNotify: true,
-      isKimiNotify: false,
       sessionId: "codex-a",
       bubble: null,
       hideTimer: null,
@@ -424,7 +419,7 @@ describe("permission passive notify auto-close refresh", () => {
 
 // Gate-ledger joint lifecycle (batched approvals): after the FIRST cue is
 // gone — dismissed via the real ipc-decide path or auto-expired — state.js
-// re-arms a cue for the next queued approval by calling showKimiNotifyBubble
+// re-arms a cue for the next queued approval by showing the notify bubble
 // again. The permission layer must build a brand-new working card each time;
 // stale dedupe/bookkeeping from the dead entry must not swallow the re-show.
 describe("interactive permission bubble fatal fallback", () => {
