@@ -37,6 +37,11 @@ export function createBehaviours({ runtime, autonomy, clock = globalThis }) {
     current = file;
     const plan = planForVisual(file);
     if (plan.kind === "idle") {
+      // Leaving an agent-driven state: get back on our feet before handing
+      // control to the autonomy adapter, which only acts while walking.
+      const snapshot = typeof runtime.snapshot === "function" ? runtime.snapshot() : {};
+      if (snapshot && snapshot.sleeping) cmd({ type: "wake" });
+      else if (snapshot && (snapshot.mode === "sit" || snapshot.mode === "sitting")) cmd({ type: "perform", action: "stand" });
       cmd({ type: "stop" });
       autonomy.resume();
       return plan;

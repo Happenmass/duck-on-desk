@@ -41,3 +41,18 @@ test("createBehaviours issues runtime commands and clears timers on change", asy
   assert.equal(timers.size, 0);
   assert.deepEqual(commands.at(-1), { type: "stop", source: "system" });
 });
+
+test("returning to idle stands the duck up or wakes it before resuming autonomy", async () => {
+  const { createBehaviours } = await import("../renderer/src/agent-visual-adapter.js");
+  const clock = { setInterval: () => 1, clearInterval: () => {} };
+  const autonomy = { pause() {}, resume() {} };
+  const run = (snapshot) => {
+    const commands = [];
+    const b = createBehaviours({ runtime: { command: (i) => commands.push(i), snapshot: () => snapshot }, autonomy, clock });
+    b.apply("duck-idle");
+    return commands.map((c) => c.type + (c.action ? ":" + c.action : ""));
+  };
+  assert.deepEqual(run({ mode: "sit", sleeping: false }), ["perform:stand", "stop"]);
+  assert.deepEqual(run({ mode: "sit", sleeping: true }), ["wake", "stop"]);
+  assert.deepEqual(run({ mode: "walk", sleeping: false }), ["stop"]);
+});
