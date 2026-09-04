@@ -17,6 +17,7 @@ export class AutonomyAdapter {
   #lastHumanAt = performance.now();
   #nextActionAt = performance.now() + 6_000;
   #sleepAfterMs;
+  #paused = false;
 
   constructor(runtime, { sleepAfterMs = 240_000 } = {}) {
     this.#runtime = runtime;
@@ -31,12 +32,23 @@ export class AutonomyAdapter {
     if (this.#runtime.snapshot().sleeping) this.#runtime.command({ type: "wake", source: "local" });
   }
 
+  pause() {
+    this.#paused = true;
+    this.#runtime.command({ type: "stop", source: "autonomy" });
+  }
+
+  resume() {
+    this.#paused = false;
+    this.#nextActionAt = performance.now() + 1_500;
+  }
+
   dispose() {
     clearInterval(this.#timer);
     this.#runtime.command({ type: "stop", source: "autonomy" });
   }
 
   #tick() {
+    if (this.#paused) return;
     const now = performance.now();
     if (now - this.#lastHumanAt >= this.#sleepAfterMs) {
       if (!this.#runtime.snapshot().sleeping) this.#runtime.command({ type: "sleep", source: "autonomy" });
