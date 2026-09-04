@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Notification, screen, ipcMain, globalShortcut, nativeTheme, dialog, shell, nativeImage, powerSaveBlocker, powerMonitor, clipboard, safeStorage } = require("electron");
+const { app, BrowserWindow, Notification, screen, ipcMain, globalShortcut, nativeTheme, dialog, shell, nativeImage, powerSaveBlocker, powerMonitor, clipboard, safeStorage, protocol, net } = require("electron");
 const { maybeRunPackageKoffiSmoke } = require("./package-koffi-smoke");
 if (maybeRunPackageKoffiSmoke({ app, BrowserWindow })) {
   return;
@@ -107,6 +107,12 @@ const { getAllAgents } = require("../agents/registry");
 // ── Autoplay policy: allow sound playback without user gesture ──
 // MUST be set before any BrowserWindow is created (before app.whenReady)
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
+
+// ── pet-model:// ONNX policy protocol ──
+// MUST be registered before app.whenReady(); the handler is installed inside it.
+const { pathToFileURL } = require("url");
+const petModelProtocol = require("./pet-model-protocol");
+petModelProtocol.registerScheme(protocol);
 
 const isMac = process.platform === "darwin";
 const isLinux = process.platform === "linux";
@@ -3657,6 +3663,7 @@ if (!gotTheLock) {
   }
 
   app.whenReady().then(async () => {
+    petModelProtocol.installHandler(protocol, net, pathToFileURL);
     // Older macOS and development builds retain the padded runtime icon from
     // #416. Packaged Tahoe+ leaves the Dock untouched so macOS can apply the
     // user's Default/Dark/Clear/Tinted treatment to the bundle icon (#941).
