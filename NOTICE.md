@@ -1,68 +1,29 @@
 # Notices
 
-This project includes third-party materials.
+## Derived work
 
-## Freesound Notification Sounds
+duck-on-desk is a derivative of **Clawd on Desk** (https://github.com/rullerzhou-afk/clawd-on-desk),
+Copyright (C) 2026 rullerzhou-afk and contributors, licensed under the GNU AGPL-3.0-only.
+Baseline imported from upstream commit 5ca26b5c (2026-09-04). Modifications:
+renamed product identity, removed 20 agent integrations and optional subsystems
+(Remote SSH, Telegram/Feishu/Slack/Discord, recap, Kimi quota, tutorial, mobile preview),
+and replaced the sprite renderer with a physics-driven 3D duck. See git history for details.
 
-The default completion sound at `assets/sounds/complete.mp3` uses
-"DELETRAZ_Ludivine_2019_2020_notification.wav" by iut_Paris8:
+## 3D duck assets
 
-- Source: https://freesound.org/people/iut_Paris8/sounds/510287/
-- License: Creative Commons CC0 1.0 Universal
-- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Mesh, MJCF and kinematics assets under `renderer/public/robot/` and the material/variant
+code derived from the Pollen Robotics Microduck simulator
+(https://huggingface.co/spaces/pollen-robotics/microduck-simulator, commit 183f99a40bd7308da3e848de961ed32bb02624a5).
+The `microduck_rl` README states its 3D model files are CC BY-SA-NC; the Space declares no
+license for its glue code. Non-commercial use only until clarified with Pollen Robotics.
+ONNX policy weights are NOT bundled; they are read from the user's Hugging Face cache.
 
-The repository also preserves three CC0 completion-sound candidates from
-AlfredHitch, TheArbuzikYT, and Fupicat. Their source links, hashes, and metadata
-are recorded in `assets/source/SOUND-CANDIDATES.md` and the corresponding
-`assets/source/freesound-*` directories.
+## Sounds
 
-## Lobe Icons
+- `renderer/public/assets/sfx/` footsteps and thumps: CC0 samples from Kenney.nl ("Impact Sounds"), trimmed by the Space.
+- `renderer/public/assets/voices/duck1..duck4/`: voice banks from the same Space snapshot, treated as CC BY-SA-NC.
+- `assets/sounds/complete.mp3`: "DELETRAZ_Ludivine_2019_2020_notification.wav" by iut_Paris8, CC0 (https://freesound.org/people/iut_Paris8/sounds/510287/).
 
-Selected Agent icon source assets come from
-`@lobehub/icons-static-png@1.95.0` (`light/` variant), with editable SVG
-companions obtained from the official Lobe Icons website at
-`https://lobehub.com/icons`. Generated runtime PNGs derived from these sources
-are stored under `assets/icons/agents/`.
+## Agent icons
 
-The included package assets are:
-
-- `antigravity-color.png`
-- `claude-color.png`
-- `codebuddy-color.png`
-- `openai.png`
-- `githubcopilot.png`
-- `cursor.png`
-- `geminicli-color.png`
-- `hermesagent.png`
-- `kimi-color.png` (archived source candidate)
-- `kiro-color.png`
-- `xiaomimimo.png`
-- `openclaw-color.png`
-- `opencode.png`
-- `pi.png`
-- `qoder-color.png`
-- `qwen-color.png`
-
-Lobe Icons is licensed under the MIT License:
-
-MIT License
-
-Copyright (c) 2023 LobeHub
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+`assets/icons/agents/` derived from `@lobehub/icons-static-png@1.95.0` (https://lobehub.com/icons).

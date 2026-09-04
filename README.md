@@ -2,6 +2,9 @@
   <img src="assets/icon.png" width="128" alt="Clawd">
 </p>
 <h1 align="center">Clawd on Desk</h1>
+
+> **duck-on-desk** is an AGPL-3.0 derivative of [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk) (baseline commit `5ca26b5c`) that swaps the pixel crab for a physics-driven 3D Microduck. See `NOTICE.md`.
+
 <p align="center">
   <a href="README.zh-CN.md">中文版</a>
   ·
