@@ -19,7 +19,6 @@ function fixture(t, showCard = false) {
   theme.timings.minDisplay = {};
   theme.timings.autoReturn = {};
   const noop = () => {};
-  const recorded = [];
   const state = createState({
     theme, lang: "en", doNotDisturb: false, miniMode: false,
     playSound: noop, sendToRenderer: noop, syncHitWin: noop, sendToHitWin: noop,
@@ -27,7 +26,6 @@ function fixture(t, showCard = false) {
     pendingPermissions: [], resolvePermissionEntry: noop, dismissPermissionsForDnd: noop,
     focusTerminalWindow: noop, focusHostPlatform: "darwin", processKill: () => true,
     getCursorScreenPoint: () => ({ x: 100, y: 100 }), t: key => key,
-    recapSink: { record: event => recorded.push(event) },
   });
   class IsolatedMonitor extends Monitor { start() {} }
   const shown = [];
@@ -65,7 +63,7 @@ function fixture(t, showCard = false) {
     type: "function_call_output", call_id: id, output: "{}",
   });
   t.after(() => { runtime.cleanup(); state.cleanup(); fs.rmSync(root, { recursive: true, force: true }); });
-  return { state, runtime, tracked, key, official, line, question, answer, shown, recorded };
+  return { state, runtime, tracked, key, official, line, question, answer, shown };
 }
 
 for (const showCard of [false, true]) {
@@ -74,7 +72,6 @@ test(`late question and answer cannot revive a closed turn (card shown: ${showCa
   const f = fixture(t, showCard);
   f.official("UserPromptSubmit", "A");
   f.official("Stop", "A");
-  const count = f.recorded.length;
   assert.equal(f.state.sessions.get(f.key).state, "idle");
   const before = f.state.sessions.get(f.key).updatedAt;
   t.mock.timers.tick(60000);
@@ -86,7 +83,6 @@ test(`late question and answer cannot revive a closed turn (card shown: ${showCa
   assert.equal(f.state.sessions.get(f.key).state, "idle");
   assert.equal(f.state.sessions.get(f.key).updatedAt, before);
   assert.equal(f.state.deriveSessionBadge(f.state.sessions.get(f.key)), "done");
-  assert.equal(f.recorded.length, count, "passive UI does not count as accepted activity");
 });
 
 test(`new turn rejects old, replayed, or unidentified activity (card shown: ${showCard})`, t => {

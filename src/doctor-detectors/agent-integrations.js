@@ -525,7 +525,7 @@ function applyCodexSupplementary(detail, descriptor, options, settings) {
   return next;
 }
 
-// MiMo-style merged config (descriptor.configCandidates, highest-priority
+// opencode-style merged config (descriptor.configCandidates, highest-priority
 // first): EVERY existing candidate loads, each parsed as JSONC exactly like
 // the host's own loader, and the "plugin" array is REPLACED by the
 // highest-priority file that declares it. The doctor must validate that

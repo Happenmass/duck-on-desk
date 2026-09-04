@@ -987,7 +987,7 @@ describe("opencode-family contextUsage wire path (handleContextUsageEvent)", () 
     const plugin = createTrackedPlugin(core, OTHERHOST_PARAMS);
     plugin.__test._cachedPort = 24333;
     const client = makeFakeClient([
-      { id: "mimo", models: { model: { limit: { context: 1000 } } } },
+      { id: "otherhost", models: { model: { limit: { context: 1000 } } } },
     ]);
 
     await plugin.__test.handleContextUsageEvent(

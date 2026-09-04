@@ -271,10 +271,10 @@ describe("state agent icons", () => {
     }
   });
 
-  it("resolves an icon URL for every installable tutorial agent", () => {
+  it("resolves an icon URL for every installable agent", () => {
     for (const agentId of INSTALLABLE_AGENT_IDS) {
       const iconUrl = getAgentIconUrl(agentId);
-      assert.ok(iconUrl, `Missing tutorial icon URL for ${agentId}`);
+      assert.ok(iconUrl, `Missing agent icon URL for ${agentId}`);
       assert.strictEqual(
         path.normalize(fileURLToPath(iconUrl)),
         path.join(AGENT_ICON_DIR, `${agentId}.png`),

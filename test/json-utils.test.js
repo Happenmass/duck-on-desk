@@ -257,7 +257,7 @@ describe("formatNodeHookCommand", () => {
   });
 
   // windowsWrapper:"portable" targets launchers that run command hooks
-  // through a POSIX shell on Windows (Qoder CLI → Git Bash, #597): unquoted
+  // through a POSIX shell on Windows (Git Bash, #597): unquoted
   // forward-slash interpreter token, double-quoted args, zero backslashes.
   it("formats the portable Windows form with bare node when the path has spaces", () => {
     assert.strictEqual(
@@ -295,7 +295,7 @@ describe("formatNodeHookCommand", () => {
 
 // statusLine settings have no `shell` field, so unlike hook commands the
 // string must parse under Git Bash AND PowerShell (Claude Code picks per
-// machine) and ideally cmd (Antigravity). The load-bearing property: the
+// machine) and ideally cmd. The load-bearing property: the
 // command token is never quoted and never prefixed with `&`.
 describe("buildPortableStatuslineCommand", () => {
   it("falls back to bare node when the node path contains spaces (default Program Files install)", () => {

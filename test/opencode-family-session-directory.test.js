@@ -649,9 +649,9 @@ describe("opencode-family session title (#829)", () => {
     assert.ok(logContent.includes("SESSION_TITLE"), "debug log should record that a title event happened");
   });
 
-  it("handles MiMo-style patch event shape where info lives at event.properties.info", async () => {
-    // Official opencode SDK: event.properties.info. MiMo-derived hosts patch
-    // the same shape. getEventSessionInfo reads info from properties.info in
+  it("handles the patch event shape where info lives at event.properties.info", async () => {
+    // Official opencode SDK: event.properties.info. Derived hosts patch the
+    // same shape. getEventSessionInfo reads info from properties.info in
     // both cases, so title capture works for the whole family.
     const plugin = createOpencodeFamilyPlugin(OPENCODE_CONFIG);
     const hooks = await plugin(createContext("C:\\proj"));
@@ -661,12 +661,12 @@ describe("opencode-family session title (#829)", () => {
         type: "session.created",
         properties: {
           sessionID: "ses_m",
-          info: { id: "ses_m", directory: "C:\\proj", title: "MiMo Title" },
+          info: { id: "ses_m", directory: "C:\\proj", title: "Patched Title" },
         },
       },
     });
     await settlePosts();
-    assert.strictEqual(plugin.__test._sessionTitleById.get("opencode:ses_m"), "MiMo Title");
+    assert.strictEqual(plugin.__test._sessionTitleById.get("opencode:ses_m"), "Patched Title");
   });
 
   it("clears the title map on session.deleted and server.instance.disposed", async () => {

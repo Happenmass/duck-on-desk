@@ -2621,13 +2621,13 @@ describe("settings renderer browser environment", () => {
     const render = () => {
       content.innerHTML = "";
       period = document.createElement("button");
-      period.setAttribute("data-settings-focus-key", "recap-period-today");
+      period.setAttribute("data-settings-focus-key", "agents-codex-row");
       content.appendChild(period);
       retry = null;
       if (showRetry) {
         retry = document.createElement("button");
-        retry.setAttribute("data-settings-focus-key", "recap-retry-today");
-        retry.setAttribute("data-settings-focus-fallback-key", "recap-period-today");
+        retry.setAttribute("data-settings-focus-key", "agents-codex-retry");
+        retry.setAttribute("data-settings-focus-fallback-key", "agents-codex-row");
         content.appendChild(retry);
       }
     };
@@ -2669,11 +2669,11 @@ describe("settings renderer browser environment", () => {
     const render = () => {
       content.innerHTML = "";
       fallback = document.createElement("button");
-      fallback.setAttribute("data-settings-focus-key", "recap-recording-toggle");
+      fallback.setAttribute("data-settings-focus-key", "agents-codex-toggle");
       content.appendChild(fallback);
       exact = document.createElement("button");
-      exact.setAttribute("data-settings-focus-key", "recap-clear");
-      exact.setAttribute("data-settings-focus-fallback-key", "recap-recording-toggle");
+      exact.setAttribute("data-settings-focus-key", "agents-codex-clear");
+      exact.setAttribute("data-settings-focus-fallback-key", "agents-codex-toggle");
       exact.disabled = disableExact;
       content.appendChild(exact);
     };
@@ -2709,7 +2709,7 @@ describe("settings renderer browser environment", () => {
     };
     const core = loadSettingsCoreForTest({}, { document });
     const original = document.createElement("button");
-    original.setAttribute("data-settings-focus-key", "recap-clear");
+    original.setAttribute("data-settings-focus-key", "agents-codex-clear");
     content.appendChild(original);
     original.focus();
 
@@ -2719,7 +2719,7 @@ describe("settings renderer browser environment", () => {
       content() {
         content.innerHTML = "";
         replacement = document.createElement("button");
-        replacement.setAttribute("data-settings-focus-key", "recap-clear");
+        replacement.setAttribute("data-settings-focus-key", "agents-codex-clear");
         content.appendChild(replacement);
         newlyFocused = document.createElement("button");
         content.appendChild(newlyFocused);
@@ -2758,8 +2758,8 @@ describe("settings renderer browser environment", () => {
       document,
       requestAnimationFrame: raf.requestAnimationFrame,
     });
-    core.state.activeTab = "recap";
-    core.tabs.recap = {};
+    core.state.activeTab = "agents";
+    core.tabs.agents = {};
     core.ops.installRenderHooks({
       content() {
         maxScrollTop = 0;
@@ -2976,7 +2976,7 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(harness.valueElement.textContent, "ZH", "failed latest choice restores the successful save");
   });
 
-  it("flips and bounds the tutorial picker at minimum-size enlarged-text geometry", () => {
+  it("flips and bounds the language picker at minimum-size enlarged-text geometry", () => {
     const harness = loadSharedLanguagePickerForTest({
       options: ["en", "zh", "zh-TW", "ko", "ja"],
       innerHeight: 450,
@@ -3035,7 +3035,7 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(harness.menu.style.maxHeight, "192px");
   });
 
-  it("initially reveals and bounds the tutorial picker at 150% and 160% text scale", () => {
+  it("initially reveals and bounds the language picker at 150% and 160% text scale", () => {
     const layouts = [
       { scale: "150%", boundaryBottom: 313.7, triggerTop: 317.1, triggerBottom: 353.1 },
       { scale: "160%", boundaryBottom: 290.3, triggerTop: 316.6, triggerBottom: 352.6 },
@@ -3086,7 +3086,7 @@ describe("settings renderer browser environment", () => {
     }
   });
 
-  it("reflows an open tutorial picker after the window is resized", () => {
+  it("reflows an open language picker after the window is resized", () => {
     const harness = loadSharedLanguagePickerForTest({
       options: ["en", "zh", "zh-TW", "ko", "ja"],
       innerHeight: 450,

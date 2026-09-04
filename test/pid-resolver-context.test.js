@@ -165,7 +165,7 @@ describe("resolver no-arg compatibility (§5.1 red line)", () => {
     } finally { cleanup(); }
   });
 
-  it("an unmigrated adapter (Gemini-shaped resolver) is unaffected: same fields + spawn count, zero cache files", (t) => {
+  it("an unmigrated adapter (non-Claude resolver) is unaffected: same fields + spawn count, zero cache files", (t) => {
     // Slice 1 migrates only Claude. Any other adapter keeps calling resolve()
     // no-arg; its behavior must be byte-for-byte with 5c2b1f0.
     let spawns = 0;

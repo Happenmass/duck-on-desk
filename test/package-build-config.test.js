@@ -100,7 +100,7 @@ describe("package build config", () => {
   it("unpacks jsonc-parser for NSIS cleanup scripts executed outside app.asar", () => {
     assert.ok(
       pkg.build.asarUnpack.includes("node_modules/jsonc-parser/**/*"),
-      "NSIS runs cleanup-integrations.js from app.asar.unpacked, so MiMo JSONC cleanup needs an unpacked dependency"
+      "NSIS runs cleanup-integrations.js from app.asar.unpacked, so opencode JSONC cleanup needs an unpacked dependency"
     );
   });
 

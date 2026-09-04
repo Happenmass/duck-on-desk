@@ -1101,7 +1101,7 @@ function show(data) {
     // opencode-family hosts do not scope "always" to the specific pattern of
     // this request. We keep the button to respect the native UX, but the label
     // + tooltip make the blast radius explicit — templated with the member's
-    // real product name so a MiMo user never reads "opencode" in the warning.
+    // real product name so the warning always names the host actually running.
     suggestionsContainer.innerHTML = "";
     if (Array.isArray(data.familyAlways) && data.familyAlways.length > 0) {
       const agentName = data.familyDisplayName || data.familyAgentId;

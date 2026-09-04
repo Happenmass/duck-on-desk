@@ -1556,9 +1556,9 @@ export function createOpencodeFamilyPlugin(config) {
   // never awaits this path; its returned promise is intentionally detached.
   function handleContextUsageEvent(event, instance) {
     try {
-      // MiMo uses this shared core but its SDK/event contract is not proven to
-      // match OpenCode's message.updated/provider.list contract. Keep #830
-      // explicitly scoped until a real MiMo compatibility fixture exists.
+      // Any future family member reuses this shared core, but only OpenCode's
+      // message.updated/provider.list contract is proven. Keep #830 explicitly
+      // scoped until another member has a real compatibility fixture.
       if (AGENT_ID !== "opencode") return;
 
       const props = event && event.properties && typeof event.properties === "object"
@@ -1699,7 +1699,7 @@ export function createOpencodeFamilyPlugin(config) {
     return clean.length > 120 ? `${clean.slice(0, 119)}…` : clean;
   }
 
-  // Current OpenCode/MiMo completion contract:
+  // Current OpenCode completion contract:
   // { sessionID, requestID, reply }. Older permissionID/response shapes belong
   // to a different upstream generation and intentionally fail closed.
   function handlePermissionReplied(event) {

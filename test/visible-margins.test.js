@@ -200,7 +200,7 @@ describe("edge pinning margin policy", () => {
     });
   });
 
-  it("ON drag caps bottom slack by display inset", () => {
+  it("ON drag caps the bottom gap by display inset", () => {
     const margins = getLooseDragMargins({
       width: 200,
       height: 280,
@@ -246,7 +246,7 @@ describe("edge pinning margin policy", () => {
     assert.deepStrictEqual(rest, { top: 168, bottom: 70 });
   });
 
-  it("ON rest clamp caps bottom slack by display inset", () => {
+  it("ON rest clamp caps the bottom gap by display inset", () => {
     assert.deepStrictEqual(
       getRestClampMargins({
         height: 280,

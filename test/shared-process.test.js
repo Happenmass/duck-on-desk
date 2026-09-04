@@ -166,16 +166,16 @@ describe("createPidResolver()", () => {
 describe("createPidResolver() — POSIX non-Node command-line probe", () => {
   const { loadSharedProcessWithMock } = require("./helpers/load-shared-process-with-mock");
 
-  function workBuddyProcessMock(onCommandProbe = () => {}) {
+  function electronHostProcessMock(onCommandProbe = () => {}) {
     return (command, args) => {
       const invocation = `${command} ${args.join(" ")}`;
       if (invocation === "ps -o ppid= -p 610") return "1\n";
       if (invocation === "ps -o comm= -p 610") {
-        return "/Applications/WorkBuddy AI.app/Contents/MacOS/Electron\n";
+        return "/Applications/Some Host.app/Contents/MacOS/Electron\n";
       }
       if (invocation === "ps -o command= -p 610") {
         onCommandProbe();
-        return "/Applications/WorkBuddy AI.app/Contents/MacOS/Electron "
+        return "/Applications/Some Host.app/Contents/MacOS/Electron "
           + "/Applications/Some Agent.app/Contents/Resources/app.asar.unpacked/cli/bin/agentcli "
           + "--serve --session-id session-1\n";
       }
@@ -188,7 +188,7 @@ describe("createPidResolver() — POSIX non-Node command-line probe", () => {
   it("sets agentPid for an explicitly scoped Electron command-line match on macOS", () => {
     let commandProbes = 0;
     const { mod, cleanup } = loadSharedProcessWithMock({
-      execFileSyncMock: workBuddyProcessMock(() => { commandProbes++; }),
+      execFileSyncMock: electronHostProcessMock(() => { commandProbes++; }),
       platform: "darwin",
     });
     try {
@@ -212,7 +212,7 @@ describe("createPidResolver() — POSIX non-Node command-line probe", () => {
   it("does not probe Electron command lines unless the caller opts in", () => {
     let commandProbes = 0;
     const { mod, cleanup } = loadSharedProcessWithMock({
-      execFileSyncMock: workBuddyProcessMock(() => { commandProbes++; }),
+      execFileSyncMock: electronHostProcessMock(() => { commandProbes++; }),
       platform: "darwin",
     });
     try {
