@@ -433,6 +433,7 @@ function validateThemeShape(themeId, opts = {}) {
 }
 
 function _validateRequiredAssets(theme) {
+  if (theme.renderer === "duck3d") return [];
   const errors = [];
   for (const filename of _collectRequiredAssetFiles(theme)) {
     const absPath = _resolveAssetPath(theme, filename);

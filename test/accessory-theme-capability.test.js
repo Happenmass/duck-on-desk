@@ -5,17 +5,16 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const themeLoader = require("../src/theme-loader");
+const { loadSpriteTheme, SPRITE_THEMES_DIR, CRAB_SVG_DIR } = require("./fixtures/sprite-theme");
 const { buildThemeMetadata } = require("../src/theme-metadata");
 const {
   collectRequiredAssetFiles,
   projectThemeVisualUsages,
 } = require("../src/theme-schema");
 
-const ROOT = path.join(__dirname, "..");
-const THEMES_DIR = path.join(ROOT, "themes");
-
-themeLoader.init(path.join(ROOT, "src"));
+// Accessories are sprite-only: measured against the sprite fixtures (crab is
+// the former built-in duck sprite theme, calico has no accessories).
+const THEMES_DIR = SPRITE_THEMES_DIR;
 
 function readRawTheme(themeId) {
   return JSON.parse(
@@ -27,7 +26,7 @@ function capabilityPair(themeId) {
   const raw = readRawTheme(themeId);
   const themeDir = path.join(THEMES_DIR, themeId);
   const metadata = buildThemeMetadata(themeId, raw, true, themeDir);
-  const normalized = themeLoader.loadTheme(themeId, { strict: true });
+  const normalized = loadSpriteTheme(themeId, { strict: true });
   return { raw, metadata, normalized };
 }
 
@@ -39,7 +38,7 @@ function assertDeclaredTargetsExist(themeId, raw) {
     const localPath = path.join(THEMES_DIR, themeId, "assets", file);
     const assetPath = fs.existsSync(localPath)
       ? localPath
-      : path.join(ROOT, "assets", "svg", file);
+      : path.join(CRAB_SVG_DIR, file);
     const source = fs.readFileSync(assetPath, "utf8");
     assert.ok(
       source.includes(`id="${targetId}"`) || source.includes(`id='${targetId}'`),
@@ -51,8 +50,7 @@ function assertDeclaredTargetsExist(themeId, raw) {
 describe("built-in accessory capability contracts", () => {
   it("keeps raw metadata and normalized runtime capability aligned", () => {
     for (const [themeId, expected] of [
-      ["duck", true],
-      ["cloudling", true],
+      ["crab", true],
       ["calico", false],
     ]) {
       const { metadata, normalized } = capabilityPair(themeId);
@@ -67,7 +65,7 @@ describe("built-in accessory capability contracts", () => {
   });
 
   it("projects every Duck visual usage and verifies its exact dynamic targets", () => {
-    const { raw, normalized } = capabilityPair("duck");
+    const { raw, normalized } = capabilityPair("crab");
     const usages = projectThemeVisualUsages(raw);
     const files = collectRequiredAssetFiles(raw);
 
@@ -75,7 +73,7 @@ describe("built-in accessory capability contracts", () => {
     assert.strictEqual(files.length, 48);
     assert.deepStrictEqual(
       new Set(files),
-      new Set(fs.readdirSync(path.join(ROOT, "assets", "svg")).filter((file) => file.endsWith(".svg"))),
+      new Set(fs.readdirSync(CRAB_SVG_DIR).filter((file) => file.endsWith(".svg"))),
       "every SVG exposed by the animation picker must have an audited attachment policy"
     );
     assert.ok(files.includes("duck-outlaw-bender.svg"));
@@ -83,7 +81,7 @@ describe("built-in accessory capability contracts", () => {
     assert.ok(!usages.some((usage) => usage.file === "duck-working-typing-boss.svg"));
     assert.ok(!usages.some((usage) => usage.source === "rendering.objectChannelFiles"));
     assert.strictEqual(normalized._capabilities.accessories, true);
-    assertDeclaredTargetsExist("duck", raw);
+    assertDeclaredTargetsExist("crab", raw);
 
     for (const hidden of [
       "duck-error.svg",
@@ -149,13 +147,13 @@ describe("built-in accessory capability contracts", () => {
   });
 
   it("anchors Duck idle accessories inside the breathing transform", () => {
-    const raw = readRawTheme("duck");
+    const raw = readRawTheme("crab");
     const idleDescriptor =
       raw.customization.accessories.files["duck-idle-follow.svg"];
     assert.strictEqual(idleDescriptor.followTarget.id, "torso");
 
     const source = fs.readFileSync(
-      path.join(ROOT, "assets", "svg", "duck-idle-follow.svg"),
+      path.join(CRAB_SVG_DIR, "duck-idle-follow.svg"),
       "utf8"
     );
     assert.match(
@@ -165,34 +163,4 @@ describe("built-in accessory capability contracts", () => {
     );
   });
 
-  it("projects all Cloudling usages including DND and verifies exact dynamic targets", () => {
-    const { raw, normalized } = capabilityPair("cloudling");
-    const usages = projectThemeVisualUsages(raw);
-    const files = collectRequiredAssetFiles(raw);
-
-    assert.strictEqual(usages.length, 41);
-    assert.strictEqual(files.length, 29);
-    assert.strictEqual(normalized._capabilities.accessories, true);
-    assert.ok(files.includes("cloudling-idle-to-sleeping.svg"));
-    assert.ok(
-      usages.some((usage) => (
-        usage.file === "cloudling-idle-to-sleeping.svg"
-        && usage.source === "timings.dndSleepTransitionSvg"
-      ))
-    );
-    assertDeclaredTargetsExist("cloudling", raw);
-
-    for (const hidden of [
-      "cloudling-idle-to-sleeping.svg",
-      "cloudling-dozing-to-sleeping.svg",
-      "cloudling-sleeping.svg",
-      "cloudling-sleeping-static.png",
-      "cloudling-sleeping-to-idle.svg",
-      "cloudling-mini-enter-sleep.svg",
-      "cloudling-mini-sleep.svg",
-    ]) {
-      assert.strictEqual(raw.customization.accessories.files[hidden].visibility, "hidden");
-      assert.ok(usages.some((usage) => usage.file === hidden), `${hidden} should be reachable`);
-    }
-  });
 });

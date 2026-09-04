@@ -5,11 +5,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const themeLoader = require("../src/theme-loader");
+const { loadSpriteTheme, CRAB_SVG_DIR } = require("./fixtures/sprite-theme");
 const accessoryLayout = require("../src/pet-accessory-layout");
 
-const ROOT = path.join(__dirname, "..");
-themeLoader.init(path.join(ROOT, "src"));
 
 const VISIBLE_MOUTH_FILES = Object.freeze([
   "duck-idle-follow.svg",
@@ -68,7 +66,7 @@ const OPTIONAL_LIBRARY_FILES = Object.freeze([
 ]);
 
 test("PR #811 mouth policy covers the approved 36 stock sprites exactly", () => {
-  const theme = themeLoader.loadTheme("duck", { strict: true });
+  const theme = loadSpriteTheme("crab", { strict: true });
   const files = theme.customization.mouthAccessories.files;
   const stockFiles = Object.fromEntries(
     Object.entries(files).filter(([file]) => (
@@ -105,10 +103,10 @@ test("PR #811 mouth policy covers the approved 36 stock sprites exactly", () => 
 
 test("the boss extra keeps its authored cigar and never receives a second cigarette", () => {
   const boss = fs.readFileSync(
-    path.join(ROOT, "assets", "svg", "duck-working-typing-boss.svg"),
+    path.join(CRAB_SVG_DIR, "duck-working-typing-boss.svg"),
     "utf8"
   );
-  const theme = themeLoader.loadTheme("duck", { strict: true });
+  const theme = loadSpriteTheme("crab", { strict: true });
 
   assert.match(boss, /id="cigarette-rotor"/);
   assert.match(boss, /id="codesmoke"/);
@@ -125,7 +123,7 @@ test("the boss extra keeps its authored cigar and never receives a second cigare
 });
 
 test("optional animation-library SVGs never fall back to static moving accessories", () => {
-  const theme = themeLoader.loadTheme("duck", { strict: true });
+  const theme = loadSpriteTheme("crab", { strict: true });
   const head = theme.customization.accessories.files;
   const mouth = theme.customization.mouthAccessories.files;
 
@@ -169,7 +167,7 @@ test("optional animation-library SVGs never fall back to static moving accessori
 });
 
 test("head pose policy keeps headphones hatless and limits western-hat-only overrides", () => {
-  const theme = themeLoader.loadTheme("duck", { strict: true });
+  const theme = loadSpriteTheme("crab", { strict: true });
   const base = theme.customization.accessories.files;
   const overrides = theme.customization.accessories.itemOverrides;
   const western = overrides["western-cowboy-hat"].files;
@@ -202,14 +200,14 @@ test("head pose policy keeps headphones hatless and limits western-hat-only over
 
 test("notification and wake anchors are named on the elements that own their motion", () => {
   const notification = fs.readFileSync(
-    path.join(ROOT, "assets", "svg", "duck-notification.svg"),
+    path.join(CRAB_SVG_DIR, "duck-notification.svg"),
     "utf8"
   );
   const wake = fs.readFileSync(
-    path.join(ROOT, "assets", "svg", "duck-wake.svg"),
+    path.join(CRAB_SVG_DIR, "duck-wake.svg"),
     "utf8"
   );
-  const theme = themeLoader.loadTheme("duck", { strict: true });
+  const theme = loadSpriteTheme("crab", { strict: true });
   const notificationDescriptor =
     theme.customization.mouthAccessories.files["duck-notification.svg"];
 
@@ -250,7 +248,7 @@ test("the canonical cigarette frame reproduces the pinned standard-pose coordina
 });
 
 test("every visible animated cigarette has a measured or authored hit envelope", () => {
-  const theme = themeLoader.loadTheme("duck", { strict: true });
+  const theme = loadSpriteTheme("crab", { strict: true });
   const files = theme.customization.mouthAccessories.files;
   const measured = require("../src/pet-accessory-hitbox")
     .BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING.duck;
@@ -269,7 +267,7 @@ test("every visible animated cigarette has a measured or authored hit envelope",
 });
 
 test("bender uses the one-unit anti-crop viewBox and its measured face-plant hitbox", () => {
-  const theme = themeLoader.loadTheme("duck", { strict: true });
+  const theme = loadSpriteTheme("crab", { strict: true });
   assert.deepStrictEqual(theme.idleEasterEggs, [{
     file: "duck-outlaw-bender.svg",
     duration: 15000,

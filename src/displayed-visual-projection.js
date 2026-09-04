@@ -10,7 +10,7 @@ const RENDERER_OUTCOMES = new Set([
   "fallback",
   "failed",
 ]);
-const SAFE_CHANNELS = new Set(["object", "img", "bridge"]);
+const SAFE_CHANNELS = new Set(["object", "img", "bridge", "duck3d"]);
 const SAFE_BASENAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$/;
 const MAX_TERMINAL_HISTORY = 128;
 

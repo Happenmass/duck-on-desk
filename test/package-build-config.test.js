@@ -53,18 +53,6 @@ describe("package build config", () => {
 
   it("unpacks built-in theme assets so the folder can be opened from settings", () => {
     assert.ok(
-      pkg.build.asarUnpack.includes("assets/svg/**/*"),
-      "asarUnpack should include assets/svg/**/*"
-    );
-    assert.ok(
-      pkg.build.files.includes("assets/accessories/**/*"),
-      "build.files should include assets/accessories/**/*"
-    );
-    assert.ok(
-      pkg.build.asarUnpack.includes("assets/accessories/**/*"),
-      "asarUnpack should include assets/accessories/**/*"
-    );
-    assert.ok(
       pkg.build.asarUnpack.includes("themes/**/*"),
       "asarUnpack should include themes/**/*"
     );

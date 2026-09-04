@@ -110,8 +110,6 @@
       "src/**/*",
       "assets/icon.png",
       "assets/icons/**/*",
-      "assets/svg/**/*",
-      "assets/accessories/**/*",
       "assets/sounds/**/*",
       "assets/dock-icon.png",
       "assets/tray-icon*.png",
@@ -122,8 +120,6 @@
       "renderer-dist/**/*"
     ],
     "asarUnpack": [
-      "assets/svg/**/*",
-      "assets/accessories/**/*",
       "hooks/**/*",
       "extensions/**/*",
       "agents/**/*",

@@ -19,7 +19,9 @@ const { describe, it, afterEach } = require("node:test");
 
 const REPO_ROOT = path.join(__dirname, "..");
 const SCRIPT_PATH = path.join(REPO_ROOT, "scripts", "validate-theme.js");
-const CALICO = path.join(REPO_ROOT, "themes", "calico");
+// A complete sprite theme with its own assets/ (themes/duck is duck3d and
+// binds intent ids, not files, so it cannot exercise the asset checks).
+const { CRAB_DIR: CALICO } = require("./fixtures/sprite-theme");
 
 const tempDirs = [];
 
@@ -354,10 +356,10 @@ describe("validate-theme.js CLI (real process, spawnSync)", () => {
   });
 
   it("control: a real, shipped, valid theme validates clean", () => {
-    // themes/calico rather than a hand-built fixture: assembling a theme.json
-    // that clears every rule (required states, sleepSequence, eye-tracking SVG
-    // ids, asset existence) would just re-derive a shipped theme. calico is
-    // git-tracked and has its own assets/, so this exercises the full pass.
+    // The crab sprite fixture rather than a hand-built one: assembling a
+    // theme.json that clears every rule (required states, sleepSequence,
+    // eye-tracking SVG ids, asset existence) would just re-derive a real theme.
+    // It is git-tracked and has its own assets/, so this exercises the full pass.
     const result = runValidateTheme([CALICO]);
     assert.strictEqual(result.status, 0, result.stderr || result.stdout);
   });

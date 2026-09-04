@@ -48,6 +48,8 @@ describe("builtin theme roam asset config", () => {
 
   it("roam bindings point at files that exist", () => {
     for (const { id, dir, cfg } of themes) {
+      // duck3d themes bind intent ids, not asset files.
+      if (cfg.renderer === "duck3d") continue;
       const roam = cfg.states && cfg.states.roam;
       if (!Array.isArray(roam)) continue;
       for (const file of roam) {

@@ -120,8 +120,9 @@ function validateTheme(cfg) {
     }
   }
 
-  // eyeTracking.states listed states must use .svg if enabled
-  if (cfg.eyeTracking && cfg.eyeTracking.enabled && cfg.states) {
+  // eyeTracking.states listed states must use .svg if enabled.
+  // duck3d themes name intents, not asset files, so the extension rule is moot.
+  if (cfg.renderer !== "duck3d" && cfg.eyeTracking && cfg.eyeTracking.enabled && cfg.states) {
     for (const stateName of (cfg.eyeTracking.states || [])) {
       const files = getStateFiles(cfg.states[stateName]).length > 0
         ? getStateFiles(cfg.states[stateName])
@@ -1391,6 +1392,10 @@ function mergeDefaults(raw, themeId, isBuiltin) {
     minDisplay: { ...DEFAULT_TIMINGS.minDisplay, ...(raw.timings && raw.timings.minDisplay) },
     autoReturn: { ...DEFAULT_TIMINGS.autoReturn, ...(raw.timings && raw.timings.autoReturn) },
   };
+
+  // Renderer channel. Only built-in themes may claim the trusted 3D runtime;
+  // an external theme declaring duck3d is downgraded to the sprite renderer.
+  theme.renderer = (isBuiltin && raw.renderer === "duck3d") ? "duck3d" : "sprite";
 
   // hitBoxes
   theme.hitBoxes = { ...DEFAULT_HITBOXES, ...(raw.hitBoxes || {}) };

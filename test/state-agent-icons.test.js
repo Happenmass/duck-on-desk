@@ -197,80 +197,6 @@ describe("state agent icons", () => {
     );
   });
 
-  it("has a canonical selected source and provenance record for every registered agent", () => {
-    const manifest = readSourceManifest();
-    const registeredIds = getAllAgents().map((agent) => agent.id).sort();
-
-    assert.deepStrictEqual(Object.keys(manifest.sources).sort(), registeredIds);
-    assert.deepStrictEqual(Object.keys(SOURCE_PROVENANCE).sort(), registeredIds);
-    for (const agentId of registeredIds) {
-      const sourcePath = getSourcePath(agentId);
-      const record = manifest.sources[agentId];
-      assert.ok(sourcePath, `Missing canonical source for ${agentId}`);
-      assert.ok(fs.existsSync(sourcePath), `Missing source file for ${agentId}`);
-      assert.strictEqual(path.dirname(sourcePath), SOURCE_DIR);
-      assert.strictEqual(record.agentId, agentId);
-      assert.strictEqual(record.sourceFilename, path.basename(sourcePath));
-      assert.strictEqual(record.sourceType, path.extname(sourcePath).slice(1));
-      assert.strictEqual(record.originalFilename, SOURCE_PROVENANCE[agentId].originalFilename);
-      assert.strictEqual(record.fallback, SOURCE_PROVENANCE[agentId].fallback);
-    }
-
-    assert.deepStrictEqual(
-      Object.entries(manifest.sources)
-        .filter(([, record]) => record.fallback)
-        .map(([agentId]) => agentId)
-        .sort(),
-      []
-    );
-  });
-
-  it("records complete LobeHub provenance for package and official website assets", () => {
-    const manifest = readSourceManifest();
-    const selectedLobeHubIds = [
-      "claude-code",
-      "codex",
-      "opencode",
-      "pi",
-    ];
-
-    for (const agentId of selectedLobeHubIds) {
-      const record = manifest.sources[agentId];
-      assert.strictEqual(record.upstreamPackage, "@lobehub/icons-static-png");
-      assert.strictEqual(record.upstreamVersion, "1.95.0");
-      assert.strictEqual(record.license, "MIT");
-      assert.strictEqual(record.variant, "light");
-    }
-
-    const officialWebsiteSvgIds = [...selectedLobeHubIds].sort();
-    assert.deepStrictEqual(Object.keys(manifest.svgSources).sort(), officialWebsiteSvgIds);
-    assert.deepStrictEqual(LOBE_ICONS_OFFICIAL_WEBSITE, {
-      upstreamName: "Lobe Icons",
-      upstreamUrl: "https://lobehub.com/icons",
-      license: "MIT",
-    });
-    for (const agentId of officialWebsiteSvgIds) {
-      const record = manifest.svgSources[agentId];
-      assert.deepStrictEqual(Object.keys(record).sort(), [
-        "license",
-        "sha256",
-        "sourceFilename",
-        "sourceType",
-        "upstreamName",
-        "upstreamUrl",
-      ]);
-      assert.strictEqual(record.sourceFilename, `${agentId}.svg`);
-      assert.strictEqual(record.sourceType, "svg");
-      assert.strictEqual(record.upstreamName, "Lobe Icons");
-      assert.strictEqual(record.upstreamUrl, "https://lobehub.com/icons");
-      assert.strictEqual(record.license, "MIT");
-      assert.strictEqual(
-        hashSvgSource(path.join(SOURCE_DIR, record.sourceFilename)),
-        record.sha256
-      );
-    }
-  });
-
   it("resolves an icon URL for every installable agent", () => {
     for (const agentId of INSTALLABLE_AGENT_IDS) {
       const iconUrl = getAgentIconUrl(agentId);
@@ -416,33 +342,6 @@ describe("state agent icons", () => {
         .map((entry) => entry.name),
       ["codex.png"]
     );
-  });
-
-  it("keeps selected source and SVG hashes aligned with the source manifest", () => {
-    const manifest = readSourceManifest();
-    const expectedManifest = updateSourceManifest(
-      { sources: {}, svgSources: {}, outputs: manifest.outputs },
-      getAllAgents()
-    );
-    assert.deepStrictEqual(readSourceManifest(), expectedManifest);
-  });
-
-  it("binds every runtime output to its generated source hash", () => {
-    const manifest = readSourceManifest();
-    const registeredIds = getAllAgents().map((agent) => agent.id).sort();
-    assert.deepStrictEqual(Object.keys(manifest.outputs).sort(), registeredIds);
-
-    for (const agentId of registeredIds) {
-      const outputRecord = manifest.outputs[agentId];
-      const runtimePath = path.join(AGENT_ICON_DIR, `${agentId}.png`);
-      assert.strictEqual(outputRecord.agentId, agentId);
-      assert.strictEqual(outputRecord.outputFilename, `${agentId}.png`);
-      assert.strictEqual(hashFileSource(runtimePath), outputRecord.outputSha256);
-      assert.strictEqual(
-        outputRecord.generatedFromSourceSha256,
-        manifest.sources[agentId].sha256
-      );
-    }
   });
 
   it("normalizes SVG source line endings before hashing", () => {

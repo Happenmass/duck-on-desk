@@ -9,7 +9,13 @@ const path = require("node:path");
 const themeLoader = require("../src/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
 const _defaultTheme = themeLoader.loadTheme("duck");
-const _calicoTheme = themeLoader.loadTheme("calico");
+// themes/duck is a duck3d theme (state files are intent ids, no tiers, no mini
+// mode, direct sleep). Sprite-only behaviour (working/juggling tiers, update
+// visual overlays, mini routing, yawn/collapse sleep, hot theme switch) is
+// exercised on the sprite fixtures instead.
+const { loadSpriteTheme } = require("./fixtures/sprite-theme");
+const _spriteTheme = loadSpriteTheme("crab");
+const _calicoTheme = loadSpriteTheme("calico");
 const { createTranslator } = require("../src/i18n");
 const { makeSessionKey, resolveSessionIdentity } = require("../src/session-key");
 const { isSessionInProgress } = require("../src/state-session-snapshot");
@@ -319,7 +325,7 @@ describe("restoreSessionFromLease()", () => {
   });
 
   it("uses a recovered juggling lease as a visual floor and replaces it on fresh identity", () => {
-    api = require("../src/state")(makeCtx({ processKill: () => true }));
+    api = require("../src/state")(makeCtx({ theme: _spriteTheme, processKill: () => true }));
     assert.strictEqual(api.restoreSessionFromLease(lease({ state: "juggling" })), true);
     const sessionId = makeSessionKey({ profileId: "local", rawSessionId: "claude-real-session" });
     assert.strictEqual(api.sessions.get(sessionId).subagentTracker.recoveredFloor, true);
@@ -360,7 +366,7 @@ describe("restoreSessionFromLease()", () => {
 
 describe("resolveDisplayState()", () => {
   let api;
-  beforeEach(() => { api = require("../src/state")(makeCtx()); });
+  beforeEach(() => { api = require("../src/state")(makeCtx({ theme: _spriteTheme })); });
   afterEach(() => { api.cleanup(); });
 
   it("no sessions → idle", () => {
@@ -438,7 +444,7 @@ describe("resolveDisplayState()", () => {
   });
 
   it("refreshes the active checking update visual override when the theme changes", () => {
-    const ctx = makeCtx();
+    const ctx = makeCtx({ theme: _spriteTheme });
     api.cleanup();
     api = require("../src/state")(ctx);
 
@@ -449,7 +455,7 @@ describe("resolveDisplayState()", () => {
     api.refreshTheme();
     assert.strictEqual(api.getSvgOverride("thinking"), "calico-thinking.apng");
 
-    ctx.theme = _defaultTheme;
+    ctx.theme = _spriteTheme;
     api.refreshTheme();
     assert.strictEqual(api.getSvgOverride("thinking"), "duck-working-debugger.svg");
   });
@@ -599,7 +605,7 @@ describe("setState() debounce", () => {
 
 describe("working sub-animations", () => {
   let api;
-  beforeEach(() => { api = require("../src/state")(makeCtx()); });
+  beforeEach(() => { api = require("../src/state")(makeCtx({ theme: _spriteTheme })); });
   afterEach(() => { api.cleanup(); });
 
   it("1 working session → typing SVG", () => {
@@ -642,7 +648,7 @@ describe("working sub-animations", () => {
 // api.sessions directly.
 describe("#862 juggling tier counts subagents, not sessions", () => {
   let api;
-  beforeEach(() => { api = require("../src/state")(makeCtx()); });
+  beforeEach(() => { api = require("../src/state")(makeCtx({ theme: _spriteTheme })); });
   afterEach(() => { api.cleanup(); });
 
   const GROOVE = "duck-headphones-groove.svg";
@@ -1007,6 +1013,7 @@ describe("#862 renderer tier timing", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     changes = [];
     api = require("../src/state")(makeCtx({
+      theme: _spriteTheme,
       sendToRenderer: (channel, state, svg) => {
         if (channel === "state-change") changes.push([state, svg]);
       },
@@ -1086,7 +1093,7 @@ describe("hitbox selection", () => {
   });
 
   it("keeps wide/default fallback when no file-specific hitbox exists", () => {
-    const theme = cloneTheme(_defaultTheme);
+    const theme = cloneTheme(_spriteTheme);
     theme.fileHitBoxes = {};
     api = require("../src/state")(makeCtx({ theme }));
 
@@ -1103,7 +1110,7 @@ describe("visual fallback resolution", () => {
 
   beforeEach(() => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-    const theme = cloneTheme(_defaultTheme);
+    const theme = cloneTheme(_spriteTheme);
     theme.states.error = [];
     theme._stateBindings.error = { files: [], fallbackTo: "attention" };
     api = require("../src/state")(makeCtx({ theme }));
@@ -1137,7 +1144,7 @@ describe("mini mode working routing", () => {
   });
 
   it("theme defines mini-working → working routes to mini-working", () => {
-    ctx = makeCtx({ miniMode: true });
+    ctx = makeCtx({ theme: _spriteTheme, miniMode: true });
     api = require("../src/state")(ctx);
     api.applyState("mini-idle");
     api.applyState("working");
@@ -1145,7 +1152,7 @@ describe("mini mode working routing", () => {
   });
 
   it("theme lacks mini-working → working stays on current mini state", () => {
-    const theme = cloneTheme(_defaultTheme);
+    const theme = cloneTheme(_spriteTheme);
     delete theme.miniMode.states["mini-working"];
     delete theme._stateBindings["mini-working"];
     ctx = makeCtx({ miniMode: true, theme });
@@ -1288,7 +1295,7 @@ describe("wake poll behavior", () => {
     fakeCursor.x = 200;
     mock.timers.tick(200);
     assert.strictEqual(api.getCurrentState(), "idle");
-    assert.strictEqual(api.getCurrentSvg(), "duck-idle-follow.svg");
+    assert.strictEqual(api.getCurrentSvg(), "duck-idle");
   });
 
   it("dozing + still > DEEP_SLEEP_TIMEOUT → collapsing", () => {
@@ -5369,7 +5376,7 @@ describe("DND mode", () => {
 
   beforeEach(() => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-    ctx = makeCtx();
+    ctx = makeCtx({ theme: _spriteTheme });
     api = require("../src/state")(ctx);
   });
   afterEach(() => {
@@ -5386,7 +5393,7 @@ describe("DND mode", () => {
   });
 
   it("enableDoNotDisturb uses theme-specific direct sleep transition art when provided", () => {
-    const theme = cloneTheme(_defaultTheme);
+    const theme = cloneTheme(_spriteTheme);
     theme.timings.dndSleepTransitionSvg = "custom-idle-to-sleeping.svg";
     theme.timings.dndSleepTransitionDuration = 4800;
     api.cleanup();
@@ -5410,7 +5417,7 @@ describe("DND mode", () => {
   });
 
   it("enableDoNotDisturb direct-sleep theme → sleeping immediately", () => {
-    const theme = cloneTheme(_defaultTheme);
+    const theme = cloneTheme(_spriteTheme);
     theme.sleepSequence = { mode: "direct" };
     api.cleanup();
     ctx = makeCtx({ theme });
@@ -5452,7 +5459,7 @@ describe("DND mode", () => {
   it("DND preserves pending completion arbitration without sound", () => {
     const sounds = [];
     api.cleanup();
-    ctx = makeCtx({ playSound: (name) => sounds.push(name) });
+    ctx = makeCtx({ theme: _spriteTheme, playSound: (name) => sounds.push(name) });
     api = require("../src/state")(ctx);
 
     update(api, { event: "UserPromptSubmit", state: "thinking", headless: true });
@@ -5484,7 +5491,7 @@ describe("DND mode", () => {
     ].join("\n") + "\n");
 
     api.cleanup();
-    ctx = makeCtx({ playSound: (name) => sounds.push(name) });
+    ctx = makeCtx({ theme: _spriteTheme, playSound: (name) => sounds.push(name) });
     api = require("../src/state")(ctx);
     update(api, {
       id: sessionId,
@@ -5516,7 +5523,7 @@ describe("DND mode", () => {
   });
 
   it("disableDoNotDisturb direct-sleep theme without waking art → idle", () => {
-    const theme = cloneTheme(_defaultTheme);
+    const theme = cloneTheme(_spriteTheme);
     theme.sleepSequence = { mode: "direct" };
     theme.states.waking = [];
     theme._stateBindings.waking = { files: [], fallbackTo: null };
@@ -5551,7 +5558,7 @@ describe("refreshTheme()", () => {
 
   beforeEach(() => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-    ctx = makeCtx();
+    ctx = makeCtx({ theme: _spriteTheme });
     api = require("../src/state")(ctx);
   });
   afterEach(() => {

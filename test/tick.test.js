@@ -886,12 +886,12 @@ describe("tick default idle visual", () => {
     const changes = idleStateChanges();
     assert.deepStrictEqual(
       changes.map(([, , svg]) => svg),
-      ["duck-idle-look.svg", "duck-idle-follow.svg"]
+      ["duck-idle-look.svg", "duck-idle"]
     );
   });
 
   it("unset choice leaves the pool untouched (follow sprite stays a valid pool entry)", () => {
-    const theme = makeIdleTheme([{ file: "duck-idle-follow.svg", duration: 500 }]);
+    const theme = makeIdleTheme([{ file: "duck-idle", duration: 500 }]);
     ctx = makeIdleVisualCtx(theme);
     tickApi = loader.initTick(ctx);
     tickApi.startMainTick();
@@ -902,7 +902,7 @@ describe("tick default idle visual", () => {
     const changes = idleStateChanges();
     assert.deepStrictEqual(
       changes.map(([, , svg]) => svg),
-      ["duck-idle-follow.svg", "duck-idle-follow.svg"],
+      ["duck-idle", "duck-idle"],
       "with no choice set a theme may play its follow sprite from the pool"
     );
   });
@@ -1105,7 +1105,7 @@ describe("tick conditional idle easter eggs", () => {
     mock.timers.tick(15000);
     assert.deepStrictEqual(idleFiles(), [
       "duck-outlaw-bender.svg",
-      "duck-idle-follow.svg",
+      "duck-idle",
     ]);
   });
 
@@ -1184,7 +1184,7 @@ describe("tick conditional idle easter eggs", () => {
     mock.timers.tick(1);
     assert.deepStrictEqual(idleFiles(), [
       "duck-outlaw-bender.svg",
-      "duck-idle-follow.svg",
+      "duck-idle",
     ]);
   });
 

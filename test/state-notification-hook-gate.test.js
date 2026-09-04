@@ -8,13 +8,16 @@ const { createTranslator } = require("../src/i18n");
 
 themeLoader.init(path.join(__dirname, "..", "src"));
 const defaultTheme = themeLoader.loadTheme("duck");
+// Mini mode is sprite-only.
+const { loadSpriteTheme } = require("./fixtures/sprite-theme");
+const spriteTheme = loadSpriteTheme("crab");
 
-function makeCtx({ notificationHookEnabled = true } = {}) {
+function makeCtx({ notificationHookEnabled = true, theme = defaultTheme } = {}) {
   const rendererEvents = [];
   const soundsPlayed = [];
   const ctx = {
     lang: "en",
-    theme: defaultTheme,
+    theme,
     doNotDisturb: false,
     miniTransitioning: false,
     miniMode: false,
@@ -99,14 +102,14 @@ describe("updateSession: Notification hook gate", () => {
 
   it("mutes mini alert for post-completion idle Notification while keeping bookkeeping", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-    ctx = makeCtx({ notificationHookEnabled: true });
+    ctx = makeCtx({ notificationHookEnabled: true, theme: spriteTheme });
     ctx.miniMode = true;
     api = require("../src/state")(ctx);
 
     api.updateSession("cc-1", "attention", "Stop", { agentId: "claude-code" });
     assert.strictEqual(api.getCurrentState(), "mini-happy", "completion should still show mini-happy");
 
-    mock.timers.tick(defaultTheme.timings.autoReturn["mini-happy"] + 1);
+    mock.timers.tick(spriteTheme.timings.autoReturn["mini-happy"] + 1);
     assert.strictEqual(api.getCurrentState(), "mini-idle", "mini-happy should settle before the idle ping");
     ctx._rendererEvents.length = 0;
     ctx._soundsPlayed.length = 0;

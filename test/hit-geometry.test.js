@@ -2,12 +2,12 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const path = require("path");
 
-const themeLoader = require("../src/theme-loader");
 const hitGeometry = require("../src/hit-geometry");
+const { loadSpriteTheme } = require("./fixtures/sprite-theme");
 
-themeLoader.init(path.join(__dirname, "..", "src"));
-const calico = themeLoader.loadTheme("calico");
-const duck = themeLoader.loadTheme("duck");
+// SVG/APNG hit geometry is sprite-only: measured against the sprite fixtures.
+const calico = loadSpriteTheme("calico");
+const duck = loadSpriteTheme("crab");
 
 function approx(actual, expected, epsilon = 0.01) {
   assert.ok(

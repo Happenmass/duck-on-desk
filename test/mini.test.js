@@ -2,11 +2,10 @@
 
 const { describe, it, beforeEach, afterEach, mock } = require("node:test");
 const assert = require("node:assert");
-const path = require("node:path");
 
-const themeLoader = require("../src/theme-loader");
-themeLoader.init(path.join(__dirname, "..", "src"));
-const _defaultTheme = themeLoader.loadTheme("duck");
+// Mini mode is sprite-only: exercise it on the sprite fixture.
+const { loadSpriteTheme } = require("./fixtures/sprite-theme");
+const _defaultTheme = loadSpriteTheme("crab");
 
 function cloneTheme(theme) {
   return JSON.parse(JSON.stringify(theme));

@@ -2,9 +2,8 @@
 
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
-const path = require("node:path");
 
-const themeLoader = require("../src/theme-loader");
+const { loadSpriteTheme } = require("./fixtures/sprite-theme");
 const hitGeometry = require("../src/hit-geometry");
 const {
   PET_ACCESSORY_IDS,
@@ -18,9 +17,7 @@ const {
   resolveAccessoryAwareHitBox,
 } = require("../src/pet-accessory-hitbox");
 
-const ROOT = path.join(__dirname, "..");
 const EPSILON = 1e-9;
-themeLoader.init(path.join(ROOT, "src"));
 
 function baseHitBox(theme, file) {
   return theme.fileHitBoxes[file] || theme.hitBoxes.default;
@@ -28,7 +25,7 @@ function baseHitBox(theme, file) {
 
 describe("accessory-aware hit boxes", () => {
   it("does not add a transparent hat region when no accessory is worn", () => {
-    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const theme = loadSpriteTheme("crab", { strict: true });
     for (const file of [
       "duck-working-typing.svg",
       "duck-headphones-groove.svg",
@@ -50,7 +47,7 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("keeps selected-accessory geometry size-aware without a one-size-fits-all envelope", () => {
-    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const theme = loadSpriteTheme("crab", { strict: true });
     for (const file of ["duck-working-typing.svg", "duck-working-building.svg"]) {
       const base = baseHitBox(theme, file);
       const tops = new Set();
@@ -76,7 +73,7 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("reaches the built-in safety helmet in the 3+ session building pose", () => {
-    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const theme = loadSpriteTheme("crab", { strict: true });
     const box = theme.fileHitBoxes["duck-working-building.svg"];
     const shared = theme.hitBoxes.default;
 
@@ -103,11 +100,13 @@ describe("accessory-aware hit boxes", () => {
     // This is the structural half: a followTarget accessory rides the animation
     // and needs an envelope, a static one does not, and an envelope for a file
     // that no longer animates is dead weight nobody would notice.
-    for (const themeId of ["duck", "cloudling"]) {
-      const theme = themeLoader.loadTheme(themeId, { strict: true });
+    // The crab fixture is the former built-in duck sprite, so its envelopes
+    // live under the "duck" key of the measured table.
+    for (const [themeId, tableKey] of [["crab", "duck"]]) {
+      const theme = loadSpriteTheme(themeId, { strict: true });
       const files = (theme.customization.accessories || {}).files || {};
       const animated = Object.keys(files).filter((file) => files[file] && files[file].followTarget);
-      const measured = BUILTIN_ACCESSORY_MOTION_PADDING[themeId] || {};
+      const measured = BUILTIN_ACCESSORY_MOTION_PADDING[tableKey] || {};
 
       assert.deepStrictEqual(
         animated.filter((file) => !measured[file]),
@@ -141,7 +140,7 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("keeps headphones hatless without hiding its animated mouth accessory", () => {
-    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const theme = loadSpriteTheme("crab", { strict: true });
     const file = "duck-headphones-groove.svg";
     const head = theme.customization.accessories.files[file];
     const mouth = theme.customization.mouthAccessories.files[file];
@@ -153,7 +152,7 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("keeps a separate measured envelope for every visible animated mouth descriptor", () => {
-    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const theme = loadSpriteTheme("crab", { strict: true });
     const files = theme.customization.mouthAccessories.files;
     const animated = Object.keys(files).filter((file) => files[file] && files[file].followTarget);
     const measured = BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING.duck;
@@ -164,7 +163,7 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("unions head and mouth hit geometry without reviving hidden slots", () => {
-    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const theme = loadSpriteTheme("crab", { strict: true });
     const file = "duck-working-typing.svg";
     const base = baseHitBox(theme, file);
     const head = resolvePetAccessoryPayload("wizard-hat", theme);
@@ -195,7 +194,7 @@ describe("accessory-aware hit boxes", () => {
   });
 
   it("keeps hidden accessories from changing the animation hitbox", () => {
-    const theme = themeLoader.loadTheme("duck", { strict: true });
+    const theme = loadSpriteTheme("crab", { strict: true });
     const file = "duck-collapse-sleep.svg";
     const base = baseHitBox(theme, file);
     assert.strictEqual(
