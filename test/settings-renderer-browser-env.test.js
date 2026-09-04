@@ -699,8 +699,6 @@ function loadGeneralLanguageRowForTest({
           rowLanguageDesc: "Language desc",
           langEnglish: "English",
           langChinese: "Chinese",
-          langKorean: "Korean",
-          langJapanese: "Japanese",
           toastSaveFailed: "Failed: ",
         },
         zh: {
@@ -708,8 +706,6 @@ function loadGeneralLanguageRowForTest({
           rowLanguageDesc: "Language desc",
           langEnglish: "English",
           langChinese: "Chinese",
-          langKorean: "Korean",
-          langJapanese: "Japanese",
           toastSaveFailed: "Failed: ",
         },
       },
@@ -2106,12 +2102,8 @@ describe("settings renderer browser environment", () => {
     assert.ok(i18nSource.includes("doctorOpenLog"));
     assert.ok(i18nSource.includes('doctorOpenLogOpened: "Debug log opened"'));
     assert.ok(i18nSource.includes('doctorOpenLogOpened: "已打开调试日志"'));
-    assert.ok(i18nSource.includes('doctorOpenLogOpened: "디버그 로그를 열었습니다"'));
-    assert.ok(i18nSource.includes('doctorOpenLogOpened: "デバッグログを開きました"'));
     assert.ok(!i18nSource.includes('doctorOpenLogOpened: "Debug log opened."'));
     assert.ok(!i18nSource.includes('doctorOpenLogOpened: "已打开调试日志。"'));
-    assert.ok(!i18nSource.includes('doctorOpenLogOpened: "디버그 로그를 열었습니다."'));
-    assert.ok(!i18nSource.includes('doctorOpenLogOpened: "デバッグログを開きました。"'));
   });
 
   it("keeps collapsible focus outlines aligned with the card's rounded corners", () => {
@@ -3006,7 +2998,7 @@ describe("settings renderer browser environment", () => {
     assert.match(css, /\.language-picker\.open-up \.language-picker-menu\s*\{[\s\S]*bottom:\s*calc\(100% \+ 6px\);/);
   });
 
-  it("opens downward for the captured three-line pt-BR/es default-window geometry", () => {
+  it("opens downward for the captured three-line default-window geometry", () => {
     const harness = loadSharedLanguagePickerForTest({
       options: SUPPORTED_LANGS,
       innerHeight: 668,
@@ -3896,8 +3888,8 @@ describe("settings renderer browser environment", () => {
     assert.ok(i18nSource.includes("later session states may dismiss it earlier"));
     assert.ok(i18nSource.includes("自动关闭上限"));
     assert.ok(i18nSource.includes("后续状态可能提前关闭"));
-    assert.ok(i18nSource.includes("자동 종료 상한"));
-    assert.ok(i18nSource.includes("후속 상태가 더 일찍 닫을 수 있습니다"));
+    assert.ok(i18nSource.includes("自動關閉的上限"));
+    assert.ok(i18nSource.includes("後面有狀態變化可能提前關掉"));
   });
 
   it("auto-commits bubble seconds shortly after valid input instead of waiting only for change", () => {
@@ -8442,20 +8434,16 @@ describe("settings renderer browser environment", () => {
     const strings = loadSettingsI18nForTest();
     assert.strictEqual(strings.en.animOverridesReplacementConfig, "Animation override settings");
     assert.strictEqual(strings.zh.animOverridesReplacementConfig, "动画覆盖设置");
-    assert.strictEqual(strings.ko.animOverridesReplacementConfig, "애니메이션 덮어쓰기 설정");
-    assert.strictEqual(strings.ja.animOverridesReplacementConfig, "アニメーション上書き設定");
+    assert.strictEqual(strings["zh-TW"].animOverridesReplacementConfig, "動畫自訂設定");
     assert.strictEqual(strings.en.animOverridesImport, "Import config…");
     assert.strictEqual(strings.zh.animOverridesImport, "导入配置…");
-    assert.strictEqual(strings.ko.animOverridesImport, "설정 가져오기…");
-    assert.strictEqual(strings.ja.animOverridesImport, "設定をインポート…");
+    assert.strictEqual(strings["zh-TW"].animOverridesImport, "匯入設定…");
     assert.strictEqual(strings.en.animOverridesExport, "Export config…");
     assert.strictEqual(strings.zh.animOverridesExport, "导出配置…");
-    assert.strictEqual(strings.ko.animOverridesExport, "설정 내보내기…");
-    assert.strictEqual(strings.ja.animOverridesExport, "設定をエクスポート…");
+    assert.strictEqual(strings["zh-TW"].animOverridesExport, "匯出設定…");
     assert.strictEqual(strings.en.animOverridesResetAll, "Restore theme defaults");
     assert.strictEqual(strings.zh.animOverridesResetAll, "恢复主题默认");
-    assert.strictEqual(strings.ko.animOverridesResetAll, "테마 기본값으로 복원");
-    assert.strictEqual(strings.ja.animOverridesResetAll, "テーマのデフォルトに戻す");
+    assert.strictEqual(strings["zh-TW"].animOverridesResetAll, "還原主題預設值");
     assert.match(
       css,
       /@media \(max-width:\s*640px\)\s*\{[\s\S]*\.anim-override-meta\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/
@@ -8491,10 +8479,8 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(strings.en.animOverridesFadeOut, "Fade out on exit");
     assert.strictEqual(strings.zh.animOverridesFadeIn, "进入时淡入");
     assert.strictEqual(strings.zh.animOverridesFadeOut, "退出时淡出");
-    assert.strictEqual(strings.ko.animOverridesFadeIn, "진입 시 페이드 인");
-    assert.strictEqual(strings.ko.animOverridesFadeOut, "종료 시 페이드 아웃");
-    assert.strictEqual(strings.ja.animOverridesFadeIn, "開始時フェードイン");
-    assert.strictEqual(strings.ja.animOverridesFadeOut, "終了時フェードアウト");
+    assert.strictEqual(strings["zh-TW"].animOverridesFadeIn, "進入時淡化顯示");
+    assert.strictEqual(strings["zh-TW"].animOverridesFadeOut, "退出時淡化隱藏");
 
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
     assert.match(

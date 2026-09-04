@@ -255,14 +255,6 @@ const detailEl = document.getElementById("detail");
 const actionsEl = document.getElementById("actions");
 
 function modeLabel(mode, lang) {
-  const ko = {
-    checking: "\uD655\uC778 \uC911",
-    available: "\uC5C5\uB370\uC774\uD2B8 \uAC00\uB2A5",
-    downloading: "\uB2E4\uC6B4\uB85C\uB4DC \uC911",
-    ready: "\uC900\uBE44 \uC644\uB8CC",
-    "up-to-date": "\uCD5C\uC2E0 \uBC84\uC804",
-    error: "\uC624\uB958",
-  };
   const zh = {
     checking: "检查中",
     available: "可更新",
@@ -287,30 +279,11 @@ function modeLabel(mode, lang) {
     "up-to-date": "Latest",
     error: "Error",
   };
-  const ptBR = {
-    checking: "Verificando",
-    available: "Disponível",
-    downloading: "Baixando",
-    ready: "Pronta",
-    "up-to-date": "Atualizado",
-    error: "Erro",
-  };
-  const es = {
-    checking: "Buscando",
-    available: "Disponible",
-    downloading: "Descargando",
-    ready: "Lista",
-    "up-to-date": "Última versión",
-    error: "Error",
-  };
 
   const dictMap = {
     zh,
-    ko,
     en,
     "zh-TW": zhTW,
-    "pt-BR": ptBR,
-    es,
   };
 
   const dict = dictMap[lang] || en;

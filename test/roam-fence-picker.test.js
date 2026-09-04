@@ -212,11 +212,11 @@ test("picker refuses to claim success when the effective pet cannot fit on the d
   harness.runtime.dispose();
 });
 
-test("picker preserves Brazilian Portuguese instead of falling back to English", async () => {
+test("picker preserves Traditional Chinese instead of falling back to English", async () => {
   const harness = makeRuntime();
-  const resultPromise = harness.runtime.selectArea({ lang: "pt-BR" });
+  const resultPromise = harness.runtime.selectArea({ lang: "zh-TW" });
   const win = finishStartup(harness, false);
-  assert.strictEqual(win.webContents.sent[0][1].lang, "pt-BR");
+  assert.strictEqual(win.webContents.sent[0][1].lang, "zh-TW");
   harness.ipcMain.emit(APPLIED_CHANNEL, pickerEvent(win));
   harness.ipcMain.emit(RESULT_CHANNEL, pickerEvent(win), { action: "cancel" });
   assert.deepStrictEqual(await resultPromise, { status: "cancel" });
@@ -226,7 +226,7 @@ test("picker preserves Brazilian Portuguese instead of falling back to English",
 test("picker ignores spoofed IPC senders and coalesces duplicate requests", async () => {
   const harness = makeRuntime();
   const first = harness.runtime.selectArea({ lang: "en" });
-  const second = harness.runtime.selectArea({ lang: "ja" });
+  const second = harness.runtime.selectArea({ lang: "zh" });
   assert.strictEqual(first, second);
   assert.strictEqual(FakeBrowserWindow.instances.length, 1);
   assert.strictEqual(FakeBrowserWindow.instances[0].shown, false, "duplicate startup must not expose a blank overlay");

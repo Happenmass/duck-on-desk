@@ -81,7 +81,7 @@ function runtimeDictRenderers() {
 
 describe("i18n locales", () => {
   it("lists all selectable languages in supported languages", () => {
-    assert.deepStrictEqual(SUPPORTED_LANGS, ["en", "zh", "zh-TW", "ko", "ja", "pt-BR", "es"]);
+    assert.deepStrictEqual(SUPPORTED_LANGS, ["en", "zh", "zh-TW"]);
   });
 
   it("keeps all locale keysets aligned with English", () => {
@@ -119,10 +119,6 @@ describe("i18n locales", () => {
         en: "More supported tools",
         zh: "其他支持的工具",
         "zh-TW": "其他支援的工具",
-        ko: "지원되는 기타 도구",
-        ja: "その他の対応ツール",
-        "pt-BR": "Outras ferramentas compatíveis",
-        es: "Otras herramientas compatibles",
       }
     );
     // The sibling section IS a detection claim and must keep saying so.
@@ -219,124 +215,18 @@ describe("i18n locales", () => {
     }
   });
 
-  // Parity passes on "1 ativas" — the key and the placeholder are both there,
-  // only the grammar is wrong. Portuguese inflects for number, so these pin the
-  // rendered text at 1 and at N.
-  it("inflects pt-BR count strings whose locale entry is a function", () => {
-    const pt = loadSettingsI18nStrings()["pt-BR"];
-
-    assert.strictEqual(pt.doctorAgentSummaryAttention(1), "1 precisa de atenção");
-    assert.strictEqual(pt.doctorAgentSummaryAttention(4), "4 precisam de atenção");
-    assert.strictEqual(pt.doctorAgentSummarySkipped(1), "1 ignorado");
-    assert.strictEqual(pt.doctorAgentSummarySkipped(4), "4 ignorados");
-
-    const oneOfEach = pt.toastCodexPetsRefreshOk(1, 1, 1, 1, 1, false);
-    assert.match(oneOfEach, /1 novo, 1 atualizado, 1 sem mudança, 1 removido, 1 inválido/);
-    const manyOfEach = pt.toastCodexPetsRefreshOk(2, 2, 2, 2, 2, false);
-    assert.match(manyOfEach, /2 novos, 2 atualizados, 2 sem mudança, 2 removidos, 2 inválidos/);
-
-    assert.match(pt.toastAnimOverridesExportOk(1, "/tmp/o.json"), /\b1 tema\b/);
-    assert.match(pt.toastAnimOverridesExportOk(2, "/tmp/o.json"), /\b2 temas\b/);
-    assert.match(pt.toastAnimOverridesImportOk(1), /\b1 tema\b/);
-    assert.match(pt.toastAnimOverridesImportOk(2), /\b2 temas\b/);
-  });
-
-  it("keeps pt-BR count strings number-invariant where the locale entry is a plain string", () => {
-    const settings = loadSettingsI18nStrings()["pt-BR"];
-    const runtime = i18n["pt-BR"];
-
-    // [template, placeholder, rendered at 1, rendered at 4]
-    const cases = [
-      [runtime.dashboardCount, "{n}", "1 em atividade", "4 em atividade"],
-      [runtime.sessionHudActive, "{n}", "1 em atividade", "4 em atividade"],
-      [runtime.sessionHudOtherActive, "{n}", "mais 1 em atividade", "mais 4 em atividade"],
-      [settings.doctorIssueCount, "{count}", "1 problema(s)", "4 problema(s)"],
-    ];
-    for (const [template, placeholder, one, many] of cases) {
-      assert.strictEqual(template.replace(placeholder, "1"), one);
-      assert.strictEqual(template.replace(placeholder, "4"), many);
-    }
-
-    // Counted toasts: the participle must not commit to a number.
-    for (const [template, tokens] of [
-      [settings.toastAgentInstallHintPartial, ["{success}", "{failed}"]],
-      [settings.toastAgentCleanupHintPartial, ["{success}", "{failed}"]],
-      [settings.toastAgentInstallHintPartialSkipped, ["{success}"]],
-    ]) {
-      let rendered = template;
-      for (const token of tokens) rendered = rendered.replace(token, "1");
-      assert.match(rendered, /\(s\)/, `expected invariant wording at a count of 1: ${rendered}`);
-    }
-
-    // Appended after a name list that can hold a single agent.
-    assert.strictEqual(settings.doctorAgentSummaryNeedsAttention, "precisa(m) de atenção");
-  });
-
-  it("keeps Spanish runtime count strings grammatical at one and many", () => {
-    const es = i18n.es;
-    const cases = [
-      [es.dashboardCount, "1 en actividad", "4 en actividad"],
-      [es.sessionHudActive, "1 en actividad", "4 en actividad"],
-      [es.sessionHudOtherActive, "1 más en actividad", "4 más en actividad"],
-    ];
-    for (const [template, one, many] of cases) {
-      assert.strictEqual(template.replace("{n}", "1"), one);
-      assert.strictEqual(template.replace("{n}", "4"), many);
-    }
-  });
-
-  it("inflects Spanish Settings count strings", () => {
-    const es = loadSettingsI18nStrings().es;
-    assert.strictEqual(es.doctorAgentSummaryAttention(1), "1 requiere atención");
-    assert.strictEqual(es.doctorAgentSummaryAttention(4), "4 requieren atención");
-    assert.strictEqual(es.doctorAgentSummarySkipped(1), "1 omitido");
-    assert.strictEqual(es.doctorAgentSummarySkipped(4), "4 omitidos");
-
-    const oneOfEach = es.toastCodexPetsRefreshOk(1, 1, 1, 1, 1, false);
-    assert.match(oneOfEach, /1 nuevo, 1 actualizado, 1 sin cambios, 1 eliminado, 1 inválido/);
-    const manyOfEach = es.toastCodexPetsRefreshOk(2, 2, 2, 2, 2, false);
-    assert.match(manyOfEach, /2 nuevos, 2 actualizados, 2 sin cambios, 2 eliminados, 2 inválidos/);
-  });
-
-  it("keeps Spanish plain count strings number-invariant", () => {
-    const es = loadSettingsI18nStrings().es;
-    assert.strictEqual(es.doctorIssueCount.replace("{count}", "1"), "Problemas: 1");
-    assert.strictEqual(es.doctorIssueCount.replace("{count}", "4"), "Problemas: 4");
-
-    for (const [template, one, many] of [
-      [es.toastAgentInstallHintPartialSkipped, "Instalaciones completadas: 1.", "Instalaciones completadas: 4."],
-      [es.toastAgentInstallHintPartial, "Instalaciones completadas: 1; con error: 1.", "Instalaciones completadas: 4; con error: 4."],
-      [es.toastAgentCleanupHintPartial, "Eliminaciones completadas: 1; con error: 1.", "Eliminaciones completadas: 4; con error: 4."],
-    ]) {
-      const render = (count) => template
-        .replace("{success}", String(count))
-        .replace("{failed}", String(count));
-      assert.match(render(1), new RegExp(`^${regexEscape(one)}`));
-      assert.match(render(4), new RegExp(`^${regexEscape(many)}`));
-    }
-
-    assert.strictEqual(
-      es.toastAgentInstallHintPartialSkipped
-        .replace("{success}", "1")
-        .replace("{agents}", "Codex y OpenCode"),
-      "Instalaciones completadas: 1. No se encontró instalación local de Codex y OpenCode."
-    );
-  });
-
-  it("keeps Spanish Settings copy aligned with product semantics changed since the original locale contribution", () => {
-    const es = loadSettingsI18nStrings().es;
-    const expected = {
-      sidebarAnimOverrides: "Animación y sonido",
-      agentsSubtitle: "Descubre automáticamente herramientas de IA en este equipo y en WSL, o añade manualmente una IA que Duck aún no incluya. Una vez conectada, gestiona aquí su estado, sus solicitudes de permiso y sus notificaciones.",
-      shortcutLabelPetReveal: "Clic en la mascota: Mostrar superposiciones de la mascota",
-      bubbleNotificationDesc: "El interruptor controla los avisos pasivos de Codex. Los segundos fijan el límite máximo de cierre automático; estados de sesión posteriores pueden descartarlo antes. 0 los oculta.",
-      langChinese: "简体中文",
-      langTraditionalChinese: "繁體中文",
-      themeSubtitle: "Elige y personaliza tu mascota de escritorio.",
-      animOverridesTitle: "Animación y sonido",
-    };
-    for (const [key, value] of Object.entries(expected)) {
-      assert.strictEqual(es[key], value, key);
+  // The Settings table stores count formatters as functions; scripts/trim-i18n.js
+  // regenerates that file, and a JSON-only serializer would silently drop them.
+  it("keeps Settings count formatters callable in every supported locale", () => {
+    const strings = loadSettingsI18nStrings();
+    for (const lang of SUPPORTED_LANGS) {
+      const dict = strings[lang];
+      assert.strictEqual(typeof dict.doctorAgentSummaryOk, "function", `${lang}.doctorAgentSummaryOk`);
+      assert.match(dict.doctorAgentSummaryOk(3), /3/, `${lang}.doctorAgentSummaryOk should render its count`);
+      assert.strictEqual(typeof dict.toastCodexPetsRefreshOk, "function", `${lang}.toastCodexPetsRefreshOk`);
+      assert.match(dict.toastCodexPetsRefreshOk(1, 2, 3, 4, 5, false), /1[\s\S]*2[\s\S]*3[\s\S]*4[\s\S]*5/, lang);
+      assert.strictEqual(typeof dict.toastSoundOverrideSetOk, "function", `${lang}.toastSoundOverrideSetOk`);
+      assert.ok(dict.toastSoundOverrideSetOk("Idle", "/tmp/a.wav").trim(), `${lang}.toastSoundOverrideSetOk`);
     }
   });
 

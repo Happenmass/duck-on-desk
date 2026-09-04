@@ -4,14 +4,6 @@
 <h1 align="center">Duck 桌宠</h1>
 <p align="center">
   <a href="README.md">English</a>
-  ·
-  <a href="README.zh-TW.md">繁體中文</a>
-  ·
-  <a href="README.ko-KR.md">한국어</a>
-  ·
-  <a href="README.ja-JP.md">日本語</a>
-  ·
-  <a href="README.es.md">Español</a>
 </p>
 <p align="center">
   <a href="https://github.com/rullerzhou-afk/duck-on-desk/releases"><img src="https://img.shields.io/github/v/release/rullerzhou-afk/duck-on-desk" alt="Version"></a>

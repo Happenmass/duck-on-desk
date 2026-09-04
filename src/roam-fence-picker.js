@@ -9,7 +9,7 @@ const STATE_CHANNEL = "roam-fence-picker:state";
 const RESULT_CHANNEL = "roam-fence-picker:result";
 const STARTUP_TIMEOUT_MS = 5000;
 const FALLBACK_WORK_AREA = { x: 0, y: 0, width: 1280, height: 800 };
-const SUPPORTED_LANGS = new Set(["en", "zh", "zh-TW", "ko", "ja", "pt-BR", "es"]);
+const SUPPORTED_LANGS = new Set(["en", "zh", "zh-TW"]);
 
 function isUsableRect(value) {
   return !!value

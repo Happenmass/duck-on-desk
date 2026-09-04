@@ -123,7 +123,7 @@ const SCHEMA = {
   preMiniX: { type: "number", default: 0, validate: (v) => Number.isFinite(v) },
   preMiniY: { type: "number", default: 0, validate: (v) => Number.isFinite(v) },
   // Pure data prefs
-  lang: { type: "string", default: "en", enum: ["en", "zh", "zh-TW", "ko", "ja", "pt-BR", "es"] },
+  lang: { type: "string", default: "en", enum: ["en", "zh", "zh-TW"] },
   showTray: { type: "boolean", default: true },
   // Default off (macOS): a fresh install runs as an accessory/agent app — pet +
   // menu-bar icon, no Dock tile. Existing users keep their Dock — a persisted
@@ -1359,11 +1359,6 @@ function mapLocaleToLang(locale) {
     if (/hant/.test(l) || /^zh-(tw|hk|mo)\b/.test(l)) return "zh-TW";
     return "zh";
   }
-  if (l === "ko" || l.startsWith("ko-")) return "ko";
-  if (l === "ja" || l.startsWith("ja-")) return "ja";
-  // Regional locale: only pt-BR itself auto-selects it.
-  if (l === "pt-br") return "pt-BR";
-  if (l === "es" || l.startsWith("es-")) return "es";
   return "en";
 }
 

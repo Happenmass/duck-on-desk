@@ -18,10 +18,6 @@ const PACKAGED_ICON_ASSETS = [
 const LOCALIZED_READMES = [
   "README.md",
   "README.zh-CN.md",
-  "README.zh-TW.md",
-  "README.ko-KR.md",
-  "README.ja-JP.md",
-  "README.es.md",
 ];
 
 test("ordinary tray and README callers use the canonical application icon", () => {

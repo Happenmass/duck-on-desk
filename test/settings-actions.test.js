@@ -45,8 +45,8 @@ describe("updateRegistry pure-data validators", () => {
   it("lang validates against the enum", () => {
     assert.strictEqual(updateRegistry.lang("en", { snapshot: baseSnapshot }).status, "ok");
     assert.strictEqual(updateRegistry.lang("zh", { snapshot: baseSnapshot }).status, "ok");
-    assert.strictEqual(updateRegistry.lang("ko", { snapshot: baseSnapshot }).status, "ok");
-    assert.strictEqual(updateRegistry.lang("es", { snapshot: baseSnapshot }).status, "ok");
+    assert.strictEqual(updateRegistry.lang("zh-TW", { snapshot: baseSnapshot }).status, "ok");
+    assert.strictEqual(updateRegistry.lang("es", { snapshot: baseSnapshot }).status, "error");
     assert.strictEqual(updateRegistry.lang("klingon", { snapshot: baseSnapshot }).status, "error");
   });
 

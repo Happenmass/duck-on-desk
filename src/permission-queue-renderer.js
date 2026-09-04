@@ -12,10 +12,6 @@ const STRINGS = {
   en: { pending: "{count} more pending", view: "View ›", title: "All {total} · {hidden} collapsed", close: "Collapse", empty: "No pending requests", answer: "Answer", viewPlan: "View plan", viewRequest: "View", locked: "Finish typing to switch" },
   zh: { pending: "还有 {count} 个待处理", view: "查看 ›", title: "全部 {total} 个 · 其中 {hidden} 个已收起", close: "收起", empty: "没有待处理请求", answer: "回答", viewPlan: "查看计划", viewRequest: "查看", locked: "请先完成当前输入" },
   "zh-TW": { pending: "還有 {count} 個待處理", view: "查看 ›", title: "全部 {total} 個 · 其中 {hidden} 個已收合", close: "收合", empty: "沒有待處理請求", answer: "回答", viewPlan: "查看計畫", viewRequest: "查看", locked: "請先完成目前輸入" },
-  ko: { pending: "대기 중인 요청 {count}개 더 있음", view: "보기 ›", title: "전체 {total}개 · {hidden}개 접힘", close: "접기", empty: "대기 중인 요청 없음", answer: "답변", viewPlan: "계획 보기", viewRequest: "보기", locked: "입력을 마친 후 전환하세요" },
-  ja: { pending: "保留中のリクエストがあと {count} 件", view: "表示 ›", title: "全 {total} 件 · {hidden} 件を収納", close: "閉じる", empty: "保留中のリクエストはありません", answer: "回答", viewPlan: "計画を表示", viewRequest: "表示", locked: "入力を完了してから切り替えてください" },
-  "pt-BR": { pending: "Mais {count} pendentes", view: "Ver ›", title: "Todos: {total} · {hidden} recolhidos", close: "Recolher", empty: "Nenhuma solicitação pendente", answer: "Responder", viewPlan: "Ver plano", viewRequest: "Ver", locked: "Termine de digitar para alternar" },
-  es: { pending: "{count} pendientes más", view: "Ver ›", title: "Todas: {total} · {hidden} contraídas", close: "Contraer", empty: "No hay solicitudes pendientes", answer: "Responder", viewPlan: "Ver plan", viewRequest: "Ver", locked: "Termina de escribir para cambiar" },
 };
 
 let currentPayload = null;

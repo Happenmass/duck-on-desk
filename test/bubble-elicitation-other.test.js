@@ -12,10 +12,8 @@ describe("AskUserQuestion bubble Other option", () => {
     assert.match(bubbleRenderer, /otherPlaceholder: "Type your answer…",/);
     assert.match(bubbleRenderer, /other: "\\u5176\\u4ED6",/);
     assert.match(bubbleRenderer, /otherPlaceholder: "\\u8F93\\u5165\\u4F60\\u7684\\u56DE\\u7B54\\u2026",/);
-    assert.match(bubbleRenderer, /other: "\\uAE30\\uD0C0",/);
-    assert.match(bubbleRenderer, /otherPlaceholder: "\\uC9C1\\uC811 \\uC785\\uB825\\u2026",/);
-    assert.match(bubbleRenderer, /other: "その他",/);
-    assert.match(bubbleRenderer, /otherPlaceholder: "回答を入力…",/);
+    assert.match(bubbleRenderer, /other: "其他",/);
+    assert.match(bubbleRenderer, /otherPlaceholder: "輸入你的回答…",/);
   });
 
   it("renders a client-side Other option with a folding textarea", () => {

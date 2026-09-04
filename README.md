@@ -7,14 +7,6 @@
 
 <p align="center">
   <a href="README.zh-CN.md">中文版</a>
-  ·
-  <a href="README.zh-TW.md">繁體中文</a>
-  ·
-  <a href="README.ko-KR.md">한국어</a>
-  ·
-  <a href="README.ja-JP.md">日本語</a>
-  ·
-  <a href="README.es.md">Español</a>
 </p>
 <p align="center">
   <sub>🌏 Don't see your language? <a href="https://github.com/rullerzhou-afk/duck-on-desk/pulls">Open a PR</a> to add one — Français, Deutsch, etc. all welcome.</sub>

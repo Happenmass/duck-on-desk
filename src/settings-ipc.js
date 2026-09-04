@@ -20,20 +20,12 @@ const SOUND_OVERRIDE_DIALOG_STRINGS = {
   en: { title: "Choose a sound file", filterName: "Audio" },
   zh: { title: "选择音效文件", filterName: "音频" },
   "zh-TW": { title: "選擇音效檔案", filterName: "音效" },
-  ko: { title: "음향 파일 선택", filterName: "오디오" },
-  ja: { title: "音声ファイルを選択", filterName: "音声" },
-  "pt-BR": { title: "Escolha um arquivo de som", filterName: "Áudio" },
-  es: { title: "Elige un archivo de sonido", filterName: "Audio" },
 };
 
 const AGENT_DISCOVERY_DIALOG_STRINGS = {
   en: { file: "Choose a tool executable", directory: "Choose a tool installation folder" },
   zh: { file: "选择工具可执行文件", directory: "选择工具安装目录" },
   "zh-TW": { file: "選擇工具執行檔", directory: "選擇工具安裝目錄" },
-  ko: { file: "도구 실행 파일 선택", directory: "도구 설치 폴더 선택" },
-  ja: { file: "ツールの実行ファイルを選択", directory: "ツールのインストールフォルダーを選択" },
-  "pt-BR": { file: "Escolha o executável da ferramenta", directory: "Escolha a pasta de instalação da ferramenta" },
-  es: { file: "Elige el ejecutable de la herramienta", directory: "Elige la carpeta de instalación de la herramienta" },
 };
 
 const REMOVE_THEME_DIALOG_STRINGS = {
@@ -54,30 +46,6 @@ const REMOVE_THEME_DIALOG_STRINGS = {
     cancel: "取消",
     message: (name) => `確定要刪除主題「${name}」？`,
     detail: "此動作無法復原。此主題的所有檔案都會從磁碟移除。",
-  },
-  ko: {
-    delete: "삭제",
-    cancel: "취소",
-    message: (name) => `테마 "${name}"을(를) 삭제할까요?`,
-    detail: "이 작업은 되돌릴 수 없습니다. 이 테마의 모든 파일이 디스크에서 제거됩니다.",
-  },
-  ja: {
-    delete: "削除",
-    cancel: "キャンセル",
-    message: (name) => `テーマ "${name}" を削除しますか？`,
-    detail: "この操作は元に戻せません。このテーマのすべてのファイルがディスクから削除されます。",
-  },
-  "pt-BR": {
-    delete: "Excluir",
-    cancel: "Cancelar",
-    message: (name) => `Excluir o tema "${name}"?`,
-    detail: "Isso não pode ser desfeito. Todos os arquivos deste tema serão removidos do disco.",
-  },
-  es: {
-    delete: "Eliminar",
-    cancel: "Cancelar",
-    message: (name) => `¿Eliminar el tema "${name}"?`,
-    detail: "Esta acción no se puede deshacer. Todos los archivos de este tema se eliminarán del disco.",
   },
 };
 

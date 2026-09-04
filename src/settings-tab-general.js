@@ -95,7 +95,7 @@
   let ops = null;
   let i18n = null;
 
-  const LANGUAGE_OPTIONS = ["en", "zh", "zh-TW", "ko", "ja", "pt-BR", "es"];
+  const LANGUAGE_OPTIONS = ["en", "zh", "zh-TW"];
   const ROAM_MOVEMENT_NATURAL = "natural";
   const ROAM_MOVEMENT_AXIS = "axis";
 
@@ -730,10 +730,6 @@
     "en": "langEnglish",
     "zh": "langChinese",
     "zh-TW": "langTraditionalChinese",
-    "ko": "langKorean",
-    "ja": "langJapanese",
-    "pt-BR": "langPortugueseBrazil",
-    "es": "langSpanish",
   };
 
   function buildLanguageRow() {

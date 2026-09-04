@@ -209,13 +209,13 @@ test("keyboard can create, move, resize, and confirm a selection", () => {
   ]);
 });
 
-test("renderer provides Brazilian Portuguese picker copy", () => {
-  const harness = createHarness("pt-BR");
-  assert.strictEqual(harness.document.documentElement.lang, "pt-BR");
-  assert.strictEqual(harness.title.textContent, "Escolher a área de atividade do Duck");
-  assert.match(harness.hint.textContent, /Shift\+setas/);
-  assert.strictEqual(harness.confirm.textContent, "Usar esta área");
-  assert.strictEqual(harness.cancel.textContent, "Cancelar");
+test("renderer provides Traditional Chinese picker copy", () => {
+  const harness = createHarness("zh-TW");
+  assert.strictEqual(harness.document.documentElement.lang, "zh-TW");
+  assert.strictEqual(harness.title.textContent, "框選 Duck 的活動範圍");
+  assert.match(harness.hint.textContent, /Shift\+方向鍵/);
+  assert.strictEqual(harness.confirm.textContent, "使用此範圍");
+  assert.strictEqual(harness.cancel.textContent, "取消");
 });
 
 test("Enter on Cancel uses the button action instead of the global confirm shortcut", () => {

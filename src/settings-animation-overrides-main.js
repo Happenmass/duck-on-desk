@@ -47,34 +47,6 @@ const ANIMATION_OVERRIDES_EXPORT_DIALOG_STRINGS = {
     jsonFilter: "Duck 動畫與音效自訂設定",
     nothingToExport: "目前沒有可匯出的自訂設定。",
   },
-  ko: {
-    saveTitle: "애니메이션 덮어쓰기 내보내기",
-    openTitle: "애니메이션 덮어쓰기 가져오기",
-    defaultName: (ts) => `duck-animation-overrides-${ts}.json`,
-    jsonFilter: "Duck 애니메이션 덮어쓰기",
-    nothingToExport: "내보낼 애니메이션 덮어쓰기가 없습니다. 먼저 무언가를 덮어써 보세요.",
-  },
-  ja: {
-    saveTitle: "アニメーション差し替えをエクスポート",
-    openTitle: "アニメーション差し替えをインポート",
-    defaultName: (ts) => `duck-animation-overrides-${ts}.json`,
-    jsonFilter: "Duck アニメーション差し替え",
-    nothingToExport: "エクスポートするアニメーション差し替えがありません。先に何かを差し替えてください。",
-  },
-  "pt-BR": {
-    saveTitle: "Exportar as personalizações de animação",
-    openTitle: "Importar personalizações de animação",
-    defaultName: (ts) => `duck-animation-overrides-${ts}.json`,
-    jsonFilter: "Personalizações de animação do Duck",
-    nothingToExport: "Não há personalizações de animação para exportar. Personalize alguma coisa primeiro.",
-  },
-  es: {
-    saveTitle: "Exportar personalizaciones de animación",
-    openTitle: "Importar personalizaciones de animación",
-    defaultName: (ts) => `duck-animation-overrides-${ts}.json`,
-    jsonFilter: "Personalizaciones de animación de Duck",
-    nothingToExport: "No hay personalizaciones de animación para exportar. Personaliza algo primero.",
-  },
 };
 
 function requiredDependency(value, name, owner) {

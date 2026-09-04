@@ -7,23 +7,18 @@ const vm = require("node:vm");
 const test = require("node:test");
 
 const ROOT = path.join(__dirname, "..");
-const TABLE_READMES = ["README.md", "README.ko-KR.md", "README.ja-JP.md", "README.es.md"];
-const ALL_READMES = [
-  "README.md",
-  "README.zh-CN.md",
-  "README.zh-TW.md",
-  "README.ko-KR.md",
-  "README.ja-JP.md",
-  "README.es.md",
-];
+const TABLE_READMES = ["README.md"];
+const ALL_READMES = ["README.md", "README.zh-CN.md"];
 
-test("all other README variants expose Spanish navigation without a Spanish self-link", () => {
-  for (const file of ALL_READMES.filter((name) => name !== "README.es.md")) {
+test("every README variant links to its sibling without linking to itself", () => {
+  for (const file of ALL_READMES) {
     const source = fs.readFileSync(path.join(ROOT, file), "utf8");
-    assert.match(source, /href="README\.es\.md"/, `${file} should link to README.es.md`);
+    for (const sibling of ALL_READMES) {
+      const link = new RegExp(`href="${sibling.replace(/\./g, "\\.")}"`);
+      if (sibling === file) assert.doesNotMatch(source, link, `${file} should not link to itself`);
+      else assert.match(source, link, `${file} should link to ${sibling}`);
+    }
   }
-  const spanish = fs.readFileSync(path.join(ROOT, "README.es.md"), "utf8");
-  assert.doesNotMatch(spanish, /href="README\.es\.md"/, "README.es.md should not link to itself");
 });
 
 const VERIFIED_GITHUB_CONTRIBUTORS = [

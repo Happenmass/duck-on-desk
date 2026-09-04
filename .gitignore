@@ -37,7 +37,6 @@ docs/**
 !docs/guides/release-signing.md
 !docs/guides/codex-wsl-clarification.md
 !docs/guides/codex-wsl-clarification.zh-CN.md
-!docs/guides/codex-wsl-clarification.ko-KR.md
 !docs/investigations/
 !docs/investigations/permission-hook-fail-deny-investigation.md
 !docs/investigations/codex-subagent-session-meta.md
@@ -118,6 +117,7 @@ scripts/manual/*
 !scripts/windows-process-chain-benchmark.js
 !scripts/windows-process-chain-observer.ps1
 !scripts/rename-from-clawd.mjs
+!scripts/trim-i18n.js
 !scripts/validate-theme.js
 !scripts/create-theme.js
 !scripts/export-agent-icons.js

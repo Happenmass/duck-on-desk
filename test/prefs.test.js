@@ -317,7 +317,7 @@ describe("prefs.validate", () => {
 
   it("keeps valid fields verbatim", () => {
     const v = prefs.validate({
-      lang: "ko",
+      lang: "zh-TW",
       soundMuted: true,
       soundVolume: 0.4,
       lowPowerIdleMode: true,
@@ -344,7 +344,7 @@ describe("prefs.validate", () => {
       petAccessory: { duck: "wizard-hat", cloudling: "halo" },
       petMouthAccessory: { duck: "cigarette" },
     });
-    assert.strictEqual(v.lang, "ko");
+    assert.strictEqual(v.lang, "zh-TW");
     assert.strictEqual(v.soundMuted, true);
     assert.strictEqual(v.soundVolume, 0.4);
     assert.strictEqual(v.lowPowerIdleMode, true);
@@ -1658,14 +1658,14 @@ describe("prefs.load", () => {
     assert.strictEqual(current.snapshot.lang, "zh");
 
     const futurePath = makeTempPath("v20.json");
-    fs.writeFileSync(futurePath, JSON.stringify({ version: 20, lang: "ja" }), "utf8");
+    fs.writeFileSync(futurePath, JSON.stringify({ version: 20, lang: "zh-TW" }), "utf8");
     const originalWarn = console.warn;
     console.warn = () => {};
     try {
       const future = prefs.load(futurePath);
       assert.strictEqual(future.locked, true);
       assert.strictEqual(future.snapshot.version, 20);
-      assert.strictEqual(future.snapshot.lang, "ja");
+      assert.strictEqual(future.snapshot.lang, "zh-TW");
     } finally {
       console.warn = originalWarn;
     }
@@ -2197,12 +2197,8 @@ describe("prefs.mapLocaleToLang (device locale → UI language)", () => {
     ["en-US", "en"], ["en", "en"],
     ["zh-CN", "zh"], ["zh-Hans", "zh"], ["zh", "zh"],
     ["zh-TW", "zh-TW"], ["zh-Hant", "zh-TW"], ["zh-HK", "zh-TW"], ["zh-Hant-TW", "zh-TW"],
-    ["ko-KR", "ko"], ["ko", "ko"],
-    ["ja-JP", "ja"], ["ja", "ja"],
-    ["pt-BR", "pt-BR"], ["pt_BR", "pt-BR"],
-    // Only the shipped regional variant is auto-selected.
-    ["pt", "en"], ["pt-PT", "en"], ["pt-AO", "en"],
-    ["es-MX", "es"], ["es-ES", "es"], ["es", "es"],
+    // Locales whose UI language was dropped now seed English.
+    ["ko-KR", "en"], ["ja-JP", "en"], ["pt-BR", "en"], ["es-MX", "en"],
     ["fr-FR", "en"], ["de", "en"],
   ];
   for (const [input, expected] of cases) {
@@ -2219,7 +2215,7 @@ describe("prefs.mapLocaleToLang (device locale → UI language)", () => {
   });
 
   it("only ever returns a value inside the lang enum", () => {
-    const enumVals = new Set(["en", "zh", "zh-TW", "ko", "ja", "pt-BR", "es"]);
+    const enumVals = new Set(["en", "zh", "zh-TW"]);
     for (const probe of ["xx", "ZH-tw", "JA", "en-GB", "pt-BR", "PT-br", "es-MX", ""]) {
       assert.ok(enumVals.has(prefs.mapLocaleToLang(probe)), `${probe} mapped outside enum`);
     }

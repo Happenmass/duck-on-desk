@@ -821,21 +821,6 @@
       if (minSessions === maxSessions) return `${minSessions} 工作階段`;
       return `${minSessions}-${maxSessions} 工作階段`;
     }
-    if (lang === "ko") {
-      if (maxSessions == null) return `${minSessions}+ 세션`;
-      if (minSessions === maxSessions) return `${minSessions} 세션`;
-      return `${minSessions}-${maxSessions} 세션`;
-    }
-    if (lang === "pt-BR") {
-      if (maxSessions == null) return `${minSessions}+ sessões`;
-      if (minSessions === maxSessions) return `${minSessions} ${minSessions === 1 ? "sessão" : "sessões"}`;
-      return `${minSessions}-${maxSessions} sessões`;
-    }
-    if (lang === "es") {
-      if (maxSessions == null) return `${minSessions}+ sesiones`;
-      if (minSessions === maxSessions) return `${minSessions} ${minSessions === 1 ? "sesión" : "sesiones"}`;
-      return `${minSessions}-${maxSessions} sesiones`;
-    }
     if (maxSessions == null) return `${minSessions}+ sessions`;
     if (minSessions === maxSessions) return `${minSessions} session${minSessions === 1 ? "" : "s"}`;
     return `${minSessions}-${maxSessions} sessions`;
@@ -852,26 +837,6 @@
       if (maxSessions == null) return `${minSessions}+ 個子代理`;
       if (minSessions === maxSessions) return `${minSessions} 個子代理`;
       return `${minSessions}-${maxSessions} 個子代理`;
-    }
-    if (lang === "ko") {
-      if (maxSessions == null) return `하위 에이전트 ${minSessions}개 이상`;
-      if (minSessions === maxSessions) return `하위 에이전트 ${minSessions}개`;
-      return `하위 에이전트 ${minSessions}-${maxSessions}개`;
-    }
-    if (lang === "ja") {
-      if (maxSessions == null) return `サブエージェント ${minSessions}+`;
-      if (minSessions === maxSessions) return `サブエージェント ${minSessions}`;
-      return `サブエージェント ${minSessions}-${maxSessions}`;
-    }
-    if (lang === "pt-BR") {
-      if (maxSessions == null) return `${minSessions}+ subagentes`;
-      if (minSessions === maxSessions) return `${minSessions} ${minSessions === 1 ? "subagente" : "subagentes"}`;
-      return `${minSessions}-${maxSessions} subagentes`;
-    }
-    if (lang === "es") {
-      if (maxSessions == null) return `${minSessions}+ subagentes`;
-      if (minSessions === maxSessions) return `${minSessions} ${minSessions === 1 ? "subagente" : "subagentes"}`;
-      return `${minSessions}-${maxSessions} subagentes`;
     }
     if (maxSessions == null) return `${minSessions}+ subagents`;
     if (minSessions === maxSessions) return `${minSessions} subagent${minSessions === 1 ? "" : "s"}`;
