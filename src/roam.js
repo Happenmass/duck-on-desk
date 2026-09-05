@@ -74,8 +74,6 @@ module.exports = function initRoam(ctx) {
   function isRoamAllowed() {
     if (!enabled) return false;
     if (ctx.dragLocked) return false;
-    // duck-on-desk: never start (or continue) a walk while the pick-up window is enlarged.
-    if (typeof ctx.isLiftActive === "function" && ctx.isLiftActive()) return false;
     if (ctx.getMiniMode && ctx.getMiniMode()) return false;
     const state = ctx.getCurrentState ? ctx.getCurrentState() : "idle";
     // Allow roaming when idle (about to start) or already roaming (mid-animation)

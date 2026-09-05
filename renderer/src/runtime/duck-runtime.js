@@ -16,10 +16,14 @@ import {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-// Pick-up: while grabbed the trunk is eased up HOLD_LIFT metres above where it was and held there
-// (feet off the ground, legs relaxed); the carry itself happens in 2D outside the scene (pet-bridge.js).
-const HOLD_LIFT = 0.06;
+// Pick-up: while grabbed the trunk is held at #lift.target (base = height at grab time + the requested
+// lift, up to LIFT_MAX metres above it) and eased there with LIFT_SMOOTHING per 50 Hz control step.
+// The camera rig rises with the trunk (see the render loop) so the window never has to change: a carried
+// or falling duck stays framed exactly as on the ground while the ground and its shadow drop out of view.
+const LIFT_MAX = 5;
 const LIFT_SMOOTHING = 0.3;
+const REST_HEIGHT = 0.12; // trunk height when standing; anything above it is "lift"
+const CAMERA_FOLLOW_DEADBAND = 0.02; // ignore the gait's own few-mm bob
 
 export async function createDuckRuntime(options) {
   const runtime = new DuckRuntime(options);
@@ -68,7 +72,9 @@ class DuckRuntime {
   #pick = null;
   #quackAt = -Infinity;
   #grabbed = false;
-  #lift = null; // { z, target } while picked up
+  #lift = null; // { z, base, target } while picked up
+  #cameraLift = 0; // metres the camera rig is raised to keep a lifted/falling trunk centred
+  #cameraBase = null; // camera position at rest
   #sleeping = false;
   #suspended = false;
   #disposed = false;
@@ -189,10 +195,16 @@ class DuckRuntime {
         this.#lastAction.fill(0);
         {
           const z = this.#data ? this.#data.qpos[2] : 0.12;
-          this.#lift = { z, target: z + HOLD_LIFT };
+          this.#lift = { z, base: z, target: z };
         }
         this.#grabbed = true;
         this.#emit();
+        break;
+      case "grab-lift":
+        // Pointer-driven lift height (m above the height at grab time).
+        if (this.#grabbed && this.#lift) {
+          this.#lift.target = this.#lift.base + clamp(Number(intent.height) || 0, 0, LIFT_MAX);
+        }
         break;
       case "grab-end":
         // Let go: gravity takes over from wherever it hangs; the walker (or the
@@ -519,7 +531,7 @@ class DuckRuntime {
     this.#updateRecovery();
   }
 
-  // Held in the air: ease the trunk up to #lift.target and pin it there each
+  // Held in the air: ease the trunk up to LIFT_HEIGHT and pin it there each
   // physics substep (level, current yaw, no velocity) while the legs relax to
   // the default pose. Gravity resumes the moment grab-end clears #lift.
   #holdLifted() {
@@ -662,6 +674,15 @@ class DuckRuntime {
       this.#lastSleepRender = now;
       if (this.#data && this.#trunk) {
         const qpos = this.#data.qpos;
+        // Camera rig follows the trunk height exactly while the duck is carried
+        // or airborne (a smoothed follow would lose a fast fall), and eases the
+        // last centimetres back down after the landing instead of snapping.
+        if (!this.#cameraBase) this.#cameraBase = this.#camera.position.clone();
+        const height = Math.max(0, qpos[2] - REST_HEIGHT);
+        this.#cameraLift = height > CAMERA_FOLLOW_DEADBAND ? height : this.#cameraLift * 0.75;
+        this.#camera.position.copy(this.#cameraBase);
+        this.#camera.position.y += this.#cameraLift;
+        this.#camera.lookAt(0, REST_HEIGHT + this.#cameraLift, 0);
         this.#trunk.position.set(qpos[0], qpos[1], qpos[2]);
         this.#trunk.quaternion.set(qpos[4], qpos[5], qpos[6], qpos[3]);
         for (let joint = 0; joint < NUM_JOINTS; joint++) {

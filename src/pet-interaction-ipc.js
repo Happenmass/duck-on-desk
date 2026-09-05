@@ -34,9 +34,6 @@ function registerPetInteractionIpc(options = {}) {
   const setDragLocked = requiredDependency(options.setDragLocked, "setDragLocked");
   const setMouseOverPet = requiredDependency(options.setMouseOverPet, "setMouseOverPet");
   const cancelRoam = requiredDependency(options.cancelRoam, "cancelRoam");
-  // duck-on-desk: middle-button pick-up controller (src/duck-lift.js); hosts
-  // without one (tests, headless harnesses) get an inert controller.
-  const duckLift = options.duckLift || { begin: () => null, move() {}, release() {}, land() {}, isActive: () => false };
   const beginDragSnapshot = requiredDependency(options.beginDragSnapshot, "beginDragSnapshot");
   const clearDragSnapshot = requiredDependency(options.clearDragSnapshot, "clearDragSnapshot");
   const syncHitWin = requiredDependency(options.syncHitWin, "syncHitWin");
@@ -136,12 +133,8 @@ function registerPetInteractionIpc(options = {}) {
   on("duck-lift", (_event, payload) => {
     const phase = payload && ["start", "move", "end"].includes(payload.phase) ? payload.phase : null;
     if (!phase) return;
-    if (phase === "start") duckLift.begin();
-    else if (phase === "move") duckLift.move(Number.isFinite(payload.dx) ? payload.dx : 0, Number.isFinite(payload.dy) ? payload.dy : 0);
-    else duckLift.release();
-  });
-  on("duck-lift-landed", (_event, payload) => {
-    duckLift.land(payload && Number.isFinite(payload.x) ? payload.x : 0, payload && Number.isFinite(payload.y) ? payload.y : 0);
+    const dy = payload && Number.isFinite(payload.dy) ? payload.dy : 0;
+    sendToRenderer("duck-lift", { phase, dy });
   });
 
   on("start-drag-reaction", (_event, direction) => {

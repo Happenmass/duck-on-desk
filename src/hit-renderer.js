@@ -74,12 +74,11 @@ function clearQueuedDragMove() {
 // sets the lift height; releasing drops it. The left button keeps its upstream
 // meaning (drag the window, click reactions) and never lifts.
 let liftActive = false;
-let liftStartX = 0;
 let liftStartY = 0;
 function endLift() {
   if (!liftActive) return;
   liftActive = false;
-  window.hitAPI.duckLift({ phase: "end", dx: 0, dy: 0 });
+  window.hitAPI.duckLift({ phase: "end", dy: 0 });
 }
 area.addEventListener("auxclick", (e) => { if (e.button === 1) e.preventDefault(); });
 
@@ -90,9 +89,8 @@ area.addEventListener("pointerdown", (e) => {
     if (miniMode) return;
     area.setPointerCapture(e.pointerId);
     liftActive = true;
-    liftStartX = e.clientX;
     liftStartY = e.clientY;
-    window.hitAPI.duckLift({ phase: "start", dx: 0, dy: 0 });
+    window.hitAPI.duckLift({ phase: "start", dy: 0 });
     return;
   }
   if (e.button === 0) {
@@ -111,7 +109,7 @@ area.addEventListener("pointerdown", (e) => {
 
 document.addEventListener("pointermove", (e) => {
   if (liftActive) {
-    window.hitAPI.duckLift({ phase: "move", dx: e.clientX - liftStartX, dy: e.clientY - liftStartY });
+    window.hitAPI.duckLift({ phase: "move", dy: e.clientY - liftStartY });
     return;
   }
   if (isDragging) {

@@ -144,25 +144,3 @@ describe("roam follows the duck's stride (duckDrivesRoam)", () => {
     assert.deepStrictEqual(h.applied.at(-1), { x: 900, y: 400 });
   });
 });
-
-describe("roam yields to the pick-up window", () => {
-  beforeEach(() => { mock.timers.enable({ apis: ["setTimeout", "Date"] }); });
-  afterEach(() => { mock.timers.reset(); mock.restoreAll(); });
-
-  it("neither starts nor continues a walk while the lift is active", () => {
-    const h = makeCtx({ x: 900, lean: -1 });
-    let lifted = true;
-    h.ctx.duckDrivesRoam = true;
-    h.ctx.isLiftActive = () => lifted;
-    const roam = roamModule(h.ctx);
-    roam.setEnabled(true);
-    runFor(roam, 12);
-    assert.equal(h.applied.length, 0, "no walk while lifted");
-    lifted = false;
-    runFor(roam, 9);
-    assert.equal(h.ctx.getCurrentState(), "roam");
-    lifted = true;
-    roam.tick();
-    assert.equal(h.ctx.getCurrentState(), "idle", "a press mid-walk cancels it");
-  });
-});

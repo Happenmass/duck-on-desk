@@ -65,13 +65,6 @@ function createHarness(overrides = {}) {
     cancelRoam: Object.prototype.hasOwnProperty.call(overrides, "cancelRoam")
       ? overrides.cancelRoam
       : (() => calls.push(["cancelRoam"])),
-    duckLift: {
-      begin: () => { calls.push(["duckLift.begin"]); return null; },
-      move: (dx, dy) => calls.push(["duckLift.move", dx, dy]),
-      release: () => calls.push(["duckLift.release"]),
-      land: (x, y) => calls.push(["duckLift.land", x, y]),
-      isActive: () => false,
-    },
     beginDragSnapshot: () => calls.push(["beginDragSnapshot"]),
     clearDragSnapshot: () => calls.push(["clearDragSnapshot"]),
     syncHitWin: () => calls.push(["syncHitWin"]),
@@ -156,7 +149,6 @@ test("pet interaction IPC registers owned channels and disposes them", () => {
     "drag-lock",
     "drag-move",
     "duck-lift",
-    "duck-lift-landed",
     "end-drag-reaction",
     "exit-mini-mode",
     "focus-terminal",
@@ -545,23 +537,4 @@ test("pet drop does not ping the hit window when the terminal launch fails", asy
   assert.deepStrictEqual(sender.sent, []);
   const logs = calls.filter((c) => c[0] === "dropLog").map((c) => c[1]);
   assert.ok(logs.some((m) => m.includes("launch failed") && m.includes("no terminal")), logs.join("; "));
-});
-
-test("duck-lift phases and the landing report drive the duck-lift controller", () => {
-  const { ipcMain, calls } = createHarness();
-  ipcMain.send("duck-lift", { phase: "start", dx: 0, dy: 0 });
-  ipcMain.send("duck-lift", { phase: "move", dx: -12.5, dy: 30 });
-  ipcMain.send("duck-lift", { phase: "move", dx: "x", dy: null });
-  ipcMain.send("duck-lift", { phase: "bogus" });
-  ipcMain.send("duck-lift", { phase: "end" });
-  ipcMain.send("duck-lift-landed", { x: 640.25, y: 871 });
-  ipcMain.send("duck-lift-landed", null);
-  assert.deepStrictEqual(calls.filter((c) => String(c[0]).startsWith("duckLift.")), [
-    ["duckLift.begin"],
-    ["duckLift.move", -12.5, 30],
-    ["duckLift.move", 0, 0],
-    ["duckLift.release"],
-    ["duckLift.land", 640.25, 871],
-    ["duckLift.land", 0, 0],
-  ]);
 });

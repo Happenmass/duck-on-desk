@@ -40,50 +40,22 @@ test("drag and click reactions become grab and quack intents", async () => {
   assert.deepEqual(commands.map((c) => c.type + (c.action ? ":" + c.action : "")), ["perform:quack"]);
 });
 
-test("middle-button lift: pin on enlarge, carry with the pointer, fall with gravity, report and un-pin", async () => {
+test("middle-button lift: press holds, upward travel lifts 1 m per 250 px, release drops", async () => {
   const { connectPetBridge } = await import("../renderer/src/pet-bridge.js");
   const api = fakeApi();
   const commands = [];
-  const landed = [];
-  api.reportDuckLanded = (p) => landed.push(p);
-  const stage = { style: { cssText: "" } };
-  let view = { width: 184, height: 184 };
-  let resize = null;
-  const frames = [];
-  let t = 1000;
-  connectPetBridge({
-    api, runtime: { command: (i) => commands.push(i) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} },
-    stage, viewport: () => view, raf: (fn) => frames.push(fn), now: () => t, onResize: (fn) => { resize = fn; },
-  });
-  api.handlers.lift({ phase: "end" });                                  // release before any press: ignored
-  api.handlers.lift({ phase: "start", x: 1400, y: 675, width: 184, height: 184, floor: 1055, right: 1820 });
-  api.handlers.lift({ phase: "start", x: 0, y: 0, width: 184, height: 184, floor: 1055, right: 1820 }); // repeated: ignored
-  assert.deepEqual(commands.map((c) => c.type), ["grab-start"]);
-  assert.equal(stage.style.left, undefined, "not pinned until the window has grown");
-  view = { width: 1820, height: 1055 };
-  resize();
-  assert.equal(stage.style.inset, "auto");
-  assert.deepEqual([stage.style.left, stage.style.top, stage.style.width], ["1400px", "675px", "184px"]);
-  api.handlers.lift({ phase: "move", dx: -300, dy: -400 });
-  assert.deepEqual([stage.style.left, stage.style.top], ["1100px", "275px"]);
-  api.handlers.lift({ phase: "move", dx: -9999, dy: -9999 });           // clamped to the page
-  assert.deepEqual([stage.style.left, stage.style.top], ["0px", "0px"]);
-  api.handlers.lift({ phase: "move", dx: -300, dy: -400 });
-  api.handlers.lift({ phase: "end" });
-  assert.equal(frames.length, 1, "the fall runs on animation frames");
-  let steps = 0;
-  while (frames.length && steps < 200) { const fn = frames.shift(); t += 16; fn(t); steps++; }
-  assert.ok(steps > 10 && steps < 60, `fell for ${steps} frames`);
-  assert.equal(stage.style.top, `${1055 - 184}px`, "rests on the work-area bottom");
-  assert.deepEqual(commands.map((c) => c.type), ["grab-start", "grab-end"]);
-  assert.deepEqual(landed, [{ x: 1100, y: 1055 - 184 }]);
-  api.handlers.lift({ phase: "reset" });
-  assert.equal(stage.style.left, "1100px", "stays pinned while the window is still large");
-  view = { width: 184, height: 184 };
-  resize();
-  assert.equal(stage.style.cssText, "", "un-pinned once the window is small again");
-  api.handlers.lift({ phase: "start", x: 0, y: 0, width: 184, height: 184, floor: 1055, right: 1820 });
-  assert.equal(commands.length, 3, "a new press is accepted after the drop");
+  connectPetBridge({ api, runtime: { command: (i) => commands.push(i) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} } });
+  api.handlers.lift({ phase: "end", dy: 0 });                 // release before any press: ignored
+  api.handlers.lift({ phase: "start", dy: 0 });
+  api.handlers.lift({ phase: "start", dy: 0 });               // repeated start: ignored
+  api.handlers.lift({ phase: "move", dy: -200 });             // 200 px up -> 0.8 m
+  api.handlers.lift({ phase: "move", dy: 50 });               // below the start point -> on the ground
+  api.handlers.lift({ phase: "move", dy: -900 });             // 900 px up -> 3.6 m (not bounded by the window)
+  api.handlers.lift({ phase: "move", dy: -9999 });            // capped at 5 m
+  api.handlers.lift({ phase: "end", dy: 0 });
+  api.handlers.lift({ phase: "end", dy: 0 });
+  assert.deepEqual(commands.map((c) => c.type), ["grab-start", "grab-lift", "grab-lift", "grab-lift", "grab-lift", "grab-end"]);
+  assert.deepEqual(commands.filter((c) => c.type === "grab-lift").map((c) => +c.height.toFixed(3)), [0.8, 0, 3.6, 5]);
 });
 
 test("roam: the duck's stride is reported to main only while roaming", async () => {
