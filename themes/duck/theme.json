@@ -125,5 +125,10 @@
   "sounds": {},
   "miniMode": {
     "supported": false
+  },
+  "reactions": {
+    "drag": {
+      "file": "duck-grab"
+    }
   }
 }

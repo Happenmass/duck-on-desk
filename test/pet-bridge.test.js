@@ -39,3 +39,20 @@ test("drag and click reactions become grab and quack intents", async () => {
   api.handlers.dragStart({}); api.handlers.dragEnd(); api.handlers.click({}, 400);
   assert.deepEqual(commands.map((c) => c.type + (c.action ? ":" + c.action : "")), ["grab-start", "grab-end", "perform:quack"]);
 });
+
+test("pick-up is idempotent and settles the drag reaction tuple", async () => {
+  const { connectPetBridge } = await import("../renderer/src/pet-bridge.js");
+  const api = fakeApi();
+  const commands = [];
+  connectPetBridge({ api, runtime: { command: (i) => commands.push(i.type) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} } });
+  api.handlers.dragEnd();                       // release before any press: ignored
+  api.handlers.dragStart({ themeId: "duck", displayState: "idle", file: "duck-grab", source: "reaction", visualGeneration: 3 });
+  api.handlers.dragStart(null, "left");         // repeated start while held: ignored
+  api.handlers.dragEnd();
+  api.handlers.dragEnd();
+  assert.deepEqual(commands, ["grab-start", "grab-end"]);
+  const settled = api.sent.filter(([k]) => k === "settled").map(([, p]) => p);
+  assert.equal(settled.length, 1);
+  assert.equal(settled[0].actualFile, "duck-grab");
+  assert.equal(settled[0].visualGeneration, 3);
+});

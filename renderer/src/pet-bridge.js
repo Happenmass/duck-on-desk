@@ -28,8 +28,22 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
     ? setInterval(() => { const s = runtime.snapshot(); if (s && Number.isFinite(s.facing)) api.reportDuckFacing(s.facing); }, 500)
     : null;
   api.onDndChange(() => {});
-  api.onStartDragReaction(() => runtime.command({ type: "grab-start", source: "local" }));
-  api.onEndDragReaction(() => runtime.command({ type: "grab-end", source: "local" }));
+  // Pick-up: main sends start-drag-reaction on press (and again on drag moves
+  // with a direction); the first one lifts, repeats are ignored, and the
+  // reaction request tuple is settled like any visual so main never falls back.
+  let held = false;
+  api.onStartDragReaction((requestOrDirection) => {
+    const request = requestOrDirection && typeof requestOrDirection === "object" ? requestOrDirection : null;
+    if (request && typeof request.file === "string") settle(request, request.file);
+    if (held) return;
+    held = true;
+    runtime.command({ type: "grab-start", source: "local" });
+  });
+  api.onEndDragReaction(() => {
+    if (!held) return;
+    held = false;
+    runtime.command({ type: "grab-end", source: "local" });
+  });
   api.onPlayClickReaction(() => runtime.command({ type: "perform", action: "quack", source: "local" }));
   api.onWakeFromDoze(() => runtime.command({ type: "wake", source: "local" }));
   api.onThemeConfig(() => {});

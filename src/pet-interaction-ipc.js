@@ -120,11 +120,17 @@ function registerPetInteractionIpc(options = {}) {
       setMouseOverPet(true);
       cancelRoam();
       beginDragSnapshot();
+      // duck-on-desk: pressing picks the duck up right away (the hit window only
+      // reports start-drag-reaction after a 3 px move); the renderer treats a
+      // repeated start as a no-op.
+      if (requestDragReaction) requestDragReaction(null);
     } else {
       clearDragSnapshot();
       syncHitWin();
       syncDisplayedVisualGeometry();
       syncImeEditingPetDodge();
+      // duck-on-desk: letting go always drops the duck, even without a drag.
+      sendToRenderer("end-drag-reaction");
     }
   });
 
