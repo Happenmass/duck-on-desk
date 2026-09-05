@@ -194,7 +194,6 @@ class DuckRuntime {
           this.#lift = { z, base: z, target: z };
         }
         this.#grabbed = true;
-        this.#onSound({ name: "wheee", on: true });
         this.#emit();
         break;
       case "grab-lift":
@@ -209,7 +208,6 @@ class DuckRuntime {
         this.#grabbed = false;
         this.#lift = null;
         this.#leases.clearAll();
-        this.#onSound({ name: "wheee", on: false });
         this.#emit();
         break;
       case "sleep":

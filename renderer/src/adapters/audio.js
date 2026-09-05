@@ -13,9 +13,8 @@ export function createAudio() {
   let master;
   let muted = false;
   let bank = "duck1";
-  let ride = null;
   const buffers = new Map();
-  const stats = { chirp: 0, step: 0, thump: 0, wheee: 0 };
+  const stats = { chirp: 0, step: 0, thump: 0 };
 
   const context = () => {
     if (!ctx) {
@@ -46,46 +45,6 @@ export function createAudio() {
     }).catch((error) => console.warn("sound failed", url, error));
   };
 
-  // Drag ride: the bank's authored start → loop → end segments, one take.
-  async function startRide() {
-    stopRide(true);
-    const c = context();
-    const take = pick("ab");
-    const current = { take };
-    ride = current;
-    const [start, loop] = await Promise.all([
-      bufferFor(`./assets/voices/${bank}/wheee_start_${take}.wav`),
-      bufferFor(`./assets/voices/${bank}/wheee_loop_${take}.wav`),
-    ]).catch(() => []);
-    if (ride !== current || !start) return;
-    const gain = c.createGain();
-    gain.gain.value = 0.7;
-    gain.connect(master);
-    const t0 = c.currentTime + 0.02;
-    const startSrc = c.createBufferSource();
-    startSrc.buffer = start;
-    startSrc.connect(gain);
-    startSrc.start(t0);
-    const loopSrc = c.createBufferSource();
-    loopSrc.buffer = loop;
-    loopSrc.loop = true;
-    loopSrc.connect(gain);
-    loopSrc.start(t0 + start.duration);
-    Object.assign(current, { gain, startSrc, loopSrc });
-  }
-  function stopRide(silent = false) {
-    const current = ride;
-    if (!current) return;
-    ride = null;
-    if (!current.gain) return; // released before the buffers decoded
-    const t = ctx.currentTime;
-    current.gain.gain.setTargetAtTime(0, t, 0.03);
-    for (const source of [current.startSrc, current.loopSrc]) {
-      try { source.stop(t + 0.2); } catch { /* already ended */ }
-    }
-    if (!silent) play(`./assets/voices/${bank}/wheee_end_${current.take}.wav`, { gain: 0.7 });
-  }
-
   return {
     stats,
     isMuted: () => muted,
@@ -105,8 +64,6 @@ export function createAudio() {
         case "step":
         case "thump":
           return play(`./assets/sfx/${sound.name}_${pick(SFX_TAKES[sound.name])}.wav`, sound);
-        case "wheee":
-          return sound.on ? startRide() : stopRide();
         default:
           return undefined;
       }
