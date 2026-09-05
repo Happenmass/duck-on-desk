@@ -147,6 +147,7 @@ test("pet interaction IPC registers owned channels and disposes them", () => {
     "accessory-mirror",
     "drag-end",
     "drag-lock",
+"duck-lift",
     "drag-move",
     "end-drag-reaction",
     "exit-mini-mode",
@@ -282,8 +283,6 @@ test("pet interaction IPC preserves drag lock lifecycle", () => {
     // #640: the dodge defers its hit-window click-through write while a drag
     // is in flight — releasing the lock must re-run the sync.
     ["syncImeEditingPetDodge"],
-    // duck-on-desk: letting go always drops the duck, even without a drag.
-    ["sendToRenderer", "end-drag-reaction"],
   ]);
 });
 

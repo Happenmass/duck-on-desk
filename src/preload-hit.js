@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld("hitAPI", {
   dragLock: (locked) => ipcRenderer.send("drag-lock", locked),
   dragMove: () => ipcRenderer.send("drag-move"),
   dragEnd: () => ipcRenderer.send("drag-end"),
+  duckLift: (payload) => ipcRenderer.send("duck-lift", payload),
   showContextMenu: () => ipcRenderer.send("show-context-menu"),
   focusTerminal: () => ipcRenderer.send("focus-terminal"),
   // OS file drop (#459). File → absolute path must resolve here in the

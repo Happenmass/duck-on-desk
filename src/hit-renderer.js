@@ -69,8 +69,30 @@ function clearQueuedDragMove() {
   dragMoveRAF = null;
 }
 
+// --- Middle-button pick-up (duck-on-desk) ---
+// Hold the middle button to pick the duck up; how far the pointer travels up
+// sets the lift height; releasing drops it. The left button keeps its upstream
+// meaning (drag the window, click reactions) and never lifts.
+let liftActive = false;
+let liftStartY = 0;
+function endLift() {
+  if (!liftActive) return;
+  liftActive = false;
+  window.hitAPI.duckLift({ phase: "end", dy: 0 });
+}
+area.addEventListener("auxclick", (e) => { if (e.button === 1) e.preventDefault(); });
+
 // --- Pointer handlers ---
 area.addEventListener("pointerdown", (e) => {
+  if (e.button === 1) {
+    e.preventDefault();
+    if (miniMode) return;
+    area.setPointerCapture(e.pointerId);
+    liftActive = true;
+    liftStartY = e.clientY;
+    window.hitAPI.duckLift({ phase: "start", dy: 0 });
+    return;
+  }
   if (e.button === 0) {
     if (miniMode) { didDrag = false; return; }
     area.setPointerCapture(e.pointerId);
@@ -86,6 +108,10 @@ area.addEventListener("pointerdown", (e) => {
 });
 
 document.addEventListener("pointermove", (e) => {
+  if (liftActive) {
+    window.hitAPI.duckLift({ phase: "move", dy: e.clientY - liftStartY });
+    return;
+  }
   if (isDragging) {
     if (!didDrag) {
       const totalDx = e.clientX - mouseDownX;
@@ -120,6 +146,7 @@ function stopDrag() {
 }
 
 document.addEventListener("pointerup", (e) => {
+  if (e.button === 1) { endLift(); return; }
   if (e.button !== 0) return;
   const wasDrag = didDrag;
   stopDrag();
@@ -145,9 +172,9 @@ document.addEventListener("pointerup", (e) => {
   handleClick(e.clientX);
 });
 
-area.addEventListener("pointercancel", () => stopDrag());
-area.addEventListener("lostpointercapture", () => { if (isDragging) stopDrag(); });
-window.addEventListener("blur", stopDrag);
+area.addEventListener("pointercancel", () => { endLift(); stopDrag(); });
+area.addEventListener("lostpointercapture", () => { endLift(); if (isDragging) stopDrag(); });
+window.addEventListener("blur", () => { endLift(); stopDrag(); });
 
 // --- Click reaction logic (2-click = poke, 4-click = flail) ---
 const CLICK_WINDOW_MS = 400;

@@ -1,6 +1,6 @@
 // Consumes the main-process preload contract (src/preload.js) and drives the duck.
 // The only mandatory reply is notifyPetVisualSettled; without it main reloads the window after 9750 ms.
-export function connectPetBridge({ api = window.electronAPI, runtime, behaviours, audio }) {
+export function connectPetBridge({ api = window.electronAPI, runtime, behaviours, audio, viewportHeight = () => (typeof window === "undefined" ? 400 : window.innerHeight) }) {
   const settle = (request, file) => api.notifyPetVisualSettled({
     themeId: (request && request.themeId) || "duck",
     displayState: (request && request.displayState) || null,
@@ -28,21 +28,32 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
     ? setInterval(() => { const s = runtime.snapshot(); if (s && Number.isFinite(s.facing)) api.reportDuckFacing(s.facing); }, 500)
     : null;
   api.onDndChange(() => {});
-  // Pick-up: main sends start-drag-reaction on press (and again on drag moves
-  // with a direction); the first one lifts, repeats are ignored, and the
-  // reaction request tuple is settled like any visual so main never falls back.
-  let held = false;
+  // Left-button drag moves the window (upstream behaviour) and never lifts the
+  // duck; any reaction tuple main might send is settled so it never falls back.
   api.onStartDragReaction((requestOrDirection) => {
     const request = requestOrDirection && typeof requestOrDirection === "object" ? requestOrDirection : null;
     if (request && typeof request.file === "string") settle(request, request.file);
-    if (held) return;
-    held = true;
-    runtime.command({ type: "grab-start", source: "local" });
   });
-  api.onEndDragReaction(() => {
-    if (!held) return;
-    held = false;
-    runtime.command({ type: "grab-end", source: "local" });
+  api.onEndDragReaction(() => {});
+  // Middle-button pick-up: press holds the duck where it is, dragging the
+  // pointer up lifts it (a full viewport height ≈ LIFT_PER_VIEWPORT metres),
+  // dragging down lowers it, releasing drops it.
+  const LIFT_PER_VIEWPORT = 0.4;
+  let held = false;
+  api.onDuckLift?.((lift) => {
+    if (lift.phase === "start") {
+      if (held) return;
+      held = true;
+      runtime.command({ type: "grab-start", source: "local" });
+    } else if (lift.phase === "move") {
+      if (!held) return;
+      const h = Math.max(0, Math.min(LIFT_PER_VIEWPORT, (-lift.dy / Math.max(1, viewportHeight())) * LIFT_PER_VIEWPORT));
+      runtime.command({ type: "grab-lift", height: h, source: "local" });
+    } else if (lift.phase === "end") {
+      if (!held) return;
+      held = false;
+      runtime.command({ type: "grab-end", source: "local" });
+    }
   });
   api.onPlayClickReaction(() => runtime.command({ type: "perform", action: "quack", source: "local" }));
   api.onWakeFromDoze(() => runtime.command({ type: "wake", source: "local" }));

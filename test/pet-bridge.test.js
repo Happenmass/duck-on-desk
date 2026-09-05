@@ -9,7 +9,7 @@ function fakeApi() {
     handlers, sent,
     onStateChange: on("state"), onEyeMove: on("eye"), onDndChange: on("dnd"), onStartDragReaction: on("dragStart"),
     onEndDragReaction: on("dragEnd"), onPlayClickReaction: on("click"), onWakeFromDoze: on("wake"), onThemeConfig: on("theme"),
-    onPlaySound: on("sound"), onPreloadSounds: on("preload"), onInvalidateSoundCache: on("inval"), onDuckAppearanceChange: on("skin"),
+    onPlaySound: on("sound"), onPreloadSounds: on("preload"), onInvalidateSoundCache: on("inval"), onDuckAppearanceChange: on("skin"), onDuckLift: on("lift"),
     notifyPetVisualReady: () => sent.push(["ready"]),
     notifyPetVisualSettled: (p) => sent.push(["settled", p]),
   };
@@ -37,22 +37,22 @@ test("drag and click reactions become grab and quack intents", async () => {
   const commands = [];
   connectPetBridge({ api, runtime: { command: (i) => commands.push(i) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} } });
   api.handlers.dragStart({}); api.handlers.dragEnd(); api.handlers.click({}, 400);
-  assert.deepEqual(commands.map((c) => c.type + (c.action ? ":" + c.action : "")), ["grab-start", "grab-end", "perform:quack"]);
+  assert.deepEqual(commands.map((c) => c.type + (c.action ? ":" + c.action : "")), ["perform:quack"]);
 });
 
-test("pick-up is idempotent and settles the drag reaction tuple", async () => {
+test("middle-button lift: press holds, upward travel lifts proportionally, release drops", async () => {
   const { connectPetBridge } = await import("../renderer/src/pet-bridge.js");
   const api = fakeApi();
   const commands = [];
-  connectPetBridge({ api, runtime: { command: (i) => commands.push(i.type) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} } });
-  api.handlers.dragEnd();                       // release before any press: ignored
-  api.handlers.dragStart({ themeId: "duck", displayState: "idle", file: "duck-grab", source: "reaction", visualGeneration: 3 });
-  api.handlers.dragStart(null, "left");         // repeated start while held: ignored
-  api.handlers.dragEnd();
-  api.handlers.dragEnd();
-  assert.deepEqual(commands, ["grab-start", "grab-end"]);
-  const settled = api.sent.filter(([k]) => k === "settled").map(([, p]) => p);
-  assert.equal(settled.length, 1);
-  assert.equal(settled[0].actualFile, "duck-grab");
-  assert.equal(settled[0].visualGeneration, 3);
+  connectPetBridge({ api, runtime: { command: (i) => commands.push(i) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} }, viewportHeight: () => 400 });
+  api.handlers.lift({ phase: "end", dy: 0 });                 // release before any press: ignored
+  api.handlers.lift({ phase: "start", dy: 0 });
+  api.handlers.lift({ phase: "start", dy: 0 });               // repeated start: ignored
+  api.handlers.lift({ phase: "move", dy: -200 });             // half the viewport up -> 0.2 m
+  api.handlers.lift({ phase: "move", dy: 50 });               // below the start point -> 0
+  api.handlers.lift({ phase: "move", dy: -900 });             // beyond the viewport -> capped 0.4 m
+  api.handlers.lift({ phase: "end", dy: 0 });
+  api.handlers.lift({ phase: "end", dy: 0 });
+  assert.deepEqual(commands.map((c) => c.type), ["grab-start", "grab-lift", "grab-lift", "grab-lift", "grab-end"]);
+  assert.deepEqual(commands.filter((c) => c.type === "grab-lift").map((c) => +c.height.toFixed(3)), [0.2, 0, 0.4]);
 });
