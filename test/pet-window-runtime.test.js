@@ -4002,3 +4002,28 @@ describe("manual show intent hook (#935 override latch)", () => {
     assert.deepStrictEqual(notes, [], "only a manual SHOW is user intent");
   });
 });
+
+describe("duck-on-desk: hit window expansion during the middle-button lift", () => {
+  it("covers the display while the lift holds drag-lock and returns to the derived rect on release", () => {
+    const hitWin = makeWindow({ x: 100, y: 100, width: 100, height: 100 });
+    const harness = createRuntime({ hitWin });
+    harness.runtime.applyPetWindowBounds({ x: 100, y: 100, width: 100, height: 100 });
+    harness.runtime.syncHitWin();
+    const derived = hitWin.getBounds();
+    hitWin.calls.length = 0;
+
+    harness.runtime.setDragLocked(true);
+    assert.equal(harness.runtime.expandHitWindowForLift(), true);
+    assert.deepStrictEqual(hitWin.getBounds(), { x: 0, y: 0, width: 1000, height: 800 });
+    assert.deepStrictEqual(hitWin.calls.filter((c) => c[0] === "setShape").at(-1), ["setShape", [{ x: 0, y: 0, width: 1000, height: 800 }]]);
+    // Mid-lift syncs are deferred by the lock: the window stays expanded.
+    harness.runtime.syncHitWin();
+    assert.deepStrictEqual(hitWin.getBounds(), { x: 0, y: 0, width: 1000, height: 800 });
+
+    // Release: drag-lock(false) runs syncHitWin(), which must write the real
+    // rect even though it equals what was requested before the expansion.
+    harness.runtime.setDragLocked(false);
+    harness.runtime.syncHitWin();
+    assert.deepStrictEqual(hitWin.getBounds(), derived);
+  });
+});

@@ -65,6 +65,7 @@ function createHarness(overrides = {}) {
     cancelRoam: Object.prototype.hasOwnProperty.call(overrides, "cancelRoam")
       ? overrides.cancelRoam
       : (() => calls.push(["cancelRoam"])),
+    expandHitWindowForLift: () => calls.push(["expandHitWindowForLift"]),
     beginDragSnapshot: () => calls.push(["beginDragSnapshot"]),
     clearDragSnapshot: () => calls.push(["clearDragSnapshot"]),
     syncHitWin: () => calls.push(["syncHitWin"]),
@@ -537,4 +538,18 @@ test("pet drop does not ping the hit window when the terminal launch fails", asy
   assert.deepStrictEqual(sender.sent, []);
   const logs = calls.filter((c) => c[0] === "dropLog").map((c) => c[1]);
   assert.ok(logs.some((m) => m.includes("launch failed") && m.includes("no terminal")), logs.join("; "));
+});
+
+test("duck-lift start expands the hit window before the phase is forwarded; other phases just forward", () => {
+  const { ipcMain, calls } = createHarness();
+  ipcMain.send("duck-lift", { phase: "start", dy: 0 });
+  ipcMain.send("duck-lift", { phase: "move", dy: -120 });
+  ipcMain.send("duck-lift", { phase: "end", dy: 0 });
+  ipcMain.send("duck-lift", { phase: "bogus" });
+  assert.deepStrictEqual(calls.filter((c) => c[0] === "expandHitWindowForLift" || c[1] === "duck-lift"), [
+    ["expandHitWindowForLift"],
+    ["sendToRenderer", "duck-lift", { phase: "start", dy: 0 }],
+    ["sendToRenderer", "duck-lift", { phase: "move", dy: -120 }],
+    ["sendToRenderer", "duck-lift", { phase: "end", dy: 0 }],
+  ]);
 });

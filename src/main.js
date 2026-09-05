@@ -3143,6 +3143,7 @@ function createWindow() {
     setDragLocked: (value) => { petWindowRuntime.setDragLocked(value); },
     setMouseOverPet: (value) => { mouseOverPet = !!value; },
     cancelRoam: () => _roam.cancelRoam(),
+    expandHitWindowForLift: () => petWindowRuntime.expandHitWindowForLift(),
     beginDragSnapshot: () => beginDragSnapshot(),
     clearDragSnapshot: () => clearDragSnapshot(),
     syncHitWin: () => syncHitWin(),

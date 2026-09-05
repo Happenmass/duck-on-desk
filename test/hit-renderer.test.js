@@ -56,6 +56,7 @@ function createHarness({ isMac = false, sendState = {} } = {}) {
       hitAPI: {
         onThemeConfig: (cb) => { apiHandlers.themeConfig = cb; },
         dragLock: (v) => apiCalls.push(["dragLock", v]),
+        duckLift: (p) => apiCalls.push(["duckLift", p.phase, p.dy]),
         dragMove: () => apiCalls.push(["dragMove"]),
         dragEnd: () => apiCalls.push(["dragEnd"]),
         showContextMenu: () => apiCalls.push(["showContextMenu"]),
@@ -102,13 +103,13 @@ function createHarness({ isMac = false, sendState = {} } = {}) {
     fakeDocument._dispatch("pointerup", { button, ctrlKey, metaKey, clientX });
   }
 
-  function pointerdown({ button = 0, pointerId = 1, clientX = 100, clientY = 100 } = {}) {
+  function pointerdown({ button = 0, pointerId = 1, clientX = 100, clientY = 100, screenY = clientY + 500 } = {}) {
     const cb = area.listeners.get("pointerdown");
-    if (cb) cb({ button, pointerId, clientX, clientY });
+    if (cb) cb({ button, pointerId, clientX, clientY, screenY, preventDefault() {} });
   }
 
-  function pointermove({ clientX = 100, clientY = 100 } = {}) {
-    fakeDocument._dispatch("pointermove", { clientX, clientY });
+  function pointermove({ clientX = 100, clientY = 100, screenY = clientY + 500 } = {}) {
+    fakeDocument._dispatch("pointermove", { clientX, clientY, screenY });
   }
 
   function fireTimer(predicate) {
@@ -123,6 +124,25 @@ function createHarness({ isMac = false, sendState = {} } = {}) {
 }
 
 describe("hit-renderer input layer", () => {
+  it("middle-button lift holds the drag lock so main keeps routing input to this window", () => {
+    const h = createHarness();
+    h.pointerdown({ button: 1, clientY: 80, screenY: 900 });
+    // Main enlarges the window to the display on start, so client coordinates
+    // jump; the lift must measure travel in screen coordinates.
+    h.pointermove({ clientY: 850, screenY: 850 });
+    h.pointermove({ clientY: 620, screenY: 620 });
+    h.pointerup({ button: 1 });
+    h.pointerup({ button: 1 });                // second release: nothing more
+    assert.deepStrictEqual(h.apiCalls, [
+      ["dragLock", true],
+      ["duckLift", "start", 0],
+      ["duckLift", "move", -50],
+      ["duckLift", "move", -280],
+      ["duckLift", "end", 0],
+      ["dragLock", false],
+    ]);
+  });
+
   it("plain single click reveals HUD, does NOT call focusTerminal", () => {
     const h = createHarness();
     h.pointerup({});

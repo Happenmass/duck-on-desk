@@ -34,6 +34,9 @@ function registerPetInteractionIpc(options = {}) {
   const setDragLocked = requiredDependency(options.setDragLocked, "setDragLocked");
   const setMouseOverPet = requiredDependency(options.setMouseOverPet, "setMouseOverPet");
   const cancelRoam = requiredDependency(options.cancelRoam, "cancelRoam");
+  // duck-on-desk: keeps the hit window under the pointer for the whole
+  // middle-button lift (see pet-window-runtime.js); optional for hosts without it.
+  const expandHitWindowForLift = options.expandHitWindowForLift || (() => false);
   const beginDragSnapshot = requiredDependency(options.beginDragSnapshot, "beginDragSnapshot");
   const clearDragSnapshot = requiredDependency(options.clearDragSnapshot, "clearDragSnapshot");
   const syncHitWin = requiredDependency(options.syncHitWin, "syncHitWin");
@@ -134,6 +137,7 @@ function registerPetInteractionIpc(options = {}) {
     const phase = payload && ["start", "move", "end"].includes(payload.phase) ? payload.phase : null;
     if (!phase) return;
     const dy = payload && Number.isFinite(payload.dy) ? payload.dy : 0;
+    if (phase === "start") expandHitWindowForLift();
     sendToRenderer("duck-lift", { phase, dy });
   });
 

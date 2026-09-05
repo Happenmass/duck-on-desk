@@ -1895,6 +1895,30 @@ function createPetWindowRuntime(options = {}) {
   // getHitRectScreen()/clipHitRectToMiniSeam() pairing used by hover/overlap
   // callers elsewhere) so seam clipping happens strictly after outward
   // clipping, not baked in before it.
+  // duck-on-desk: the middle-button lift holds pointer capture in the hit
+  // window while the pointer travels far above the pet, and macOS drops that
+  // capture the moment the pointer leaves the (small) hit rect — ending the
+  // lift a few px into the drag. The window is invisible, so for the duration
+  // of the hold it simply covers the whole display. The lift also holds
+  // drag-lock, which defers syncHitWin(); clearing lastRequestedHitRect both
+  // parks runHitReconcile() and forces the release's syncHitWin() to write the
+  // real rect back.
+  function expandHitWindowForLift() {
+    const hitWin = getHitWindow();
+    const bounds = getPetWindowBounds();
+    if (!isLiveWindow(hitWin) || !bounds) return false;
+    const display = screen.getDisplayNearestPoint({ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 });
+    const full = display && display.bounds;
+    if (!full) return false;
+    hitWin.setBounds({ x: full.x, y: full.y, width: full.width, height: full.height });
+    hitShapeWidth = full.width;
+    hitShapeHeight = full.height;
+    hitWin.setShape([{ x: 0, y: 0, width: full.width, height: full.height }]);
+    lastRequestedHitRect = null;
+    lastAdoptedHitOutcome = null;
+    return true;
+  }
+
   function syncHitWin() {
     const hitWin = getHitWindow();
     const win = getRenderWindow();
@@ -2668,6 +2692,7 @@ function createPetWindowRuntime(options = {}) {
     needsFinalClampAdjustment,
     materializeVirtualBounds,
     syncHitWin,
+    expandHitWindowForLift,
     getInitialHitWindowBounds,
     createRenderWindow,
     createHitWindow,

@@ -79,6 +79,7 @@ function endLift() {
   if (!liftActive) return;
   liftActive = false;
   window.hitAPI.duckLift({ phase: "end", dy: 0 });
+  window.hitAPI.dragLock(false);
 }
 area.addEventListener("auxclick", (e) => { if (e.button === 1) e.preventDefault(); });
 
@@ -89,7 +90,15 @@ area.addEventListener("pointerdown", (e) => {
     if (miniMode) return;
     area.setPointerCapture(e.pointerId);
     liftActive = true;
-    liftStartY = e.clientY;
+    // Screen coordinates: main enlarges this window to the display for the
+    // lift, which shifts client coordinates but not screen ones.
+    liftStartY = e.screenY;
+    // Hold main's drag lock for the whole lift: without it main's cursor poll
+    // flips this window back to ignore-mouse-events the moment the pointer
+    // leaves the pet's hit rect, which cancels the capture (lostpointercapture)
+    // a few px into the drag. The lock never moves the window — no drag-move
+    // is sent — it only keeps the input routing pinned to us.
+    window.hitAPI.dragLock(true);
     window.hitAPI.duckLift({ phase: "start", dy: 0 });
     return;
   }
@@ -109,7 +118,7 @@ area.addEventListener("pointerdown", (e) => {
 
 document.addEventListener("pointermove", (e) => {
   if (liftActive) {
-    window.hitAPI.duckLift({ phase: "move", dy: e.clientY - liftStartY });
+    window.hitAPI.duckLift({ phase: "move", dy: e.screenY - liftStartY });
     return;
   }
   if (isDragging) {
