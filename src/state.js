@@ -116,7 +116,9 @@ let lastSessionSnapshotSignature = null;
 let lastSessionSnapshot = null;
 let startupRecoveryActive = false;
 let startupRecoveryTimer = null;
-const STARTUP_RECOVERY_MAX_MS = 300000;
+// duck-on-desk: 60 s (upstream 5 min). A detected CLI that is merely sitting at its prompt sends no hook events,
+// and a duck that "works" for five minutes after every launch reads as broken; real events still override at once.
+const STARTUP_RECOVERY_MAX_MS = 60000;
 const codexExitProbes = new Map();
 const claudeTranscriptCompletionProbes = new Map();
 
