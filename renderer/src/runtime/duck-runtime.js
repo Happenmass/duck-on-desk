@@ -10,7 +10,7 @@ import {
   MAX_TURN, NUM_JOINTS, OBS_SIZE, POLICY_FILES, TIMESTEP,
 } from "./constants.js";
 import {
-  footLanding, GROUND_PICK, HEAD_ALPHA, HEAD_KEYS, HEAD_MAX, HEADING_MIN_FORWARD, headingTurn, landingImpact, pickJawOpenness,
+  FACING_HALF_CONE, footLanding, GROUND_PICK, HEAD_ALPHA, HEAD_KEYS, HEAD_MAX, HEADING_ENGAGE, HEADING_MIN_FORWARD, headingTurn, landingImpact, pickJawOpenness,
   quackJawOpenness, wrapAngle,
 } from "./gestures.js";
 
@@ -23,6 +23,14 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const LIFT_MAX = 5;
 const LIFT_SMOOTHING = 0.3;
 const REST_HEIGHT = 0.12; // trunk height when standing; anything above it is "lift"
+const STRIDE_M = 0.02; // metres credited to free roam per foot landing (see takeDisplacement)
+// The walking policy will not start stepping from standstill below roughly 0.8
+// forward, although it sustains a gait already under way down to ~0.45. Any
+// move lease therefore gets a GAIT_KICK forward until the feet are stepping
+// (a landing within GAIT_STALL_MS), then cruises at the commanded value.
+const GAIT_KICK = 0.9;
+const GAIT_STALL_MS = 800;
+const STRIDE_SPREAD_STEPS = 12; // control steps (240 ms) over which one stride is paid out
 const CAMERA_FOLLOW_DEADBAND = 0.02; // ignore the gait's own few-mm bob
 
 export async function createDuckRuntime(options) {
@@ -53,7 +61,9 @@ class DuckRuntime {
   #ankleIds;
   #cameraBearing = 0;
   #headingEngaged = false;
-  #displacement = { x: 0, y: 0 }; // trunk x/y travelled since takeDisplacement() (rig frame, metres)
+  #displacement = { x: 0, y: 0 }; // stride credited since takeDisplacement() (rig frame, metres)
+  #strideRemaining = 0; // metres of the last foot landing's stride still to be paid out
+  #lastLandingAt = 0; // performance.now() of the last foot landing (gait-kick bookkeeping)
   #stepFeet = [{ air: false, prevZ: 0, lastAt: 0 }, { air: false, prevZ: 0, lastAt: 0 }];
   #prevVz = 0;
   #thumpAt = 0;
@@ -252,9 +262,13 @@ class DuckRuntime {
     });
   }
 
-  // Screen-space distance (px, +x right, +y down) the trunk actually walked
-  // since the last call, projected through the live camera. Free roam moves
-  // the window by exactly this so the window follows the duck's own gait.
+  // Screen-space distance (px, +x right, +y down) the duck's steps have
+  // covered since the last call, projected through the live camera. Free roam
+  // moves the window by exactly this so the window follows the duck's own
+  // gait. The stride is credited per foot landing (STRIDE_M along the trunk's
+  // heading, paid out over the next STRIDE_SPREAD_STEPS control steps) rather
+  // than read from the physics: the walking policy's real translation is tiny
+  // and erratic (a few px/s, mostly yaw drift), while its cadence is steady.
   takeDisplacement() {
     const { x, y } = this.#displacement;
     this.#displacement.x = 0;
@@ -472,11 +486,18 @@ class DuckRuntime {
       const motion = this.#leases.current();
       let { forward, turn } = motion;
       if (typeof motion.heading === "number") {
-        const control = headingTurn(this.#facing(), motion.heading, this.#headingEngaged);
+        // The duck never turns its back on the viewer: whatever a caller asks
+        // for, the target facing stays inside the ±FACING_HALF_CONE cone. The
+        // bang-bang controller lets the facing wander HEADING_ENGAGE past its
+        // target before it re-engages, so the target is inset by that much.
+        const limit = FACING_HALF_CONE - HEADING_ENGAGE;
+        const target = clamp(motion.heading, -limit, limit);
+        const control = headingTurn(this.#facing(), target, this.#headingEngaged);
         this.#headingEngaged = control.engaged;
         turn = control.turn;
         if (turn) forward = Math.max(forward, HEADING_MIN_FORWARD);
       }
+      if (forward > 0.2 && performance.now() - this.#lastLandingAt > GAIT_STALL_MS) forward = Math.max(forward, GAIT_KICK);
       this.#cmd[0] = forward >= 0 ? forward * MAX_FORWARD : -forward * MAX_BACK;
       this.#cmd[2] = turn * MAX_TURN;
     }
@@ -575,7 +596,19 @@ class DuckRuntime {
     const ground = Math.min(z[0], z[1]);
     for (let i = 0; i < 2; i++) {
       const gain = footLanding(this.#stepFeet[i], z[i], ground, CTRL_DT, now);
-      if (gain !== null) this.#onSound({ name: "step", gain, rate: 0.9 + Math.random() * 0.25 });
+      if (gain !== null) {
+        this.#lastLandingAt = now;
+        this.#onSound({ name: "step", gain, rate: 0.9 + Math.random() * 0.25 });
+        if (!this.#grabbed && !this.#recovery && !this.#pick) this.#strideRemaining += STRIDE_M;
+      }
+    }
+    if (this.#strideRemaining > 0) {
+      const d = Math.min(this.#strideRemaining, STRIDE_M / STRIDE_SPREAD_STEPS);
+      this.#strideRemaining -= d;
+      const q = this.#data.qpos;
+      const yaw = Math.atan2(2 * (q[3] * q[6] + q[4] * q[5]), 1 - 2 * (q[5] * q[5] + q[6] * q[6]));
+      this.#displacement.x += d * Math.cos(yaw);
+      this.#displacement.y += d * Math.sin(yaw);
     }
     const vz = this.#data.qvel[2];
     const impact = landingImpact(this.#prevVz, vz);
@@ -603,8 +636,6 @@ class DuckRuntime {
   // duck never leaves the fixed window. Yaw, height and velocities are untouched.
   #recenter() {
     const qpos = this.#data.qpos;
-    this.#displacement.x += qpos[0];
-    this.#displacement.y += qpos[1];
     qpos[0] = 0;
     qpos[1] = 0;
     this.#mujoco.mj_forward(this.#model, this.#data);

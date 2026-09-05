@@ -5,7 +5,7 @@ test("planForVisual maps every duck intent id to a behaviour", async () => {
   const { planForVisual, INTENT_IDS } = await import("../renderer/src/agent-visual-adapter.js");
   assert.deepEqual([...INTENT_IDS].sort(), ["duck-attention", "duck-carrying", "duck-error", "duck-idle", "duck-juggling",
     "duck-notification", "duck-roam", "duck-sleeping", "duck-sweeping", "duck-thinking", "duck-waking", "duck-working"]);
-  assert.deepEqual(planForVisual("duck-roam"), { kind: "roam", forward: 0.45, periodMs: 2000 });
+  assert.deepEqual(planForVisual("duck-roam"), { kind: "roam", forward: 0.6, periodMs: 2000 });
   assert.deepEqual(planForVisual("duck-idle"), { kind: "idle" });
   assert.deepEqual(planForVisual("duck-working"), { kind: "walk", forward: 0.7, heading: 0, periodMs: 2000 });
   assert.deepEqual(planForVisual("duck-juggling"), { kind: "sweep", forward: 0.8, amplitude: 0.8, periodMs: 3000 });
@@ -62,13 +62,12 @@ test("roam walks toward the roam heading and re-aims when main changes it", asyn
   const { createBehaviours } = await import("../renderer/src/agent-visual-adapter.js");
   const commands = [];
   const clock = { setInterval: () => 1, clearInterval: () => {} };
-  // random = 0.75 → tilt +0.1 rad (slightly away from the camera → walk drifts up)
-  const b = createBehaviours({ runtime: { command: (i) => commands.push(i), snapshot: () => ({ facing: -0.5, mode: "walk" }) }, autonomy: { pause() {}, resume() {} }, clock, random: () => 0.75 });
+  const b = createBehaviours({ runtime: { command: (i) => commands.push(i), snapshot: () => ({ facing: -0.5, mode: "walk" }) }, autonomy: { pause() {}, resume() {} }, clock });
   b.apply("duck-roam");
-  const side = Math.PI / 2 + 0.1;
-  assert.deepEqual(commands.at(-1), { type: "move", source: "system", forward: 0.45, heading: -side, ttlMs: 2600 });
+  const side = Math.PI / 3; // the edge of the camera-facing cone, never beyond
+  assert.deepEqual(commands.at(-1), { type: "move", source: "system", forward: 0.6, heading: -side, ttlMs: 2600 });
   b.setRoamHeading(true);
-  assert.deepEqual(commands.at(-1), { type: "move", source: "system", forward: 0.45, heading: side, ttlMs: 2600 });
+  assert.deepEqual(commands.at(-1), { type: "move", source: "system", forward: 0.6, heading: side, ttlMs: 2600 });
   b.apply("duck-idle");
   b.setRoamHeading(false);
   assert.equal(commands.at(-1).type, "stop");

@@ -7,7 +7,7 @@ Duck 的动画由基于物理引擎的 3D 渲染层驱动（`renderer/`，Vite r
 | 逻辑状态 | intent id | 鸭子行为 |
 |---|---|---|
 | idle / dizzy | `duck-idle` | 先站起（或唤醒），再恢复 AutonomyAdapter 的静息调度 |
-| roam（自由漫游，鸭子的步态驱动窗口） | `duck-roam` | 以侧面姿态朝主进程 `roam-heading` 指示的一侧行走（heading ±(90°+tilt)，forward 0.45，tilt 每次在 ±0.2 rad 内随机）。渲染层上报躯干实际走过的屏幕像素（`duck-displacement`），主进程按这个量原样移动窗口，窗口运动与步态始终一致；朝向/背离镜头的 tilt 自然形成轻微的下移/上移。主进程根据上报的 facing 选择鸭子当前偏向的一侧，偏向侧没有余量则本轮不走，走满计划距离或在边缘被挡住即结束 |
+| roam（自由漫游，鸭子的步态驱动窗口） | `duck-roam` | 在面向镜头的 ±60° 扇区边缘朝主进程 `roam-heading` 指示的一侧行走（heading ±60°，forward 0.6；运行时对所有 heading 请求钳制在 ±60°，永远不会背对用户）。渲染层上报躯干实际走过的屏幕像素（`duck-displacement`），主进程只取其横向分量移动窗口，并按计划的上/下漂移随步幅同步叠加，窗口运动与步态始终一致。主进程根据上报的 facing 选择鸭子当前偏向的一侧，偏向侧没有余量则本轮不走，走满计划距离或在边缘被挡住即结束 |
 | thinking | `duck-thinking` | 面朝镜头原地踏步（heading 0，forward 0.6，每 1.5 秒续租，状态持续多久就走多久）+ 每 1.5 秒随机 `look` |
 | working | `duck-working` | `move {forward:0.7, heading:0}` 持续（2 秒 TTL，循环续租） |
 | juggling | `duck-juggling` | `move {forward:0.8, heading:±0.8}`，每 3 秒换向 |

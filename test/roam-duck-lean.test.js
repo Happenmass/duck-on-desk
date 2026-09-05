@@ -110,11 +110,16 @@ describe("roam follows the duck's stride (duckDrivesRoam)", () => {
     assert.deepStrictEqual(h.applied.at(-1), { x: 900, y: 400 }, "no stride reported → window stays put");
     roam.onDisplacement(-3, 1);
     mock.timers.tick(16);
-    assert.deepStrictEqual(h.applied.at(-1), { x: 897, y: 401 });
+    assert.equal(h.applied.at(-1).x, 897);
     roam.onDisplacement(-2.5, -0.5);
     roam.onDisplacement(-1.5, 0);
     mock.timers.tick(16);
-    assert.deepStrictEqual(h.applied.at(-1), { x: 893, y: 401 });
+    assert.equal(h.applied.at(-1).x, 893);
+    // The stride's own vertical component is ignored: y follows the planned
+    // drift in proportion to the lateral travel (≤ 60% of it), never the
+    // reported dy.
+    const dy = Math.abs(h.applied.at(-1).y - 400);
+    assert.ok(dy <= Math.ceil(7 * 0.6) + 1, `vertical ${dy} for 7 px lateral`);
     assert.equal(h.ctx.getCurrentState(), "roam");
   });
 

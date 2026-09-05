@@ -582,10 +582,15 @@ module.exports = function initRoam(ctx) {
     pendingDx = 0;
     pendingDy = 0;
 
+    // The duck walks inside its camera-facing cone, so the stride's own
+    // toward-camera component would always drift the window down; use only
+    // its lateral part and add the planned up/down drift in step with it.
+    const slope = dx !== 0 ? dy / dx : 0;
+
     function follow(elapsed) {
       const wantX = curX + pendingDx;
-      const wantY = curY + pendingDy;
-      const moved = pendingDx !== 0 || pendingDy !== 0;
+      const wantY = curY + pendingDx * slope;
+      const moved = pendingDx !== 0;
       pendingDx = 0;
       pendingDy = 0;
       let nx = wantX;
@@ -753,6 +758,8 @@ module.exports = function initRoam(ctx) {
   }
 
   // duck-on-desk: renderer-reported stride (screen px) for the running walk.
+  // Only the lateral part drives the window (see follow()); dy is accepted
+  // for the record but unused.
   function onDisplacement(dx, dy) {
     if (!roamActive || !ctx.duckDrivesRoam) return;
     if (Number.isFinite(dx)) pendingDx += dx;

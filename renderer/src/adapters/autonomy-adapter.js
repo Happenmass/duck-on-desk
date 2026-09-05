@@ -10,12 +10,16 @@ export function chooseIdleAction(roll = Math.random()) {
 import { FACING_HALF_CONE } from "../runtime/gestures.js";
 
 const rand = (a, b) => a + Math.random() * (b - a);
+export const GLANCE_MIN_MS = 700;
+export const GLANCE_MAX_MS = 1_800;
 
 export class AutonomyAdapter {
   #runtime;
   #timer;
   #lastHumanAt = performance.now();
   #nextActionAt = performance.now() + 6_000;
+  #nextGlanceAt = performance.now() + 1_000;
+  #holdHeadUntil = 0; // a deliberate "look" keeps its pose until then
   #sleepAfterMs;
   #paused = false;
 
@@ -54,7 +58,19 @@ export class AutonomyAdapter {
       if (!this.#runtime.snapshot().sleeping) this.#runtime.command({ type: "sleep", source: "autonomy" });
       return;
     }
-    if (now < this.#nextActionAt || this.#runtime.snapshot().busy) return;
+    const snapshot = this.#runtime.snapshot();
+    if (snapshot.busy) return;
+    // Between the bigger idle actions the head keeps glancing about every
+    // second or so (small, quick moves) so a resting duck never reads as a
+    // frozen frame; a deliberate look holds its pose for its own duration.
+    if (now >= this.#nextGlanceAt && now >= this.#holdHeadUntil && !snapshot.sleeping) {
+      this.#runtime.command({
+        type: "look", source: "autonomy",
+        headYaw: rand(-0.4, 0.4), headPitch: rand(-0.18, 0.18), neckPitch: rand(-0.12, 0.12), headRoll: rand(-0.1, 0.1),
+      });
+      this.#nextGlanceAt = now + rand(GLANCE_MIN_MS, GLANCE_MAX_MS);
+    }
+    if (now < this.#nextActionAt) return;
     this.#nextActionAt = now + this.#act(chooseIdleAction());
   }
 
@@ -72,7 +88,9 @@ export class AutonomyAdapter {
           headYaw: neutral ? 0 : rand(-0.7, 0.7),
           headRoll: neutral ? 0 : rand(-0.25, 0.25),
         });
-        return rand(1_200, 3_500);
+        const hold = rand(1_200, 3_500);
+        this.#holdHeadUntil = performance.now() + hold;
+        return hold;
       }
       case "peck":
         cmd({ type: "perform", action: "peck" });

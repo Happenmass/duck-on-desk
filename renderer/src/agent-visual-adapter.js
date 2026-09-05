@@ -5,6 +5,8 @@ export const INTENT_IDS = new Set([
   "duck-attention", "duck-notification", "duck-error", "duck-sleeping", "duck-waking", "duck-roam",
 ]);
 
+import { FACING_HALF_CONE } from "./runtime/gestures.js";
+
 const SYSTEM = "system";
 
 export function planForVisual(file) {
@@ -26,18 +28,18 @@ export function planForVisual(file) {
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
-// Roam walks in side profile (camera at ±90° of the beak) so the window slides
-// sideways by the duck's own stride; a per-walk tilt of up to ±ROAM_TILT rad
-// toward/away from the camera turns into the walk's slight downward/upward drift.
-export const ROAM_FORWARD = 0.45;
-export const ROAM_TILT = 0.2;
+// Roam walks at the edge of the camera-facing cone (±60°, never showing its
+// back) so most of the stride is sideways; main slides the window by that
+// stride and adds the walk's planned up/down drift in step with it. 0.6 is
+// the slowest command the walking policy reliably starts from standstill
+// with (0.45 only sustains a gait already under way).
+export const ROAM_FORWARD = 0.6;
 
-export function createBehaviours({ runtime, autonomy, clock = globalThis, random = Math.random }) {
+export function createBehaviours({ runtime, autonomy, clock = globalThis }) {
   let timer = null;
   let current = "duck-idle";
   let roamLeft = null; // last roam-heading from main; null until the first roam
-  let roamTilt = 0;
-  const roamHeading = () => (roamLeft ? 1 : -1) * (Math.PI / 2 + roamTilt);
+  const roamHeading = () => (roamLeft ? 1 : -1) * FACING_HALF_CONE;
   const cmd = (intent) => runtime.command({ source: SYSTEM, ...intent });
   const every = (ms, fn) => { fn(); timer = clock.setInterval(fn, ms); };
   const stopTimer = () => { if (timer !== null) { clock.clearInterval(timer); timer = null; } };
@@ -90,7 +92,6 @@ export function createBehaviours({ runtime, autonomy, clock = globalThis, random
           const snapshot = typeof runtime.snapshot === "function" ? runtime.snapshot() : {};
           roamLeft = !!(snapshot && snapshot.facing > 0);
         }
-        roamTilt = (random() * 2 - 1) * ROAM_TILT;
         every(plan.periodMs, () => cmd({ type: "move", forward: plan.forward, heading: roamHeading(), ttlMs: plan.periodMs + 600 }));
         break;
       }
