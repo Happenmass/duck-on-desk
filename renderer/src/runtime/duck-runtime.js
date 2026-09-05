@@ -6,6 +6,7 @@ import { buildRig, geometryToBinaryStl, loadGlbGeometries, loadKinematics, MODEL
 import { DEFAULT_VARIANT, materialHookFor, VARIANTS, applyVariant } from "./variants.js";
 import { MotionLeases } from "./motion-leases.js";
 import { normalizeStilts, STILT_BLEND, STILT_MAX_FORWARD, STILT_MAX_TURN, STILT_SERVO_GAIN, stiltFraming, stiltMassKg, stiltMeshData, stiltPolicyFile } from "./stilts.js";
+import { normalizeLocomotion, ROLLER_BRAKE, ROLLER_BRAKE_ABOVE, ROLLER_CROUCH, ROLLER_MAX_FORWARD, ROLLER_POLICY_FILES, ROLLER_REST_HEIGHT, ROLLER_WHEEL_JOINTS } from "./rollers.js";
 import {
   CMD_SIZE, CTRL_DT, DECIMATION, DEFAULT_POSE, JOINT_NAMES, MAX_BACK, MAX_FORWARD,
   MAX_TURN, NUM_JOINTS, OBS_SIZE, POLICY_FILES, TIMESTEP,
@@ -87,6 +88,9 @@ class DuckRuntime {
   #cameraLift = 0; // metres the camera rig is raised to keep a lifted/falling trunk centred
   #lookY = REST_HEIGHT; // where the camera rig looks at rest (rises with stilts)
   #stilts = 0; // stilt height in cm (0 = the duck's own feet)
+  #locomotion = "legs"; // "legs" | "rollers"
+  #wheels = []; // rollers: [{ name, adr }] passive wheel hinges synced to the rig
+  #morphTarget = null; // pending { locomotion, stilts } for the next rebuild
   #stiltSites = null; // { left: { pos, quat }, right } from the MJCF foot sites (stilts only)
   #rebuilding = false; // a morphology rebuild is swapping model/rig/policy
   #cameraBase = null; // camera position at rest
@@ -105,19 +109,24 @@ class DuckRuntime {
   #gravityQ = new THREE.Quaternion();
   #gravityV = new THREE.Vector3();
 
-  constructor({ container, policyUrl, onSound = () => {}, appearance = DEFAULT_VARIANT, stilts = 0 }) {
+  constructor({ container, policyUrl, onSound = () => {}, appearance = DEFAULT_VARIANT, stilts = 0, locomotion = "legs" }) {
     if (!container) throw new Error("DuckRuntime requires a container");
     if (!VARIANTS[appearance]) throw new Error(`unknown appearance: ${appearance}`);
     this.#container = container;
     this.#policyUrl = policyUrl;
     this.#onSound = onSound;
     this.#appearance = appearance;
-    this.#stilts = normalizeStilts(stilts);
+    this.#locomotion = normalizeLocomotion(locomotion);
+    this.#stilts = this.#locomotion === "rollers" ? 0 : normalizeStilts(stilts);
+  }
+
+  #rollers() {
+    return this.#locomotion === "rollers";
   }
 
   // Trunk height when standing on the current feet.
   #restHeight() {
-    return REST_HEIGHT + this.#stilts / 100;
+    return (this.#rollers() ? ROLLER_REST_HEIGHT : REST_HEIGHT) + this.#stilts / 100;
   }
 
   async init() {
@@ -140,17 +149,19 @@ class DuckRuntime {
   // Everything that depends on the morphology (stilts or not): physics model,
   // policies, rig and camera framing. Runs at init and again on a rebuild.
   async #loadModel() {
-    if (this.#stilts > 0) {
-      // The stilt policies live in the user's Hugging Face cache (never
-      // bundled); without them fall back to the duck's own feet.
-      const available = await fetch(this.#policyUrl(stiltPolicyFile(this.#stilts))).then((r) => r.ok).catch(() => false);
-      if (!available) {
-        console.warn(`stilt policy ${this.#stilts} cm missing from the Hugging Face cache; using the duck's own feet`);
-        this.#stilts = 0;
-      }
+    // Policies live in the user's Hugging Face cache (never bundled); without
+    // the ones a morphology needs, fall back to the duck's own feet.
+    const have = (file) => fetch(this.#policyUrl(file)).then((r) => r.ok).catch(() => false);
+    if (this.#stilts > 0 && !(await have(stiltPolicyFile(this.#stilts)))) {
+      console.warn(`stilt policy ${this.#stilts} cm missing from the Hugging Face cache; using the duck's own feet`);
+      this.#stilts = 0;
+    }
+    if (this.#rollers() && !(await have(ROLLER_POLICY_FILES.walk) && await have(ROLLER_POLICY_FILES.crouch))) {
+      console.warn("roller policies missing from the Hugging Face cache; using the duck's own feet");
+      this.#locomotion = "legs";
     }
     const [k, physics] = await Promise.all([
-      loadKinematics(`${MODEL_DIR}/kinematics.json`),
+      loadKinematics(`${MODEL_DIR}/${this.#rollers() ? "kinematics_rollers.json" : "kinematics.json"}`),
       this.#buildPhysicsXml(),
     ]);
     const vfs = new this.#mujoco.MjVFS();
@@ -166,7 +177,11 @@ class DuckRuntime {
     const sessionOptions = { executionProviders: ["wasm"] };
     // On stilts the walking policy is the matching stilt policy from the Hub;
     // the other policies stay loaded but sit/peck are refused while on stilts.
-    const files = { ...POLICY_FILES, ...(this.#stilts > 0 ? { walk: stiltPolicyFile(this.#stilts) } : {}) };
+    const files = {
+      ...POLICY_FILES,
+      ...(this.#stilts > 0 ? { walk: stiltPolicyFile(this.#stilts) } : {}),
+      ...(this.#rollers() ? ROLLER_POLICY_FILES : {}),
+    };
     await Promise.all(Object.entries(files).map(async ([name, file]) => {
       this.#sessions[name] = await this.#ort.InferenceSession.create(this.#policyUrl(file), sessionOptions);
     }));
@@ -180,6 +195,11 @@ class DuckRuntime {
     this.#standKeyId = this.#mujoco.mj_name2id(this.#model, this.#mujoco.mjtObj.mjOBJ_KEY.value, "STAND");
     this.#ankleIds = ["ankle_left", "ankle_right"]
       .map((name) => this.#mujoco.mj_name2id(this.#model, this.#mujoco.mjtObj.mjOBJ_BODY.value, name));
+    // Passive wheel hinges: in qpos (zeroed in the keyframe) but not in the
+    // observation; resolved by name and only mirrored onto the rig.
+    this.#wheels = this.#rollers()
+      ? ROLLER_WHEEL_JOINTS.map((name) => ({ name, adr: this.#model.jnt(name).qposadr }))
+      : [];
 
     this.#rig = await buildRig(k, { materialForMesh: materialHookFor(VARIANTS[this.#appearance]) });
     this.#rig.placer.rotation.y = -Math.PI / 2;
@@ -198,36 +218,51 @@ class DuckRuntime {
     this.#resetPhysics();
   }
 
-  // Swap the morphology in place (stilts on/off or another height) without
-  // disturbing the callers holding this runtime: pause the control loop, drop
-  // the old model and rig, load the new ones, resume.
-  async #rebuild(heightCm) {
-    const next = normalizeStilts(heightCm);
-    if (next === this.#stilts || this.#rebuilding || !this.#mujoco) return;
+  // Morphology requests (stilts height, legs/rollers) are merged into one
+  // pending target; rollers and stilts are exclusive, the later request wins.
+  #requestMorphology(patch) {
+    const next = { locomotion: this.#locomotion, stilts: this.#stilts, ...(this.#morphTarget || {}), ...patch };
+    if ("stilts" in patch && next.stilts > 0) next.locomotion = "legs";
+    if (next.locomotion === "rollers") next.stilts = 0;
+    this.#morphTarget = next;
+    if (!this.#rebuilding) this.#rebuild();
+  }
+
+  // Swap the morphology in place without disturbing the callers holding this
+  // runtime: pause the control loop, drop the old model and rig, load the new
+  // ones, resume — and repeat if another request arrived meanwhile.
+  async #rebuild() {
+    if (this.#rebuilding || !this.#mujoco) return;
     this.#rebuilding = true;
-    this.#ready = false;
-    this.#emit();
-    await delay(80); // let an in-flight control step finish
-    this.#clearTimers();
-    this.#leases.clearAll();
-    this.#grabbed = false;
-    this.#lift = null;
-    this.#pick = null;
-    this.#recovery = null;
-    if (this.#rig) this.#scene.remove(this.#rig.placer);
-    this.#trunk = null;
-    this.#rig = null;
-    // Null the handles before freeing the WASM objects: snapshot() and the
-    // loops guard on them, and a freed embind object throws on any access.
-    const oldData = this.#data;
-    const oldModel = this.#model;
-    this.#data = null;
-    this.#model = null;
-    oldData?.delete?.();
-    oldModel?.delete?.();
-    this.#stilts = next;
     try {
-      await this.#loadModel();
+      while (this.#morphTarget) {
+        const target = this.#morphTarget;
+        this.#morphTarget = null;
+        if (target.locomotion === this.#locomotion && target.stilts === this.#stilts) continue;
+        this.#ready = false;
+        this.#emit();
+        await delay(80); // let an in-flight control step finish
+        this.#clearTimers();
+        this.#leases.clearAll();
+        this.#grabbed = false;
+        this.#lift = null;
+        this.#pick = null;
+        this.#recovery = null;
+        if (this.#rig) this.#scene.remove(this.#rig.placer);
+        this.#trunk = null;
+        this.#rig = null;
+        // Null the handles before freeing the WASM objects: snapshot() and the
+        // loops guard on them, and a freed embind object throws on any access.
+        const oldData = this.#data;
+        const oldModel = this.#model;
+        this.#data = null;
+        this.#model = null;
+        oldData?.delete?.();
+        oldModel?.delete?.();
+        this.#locomotion = target.locomotion;
+        this.#stilts = target.stilts;
+        await this.#loadModel();
+      }
     } finally {
       this.#rebuilding = false;
       this.#ready = !!this.#data;
@@ -281,11 +316,16 @@ class DuckRuntime {
         else this.#leases.clearAll();
         break;
       case "stilts":
-        this.#rebuild(intent.heightCm);
+        this.#requestMorphology({ stilts: normalizeStilts(intent.heightCm) });
+        break;
+      case "locomotion":
+        this.#requestMorphology({ locomotion: normalizeLocomotion(intent.mode) });
         break;
       case "perform":
         // Sitting and pecking have no stilt policies; ignore them on stilts.
+        // Rollers have no sit either, but "peck" becomes the crouch-glide.
         if (this.#stilts > 0 && (intent.action === "sit" || intent.action === "peck")) break;
+        if (this.#rollers() && intent.action === "sit") break;
         if (intent.action === "sit") this.#sit();
         else if (intent.action === "stand") this.#stand();
         else if (intent.action === "peck") this.#peck();
@@ -366,6 +406,7 @@ class DuckRuntime {
       height: this.#data ? this.#data.qpos[2] : 0,
       restHeight: this.#restHeight(),
       stilts: this.#stilts,
+      locomotion: this.#locomotion,
     });
   }
 
@@ -449,7 +490,7 @@ class DuckRuntime {
   }
 
   async #buildPhysicsXml() {
-    const source = await (await fetch(`${MODEL_DIR}/robot_allcollisions.xml`)).text();
+    const source = await (await fetch(`${MODEL_DIR}/${this.#rollers() ? "robot_allcollisions_rollers.xml" : "robot_allcollisions.xml"}`)).text();
     const doc = new DOMParser().parseFromString(source, "text/xml");
     for (const geom of [...doc.querySelectorAll('geom[class="visual"]')]) geom.remove();
     const usedMeshes = new Set([...doc.querySelectorAll("geom[mesh]")].map((geom) => geom.getAttribute("mesh")));
@@ -546,7 +587,7 @@ class DuckRuntime {
   }
 
   #sit() {
-    if (!this.#ready || this.#mode === "sit" || this.#pick || this.#stilts > 0) return;
+    if (!this.#ready || this.#mode === "sit" || this.#pick || this.#stilts > 0 || this.#rollers()) return;
     this.#leases.clearAll();
     this.#clearTimers();
     this.#mode = "sitting";
@@ -579,7 +620,7 @@ class DuckRuntime {
     this.#later(2_600, () => {
       this.#sleeping = true;
       this.#suspended = true;
-      this.#mode = this.#stilts > 0 ? "walk" : "sit"; // stilts: doze standing
+      this.#mode = this.#stilts > 0 || this.#rollers() ? "walk" : "sit"; // stilts/rollers: doze standing
       this.#emit();
     });
   }
@@ -645,11 +686,21 @@ class DuckRuntime {
         turn = control.turn;
         if (turn) forward = Math.max(forward, HEADING_MIN_FORWARD);
       }
-      if (forward > 0.2 && performance.now() - this.#lastLandingAt > GAIT_STALL_MS) forward = Math.max(forward, this.#stilts > 0 ? STILT_MAX_FORWARD : GAIT_KICK);
+      if (this.#rollers()) {
+        // BEST_roller was trained with no turning demand (cmd[2] always 0);
+        // cmd_x: 0 = coast, > 0 = push, < 0 = brake — brake instead of
+        // coasting away whenever nothing is driving.
+        turn = 0;
+        const speed = Math.hypot(this.#data.qvel[0], this.#data.qvel[1]);
+        if (forward === 0 && speed > ROLLER_BRAKE_ABOVE) forward = ROLLER_BRAKE / ROLLER_MAX_FORWARD;
+      } else if (forward > 0.2 && performance.now() - this.#lastLandingAt > GAIT_STALL_MS) {
+        forward = Math.max(forward, this.#stilts > 0 ? STILT_MAX_FORWARD : GAIT_KICK);
+      }
       // The stilt policies were trained up to 0.25 m/s but evaluated at 0.15;
       // keep the desktop duck on stilts at that gentler pace.
       if (this.#stilts > 0) forward = Math.min(forward, STILT_MAX_FORWARD);
-      this.#cmd[0] = forward >= 0 ? forward * MAX_FORWARD : -forward * MAX_BACK;
+      this.#cmd[0] = this.#rollers() ? forward * ROLLER_MAX_FORWARD
+        : forward >= 0 ? forward * MAX_FORWARD : -forward * MAX_BACK;
       this.#cmd[2] = turn * MAX_TURN;
       if (this.#stilts > 0) this.#cmd[2] = clamp(this.#cmd[2], -STILT_MAX_TURN, STILT_MAX_TURN);
     }
@@ -686,7 +737,7 @@ class DuckRuntime {
       return;
     }
     const session = this.#recovery?.state === "recovering" ? this.#sessions.stand
-      : this.#pick ? this.#sessions.groundpick
+      : this.#pick ? (this.#rollers() ? this.#sessions.crouch : this.#sessions.groundpick)
       : this.#mode === "walk" ? this.#sessions.walk
       : this.#sessions.sitstand;
     if (this.#recovery?.state !== "fallen") {
@@ -751,7 +802,7 @@ class DuckRuntime {
       if (gain !== null) {
         this.#lastLandingAt = now;
         this.#onSound({ name: "step", gain, rate: 0.9 + Math.random() * 0.25 });
-        if (!this.#grabbed && !this.#recovery && !this.#pick) this.#strideRemaining += STRIDE_M;
+        if (!this.#grabbed && !this.#recovery && !this.#pick && !this.#rollers()) this.#strideRemaining += STRIDE_M;
       }
     }
     if (this.#strideRemaining > 0) {
@@ -773,8 +824,9 @@ class DuckRuntime {
 
   #advancePick() {
     if (!this.#pick) return;
-    this.#pick.phase += CTRL_DT / GROUND_PICK.periodS;
-    if (this.#pick.phase >= GROUND_PICK.endPhase) this.#cancelPeck();
+    const oneShot = this.#rollers() ? ROLLER_CROUCH : GROUND_PICK;
+    this.#pick.phase += CTRL_DT / oneShot.periodS;
+    if (this.#pick.phase >= oneShot.endPhase) this.#cancelPeck();
   }
 
   #cancelPeck() {
@@ -788,6 +840,12 @@ class DuckRuntime {
   // duck never leaves the fixed window. Yaw, height and velocities are untouched.
   #recenter() {
     const qpos = this.#data.qpos;
+    // On wheels the trunk's translation is the real rolling distance (unlike
+    // the walking policy's), so it is what free roam should follow.
+    if (this.#rollers() && !this.#grabbed && !this.#recovery) {
+      this.#displacement.x += qpos[0];
+      this.#displacement.y += qpos[1];
+    }
     qpos[0] = 0;
     qpos[1] = 0;
     this.#mujoco.mj_forward(this.#model, this.#data);
@@ -798,9 +856,9 @@ class DuckRuntime {
     const fallen = this.#projectedGravityZ() > -0.5 || this.#data.qpos[2] < 0.02 + 0.5 * (this.#stilts / 100);
     if (this.#recovery) {
       this.#recovery.steps++;
-      if (this.#stilts > 0) {
-        // No get-up policy exists for stilts: after a moment on the ground the
-        // duck is simply stood back up on its stilts.
+      if (this.#stilts > 0 || this.#rollers()) {
+        // No get-up policy for stilts or rollers: after a moment on the ground
+        // the duck is simply stood back up.
         if (this.#recovery.steps >= 50) this.#resetPhysics();
         return;
       }
@@ -877,6 +935,7 @@ class DuckRuntime {
         for (let joint = 0; joint < NUM_JOINTS; joint++) {
           setJoint(this.#rig, JOINT_NAMES[joint], qpos[this.#qposAdr[joint]]);
         }
+        for (const wheel of this.#wheels) setJoint(this.#rig, wheel.name, qpos[wheel.adr]);
         setJawOpen(this.#rig, Math.min(1, pickJawOpenness(this.#pick?.phase) + quackJawOpenness(now - this.#quackAt)));
       }
       this.#renderer.render(this.#scene, this.#camera);

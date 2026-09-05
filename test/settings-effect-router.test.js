@@ -793,3 +793,15 @@ describe("duck-on-desk: stilts setting reaches the renderer", () => {
     ]);
   });
 });
+
+describe("duck-on-desk: locomotion setting reaches the renderer", () => {
+  it("forwards legs/rollers", () => {
+    const { calls, emit } = createHarness();
+    emit({ duckLocomotion: "rollers" });
+    emit({ duckLocomotion: "legs" });
+    assert.deepStrictEqual(calls.filter((c) => c[1] === "duck-locomotion-change"), [
+      ["sendToRenderer", "duck-locomotion-change", "rollers"],
+      ["sendToRenderer", "duck-locomotion-change", "legs"],
+    ]);
+  });
+});

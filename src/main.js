@@ -1897,6 +1897,7 @@ function buildRendererThemeConfig(accessorySnapshot = null) {
     cfg.duckVoiceVolume = _settingsController.getSnapshot().duckVoiceVolume;
     cfg.duckStepVolume = _settingsController.getSnapshot().duckStepVolume;
     cfg.duckStilts = _settingsController.getSnapshot().duckStilts;
+    cfg.duckLocomotion = _settingsController.getSnapshot().duckLocomotion;
     if (canonical) {
       cfg.accessorySlots = {
         themeId: canonical.themeId,

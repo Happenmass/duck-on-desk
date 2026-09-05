@@ -225,12 +225,36 @@ module.exports = function initMenu(ctx) {
         })),
       },
       {
+        label: t("menuDuckLocomotion"),
+        submenu: [
+          {
+            label: t("menuDuckLegs"),
+            type: "radio",
+            checked: settings.get("duckLocomotion") !== "rollers",
+            click: () => settings.applyUpdate("duckLocomotion", "legs"),
+          },
+          {
+            label: t("menuDuckRollers"),
+            type: "radio",
+            checked: settings.get("duckLocomotion") === "rollers",
+            click: () => {
+              // Rollers and stilts are exclusive: skating puts the stilts away.
+              if (Number(settings.get("duckStilts")) !== 0) settings.applyUpdate("duckStilts", 0);
+              settings.applyUpdate("duckLocomotion", "rollers");
+            },
+          },
+        ],
+      },
+      {
         label: t("menuDuckStilts"),
         submenu: DUCK_STILTS.map((cm) => ({
           label: cm === 0 ? t("menuDuckStiltsOff") : cm >= 100 ? `${cm / 100} m` : `${cm} cm`,
           type: "radio",
           checked: Number(settings.get("duckStilts")) === cm,
-          click: () => settings.applyUpdate("duckStilts", cm),
+          click: () => {
+            if (cm !== 0 && settings.get("duckLocomotion") === "rollers") settings.applyUpdate("duckLocomotion", "legs");
+            settings.applyUpdate("duckStilts", cm);
+          },
         })),
       },
       {

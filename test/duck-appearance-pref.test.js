@@ -38,3 +38,12 @@ test("duckStilts is an enumerated height preference (0 = own feet)", () => {
   assert.equal(updateRegistry.duckStilts(12).status, "error");
   assert.equal(updateRegistry.duckStilts("25").status, "error");
 });
+
+test("duckLocomotion is a legs/rollers preference", () => {
+  const prefs = require("../src/prefs");
+  const { updateRegistry } = require("../src/settings-actions");
+  assert.equal(prefs.SCHEMA.duckLocomotion.default, "legs");
+  assert.deepEqual(prefs.SCHEMA.duckLocomotion.enum, ["legs", "rollers"]);
+  assert.equal(updateRegistry.duckLocomotion("rollers").status, "ok");
+  assert.equal(updateRegistry.duckLocomotion("wheels").status, "error");
+});

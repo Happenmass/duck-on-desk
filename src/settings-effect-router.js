@@ -186,6 +186,9 @@ function createSettingsEffectRouter(options = {}) {
     if ("duckMuted" in changes) {
       sendToRenderer("duck-muted-change", changes.duckMuted === true);
     }
+    if ("duckLocomotion" in changes) {
+      sendToRenderer("duck-locomotion-change", changes.duckLocomotion === "rollers" ? "rollers" : "legs");
+    }
     if ("duckStilts" in changes) {
       sendToRenderer("duck-stilts-change", Number(changes.duckStilts) || 0);
     }

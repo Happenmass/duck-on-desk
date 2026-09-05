@@ -10,7 +10,7 @@ function fakeApi() {
     onStateChange: on("state"), onEyeMove: on("eye"), onDndChange: on("dnd"), onStartDragReaction: on("dragStart"),
     onEndDragReaction: on("dragEnd"), onPlayClickReaction: on("click"), onWakeFromDoze: on("wake"), onThemeConfig: on("theme"),
     onPlaySound: on("sound"), onPreloadSounds: on("preload"), onInvalidateSoundCache: on("inval"), onDuckAppearanceChange: on("skin"), onDuckLift: on("lift"),
-    onDuckMutedChange: on("muted"), onDuckVolumeChange: on("volume"), onDuckStiltsChange: on("stilts"),
+    onDuckMutedChange: on("muted"), onDuckVolumeChange: on("volume"), onDuckStiltsChange: on("stilts"), onDuckLocomotionChange: on("locomotion"),
     notifyPetVisualReady: () => sent.push(["ready"]),
     notifyPetVisualSettled: (p) => sent.push(["settled", p]),
   };
@@ -106,4 +106,13 @@ test("a stilts setting change becomes a runtime morphology command", async () =>
   connectPetBridge({ api, runtime: { command: (i) => commands.push(i) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} } });
   api.handlers.stilts(25);
   assert.deepEqual(commands, [{ type: "stilts", heightCm: 25, source: "local" }]);
+});
+
+test("a locomotion setting change becomes a runtime morphology command", async () => {
+  const { connectPetBridge } = await import("../renderer/src/pet-bridge.js");
+  const api = fakeApi();
+  const commands = [];
+  connectPetBridge({ api, runtime: { command: (i) => commands.push(i) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} } });
+  api.handlers.locomotion("rollers");
+  assert.deepEqual(commands, [{ type: "locomotion", mode: "rollers", source: "local" }]);
 });

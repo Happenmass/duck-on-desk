@@ -2,6 +2,7 @@
 
 const DUCK_APPEARANCES = Object.freeze(["classic", "charcoal", "purple", "blue"]);
 const DUCK_STILTS = [0, 10, 15, 20, 25, 50, 100, 140, 200];
+const DUCK_LOCOMOTIONS = ["legs", "rollers"];
 
 // ── Settings actions (transport-agnostic) ──
 //
@@ -425,6 +426,11 @@ const updateRegistry = {
     return DUCK_APPEARANCES.includes(value)
       ? { status: "ok" }
       : { status: "error", message: `duckAppearance must be one of ${DUCK_APPEARANCES.join(", ")}` };
+  },
+  duckLocomotion(value) {
+    return DUCK_LOCOMOTIONS.includes(value)
+      ? { status: "ok" }
+      : { status: "error", message: `duckLocomotion must be one of ${DUCK_LOCOMOTIONS.join(", ")}` };
   },
   duckStilts(value) {
     return DUCK_STILTS.includes(value)

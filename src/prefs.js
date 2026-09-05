@@ -244,6 +244,8 @@ const SCHEMA = {
   duckStepVolume: { type: "number", default: 1, validate: (v) => Number.isFinite(v) && v >= 0 && v <= 1 },
   // Community stilt policies: 0 = own feet, otherwise a released stilt height in cm.
   duckStilts: { type: "number", default: 0, validate: (v) => [0, 10, 15, 20, 25, 50, 100, 140, 200].includes(v) },
+  // Official roller-skate variant (BEST_roller / BEST_roller_crouch); exclusive with stilts.
+  duckLocomotion: { type: "string", default: "legs", enum: ["legs", "rollers"] },
   soundVolume: {
     type: "number",
     default: 1,

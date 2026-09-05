@@ -41,6 +41,10 @@ export async function loadKinematics(url) {
   if (new URLSearchParams(location.search).get("lite") === "1") {
     k.mesh_dir = k.mesh_dir.replace(/\/meshes$/, "/meshes-lite");
   }
+  // The kinematics files carry an absolute /robot/mjlab/... mesh_dir from the
+  // dev server; under file:// (Electron) that would be the filesystem root, so
+  // resolve it against MODEL_DIR like every other asset.
+  if (typeof k.mesh_dir === "string" && k.mesh_dir.startsWith("/robot/mjlab")) k.mesh_dir = `${MODEL_DIR}${k.mesh_dir.slice("/robot/mjlab".length)}`;
   return k;
 }
 

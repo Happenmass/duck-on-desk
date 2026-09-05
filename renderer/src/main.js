@@ -20,6 +20,7 @@ try {
     onSound: (sound) => audio.play(sound),
     appearance: themeConfig.duckAppearance || "classic",
     stilts: Number(themeConfig.duckStilts) || 0,
+    locomotion: themeConfig.duckLocomotion || "legs",
   });
   audio.setAppearance(runtime.snapshot().appearance);
   const autonomy = new AutonomyAdapter(runtime);

@@ -7,6 +7,7 @@ const path = require("node:path");
 const POLICY_COMMIT = "183f99a40bd7308da3e848de961ed32bb02624a5";
 const POLICY_NAMES = new Set([
   "BEST_alpha_walking.onnx", "BEST_alpha_sitstand.onnx", "BEST_alpha_stand.onnx", "alpha_ground_pick.onnx",
+  "BEST_roller.onnx", "BEST_roller_crouch.onnx",
 ]);
 const SCHEME = "pet-model";
 // Community stilt policies (HannesVonEssen/microduck-stilts on the Hub, snapshot pinned), also
