@@ -60,7 +60,8 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
   const fallFrame = () => {
     if (!fall) return;
     const s = runtime.snapshot();
-    const height = Math.max(0, (s && Number.isFinite(s.height) ? s.height : REST_HEIGHT) - REST_HEIGHT);
+    const rest = s && Number.isFinite(s.restHeight) ? s.restHeight : REST_HEIGHT;
+    const height = Math.max(0, (s && Number.isFinite(s.height) ? s.height : rest) - rest);
     fall.calm = height < LANDED_BELOW ? fall.calm + 1 : 0;
     const done = fall.calm >= LANDED_FRAMES || Date.now() - fall.started > FALL_MAX_MS;
     api.reportDuckFall?.({ height: done ? 0 : height, done });
@@ -100,6 +101,7 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
   }
   api.onDuckMutedChange?.((muted) => audio.setMuted(muted));
   api.onDuckVolumeChange?.((volumes) => audio.setVolumes(volumes));
+  api.onDuckStiltsChange?.((heightCm) => runtime.command({ type: "stilts", heightCm, source: "local" }));
   api.notifyPetVisualReady();
   return { dispose: () => { if (facingTimer) clearInterval(facingTimer); if (stepTimer) clearInterval(stepTimer); behaviours.dispose(); } };
 }

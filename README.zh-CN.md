@@ -7,6 +7,20 @@
 ## 安装
 见 `docs/guides/install.md`。支持 macOS（arm64/x64）与 Windows（x64/arm64）。
 
+## 踩高跷（实验）
+
+托盘菜单的「踩高跷」把鸭子换到社区训练的高跷策略
+（`HannesVonEssen/microduck-stilts`，训练于 `Vottivott/microduck-playground`）。
+和官方策略一样，它们只从你的 Hugging Face 缓存读取、不随应用打包，先取一次：
+
+```bash
+python3 -c "from huggingface_hub import snapshot_download; snapshot_download('HannesVonEssen/microduck-stilts', allow_patterns=['*.onnx', '*.json', '*.md'])"
+```
+
+10–25 cm 是可打印的高度，50 cm–2 m 只是仿真结果。踩高跷时鸭子会走会转，
+但不会坐下、啄地或自己爬起（摔倒后直接扶起），并把舵机增益加倍来近似这些
+策略训练时用的 BAM 舵机模型。
+
 ## Agent 支持
 | Agent | 集成方式 | 状态 | 权限气泡 |
 |---|---|---|---|

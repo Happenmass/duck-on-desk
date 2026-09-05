@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onDuckAppearanceChange: (cb) => ipcRenderer.on("duck-appearance-change", (_, name) => cb(name)),
   onDuckMutedChange: (cb) => ipcRenderer.on("duck-muted-change", (_, muted) => cb(muted === true)),
   onDuckVolumeChange: (cb) => ipcRenderer.on("duck-volume-change", (_, volumes) => cb(volumes && typeof volumes === "object" ? volumes : {})),
+  onDuckStiltsChange: (cb) => ipcRenderer.on("duck-stilts-change", (_, heightCm) => cb(Number(heightCm) || 0)),
   onDuckLift: (cb) => ipcRenderer.on("duck-lift", (_, payload) => cb(payload && typeof payload === "object" ? payload : { phase: "end" })),
   // State sync from main
   onStateChange: (callback) => ipcRenderer.on("state-change", (_, requestOrState, legacySvg) => callback(requestOrState, legacySvg)),

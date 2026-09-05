@@ -27,3 +27,14 @@ test("duckVoiceVolume and duckStepVolume are 0..1 preferences with their own reg
   assert.equal(updateRegistry.duckVoiceVolume(2).status, "error");
   assert.equal(updateRegistry.duckStepVolume("loud").status, "error");
 });
+
+test("duckStilts is an enumerated height preference (0 = own feet)", () => {
+  const prefs = require("../src/prefs");
+  const { updateRegistry } = require("../src/settings-actions");
+  assert.equal(prefs.SCHEMA.duckStilts.default, 0);
+  assert.equal(prefs.SCHEMA.duckStilts.validate(25), true);
+  assert.equal(prefs.SCHEMA.duckStilts.validate(30), false);
+  assert.equal(updateRegistry.duckStilts(200).status, "ok");
+  assert.equal(updateRegistry.duckStilts(12).status, "error");
+  assert.equal(updateRegistry.duckStilts("25").status, "error");
+});

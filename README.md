@@ -7,6 +7,22 @@ A physics-driven 3D Microduck that lives on your desktop and reacts to your AI c
 ## Install
 See `docs/guides/install.md`. macOS (arm64/x64) and Windows (x64/arm64).
 
+## Stilts (experimental)
+
+The tray menu's **Stilts** entry puts the duck on the community stilt policies
+(`HannesVonEssen/microduck-stilts`, trained in `Vottivott/microduck-playground`).
+Like the official policies they are read from your Hugging Face cache, never
+bundled: fetch them once with
+
+```bash
+python3 -c "from huggingface_hub import snapshot_download; snapshot_download('HannesVonEssen/microduck-stilts', allow_patterns=['*.onnx', '*.json', '*.md'])"
+```
+
+Heights 10–25 cm are the printable ones; 50 cm–2 m are simulation-only. On
+stilts the duck walks and turns but does not sit, peck or get up on its own
+(a fallen duck is stood back up), and the servo gains are doubled to
+approximate the BAM actuator model those policies were trained with.
+
 ## Agents
 | Agent | Integration | States | Permission bubble |
 |---|---|---|---|

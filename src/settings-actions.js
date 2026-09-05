@@ -1,6 +1,7 @@
 "use strict";
 
 const DUCK_APPEARANCES = Object.freeze(["classic", "charcoal", "purple", "blue"]);
+const DUCK_STILTS = [0, 10, 15, 20, 25, 50, 100, 140, 200];
 
 // ── Settings actions (transport-agnostic) ──
 //
@@ -424,6 +425,11 @@ const updateRegistry = {
     return DUCK_APPEARANCES.includes(value)
       ? { status: "ok" }
       : { status: "error", message: `duckAppearance must be one of ${DUCK_APPEARANCES.join(", ")}` };
+  },
+  duckStilts(value) {
+    return DUCK_STILTS.includes(value)
+      ? { status: "ok" }
+      : { status: "error", message: `duckStilts must be one of ${DUCK_STILTS.join(", ")}` };
   },
   duckMuted: requireBoolean("duckMuted"),
   duckVoiceVolume: requireNumberInRange("duckVoiceVolume", 0, 1),

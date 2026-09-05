@@ -186,6 +186,9 @@ function createSettingsEffectRouter(options = {}) {
     if ("duckMuted" in changes) {
       sendToRenderer("duck-muted-change", changes.duckMuted === true);
     }
+    if ("duckStilts" in changes) {
+      sendToRenderer("duck-stilts-change", Number(changes.duckStilts) || 0);
+    }
     if ("duckVoiceVolume" in changes || "duckStepVolume" in changes) {
       const volumes = {};
       if ("duckVoiceVolume" in changes) volumes.voice = changes.duckVoiceVolume;

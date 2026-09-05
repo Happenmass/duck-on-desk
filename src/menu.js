@@ -205,6 +205,8 @@ module.exports = function initMenu(ctx) {
   // writes through the settings controller (ctx.settings); the router turns
   // them into duck-appearance-change / duck-muted-change IPC.
   const DUCK_SKINS = [["classic", "Cream"], ["charcoal", "Graphite"], ["purple", "Lavender"], ["blue", "Sky"]];
+  // Community stilt policies (experimental): 0 = own feet.
+  const DUCK_STILTS = [0, 10, 15, 20, 25, 50, 100, 140, 200];
 
   function buildDuckAppearanceMenuItems() {
     // Same optional-ctx discipline as the other menu entries: test harnesses
@@ -220,6 +222,15 @@ module.exports = function initMenu(ctx) {
           type: "radio",
           checked: current === id,
           click: () => settings.applyUpdate("duckAppearance", id),
+        })),
+      },
+      {
+        label: t("menuDuckStilts"),
+        submenu: DUCK_STILTS.map((cm) => ({
+          label: cm === 0 ? t("menuDuckStiltsOff") : cm >= 100 ? `${cm / 100} m` : `${cm} cm`,
+          type: "radio",
+          checked: Number(settings.get("duckStilts")) === cm,
+          click: () => settings.applyUpdate("duckStilts", cm),
         })),
       },
       {

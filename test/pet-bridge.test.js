@@ -10,7 +10,7 @@ function fakeApi() {
     onStateChange: on("state"), onEyeMove: on("eye"), onDndChange: on("dnd"), onStartDragReaction: on("dragStart"),
     onEndDragReaction: on("dragEnd"), onPlayClickReaction: on("click"), onWakeFromDoze: on("wake"), onThemeConfig: on("theme"),
     onPlaySound: on("sound"), onPreloadSounds: on("preload"), onInvalidateSoundCache: on("inval"), onDuckAppearanceChange: on("skin"), onDuckLift: on("lift"),
-    onDuckMutedChange: on("muted"), onDuckVolumeChange: on("volume"),
+    onDuckMutedChange: on("muted"), onDuckVolumeChange: on("volume"), onDuckStiltsChange: on("stilts"),
     notifyPetVisualReady: () => sent.push(["ready"]),
     notifyPetVisualSettled: (p) => sent.push(["settled", p]),
   };
@@ -97,4 +97,13 @@ test("mute and per-bus volume settings are handed to the audio adapter", async (
   api.handlers.muted(true);
   api.handlers.volume({ steps: 0.25 });
   assert.deepEqual(audioCalls, [["muted", true], ["volumes", { steps: 0.25 }]]);
+});
+
+test("a stilts setting change becomes a runtime morphology command", async () => {
+  const { connectPetBridge } = await import("../renderer/src/pet-bridge.js");
+  const api = fakeApi();
+  const commands = [];
+  connectPetBridge({ api, runtime: { command: (i) => commands.push(i) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} } });
+  api.handlers.stilts(25);
+  assert.deepEqual(commands, [{ type: "stilts", heightCm: 25, source: "local" }]);
 });

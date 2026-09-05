@@ -5,6 +5,7 @@ import ortWasmUrl from "onnxruntime-web/ort-wasm-simd-threaded.wasm?url";
 import { buildRig, geometryToBinaryStl, loadGlbGeometries, loadKinematics, MODEL_DIR, setJawOpen, setJoint } from "./duck.js";
 import { DEFAULT_VARIANT, materialHookFor, VARIANTS, applyVariant } from "./variants.js";
 import { MotionLeases } from "./motion-leases.js";
+import { normalizeStilts, STILT_BLEND, STILT_MAX_FORWARD, STILT_MAX_TURN, STILT_SERVO_GAIN, stiltFraming, stiltMassKg, stiltMeshData, stiltPolicyFile } from "./stilts.js";
 import {
   CMD_SIZE, CTRL_DT, DECIMATION, DEFAULT_POSE, JOINT_NAMES, MAX_BACK, MAX_FORWARD,
   MAX_TURN, NUM_JOINTS, OBS_SIZE, POLICY_FILES, TIMESTEP,
@@ -84,6 +85,10 @@ class DuckRuntime {
   #grabbed = false;
   #lift = null; // { z, base, target } while picked up
   #cameraLift = 0; // metres the camera rig is raised to keep a lifted/falling trunk centred
+  #lookY = REST_HEIGHT; // where the camera rig looks at rest (rises with stilts)
+  #stilts = 0; // stilt height in cm (0 = the duck's own feet)
+  #stiltSites = null; // { left: { pos, quat }, right } from the MJCF foot sites (stilts only)
+  #rebuilding = false; // a morphology rebuild is swapping model/rig/policy
   #cameraBase = null; // camera position at rest
   #sleeping = false;
   #suspended = false;
@@ -100,28 +105,54 @@ class DuckRuntime {
   #gravityQ = new THREE.Quaternion();
   #gravityV = new THREE.Vector3();
 
-  constructor({ container, policyUrl, onSound = () => {}, appearance = DEFAULT_VARIANT }) {
+  constructor({ container, policyUrl, onSound = () => {}, appearance = DEFAULT_VARIANT, stilts = 0 }) {
     if (!container) throw new Error("DuckRuntime requires a container");
     if (!VARIANTS[appearance]) throw new Error(`unknown appearance: ${appearance}`);
     this.#container = container;
     this.#policyUrl = policyUrl;
     this.#onSound = onSound;
     this.#appearance = appearance;
+    this.#stilts = normalizeStilts(stilts);
+  }
+
+  // Trunk height when standing on the current feet.
+  #restHeight() {
+    return REST_HEIGHT + this.#stilts / 100;
   }
 
   async init() {
     this.#setupRenderer();
-    const [{ default: loadMujocoFactory }, ort, k, physics] = await Promise.all([
+    const [{ default: loadMujocoFactory }, ort] = await Promise.all([
       import("@mujoco/mujoco"),
       import("onnxruntime-web/wasm"),
-      loadKinematics(`${MODEL_DIR}/kinematics.json`),
-      this.#buildPhysicsXml(),
     ]);
     this.#ort = ort;
     ort.env.wasm.wasmPaths = { wasm: ortWasmUrl };
     ort.env.wasm.numThreads = 1;
-
     this.#mujoco = await loadMujocoFactory({ locateFile: (name) => name.endsWith(".wasm") ? mujocoWasmUrl : name });
+    await this.#loadModel();
+    this.#ready = true;
+    this.#emit();
+    this.#controlLoop();
+    this.#renderLoop();
+  }
+
+  // Everything that depends on the morphology (stilts or not): physics model,
+  // policies, rig and camera framing. Runs at init and again on a rebuild.
+  async #loadModel() {
+    if (this.#stilts > 0) {
+      // The stilt policies live in the user's Hugging Face cache (never
+      // bundled); without them fall back to the duck's own feet.
+      const available = await fetch(this.#policyUrl(stiltPolicyFile(this.#stilts))).then((r) => r.ok).catch(() => false);
+      if (!available) {
+        console.warn(`stilt policy ${this.#stilts} cm missing from the Hugging Face cache; using the duck's own feet`);
+        this.#stilts = 0;
+      }
+    }
+    const [k, physics] = await Promise.all([
+      loadKinematics(`${MODEL_DIR}/kinematics.json`),
+      this.#buildPhysicsXml(),
+    ]);
     const vfs = new this.#mujoco.MjVFS();
     const glb = await loadGlbGeometries();
     await Promise.all(physics.meshFiles.map(async (name) => {
@@ -133,9 +164,11 @@ class DuckRuntime {
     }));
 
     const sessionOptions = { executionProviders: ["wasm"] };
-    const sessionEntries = Object.entries(POLICY_FILES);
-    await Promise.all(sessionEntries.map(async ([name, file]) => {
-      this.#sessions[name] = await ort.InferenceSession.create(this.#policyUrl(file), sessionOptions);
+    // On stilts the walking policy is the matching stilt policy from the Hub;
+    // the other policies stay loaded but sit/peck are refused while on stilts.
+    const files = { ...POLICY_FILES, ...(this.#stilts > 0 ? { walk: stiltPolicyFile(this.#stilts) } : {}) };
+    await Promise.all(Object.entries(files).map(async ([name, file]) => {
+      this.#sessions[name] = await this.#ort.InferenceSession.create(this.#policyUrl(file), sessionOptions);
     }));
 
     this.#model = this.#mujoco.MjModel.from_xml_string(physics.xml, vfs);
@@ -153,18 +186,85 @@ class DuckRuntime {
     this.#rig.root.traverse((object) => {
       if (object.isMesh) object.castShadow = true;
     });
+    if (this.#stilts > 0) this.#attachStiltVisuals();
     this.#scene.add(this.#rig.placer);
     this.#trunk = this.#rig.bodies.get("trunk_base");
+    this.#frameCamera();
     // Camera bearing in the MJCF world frame (the trunk's parent frame): the
     // trunk is pinned at the origin, so this is constant.
     this.#scene.updateMatrixWorld(true);
     const cameraLocal = this.#trunk.parent.worldToLocal(this.#camera.position.clone());
     this.#cameraBearing = Math.atan2(cameraLocal.y, cameraLocal.x);
     this.#resetPhysics();
-    this.#ready = true;
+  }
+
+  // Swap the morphology in place (stilts on/off or another height) without
+  // disturbing the callers holding this runtime: pause the control loop, drop
+  // the old model and rig, load the new ones, resume.
+  async #rebuild(heightCm) {
+    const next = normalizeStilts(heightCm);
+    if (next === this.#stilts || this.#rebuilding || !this.#mujoco) return;
+    this.#rebuilding = true;
+    this.#ready = false;
     this.#emit();
-    this.#controlLoop();
-    this.#renderLoop();
+    await delay(80); // let an in-flight control step finish
+    this.#clearTimers();
+    this.#leases.clearAll();
+    this.#grabbed = false;
+    this.#lift = null;
+    this.#pick = null;
+    this.#recovery = null;
+    if (this.#rig) this.#scene.remove(this.#rig.placer);
+    this.#trunk = null;
+    this.#rig = null;
+    // Null the handles before freeing the WASM objects: snapshot() and the
+    // loops guard on them, and a freed embind object throws on any access.
+    const oldData = this.#data;
+    const oldModel = this.#model;
+    this.#data = null;
+    this.#model = null;
+    oldData?.delete?.();
+    oldModel?.delete?.();
+    this.#stilts = next;
+    try {
+      await this.#loadModel();
+    } finally {
+      this.#rebuilding = false;
+      this.#ready = !!this.#data;
+      this.#emit();
+    }
+  }
+
+  // Stilt visuals: the same loft the physics uses, hung from each ankle at the
+  // foot site so it follows the leg exactly.
+  #attachStiltVisuals() {
+    const { vertices, faces } = stiltMeshData(this.#stilts, STILT_BLEND);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(Array.from(faces));
+    geometry.computeVertexNormals();
+    const material = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.45, 0.34, 0.85), roughness: 0.45, side: THREE.DoubleSide });
+    for (const side of ["left", "right"]) {
+      const ankle = this.#rig.bodies.get(`ankle_${side}`);
+      const site = this.#stiltSites?.[side];
+      if (!ankle || !site) continue;
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = true;
+      mesh.position.set(site.pos[0], site.pos[1], site.pos[2]);
+      mesh.quaternion.set(site.quat[1], site.quat[2], site.quat[3], site.quat[0]);
+      ankle.add(mesh);
+    }
+  }
+
+  // Rest framing: the stock camera for the bare duck, backed off and aimed
+  // higher on stilts so the whole silhouette stays in the window.
+  #frameCamera() {
+    const framing = stiltFraming(this.#stilts, REST_HEIGHT);
+    this.#lookY = framing.lookY;
+    this.#camera.position.set(0.36, 0.23, 0.54).multiplyScalar(framing.dolly);
+    this.#camera.lookAt(0, this.#lookY, 0);
+    this.#cameraBase = this.#camera.position.clone();
+    this.#cameraLift = 0;
   }
 
   command(intent) {
@@ -180,7 +280,12 @@ class DuckRuntime {
         if (intent.source) this.#leases.clear(source);
         else this.#leases.clearAll();
         break;
+      case "stilts":
+        this.#rebuild(intent.heightCm);
+        break;
       case "perform":
+        // Sitting and pecking have no stilt policies; ignore them on stilts.
+        if (this.#stilts > 0 && (intent.action === "sit" || intent.action === "peck")) break;
         if (intent.action === "sit") this.#sit();
         else if (intent.action === "stand") this.#stand();
         else if (intent.action === "peck") this.#peck();
@@ -259,6 +364,8 @@ class DuckRuntime {
       motionSource: this.#leases.current().source,
       facing: this.#data ? this.#facing() : 0,
       height: this.#data ? this.#data.qpos[2] : 0,
+      restHeight: this.#restHeight(),
+      stilts: this.#stilts,
     });
   }
 
@@ -355,7 +462,12 @@ class DuckRuntime {
       for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
       return node;
     };
-    doc.documentElement.appendChild(element("option", { timestep: String(TIMESTEP) }));
+    // Same solver setup the policies were trained with (mjlab: implicitfast
+    // integrator, Newton solver at 10/20 iterations); MuJoCo's Euler default
+    // treats the joint damping/armature explicitly and is noticeably stiffer.
+    doc.documentElement.appendChild(element("option", {
+      timestep: String(TIMESTEP), integrator: "implicitfast", iterations: "10", ls_iterations: "20",
+    }));
     doc.querySelector("worldbody").appendChild(element("geom", {
       name: "desktop_floor", type: "plane", size: "0 0 0.05", pos: "0 0 0",
     }));
@@ -365,14 +477,50 @@ class DuckRuntime {
     const keyframe = doc.createElement("keyframe");
     keyframe.appendChild(element("key", {
       name: "STAND",
-      qpos: `0 0 0.12 1 0 0 0 ${joints}`,
+      qpos: `0 0 ${this.#restHeight().toFixed(4)} 1 0 0 0 ${joints}`,
       ctrl: Array.from(DEFAULT_POSE).join(" "),
     }));
     doc.documentElement.appendChild(keyframe);
-    return {
-      xml: new XMLSerializer().serializeToString(doc),
-      meshFiles: [...doc.querySelectorAll("asset > mesh")].map((mesh) => mesh.getAttribute("file")),
-    };
+    const meshFiles = [...doc.querySelectorAll("asset > mesh")].map((mesh) => mesh.getAttribute("file")).filter(Boolean);
+    this.#stiltSites = null;
+    if (this.#stilts > 0) {
+      // The stilt policies were trained on the walk model, whose only
+      // collision geoms are the feet: drop the leg/trunk collision geoms so a
+      // swinging stilt cannot catch on a knee the policy never learned about.
+      for (const geom of [...doc.querySelectorAll('geom[class="collision"]')]) {
+        if (!/_foot_collision$/.test(geom.getAttribute("name") || "")) geom.remove();
+      }
+      // Approximate the BAM servo model the stilt policies were trained with
+      // (see STILT_SERVO_GAIN): stiffer, stronger position actuators.
+      for (const pos of [...doc.querySelectorAll("default > position")]) {
+        if (pos.hasAttribute("kp")) pos.setAttribute("kp", String(Number(pos.getAttribute("kp")) * STILT_SERVO_GAIN));
+        if (pos.hasAttribute("forcerange")) {
+          pos.setAttribute("forcerange", pos.getAttribute("forcerange").split(/\s+/).filter(Boolean).map((v) => String(Number(v) * STILT_SERVO_GAIN)).join(" "));
+        }
+      }
+      // Same construction as the training environment: one convex loft per
+      // side in a body at the foot site under the ankle, with the stage mass.
+      const { vertices, faces } = stiltMeshData(this.#stilts, STILT_BLEND);
+      doc.querySelector("asset").appendChild(element("mesh", {
+        name: "stilt_cartridge_mesh",
+        vertex: Array.from(vertices, (v) => v.toFixed(6)).join(" "),
+        face: Array.from(faces).join(" "),
+      }));
+      this.#stiltSites = {};
+      for (const side of ["left", "right"]) {
+        const site = doc.querySelector(`site[name="${side}_foot"]`);
+        const pos = site.getAttribute("pos");
+        const quat = site.getAttribute("quat") ?? "1 0 0 0";
+        this.#stiltSites[side] = { pos: pos.split(/\s+/).filter(Boolean).map(Number), quat: quat.split(/\s+/).filter(Boolean).map(Number) };
+        const body = element("body", { name: `stilt_${side}`, pos, quat });
+        body.appendChild(element("geom", {
+          name: `${side}_stilt_collision`, type: "mesh", mesh: "stilt_cartridge_mesh", class: "collision",
+          mass: stiltMassKg(this.#stilts).toFixed(4),
+        }));
+        site.parentNode.appendChild(body);
+      }
+    }
+    return { xml: new XMLSerializer().serializeToString(doc), meshFiles };
   }
 
   #resetPhysics() {
@@ -398,7 +546,7 @@ class DuckRuntime {
   }
 
   #sit() {
-    if (!this.#ready || this.#mode === "sit" || this.#pick) return;
+    if (!this.#ready || this.#mode === "sit" || this.#pick || this.#stilts > 0) return;
     this.#leases.clearAll();
     this.#clearTimers();
     this.#mode = "sitting";
@@ -431,7 +579,7 @@ class DuckRuntime {
     this.#later(2_600, () => {
       this.#sleeping = true;
       this.#suspended = true;
-      this.#mode = "sit";
+      this.#mode = this.#stilts > 0 ? "walk" : "sit"; // stilts: doze standing
       this.#emit();
     });
   }
@@ -497,9 +645,13 @@ class DuckRuntime {
         turn = control.turn;
         if (turn) forward = Math.max(forward, HEADING_MIN_FORWARD);
       }
-      if (forward > 0.2 && performance.now() - this.#lastLandingAt > GAIT_STALL_MS) forward = Math.max(forward, GAIT_KICK);
+      if (forward > 0.2 && performance.now() - this.#lastLandingAt > GAIT_STALL_MS) forward = Math.max(forward, this.#stilts > 0 ? STILT_MAX_FORWARD : GAIT_KICK);
+      // The stilt policies were trained up to 0.25 m/s but evaluated at 0.15;
+      // keep the desktop duck on stilts at that gentler pace.
+      if (this.#stilts > 0) forward = Math.min(forward, STILT_MAX_FORWARD);
       this.#cmd[0] = forward >= 0 ? forward * MAX_FORWARD : -forward * MAX_BACK;
       this.#cmd[2] = turn * MAX_TURN;
+      if (this.#stilts > 0) this.#cmd[2] = clamp(this.#cmd[2], -STILT_MAX_TURN, STILT_MAX_TURN);
     }
     // Head slots cmd[3..6], EMA-smoothed like the robot runtime. The pick and
     // get-up policies were trained against zero-padded head commands.
@@ -643,9 +795,15 @@ class DuckRuntime {
 
   #updateRecovery() {
     if (this.#mode !== "walk" || this.#grabbed) return;
-    const fallen = this.#projectedGravityZ() > -0.5 || this.#data.qpos[2] < 0.02;
+    const fallen = this.#projectedGravityZ() > -0.5 || this.#data.qpos[2] < 0.02 + 0.5 * (this.#stilts / 100);
     if (this.#recovery) {
       this.#recovery.steps++;
+      if (this.#stilts > 0) {
+        // No get-up policy exists for stilts: after a moment on the ground the
+        // duck is simply stood back up on its stilts.
+        if (this.#recovery.steps >= 50) this.#resetPhysics();
+        return;
+      }
       if (this.#recovery.state === "fallen" && this.#recovery.steps >= 15) {
         this.#recovery = { state: "recovering", steps: 0, upright: 0 };
         this.#lastAction.fill(0);
@@ -676,8 +834,8 @@ class DuckRuntime {
     let steps = 0;
     let measuredAt = next;
     while (!this.#disposed) {
-      if (this.#suspended) {
-        await delay(200);
+      if (this.#suspended || this.#rebuilding || !this.#data) {
+        await delay(this.#rebuilding ? 50 : 200);
         next = performance.now();
         continue;
       }
@@ -709,11 +867,11 @@ class DuckRuntime {
         // or airborne (a smoothed follow would lose a fast fall), and eases the
         // last centimetres back down after the landing instead of snapping.
         if (!this.#cameraBase) this.#cameraBase = this.#camera.position.clone();
-        const height = Math.max(0, qpos[2] - REST_HEIGHT);
+        const height = Math.max(0, qpos[2] - this.#restHeight());
         this.#cameraLift = height > CAMERA_FOLLOW_DEADBAND ? height : this.#cameraLift * 0.75;
         this.#camera.position.copy(this.#cameraBase);
         this.#camera.position.y += this.#cameraLift;
-        this.#camera.lookAt(0, REST_HEIGHT + this.#cameraLift, 0);
+        this.#camera.lookAt(0, this.#lookY + this.#cameraLift, 0);
         this.#trunk.position.set(qpos[0], qpos[1], qpos[2]);
         this.#trunk.quaternion.set(qpos[4], qpos[5], qpos[6], qpos[3]);
         for (let joint = 0; joint < NUM_JOINTS; joint++) {

@@ -781,3 +781,15 @@ describe("duck-on-desk: duck volume settings reach the renderer", () => {
     ]);
   });
 });
+
+describe("duck-on-desk: stilts setting reaches the renderer", () => {
+  it("forwards the height in cm", () => {
+    const { calls, emit } = createHarness();
+    emit({ duckStilts: 25 });
+    emit({ duckStilts: 0 });
+    assert.deepStrictEqual(calls.filter((c) => c[1] === "duck-stilts-change"), [
+      ["sendToRenderer", "duck-stilts-change", 25],
+      ["sendToRenderer", "duck-stilts-change", 0],
+    ]);
+  });
+});
