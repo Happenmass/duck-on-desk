@@ -27,6 +27,14 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
   const facingTimer = typeof api.reportDuckFacing === "function" && typeof runtime.snapshot === "function"
     ? setInterval(() => { const s = runtime.snapshot(); if (s && Number.isFinite(s.facing)) api.reportDuckFacing(s.facing); }, 500)
     : null;
+  // While roaming, main moves the window by the distance the duck's feet
+  // actually covered (12.5 Hz, like the original pet) so gait and window agree.
+  const stepTimer = typeof api.reportDuckDisplacement === "function" && typeof runtime.takeDisplacement === "function"
+    ? setInterval(() => {
+      const d = runtime.takeDisplacement();
+      if (behaviours.current() === "duck-roam" && (d.dx !== 0 || d.dy !== 0)) api.reportDuckDisplacement(d);
+    }, 80)
+    : null;
   api.onDndChange(() => {});
   // Left-button drag moves the window (upstream behaviour) and never lifts the
   // duck; any reaction tuple main might send is settled so it never falls back.
@@ -69,5 +77,5 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
   }
   api.onDuckMutedChange?.((muted) => audio.setMuted(muted));
   api.notifyPetVisualReady();
-  return { dispose: () => { if (facingTimer) clearInterval(facingTimer); behaviours.dispose(); } };
+  return { dispose: () => { if (facingTimer) clearInterval(facingTimer); if (stepTimer) clearInterval(stepTimer); behaviours.dispose(); } };
 }

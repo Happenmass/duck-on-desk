@@ -23,6 +23,7 @@
 
 const ROAM_IDLE_DELAY_MS = 8000; // first roam after entering idle
 const ROAM_BETWEEN_DELAY_MS = 4000; // delay between consecutive roams
+const ROAM_STRIDE_MAX_PX = 640; // duck-on-desk: longest single duck-driven stroll
 const ROAM_SPEED_PX_PER_MS = 0.08; // 80px/s — slower than mini crabwalk (120px/s)
 const ROAM_MIN_DIST = 100;
 const ROAM_MARGIN_RATIO = 0.15;
@@ -36,6 +37,9 @@ module.exports = function initRoam(ctx) {
   let roamAnimTimer = null;
   let roamPauseTimer = null;
   let firstRoam = true; // true until the first roam fires after idle entry
+  // duck-on-desk: screen px the duck walked since the last frame (ctx.duckDrivesRoam).
+  let pendingDx = 0;
+  let pendingDy = 0;
 
   function cleanupTimers() {
     if (roamAnimTimer) {
@@ -563,6 +567,50 @@ module.exports = function initRoam(ctx) {
     roamActive = true;
     const startTime = Date.now();
     let frameCount = 0;
+    // duck-on-desk: follow mode — the window moves by the duck's reported
+    // stride, ends once the planned distance is covered, the walk is blocked
+    // (screen/fence edge) for a moment, or a generous timeout elapses.
+    const duckDriven = !!ctx.duckDrivesRoam;
+    // ponytail: the no-lean fallback picker can aim across the whole screen;
+    // at a duck's stride (~20 px/s) cap one stroll at ROAM_STRIDE_MAX_PX.
+    const plannedDist = Math.max(1, duckDriven ? Math.min(dist, ROAM_STRIDE_MAX_PX) : dist);
+    const timeoutMs = Math.max(4000, animDurationMs * 3);
+    let curX = startX;
+    let curY = startY;
+    let blockedMs = 0;
+    let lastDbg = 0;
+    pendingDx = 0;
+    pendingDy = 0;
+
+    function follow(elapsed) {
+      const wantX = curX + pendingDx;
+      const wantY = curY + pendingDy;
+      const moved = pendingDx !== 0 || pendingDy !== 0;
+      pendingDx = 0;
+      pendingDy = 0;
+      let nx = wantX;
+      let ny = wantY;
+      if (ctx.clampToScreenVisual) {
+        const c = ctx.clampToScreenVisual(nx, ny, roamW, roamH);
+        nx = c.x;
+        ny = c.y;
+      }
+      if (target.fence) {
+        // Keep an axis inside the fence only if the walk started inside on it;
+        // a staged recovery still outside on one axis must not jump.
+        const f = target.fence;
+        if (startX >= f.left && startX + roamW <= f.right) nx = Math.min(Math.max(nx, f.left), f.right - roamW);
+        if (startY >= f.top && startY + roamH <= f.bottom) ny = Math.min(Math.max(ny, f.top), f.bottom - roamH);
+      }
+      const blocked = moved && Math.abs(nx - wantX) > 0.5 && Math.abs(nx - curX) < 0.5;
+      blockedMs = blocked ? blockedMs + ROAM_FRAME_MS : 0;
+      curX = nx;
+      curY = ny;
+      const travelled = Math.hypot(curX - startX, curY - startY);
+      const done = travelled >= plannedDist || blockedMs >= 600 || elapsed >= timeoutMs;
+      if (done || elapsed - lastDbg >= 1000) { lastDbg = elapsed; dbg(`follow t=${(elapsed / 1000).toFixed(1)}s pos=(${curX.toFixed(1)},${curY.toFixed(1)}) travelled=${travelled.toFixed(1)}/${plannedDist.toFixed(0)} blockedMs=${blockedMs}${done ? " DONE" : ""}`); }
+      return { t: done ? 1 : Math.min(0.999, travelled / plannedDist), vx: Math.round(curX), vy: Math.round(curY) };
+    }
 
     function step() {
       // ── Per-frame cancellation checks ──
@@ -580,6 +628,7 @@ module.exports = function initRoam(ctx) {
       // Re-check state on every frame: if the pet is no longer idle/roam (e.g. a
       // working/notification event arrived), stop the animation immediately.
       if (!isRoamAllowed()) {
+        dbg("walk cancelled", { dragLocked: ctx.dragLocked, state: ctx.getCurrentState && ctx.getCurrentState() });
         // A drag only pauses the current roam phase; other gates still mean the
         // pet left normal idle eligibility and reset the next wait to 8s.
         if (hasPermissionBubbleHold() || !ctx.dragLocked) firstRoam = true;
@@ -591,10 +640,15 @@ module.exports = function initRoam(ctx) {
       }
 
       const elapsed = Date.now() - startTime;
-      const t = Math.min(1, elapsed / animDurationMs);
-      const eased = t * (2 - t);
-      const vx = Math.round(startX + (finalX - startX) * eased);
-      const vy = Math.round(startY + (finalY - startY) * eased);
+      let t, vx, vy;
+      if (duckDriven) {
+        ({ t, vx, vy } = follow(elapsed));
+      } else {
+        t = Math.min(1, elapsed / animDurationMs);
+        const eased = t * (2 - t);
+        vx = Math.round(startX + (finalX - startX) * eased);
+        vy = Math.round(startY + (finalY - startY) * eased);
+      }
       if (!Number.isFinite(vx) || !Number.isFinite(vy)) {
         // Same reconcile-protection release gap as the destroyed-window exit
         // above.
@@ -661,6 +715,7 @@ module.exports = function initRoam(ctx) {
       roamPauseTimer = null;
       if (!isRoamAllowed()) return;
       const target = pickRandomTarget();
+      dbg("target", target, "bounds", ctx.getPetWindowBounds(), "lean", ctx.getDuckLean && ctx.getDuckLean());
       if (!target) {
         scheduleNextRoam();
         return;
@@ -697,6 +752,13 @@ module.exports = function initRoam(ctx) {
     }
   }
 
+  // duck-on-desk: renderer-reported stride (screen px) for the running walk.
+  function onDisplacement(dx, dy) {
+    if (!roamActive || !ctx.duckDrivesRoam) return;
+    if (Number.isFinite(dx)) pendingDx += dx;
+    if (Number.isFinite(dy)) pendingDy += dy;
+  }
+
   function cancelRoam() {
     const shouldRestoreIdle =
       roamActive &&
@@ -715,9 +777,11 @@ module.exports = function initRoam(ctx) {
     }
   }
 
+  const dbg = process.env.DUCK_ROAM_DEBUG ? (...a) => console.log("[roam]", ...a) : () => {};
   function tick() {
     if (!enabled) return;
     if (!isRoamAllowed()) {
+      dbg("blocked", { dragLocked: ctx.dragLocked, mini: ctx.getMiniMode && ctx.getMiniMode(), state: ctx.getCurrentState && ctx.getCurrentState(), bubble: hasPermissionBubbleHold() });
       // Preserve the already-consumed 4s/8s phase while drag owns movement.
       // Existing non-drag gates still reset the next idle entry to 8s.
       if (hasPermissionBubbleHold() || !ctx.dragLocked) firstRoam = true;
@@ -741,6 +805,7 @@ module.exports = function initRoam(ctx) {
     setEnabled,
     setConstrainAxis,
     cancelRoam,
+    onDisplacement,
     tick,
     isRoamAnimating,
     get enabled() {

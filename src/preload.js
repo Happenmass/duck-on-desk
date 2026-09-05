@@ -69,4 +69,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   reportSystemWakeStatus: (payload) => ipcRenderer.send("system-wake-status", payload),
   reportAccessoryMirror: (mirrored) => ipcRenderer.send("accessory-mirror", !!mirrored),
   reportDuckFacing: (facing) => ipcRenderer.send("duck-facing", Number.isFinite(facing) ? facing : 0),
+  reportDuckDisplacement: (d) => ipcRenderer.send("duck-displacement", {
+    dx: d && Number.isFinite(d.dx) ? d.dx : 0,
+    dy: d && Number.isFinite(d.dy) ? d.dy : 0,
+  }),
 });

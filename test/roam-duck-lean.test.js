@@ -88,3 +88,59 @@ describe("roam follows the duck's lean", () => {
     assert.ok(travelled(fast) > travelled(slow), `fast ${travelled(fast)} should outrun slow ${travelled(slow)} after the same time`);
   });
 });
+
+describe("roam follows the duck's stride (duckDrivesRoam)", () => {
+  beforeEach(() => { mock.timers.enable({ apis: ["setTimeout", "Date"] }); });
+  afterEach(() => { mock.timers.reset(); mock.restoreAll(); });
+
+  function startWalk(extra = {}) {
+    const h = makeCtx({ x: 900, lean: -1 });
+    h.ctx.duckDrivesRoam = true;
+    Object.assign(h.ctx, extra);
+    const roam = roamModule(h.ctx);
+    roam.setEnabled(true);
+    runFor(roam, 9); // idle delay elapses, the walk is armed
+    assert.equal(h.ctx.getCurrentState(), "roam");
+    return { h, roam };
+  }
+
+  it("moves the window by exactly the reported stride and ignores its own tween", () => {
+    const { h, roam } = startWalk();
+    mock.timers.tick(500);
+    assert.deepStrictEqual(h.applied.at(-1), { x: 900, y: 400 }, "no stride reported → window stays put");
+    roam.onDisplacement(-3, 1);
+    mock.timers.tick(16);
+    assert.deepStrictEqual(h.applied.at(-1), { x: 897, y: 401 });
+    roam.onDisplacement(-2.5, -0.5);
+    roam.onDisplacement(-1.5, 0);
+    mock.timers.tick(16);
+    assert.deepStrictEqual(h.applied.at(-1), { x: 893, y: 401 });
+    assert.equal(h.ctx.getCurrentState(), "roam");
+  });
+
+  it("ends the walk once the planned distance is covered", () => {
+    const { h, roam } = startWalk();
+    for (let i = 0; i < 400 && h.ctx.getCurrentState() === "roam"; i++) { roam.onDisplacement(-2, 0); mock.timers.tick(16); }
+    assert.equal(h.ctx.getCurrentState(), "idle");
+    const dx = h.start.x - h.applied.at(-1).x;
+    assert.ok(dx >= 100 && dx <= 700, `walked ${dx}px`);
+  });
+
+  it("ends the walk when the stride is blocked at the screen edge", () => {
+    const { h, roam } = startWalk({ clampToScreenVisual: (cx, cy, w, h2) => ({ x: Math.max(890, cx), y: cy, width: w, height: h2 }) });
+    for (let i = 0; i < 80 && h.ctx.getCurrentState() === "roam"; i++) { roam.onDisplacement(-2, 0); mock.timers.tick(16); }
+    assert.equal(h.ctx.getCurrentState(), "idle");
+    assert.equal(h.applied.at(-1).x, 890);
+  });
+
+  it("drops strides reported while no walk is running", () => {
+    const h = makeCtx({ x: 900, lean: -1 });
+    h.ctx.duckDrivesRoam = true;
+    const roam = roamModule(h.ctx);
+    roam.onDisplacement(-50, 0);
+    roam.setEnabled(true);
+    runFor(roam, 9);
+    mock.timers.tick(16);
+    assert.deepStrictEqual(h.applied.at(-1), { x: 900, y: 400 });
+  });
+});

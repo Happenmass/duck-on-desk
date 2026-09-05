@@ -3421,8 +3421,17 @@ ipcMain.on("duck-facing", (event, value) => {
   duckFacing = Number.isFinite(value) ? value : 0;
 });
 
+// duck-on-desk: while roaming the window follows the duck's own stride — the
+// renderer reports how far the trunk actually walked (screen px) and roam.js
+// applies it instead of tweening along its own path.
+ipcMain.on("duck-displacement", (event, d) => {
+  if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
+  _roam.onDisplacement(d && Number.isFinite(d.dx) ? d.dx : 0, d && Number.isFinite(d.dy) ? d.dy : 0);
+});
+
 const _roamCtx = {
-  // duck-on-desk: a slow stroll (20 px/s nominal, ~40 px/s at the eased peak) — the upstream 80 px/s crab scuttle is too fast for a walking duck.
+  duckDrivesRoam: true,
+  // Only bounds the walk's timeout now (window motion comes from the duck).
   roamSpeedPxPerMs: 0.02,
   // -1 = walk left, +1 = walk right, 0 = no preference (facing within ±0.15 rad of the camera).
   getDuckLean: () => (duckFacing > 0.15 ? -1 : duckFacing < -0.15 ? 1 : 0),

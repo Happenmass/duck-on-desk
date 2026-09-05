@@ -49,6 +49,7 @@ class DuckRuntime {
   #ankleIds;
   #cameraBearing = 0;
   #headingEngaged = false;
+  #displacement = { x: 0, y: 0 }; // trunk x/y travelled since takeDisplacement() (rig frame, metres)
   #stepFeet = [{ air: false, prevZ: 0, lastAt: 0 }, { air: false, prevZ: 0, lastAt: 0 }];
   #prevVz = 0;
   #thumpAt = 0;
@@ -246,6 +247,21 @@ class DuckRuntime {
       facing: this.#data ? this.#facing() : 0,
       height: this.#data ? this.#data.qpos[2] : 0,
     });
+  }
+
+  // Screen-space distance (px, +x right, +y down) the trunk actually walked
+  // since the last call, projected through the live camera. Free roam moves
+  // the window by exactly this so the window follows the duck's own gait.
+  takeDisplacement() {
+    const { x, y } = this.#displacement;
+    this.#displacement.x = 0;
+    this.#displacement.y = 0;
+    if ((x === 0 && y === 0) || !this.#trunk || !this.#trunk.parent || !this.#renderer) return { dx: 0, dy: 0 };
+    const parent = this.#trunk.parent;
+    const a = parent.localToWorld(new THREE.Vector3(0, 0, 0)).project(this.#camera);
+    const b = parent.localToWorld(new THREE.Vector3(x, y, 0)).project(this.#camera);
+    const el = this.#renderer.domElement;
+    return { dx: (b.x - a.x) * el.clientWidth / 2, dy: -(b.y - a.y) * el.clientHeight / 2 };
   }
 
   subscribe(listener) {
@@ -584,6 +600,8 @@ class DuckRuntime {
   // duck never leaves the fixed window. Yaw, height and velocities are untouched.
   #recenter() {
     const qpos = this.#data.qpos;
+    this.#displacement.x += qpos[0];
+    this.#displacement.y += qpos[1];
     qpos[0] = 0;
     qpos[1] = 0;
     this.#mujoco.mj_forward(this.#model, this.#data);

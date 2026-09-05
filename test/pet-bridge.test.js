@@ -56,3 +56,24 @@ test("middle-button lift: press holds, upward travel lifts proportionally, relea
   assert.deepEqual(commands.map((c) => c.type), ["grab-start", "grab-lift", "grab-lift", "grab-lift", "grab-end"]);
   assert.deepEqual(commands.filter((c) => c.type === "grab-lift").map((c) => +c.height.toFixed(3)), [0.2, 0, 0.4]);
 });
+
+test("roam: the duck's stride is reported to main only while roaming", async () => {
+  const { connectPetBridge } = await import("../renderer/src/pet-bridge.js");
+  const api = fakeApi();
+  const reported = [];
+  api.reportDuckDisplacement = (d) => reported.push(d);
+  let current = "duck-idle";
+  let stride = { dx: -4, dy: 1 };
+  const runtime = { command: () => ({}), takeDisplacement: () => stride };
+  const bridge = connectPetBridge({ api, runtime, behaviours: { apply() {}, eye() {}, dispose() {}, current: () => current }, audio: { setAppearance() {} } });
+  await new Promise((r) => setTimeout(r, 100));
+  assert.deepEqual(reported, [], "idle strides are drained, not reported");
+  current = "duck-roam";
+  await new Promise((r) => setTimeout(r, 100));
+  assert.ok(reported.length >= 1 && reported.every((d) => d.dx === -4 && d.dy === 1));
+  stride = { dx: 0, dy: 0 };
+  const n = reported.length;
+  await new Promise((r) => setTimeout(r, 100));
+  assert.equal(reported.length, n, "zero strides are not reported");
+  bridge.dispose();
+});
