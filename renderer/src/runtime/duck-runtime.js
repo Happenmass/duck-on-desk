@@ -704,9 +704,11 @@ class DuckRuntime {
       this.#cmd[2] = turn * MAX_TURN;
       if (this.#stilts > 0) this.#cmd[2] = clamp(this.#cmd[2], -STILT_MAX_TURN, STILT_MAX_TURN);
     }
-    // Head slots cmd[3..6], EMA-smoothed like the robot runtime. The pick and
-    // get-up policies were trained against zero-padded head commands.
-    const zeroHead = this.#pick || this.#recovery;
+    // Head slots cmd[3..6], EMA-smoothed like the robot runtime. The pick,
+    // get-up and roller policies were trained against zero-padded head
+    // commands (the roller env pads head and body commands with zeros), so
+    // they must never see a head target.
+    const zeroHead = this.#pick || this.#recovery || this.#rollers();
     for (let h = 0; h < 4; h++) {
       this.#headSmooth[h] += HEAD_ALPHA * (this.#headTarget[h] - this.#headSmooth[h]);
       this.#cmd[3 + h] = zeroHead ? 0 : this.#headSmooth[h];

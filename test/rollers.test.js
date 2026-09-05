@@ -8,5 +8,5 @@ test("rollers module: locomotion normalisation, policy files, wheel joints and t
   assert.deepEqual(r.ROLLER_WHEEL_JOINTS, ["passive_LF_wheel", "passive_LR_wheel", "passive_RF_wheel", "passive_RR_wheel"]);
   assert.equal(r.ROLLER_CROUCH.periodS * r.ROLLER_CROUCH.endPhase, 3.5);
   assert.ok(r.ROLLER_BRAKE < 0 && r.ROLLER_BRAKE_ABOVE > 0);
-  assert.equal(r.ROLLER_MAX_FORWARD, 0.5);
+  assert.equal(r.ROLLER_MAX_FORWARD, 0.33);
 });

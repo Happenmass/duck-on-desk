@@ -13,8 +13,9 @@ export const ROLLER_CROUCH = { periodS: 5.0, endPhase: 0.7 }; // 3.5 s crouch ov
 export const ROLLER_REST_HEIGHT = 0.12; // trunk height standing on the wheels (measured; see tests/notes)
 // cmd_x scale on rollers: BEST_roller was trained for -0.5..0.6 m/s and barely
 // pushes below ~0.3 m/s (measured: 25 px in 5 s at 0.15 m/s, ~170 px at 0.36),
-// so a full "forward" maps to 0.5 m/s instead of the walker's 0.25 (0.36 m/s
-// pushes occasionally topple it, 0.27-0.5 did not in trials).
-export const ROLLER_MAX_FORWARD = 0.5;
+// so a full "forward" maps to 0.33 m/s instead of the walker's 0.25; the env
+// notes the policy only reaches ~0.33 m/s at full push, and harder pushes
+// only topple it.
+export const ROLLER_MAX_FORWARD = 0.33;
 export const ROLLER_BRAKE = -0.3; // cmd_x applied while nothing drives and the duck is still rolling
 export const ROLLER_BRAKE_ABOVE = 0.03; // m/s
