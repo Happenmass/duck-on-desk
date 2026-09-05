@@ -826,6 +826,7 @@ function setAccessoryMirrored(mirrored) {
   syncHitWin();
 }
 
+let _duckLift = null; // duck-on-desk: middle-button pick-up (src/duck-lift.js), created with the IPC wiring below
 const petWindowRuntime = createPetWindowRuntime({
   screen,
   isWin,
@@ -882,7 +883,8 @@ const petWindowRuntime = createPetWindowRuntime({
   // Issue #690 plan §4.3.10's fourth reconcile protection period (lazy-bound
   // like isMiniAnimating above — _roam is constructed after petWindowRuntime,
   // but this closure isn't invoked until well after module load finishes).
-  isRoamAnimating: () => _roam.isRoamAnimating(),
+  // duck-on-desk: the enlarged pick-up window is a protected period too.
+  isRoamAnimating: () => _roam.isRoamAnimating() || (_duckLift !== null && _duckLift.isActive()),
   isNearWorkAreaEdge: (bounds) => isNearWorkAreaEdge(bounds),
   flushRuntimeStateToPrefs: () => flushRuntimeStateToPrefs(),
   handleMiniDisplayChange: () => _mini.handleDisplayChange(),
@@ -3143,6 +3145,15 @@ function createWindow() {
     setDragLocked: (value) => { petWindowRuntime.setDragLocked(value); },
     setMouseOverPet: (value) => { mouseOverPet = !!value; },
     cancelRoam: () => _roam.cancelRoam(),
+    duckLift: (_duckLift = require("./duck-lift")({
+      getRenderWindow: () => win,
+      screen,
+      getPetWindowBounds,
+      applyPetWindowBounds,
+      syncHitWin: () => syncHitWin(),
+      sendToRenderer,
+      cancelRoam: () => _roam.cancelRoam(),
+    })),
     beginDragSnapshot: () => beginDragSnapshot(),
     clearDragSnapshot: () => clearDragSnapshot(),
     syncHitWin: () => syncHitWin(),
@@ -3437,6 +3448,7 @@ const _roamCtx = {
   getDuckLean: () => (duckFacing > 0.15 ? -1 : duckFacing < -0.15 ? 1 : 0),
   get win() { return win; },
   get dragLocked() { return petWindowRuntime.isDragLocked(); },
+  isLiftActive: () => _duckLift !== null && _duckLift.isActive(),
   getPetWindowBounds,
   applyPetWindowBounds,
   // #569: lets roam anchor to the keep-size frozen size when that toggle is on

@@ -1,6 +1,13 @@
 // Consumes the main-process preload contract (src/preload.js) and drives the duck.
 // The only mandatory reply is notifyPetVisualSettled; without it main reloads the window after 9750 ms.
-export function connectPetBridge({ api = window.electronAPI, runtime, behaviours, audio, viewportHeight = () => (typeof window === "undefined" ? 400 : window.innerHeight) }) {
+export function connectPetBridge({
+  api = window.electronAPI, runtime, behaviours, audio,
+  stage = typeof document === "undefined" ? null : document.getElementById("stage"),
+  viewport = () => (typeof window === "undefined" ? { width: 400, height: 400 } : { width: window.innerWidth, height: window.innerHeight }),
+  raf = (fn) => requestAnimationFrame(fn),
+  now = () => performance.now(),
+  onResize = (fn) => { if (typeof window !== "undefined") window.addEventListener("resize", fn); },
+}) {
   const settle = (request, file) => api.notifyPetVisualSettled({
     themeId: (request && request.themeId) || "duck",
     displayState: (request && request.displayState) || null,
@@ -43,24 +50,71 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
     if (request && typeof request.file === "string") settle(request, request.file);
   });
   api.onEndDragReaction(() => {});
-  // Middle-button pick-up: press holds the duck where it is, dragging the
-  // pointer up lifts it (a full viewport height ≈ LIFT_PER_VIEWPORT metres),
-  // dragging down lowers it, releasing drops it.
-  const LIFT_PER_VIEWPORT = 0.4;
-  let held = false;
-  api.onDuckLift?.((lift) => {
-    if (lift.phase === "start") {
-      if (held) return;
-      held = true;
-      runtime.command({ type: "grab-start", source: "local" });
-    } else if (lift.phase === "move") {
-      if (!held) return;
-      const h = Math.max(0, Math.min(LIFT_PER_VIEWPORT, (-lift.dy / Math.max(1, viewportHeight())) * LIFT_PER_VIEWPORT));
-      runtime.command({ type: "grab-lift", height: h, source: "local" });
-    } else if (lift.phase === "end") {
-      if (!held) return;
-      held = false;
+  // Middle-button pick-up (main side: src/duck-lift.js). Main enlarges the
+  // window to the whole work area; we pin the stage (the 3D canvas, unchanged
+  // in size) to the duck's old spot, carry it with the pointer, drop it with
+  // gravity to the work-area bottom, report where it landed, and un-pin once
+  // main has shrunk the window back around that spot. Pin/un-pin happen on
+  // the resize event so they land in the same frame as the window change.
+  const FALL_G = 9.81; // m/s²; the stage frames about STAGE_METRES of height
+  const STAGE_METRES = 0.4;
+  let lift = null; // { origin, x, y, phase: carry | fall | landed, vy, last, pinned }
+  const enlarged = () => !!lift && viewport().width > lift.origin.width;
+  const pin = () => {
+    if (!lift) return;
+    lift.pinned = true;
+    if (!stage) return;
+    stage.style.inset = "auto";
+    stage.style.left = `${lift.x}px`;
+    stage.style.top = `${lift.y}px`;
+    stage.style.width = `${lift.origin.width}px`;
+    stage.style.height = `${lift.origin.height}px`;
+  };
+  const unpin = () => { if (stage) stage.style.cssText = ""; lift = null; };
+  const fallFrame = (t) => {
+    if (!lift || lift.phase !== "fall") return;
+    const dt = Math.min(0.05, Math.max(0, (t - lift.last) / 1000));
+    lift.last = t;
+    lift.vy += FALL_G * (lift.origin.height / STAGE_METRES) * dt;
+    lift.y += lift.vy * dt;
+    const floorY = lift.origin.floor - lift.origin.height;
+    if (lift.y >= floorY) {
+      lift.y = floorY;
+      lift.phase = "landed";
+      pin();
       runtime.command({ type: "grab-end", source: "local" });
+      api.reportDuckLanded?.({ x: lift.x, y: lift.y });
+      return;
+    }
+    pin();
+    raf(fallFrame);
+  };
+  onResize(() => {
+    if (!lift) return;
+    if (lift.phase === "landed") { if (!enlarged()) unpin(); }
+    else if (!lift.pinned && enlarged()) pin();
+  });
+  api.onDuckLift?.((msg) => {
+    if (!msg) return;
+    if (msg.phase === "start") {
+      if (lift) return;
+      const origin = { x: msg.x || 0, y: msg.y || 0, width: msg.width || viewport().width, height: msg.height || viewport().height, floor: msg.floor || viewport().height, right: msg.right || viewport().width };
+      lift = { origin, x: origin.x, y: origin.y, phase: "carry", vy: 0, last: 0, pinned: false };
+      runtime.command({ type: "grab-start", source: "local" });
+      if (enlarged()) pin();
+    } else if (msg.phase === "move") {
+      if (!lift || lift.phase !== "carry") return;
+      lift.x = Math.min(Math.max(lift.origin.x + (msg.dx || 0), 0), lift.origin.right - lift.origin.width);
+      lift.y = Math.min(Math.max(lift.origin.y + (msg.dy || 0), 0), lift.origin.floor - lift.origin.height);
+      if (lift.pinned) pin();
+    } else if (msg.phase === "end") {
+      if (!lift || lift.phase !== "carry") return;
+      lift.phase = "fall";
+      lift.vy = 0;
+      lift.last = now();
+      raf(fallFrame);
+    } else if (msg.phase === "reset") {
+      if (lift && lift.phase === "landed" && !enlarged()) unpin();
     }
   });
   api.onPlayClickReaction(() => runtime.command({ type: "perform", action: "quack", source: "local" }));

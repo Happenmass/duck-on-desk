@@ -23,7 +23,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onPetAccessorySlotsChange: (cb) => ipcRenderer.on("pet-accessory-slots-change", (_, snapshot) => cb(snapshot)),
   onDuckAppearanceChange: (cb) => ipcRenderer.on("duck-appearance-change", (_, name) => cb(name)),
   onDuckMutedChange: (cb) => ipcRenderer.on("duck-muted-change", (_, muted) => cb(muted === true)),
-  onDuckLift: (cb) => ipcRenderer.on("duck-lift", (_, payload) => cb(payload && typeof payload === "object" ? payload : { phase: "end", dy: 0 })),
+  onDuckLift: (cb) => ipcRenderer.on("duck-lift", (_, payload) => cb(payload && typeof payload === "object" ? payload : { phase: "end" })),
   // State sync from main
   onStateChange: (callback) => ipcRenderer.on("state-change", (_, requestOrState, legacySvg) => callback(requestOrState, legacySvg)),
   onEyeMove: (callback) => ipcRenderer.on("eye-move", (_, dx, dy) => callback(dx, dy)),
@@ -69,6 +69,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   reportSystemWakeStatus: (payload) => ipcRenderer.send("system-wake-status", payload),
   reportAccessoryMirror: (mirrored) => ipcRenderer.send("accessory-mirror", !!mirrored),
   reportDuckFacing: (facing) => ipcRenderer.send("duck-facing", Number.isFinite(facing) ? facing : 0),
+  reportDuckLanded: (p) => ipcRenderer.send("duck-lift-landed", {
+    x: p && Number.isFinite(p.x) ? p.x : 0,
+    y: p && Number.isFinite(p.y) ? p.y : 0,
+  }),
   reportDuckDisplacement: (d) => ipcRenderer.send("duck-displacement", {
     dx: d && Number.isFinite(d.dx) ? d.dx : 0,
     dy: d && Number.isFinite(d.dy) ? d.dy : 0,
