@@ -382,9 +382,43 @@ module.exports = function initRoam(ctx) {
       if (xMax < xMin || yMax < yMin) return null;
     } else if (xMax <= xMin || yMax <= yMin) return null;
 
+    // duck-on-desk: when the 3D duck already leans left or right of its axis, walk
+    // toward that side (lean -1 = left, +1 = right); keep the vertical drift a
+    // random up-or-down that stays modest relative to the horizontal distance so
+    // a walk reads as "walking sideways", not "sliding diagonally". Without a
+    // lean hint the historical picker below is unchanged.
+    const lean = typeof ctx.getDuckLean === "function" ? Number(ctx.getDuckLean()) || 0 : 0;
+    const leftRoom = bounds.x - minDist - xMin;
+    const rightRoom = xMax - bounds.x - minDist;
+    // No room on the side the duck leans to (it is parked at that screen edge):
+    // skip this walk instead of wandering the other way; the autonomy sweep
+    // will lean it back toward open space within a few seconds.
+    let leanSide = 0;
+    if (lean < 0) {
+      if (leftRoom < 0) return null;
+      leanSide = -1;
+    } else if (lean > 0) {
+      if (rightRoom < 0) return null;
+      leanSide = 1;
+    }
     for (let i = 0; i < ROAM_TARGET_ATTEMPTS; i += 1) {
-      const targetX = xMin + Math.floor(Math.random() * (xMax - xMin));
-      const targetY = yMin + Math.floor(Math.random() * (yMax - yMin));
+      let targetX;
+      let targetY;
+      if (leanSide < 0) {
+        targetX = xMin + Math.floor(Math.random() * (leftRoom + 1));
+      } else if (leanSide > 0) {
+        targetX = bounds.x + minDist + Math.floor(Math.random() * (rightRoom + 1));
+      } else {
+        targetX = xMin + Math.floor(Math.random() * (xMax - xMin));
+      }
+      if (leanSide !== 0) {
+        const maxDy = Math.max(24, Math.round(Math.abs(targetX - bounds.x) * 0.6));
+        const up = Math.random() < 0.5;
+        const drift = Math.floor(Math.random() * (maxDy + 1));
+        targetY = Math.max(yMin, Math.min(yMax, bounds.y + (up ? -drift : drift)));
+      } else {
+        targetY = yMin + Math.floor(Math.random() * (yMax - yMin));
+      }
       const dx = targetX - bounds.x;
       const dy = targetY - bounds.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -504,7 +538,10 @@ module.exports = function initRoam(ctx) {
     const dx = finalX - startX;
     const dy = finalY - startY;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const animDurationMs = Math.max(1000, dist / ROAM_SPEED_PX_PER_MS);
+    const speedPxPerMs = Number.isFinite(ctx.roamSpeedPxPerMs) && ctx.roamSpeedPxPerMs > 0
+      ? ctx.roamSpeedPxPerMs
+      : ROAM_SPEED_PX_PER_MS;
+    const animDurationMs = Math.max(1000, dist / speedPxPerMs);
 
     // ── Face the walk direction ──
     // Dedicated roam visuals (e.g. duck's crabwalk) are drawn facing right;

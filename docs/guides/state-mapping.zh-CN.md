@@ -6,7 +6,8 @@ Duck 的动画由基于物理引擎的 3D 渲染层驱动（`renderer/`，Vite r
 
 | 逻辑状态 | intent id | 鸭子行为 |
 |---|---|---|
-| idle / roam / dizzy | `duck-idle` | 恢复 AutonomyAdapter 的静息调度 |
+| idle / dizzy | `duck-idle` | 先站起（或唤醒），再恢复 AutonomyAdapter 的静息调度 |
+| roam（自由漫游，主进程移动窗口） | `duck-roam` | 朝主进程 `roam-heading` 指示的一侧行走（heading ±0.9，forward 0.6）。主进程根据渲染层上报的 facing 选择鸭子当前偏向的一侧，偏向侧没有余量则本轮不走，标称 20 px/s，垂直方向每次随机上或下且幅度不超过水平量的 60% |
 | thinking | `duck-thinking` | 面朝镜头（heading 0，forward 0.6）+ 每 1.5 秒随机 `look` |
 | working | `duck-working` | `move {forward:0.7, heading:0}` 持续（2 秒 TTL，循环续租） |
 | juggling | `duck-juggling` | `move {forward:0.8, heading:±0.8}`，每 3 秒换向 |

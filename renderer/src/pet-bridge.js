@@ -20,6 +20,13 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
     settle(request, file);
   });
   api.onEyeMove((dx, dy) => behaviours.eye(dx, dy));
+  if (typeof api.onRoamHeading === "function" && typeof behaviours.setRoamHeading === "function") {
+    api.onRoamHeading((left) => behaviours.setRoamHeading(left));
+  }
+  // Free roam picks its direction from the side the duck leans to (2 Hz is plenty).
+  const facingTimer = typeof api.reportDuckFacing === "function" && typeof runtime.snapshot === "function"
+    ? setInterval(() => { const s = runtime.snapshot(); if (s && Number.isFinite(s.facing)) api.reportDuckFacing(s.facing); }, 500)
+    : null;
   api.onDndChange(() => {});
   api.onStartDragReaction(() => runtime.command({ type: "grab-start", source: "local" }));
   api.onEndDragReaction(() => runtime.command({ type: "grab-end", source: "local" }));
@@ -37,5 +44,5 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
   }
   api.onDuckMutedChange?.((muted) => audio.setMuted(muted));
   api.notifyPetVisualReady();
-  return { dispose: () => behaviours.dispose() };
+  return { dispose: () => { if (facingTimer) clearInterval(facingTimer); behaviours.dispose(); } };
 }

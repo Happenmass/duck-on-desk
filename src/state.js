@@ -2489,9 +2489,30 @@ function detectRunningAgentProcesses(callback) {
     const clauses = markerPattern
       ? [`pgrep -f ${shellQuote(markerPattern)}`, ...exactClauses]
       : exactClauses;
-    exec(clauses.join(" || "), { timeout: 3000 },
-      (err) => done(!err)
-    );
+    // duck-on-desk: run every clause (not `||`) so the pid list is complete, then
+    // inspect the matched command lines and drop GUI-bundled helpers such as
+    // ChatGPT.app's embedded `codex … app-server` and the pgrep shell itself —
+    // they are not CLI sessions and would otherwise hold startup recovery (and
+    // the "working" pose) for STARTUP_RECOVERY_MAX_MS on every launch. When
+    // pgrep prints nothing usable (mocked exec, unexpected output) keep the
+    // upstream "exit status decides" semantics.
+    exec(`{ ${clauses.join("; ")}; } 2>/dev/null`, { timeout: 3000 }, (err, stdout) => {
+      const pids = [...new Set(String(stdout || "").split("\n").map((line) => line.trim()).filter((line) => /^\d+$/.test(line)))];
+      if (pids.length === 0) {
+        done(!err);
+        return;
+      }
+      exec(`ps -o command= -p ${pids.join(",")}`, { timeout: 3000 }, (psErr, psOut) => {
+        if (psErr) {
+          done(true);
+          return;
+        }
+        const real = String(psOut || "").split("\n").filter(Boolean).filter((command) => (
+          !/\.app\/Contents\//.test(command) && !/\bapp-server\b/.test(command) && !/pgrep -/.test(command)
+        ));
+        done(real.length > 0);
+      });
+    });
   }
 }
 

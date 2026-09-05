@@ -67,4 +67,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
   setLowPowerIdlePaused: (paused) => ipcRenderer.send("low-power-idle-paused", !!paused),
   reportSystemWakeStatus: (payload) => ipcRenderer.send("system-wake-status", payload),
   reportAccessoryMirror: (mirrored) => ipcRenderer.send("accessory-mirror", !!mirrored),
+  reportDuckFacing: (facing) => ipcRenderer.send("duck-facing", Number.isFinite(facing) ? facing : 0),
 });

@@ -3412,7 +3412,20 @@ const { enterMiniMode, exitMiniMode, enterMiniViaMenu, miniPeekIn, miniPeekOut,
         checkMiniModeSnap, cancelMiniTransition, animateWindowX, animateWindowParabola } = _mini;
 
 // ── Free Roam — initialized here after state and mini modules ──
+// duck-on-desk: the 3D renderer reports the duck's facing (rad, camera bearing
+// relative to its forward axis; > 0 means the beak points to the viewer's left)
+// so free roam walks toward the side the duck already leans to.
+let duckFacing = 0;
+ipcMain.on("duck-facing", (event, value) => {
+  if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
+  duckFacing = Number.isFinite(value) ? value : 0;
+});
+
 const _roamCtx = {
+  // duck-on-desk: a slow stroll (20 px/s nominal, ~40 px/s at the eased peak) — the upstream 80 px/s crab scuttle is too fast for a walking duck.
+  roamSpeedPxPerMs: 0.02,
+  // -1 = walk left, +1 = walk right, 0 = no preference (facing within ±0.15 rad of the camera).
+  getDuckLean: () => (duckFacing > 0.15 ? -1 : duckFacing < -0.15 ? 1 : 0),
   get win() { return win; },
   get dragLocked() { return petWindowRuntime.isDragLocked(); },
   getPetWindowBounds,

@@ -2,13 +2,14 @@
 // planForVisual is pure; createBehaviours owns timers so a new visual always cancels the previous one.
 export const INTENT_IDS = new Set([
   "duck-idle", "duck-thinking", "duck-working", "duck-juggling", "duck-carrying", "duck-sweeping",
-  "duck-attention", "duck-notification", "duck-error", "duck-sleeping", "duck-waking",
+  "duck-attention", "duck-notification", "duck-error", "duck-sleeping", "duck-waking", "duck-roam",
 ]);
 
 const SYSTEM = "system";
 
 export function planForVisual(file) {
   switch (file) {
+    case "duck-roam": return { kind: "roam", forward: 0.6, periodMs: 2000 };
     case "duck-thinking": return { kind: "look", everyMs: 1500 };
     case "duck-working": return { kind: "walk", forward: 0.7, heading: 0, periodMs: 2000 };
     case "duck-juggling": return { kind: "sweep", forward: 0.8, amplitude: 0.8, periodMs: 3000 };
@@ -28,6 +29,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 export function createBehaviours({ runtime, autonomy, clock = globalThis }) {
   let timer = null;
   let current = "duck-idle";
+  let roamLeft = null; // last roam-heading from main; null until the first roam
   const cmd = (intent) => runtime.command({ source: SYSTEM, ...intent });
   const every = (ms, fn) => { fn(); timer = clock.setInterval(fn, ms); };
   const stopTimer = () => { if (timer !== null) { clock.clearInterval(timer); timer = null; } };
@@ -69,6 +71,16 @@ export function createBehaviours({ runtime, autonomy, clock = globalThis }) {
         if (plan.quackEveryMs > 0) every(plan.quackEveryMs, () => cmd({ type: "perform", action: "quack" }));
         else cmd({ type: "perform", action: "quack" });
         break;
+      case "roam": {
+        // Main moves the window; the duck walks toward that side. Until main's
+        // roam-heading arrives, follow the side the duck already leans to.
+        if (roamLeft === null) {
+          const snapshot = typeof runtime.snapshot === "function" ? runtime.snapshot() : {};
+          roamLeft = !!(snapshot && snapshot.facing > 0);
+        }
+        every(plan.periodMs, () => cmd({ type: "move", forward: plan.forward, heading: roamLeft ? 0.9 : -0.9, ttlMs: plan.periodMs + 600 }));
+        break;
+      }
       case "sulk":
         cmd({ type: "perform", action: "sit" });
         cmd({ type: "look", headPitch: 0.5, headYaw: 0, neckPitch: 0, headRoll: 0 });
@@ -92,5 +104,10 @@ export function createBehaviours({ runtime, autonomy, clock = globalThis }) {
     cmd({ type: "look", headYaw: clamp(-dx / 200, 0.6), headPitch: clamp(dy / 200, 0.3), neckPitch: 0, headRoll: 0 });
   }
 
-  return { apply, eye, current: () => current, dispose: stopTimer };
+  function setRoamHeading(left) {
+    roamLeft = !!left;
+    if (current === "duck-roam") cmd({ type: "move", forward: 0.6, heading: roamLeft ? 0.9 : -0.9, ttlMs: 2600 });
+  }
+
+  return { apply, eye, setRoamHeading, current: () => current, dispose: stopTimer };
 }

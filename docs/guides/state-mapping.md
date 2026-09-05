@@ -6,7 +6,8 @@ Duck's animation is driven by a physics-based 3D renderer (`renderer/`, Vite roo
 
 | Logical state | Intent id | Duck behaviour |
 |---|---|---|
-| idle / roam / dizzy | `duck-idle` | Resume the AutonomyAdapter's idle scheduling |
+| idle / dizzy | `duck-idle` | Stand up (or wake) first, then resume the AutonomyAdapter's idle scheduling |
+| roam (free roam; main moves the window) | `duck-roam` | Walk toward the side given by main's `roam-heading` (heading ±0.9, forward 0.6). Main picks that side from the duck's reported facing (the side it already leans to), skips the walk when that side has no room, and strolls at a nominal 20 px/s with a modest random up/down drift |
 | thinking | `duck-thinking` | Face the camera (heading 0, forward 0.6) + a random `look` every 1.5s |
 | working | `duck-working` | `move {forward:0.7, heading:0}`, held (2s TTL, re-leased on loop) |
 | juggling | `duck-juggling` | `move {forward:0.8, heading:±0.8}`, direction flips every 3s |

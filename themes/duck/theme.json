@@ -17,7 +17,7 @@
   "eyeTracking": { "enabled": true, "states": ["idle"], "eyeRatioX": 0.5, "eyeRatioY": 0.5, "maxOffset": 3, "bodyScale": 0, "shadowStretch": 0, "shadowShift": 0 },
   "states": {
     "idle": ["duck-idle"],
-    "roam": ["duck-idle"],
+    "roam": ["duck-roam"],
     "dizzy": ["duck-idle"],
     "thinking": ["duck-thinking"],
     "working": ["duck-working"],
