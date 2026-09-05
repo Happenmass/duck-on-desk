@@ -88,7 +88,7 @@
   "timings": {
     "minDisplay": {
       "attention": 3000,
-      "error": 5000,
+      "error": 8000,
       "sweeping": 4000,
       "notification": 2500,
       "carrying": 3000,
@@ -97,7 +97,7 @@
     },
     "autoReturn": {
       "attention": 4000,
-      "error": 6000,
+      "error": 20000,
       "sweeping": 300000,
       "notification": 2500,
       "carrying": 3000

@@ -572,11 +572,11 @@ describe("setState() debounce", () => {
 
   it("lower priority cannot override pending", () => {
     api.setState("error");
-    // error MIN_DISPLAY_MS = 5000
+    // hold the pending state for the theme's error minDisplay (duck: 8 s sulk)
     api.setState("notification"); // pending, prio 7 (ONESHOT — applies directly)
     api.setState("attention");    // prio 5 < notification 7, rejected
     api.setState("idle", undefined, { bypassMinDisplay: true }); // bypass must not bypass priority
-    mock.timers.tick(5000);
+    mock.timers.tick(_defaultTheme.timings.minDisplay.error);
     assert.strictEqual(api.getCurrentState(), "notification");
   });
 
