@@ -13,6 +13,7 @@ let lastCursorX = null, lastCursorY = null;
 let mouseStillSince = Date.now();
 let isMouseIdle = false;       // showing idle-look
 let hasTriggeredYawn = false;  // 60s threshold already fired
+let lastTickState = null;      // ctx.currentState seen by the previous tick (roam -> idle is not a fresh idle entry)
 let idleLookPlayed = false;    // idle-look already played once since last movement
 let idleLookReturnTimer = null;
 let idleLookVisualGeneration = null;
@@ -274,13 +275,20 @@ function runMainTickOnce() {
     const roamNow = ctx.currentState === "roam" && !ctx.idlePaused;
     const nextDelay = () => getNextTickDelay(idleNow, miniIdleNow);
 
+    // duck-on-desk: free roam alternates idle -> roam -> idle every few
+    // seconds; coming back from a walk is not a fresh idle entry, so the
+    // sleep clock keeps counting (otherwise a roaming pet can never doze).
+    const backFromRoam = lastTickState === "roam";
+    lastTickState = ctx.currentState;
     if (idleNow && !idleWasActive) {
       isMouseIdle = false;
-      hasTriggeredYawn = false;
+      if (!backFromRoam) {
+        hasTriggeredYawn = false;
+        mouseStillSince = Date.now();
+      }
       idleLookPlayed = false;
       lastCursorX = null;
       lastCursorY = null;
-      mouseStillSince = Date.now();
       lastEyeDx = 0;
       lastEyeDy = 0;
       lastCursorAngle = null;

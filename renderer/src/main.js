@@ -20,7 +20,7 @@ try {
     appearance: themeConfig.duckAppearance || "classic",
   });
   audio.setAppearance(runtime.snapshot().appearance);
-  const autonomy = new AutonomyAdapter(runtime, { sleepAfterMs: 240_000 });
+  const autonomy = new AutonomyAdapter(runtime);
   const behaviours = createBehaviours({ runtime, autonomy });
   window.__duckRuntime = runtime;
   window.__duckAudio = audio;

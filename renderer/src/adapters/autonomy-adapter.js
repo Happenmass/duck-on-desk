@@ -20,12 +20,13 @@ export class AutonomyAdapter {
   #nextActionAt = performance.now() + 6_000;
   #nextGlanceAt = performance.now() + 1_000;
   #holdHeadUntil = 0; // a deliberate "look" keeps its pose until then
-  #sleepAfterMs;
   #paused = false;
 
-  constructor(runtime, { sleepAfterMs = 240_000 } = {}) {
+  // Sleep is not decided here: main's inactivity timer puts the duck to sleep
+  // through the `sleeping` state (and blocks free roam while it lasts), so the
+  // renderer never dozes off on its own only to be walked awake by main.
+  constructor(runtime) {
     this.#runtime = runtime;
-    this.#sleepAfterMs = sleepAfterMs;
     this.#timer = setInterval(() => this.#tick(), 750);
   }
 
@@ -54,10 +55,6 @@ export class AutonomyAdapter {
   #tick() {
     if (this.#paused) return;
     const now = performance.now();
-    if (now - this.#lastHumanAt >= this.#sleepAfterMs) {
-      if (!this.#runtime.snapshot().sleeping) this.#runtime.command({ type: "sleep", source: "autonomy" });
-      return;
-    }
     const snapshot = this.#runtime.snapshot();
     if (snapshot.busy) return;
     // Between the bigger idle actions the head keeps glancing about every

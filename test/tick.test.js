@@ -118,6 +118,24 @@ describe("tick sleepSequence mode", () => {
     assert.deepStrictEqual(statesSeen, ["sleeping"]);
   });
 
+  it("direct mode: a free-roam walk in between does not restart the sleep clock", () => {
+    const theme = cloneTheme(_defaultTheme);
+    theme.sleepSequence = { mode: "direct" };
+    theme.timings.mouseIdleTimeout = 1000;
+    theme.timings.mouseSleepTimeout = 1000;
+
+    ctx = makeCtx(theme, statesSeen);
+    tickApi = loader.initTick(ctx);
+    tickApi.startMainTick();
+
+    for (let i = 0; i < 16; i++) mock.timers.tick(50);   // 800 ms idle
+    ctx.currentState = "roam";                           // main starts a walk (applied elsewhere, no setState)
+    mock.timers.tick(60);
+    ctx.currentState = "idle";                           // walk over
+    for (let i = 0; i < 22; i++) mock.timers.tick(50);   // 1100 ms more: > 1 s of rest since the first idle entry
+    assert.deepStrictEqual(statesSeen, ["sleeping"]);    // a restarted clock would still be short of the timeout
+  });
+
   it("full mode keeps the yawning entry path", () => {
     const theme = cloneTheme(_defaultTheme);
     theme.sleepSequence = { mode: "full" };
