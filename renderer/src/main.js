@@ -9,6 +9,7 @@ const stage = document.getElementById("stage");
 const themeConfig = window.themeConfig || {};
 const audio = createAudio();
 audio.setMuted(themeConfig.duckMuted === true);
+audio.setVolumes({ voice: themeConfig.duckVoiceVolume, steps: themeConfig.duckStepVolume });
 
 const policyUrl = (name) => (window.electronAPI ? `pet-model://policy/${encodeURIComponent(name)}` : `/policies/${encodeURIComponent(name)}`);
 

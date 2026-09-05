@@ -767,3 +767,17 @@ describe("settings-effect-router", () => {
     assert.deepStrictEqual(calls, []);
   });
 });
+
+describe("duck-on-desk: duck volume settings reach the renderer", () => {
+  it("forwards only the changed bus, as a partial volumes payload", () => {
+    const { calls, emit } = createHarness();
+    emit({ duckVoiceVolume: 0.4 });
+    emit({ duckStepVolume: 0.7, duckVoiceVolume: 0.9 });
+    emit({ duckMuted: true });
+    assert.deepStrictEqual(calls.filter((c) => c[1] === "duck-volume-change" || c[1] === "duck-muted-change"), [
+      ["sendToRenderer", "duck-volume-change", { voice: 0.4 }],
+      ["sendToRenderer", "duck-volume-change", { voice: 0.9, steps: 0.7 }],
+      ["sendToRenderer", "duck-muted-change", true],
+    ]);
+  });
+});

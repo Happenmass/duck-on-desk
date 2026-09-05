@@ -426,6 +426,8 @@ const updateRegistry = {
       : { status: "error", message: `duckAppearance must be one of ${DUCK_APPEARANCES.join(", ")}` };
   },
   duckMuted: requireBoolean("duckMuted"),
+  duckVoiceVolume: requireNumberInRange("duckVoiceVolume", 0, 1),
+  duckStepVolume: requireNumberInRange("duckStepVolume", 0, 1),
   keepSizeAcrossDisplays: requireBoolean("keepSizeAcrossDisplays"),
   fullscreenOverlay: requireBoolean("fullscreenOverlay"),
   fullscreenAutoHide: requireBoolean("fullscreenAutoHide"),

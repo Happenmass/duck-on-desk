@@ -10,6 +10,7 @@ function fakeApi() {
     onStateChange: on("state"), onEyeMove: on("eye"), onDndChange: on("dnd"), onStartDragReaction: on("dragStart"),
     onEndDragReaction: on("dragEnd"), onPlayClickReaction: on("click"), onWakeFromDoze: on("wake"), onThemeConfig: on("theme"),
     onPlaySound: on("sound"), onPreloadSounds: on("preload"), onInvalidateSoundCache: on("inval"), onDuckAppearanceChange: on("skin"), onDuckLift: on("lift"),
+    onDuckMutedChange: on("muted"), onDuckVolumeChange: on("volume"),
     notifyPetVisualReady: () => sent.push(["ready"]),
     notifyPetVisualSettled: (p) => sent.push(["settled", p]),
   };
@@ -86,4 +87,14 @@ test("roam: the duck's stride is reported to main only while roaming", async () 
   await new Promise((r) => setTimeout(r, 100));
   assert.equal(reported.length, n, "zero strides are not reported");
   bridge.dispose();
+});
+
+test("mute and per-bus volume settings are handed to the audio adapter", async () => {
+  const { connectPetBridge } = await import("../renderer/src/pet-bridge.js");
+  const api = fakeApi();
+  const audioCalls = [];
+  connectPetBridge({ api, runtime: { command: () => ({}) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {}, setMuted: (m) => audioCalls.push(["muted", m]), setVolumes: (v) => audioCalls.push(["volumes", v]) } });
+  api.handlers.muted(true);
+  api.handlers.volume({ steps: 0.25 });
+  assert.deepEqual(audioCalls, [["muted", true], ["volumes", { steps: 0.25 }]]);
 });

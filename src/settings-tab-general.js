@@ -998,6 +998,8 @@
       children: [buildOptionList("sound-option-list", [
         buildSoundEnabledRow(summaryControl),
         buildVolumeSliderRow(),
+        buildDuckVolumeRow("duckVoiceVolume", "rowDuckVoiceVolume", "rowDuckVoiceVolumeDesc"),
+        buildDuckVolumeRow("duckStepVolume", "rowDuckStepVolume", "rowDuckStepVolumeDesc"),
       ])],
     });
   }
@@ -1535,6 +1537,51 @@
     const next = Number(trimmed);
     if (!Number.isInteger(next) || next < 0 || next > 3600) return null;
     return next;
+  }
+
+  // duck-on-desk: the 3D duck's own sound design has two buses the user can
+  // balance separately (voice vs footsteps); each is a plain 0-100% slider
+  // bound to one 0..1 preference, independent of the sprite-era sound switch.
+  function buildDuckVolumeRow(key, labelKey, descKey) {
+    const row = document.createElement("div");
+    row.className = "row volume-slider-row";
+    row.innerHTML =
+      `<div class="row-text">` +
+        `<span class="row-label"></span>` +
+        `<span class="row-desc"></span>` +
+      `</div>` +
+      `<div class="row-control volume-control">` +
+        `<input type="range" class="volume-slider" min="0" max="100" step="1" />` +
+        `<span class="volume-readout" aria-hidden="true"></span>` +
+      `</div>`;
+    row.querySelector(".row-label").textContent = t(labelKey);
+    row.querySelector(".row-desc").textContent = t(descKey);
+    const slider = row.querySelector(".volume-slider");
+    const readout = row.querySelector(".volume-readout");
+    const snapshotPct = () => {
+      const v = state.snapshot && typeof state.snapshot[key] === "number" ? state.snapshot[key] : 1;
+      return Math.round(Math.max(0, Math.min(1, v)) * 100);
+    };
+    const show = (pct) => {
+      slider.value = String(pct);
+      slider.style.setProperty("--volume-fill", `${pct}%`);
+      readout.textContent = `${pct}%`;
+    };
+    show(snapshotPct());
+    slider.addEventListener("input", () => show(Number(slider.value)));
+    slider.addEventListener("change", () => {
+      const vol = Number(slider.value) / 100;
+      window.settingsAPI.update(key, vol).then((result) => {
+        if (!result || result.status !== "ok") {
+          ops.showToast(t("toastSaveFailed") + ((result && result.message) || "unknown error"), { error: true });
+          show(snapshotPct());
+        }
+      }).catch((err) => {
+        ops.showToast(t("toastSaveFailed") + (err && err.message), { error: true });
+        show(snapshotPct());
+      });
+    });
+    return row;
   }
 
   function buildVolumeSliderRow() {

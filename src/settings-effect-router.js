@@ -186,6 +186,12 @@ function createSettingsEffectRouter(options = {}) {
     if ("duckMuted" in changes) {
       sendToRenderer("duck-muted-change", changes.duckMuted === true);
     }
+    if ("duckVoiceVolume" in changes || "duckStepVolume" in changes) {
+      const volumes = {};
+      if ("duckVoiceVolume" in changes) volumes.voice = changes.duckVoiceVolume;
+      if ("duckStepVolume" in changes) volumes.steps = changes.duckStepVolume;
+      sendToRenderer("duck-volume-change", volumes);
+    }
     if ("petTint" in changes) {
       const activeTheme = getActiveTheme();
       const tintId = getPetTintIdForTheme(changes.petTint, activeTheme && activeTheme._id);

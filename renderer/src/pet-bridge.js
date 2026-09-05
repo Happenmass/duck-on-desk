@@ -99,6 +99,7 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
     });
   }
   api.onDuckMutedChange?.((muted) => audio.setMuted(muted));
+  api.onDuckVolumeChange?.((volumes) => audio.setVolumes(volumes));
   api.notifyPetVisualReady();
   return { dispose: () => { if (facingTimer) clearInterval(facingTimer); if (stepTimer) clearInterval(stepTimer); behaviours.dispose(); } };
 }

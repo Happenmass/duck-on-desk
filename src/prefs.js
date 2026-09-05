@@ -239,6 +239,9 @@ const SCHEMA = {
   // sprite-era soundMuted/soundVolume pair does not reach it).
   duckAppearance: { type: "string", default: "classic", enum: ["classic", "charcoal", "purple", "blue"] },
   duckMuted: { type: "boolean", default: false },
+  // Per-category duck volumes (0..1): voice = chirps/quacks, steps = footsteps + landing thumps.
+  duckVoiceVolume: { type: "number", default: 1, validate: (v) => Number.isFinite(v) && v >= 0 && v <= 1 },
+  duckStepVolume: { type: "number", default: 1, validate: (v) => Number.isFinite(v) && v >= 0 && v <= 1 },
   soundVolume: {
     type: "number",
     default: 1,

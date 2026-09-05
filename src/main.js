@@ -1894,6 +1894,8 @@ function buildRendererThemeConfig(accessorySnapshot = null) {
     cfg.petTintPayload = resolvePetTintPayload(tintId, activeTheme);
     cfg.duckAppearance = _settingsController.getSnapshot().duckAppearance;
     cfg.duckMuted = _settingsController.getSnapshot().duckMuted === true;
+    cfg.duckVoiceVolume = _settingsController.getSnapshot().duckVoiceVolume;
+    cfg.duckStepVolume = _settingsController.getSnapshot().duckStepVolume;
     if (canonical) {
       cfg.accessorySlots = {
         themeId: canonical.themeId,
