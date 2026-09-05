@@ -18,8 +18,8 @@ python3 -c "from huggingface_hub import snapshot_download; snapshot_download('Ha
 ```
 
 10–25 cm 是可打印的高度，50 cm–2 m 只是仿真结果。踩高跷时鸭子会走会转，
-但不会坐下、啄地或自己爬起（摔倒后直接扶起），并把舵机增益加倍来近似这些
-策略训练时用的 BAM 舵机模型。
+但不会坐下、啄地或自己爬起（摔倒后直接扶起），并把舵机增益加倍：所有 Microduck 策略都是用 BAM 舵机模型训练的，
+官方策略能容忍本模拟器的 MJCF 位置执行器，高跷策略不能。
 
 ## Agent 支持
 | Agent | 集成方式 | 状态 | 权限气泡 |

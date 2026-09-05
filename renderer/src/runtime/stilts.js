@@ -7,11 +7,13 @@ export const STILT_HEIGHTS_CM = [10, 15, 20, 25, 50, 100, 140, 200];
 export const STILT_BLEND = 0.5;
 export const STILT_MAX_TURN = 0.35; // rad/s, the yaw range the stilt policies were trained on
 export const STILT_MAX_FORWARD = 0.6; // of MAX_FORWARD: 0.15 m/s, the released policies' evaluation speed
-// The stilt policies were trained against BAM's identified XL330 servo model
-// (firmware position loop at kp_fw=200, voltage-limited), not the MJCF
-// position actuators the official policies use. Doubling the position gain
-// and force limit is the closest the plain actuators get: at x1 the duck tips
-// over within ~3 s, at x2.5 and above it oscillates and falls at once.
+// All Microduck policies (official and stilt) are trained against BAM's
+// identified XL330 servo model (firmware position loop at kp_fw=200,
+// voltage-limited); this simulator, like the official browser one, runs the
+// MJCF position actuators instead. The official policies tolerate that gap;
+// the stilt ones, balancing a much taller robot, do not: at x1 the duck tips
+// over within ~3 s, at x2.5 and above it oscillates and falls at once, and
+// doubling the position gain and force limit is the sweet spot measured.
 export const STILT_SERVO_GAIN = 2;
 
 export function normalizeStilts(value) {
