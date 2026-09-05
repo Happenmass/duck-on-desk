@@ -16,6 +16,10 @@ import {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+// Pick-up: hold the trunk this high (m) while grabbed; standing trunk height is ~0.12 m and the camera
+// framing tops out around 0.31 m, so 0.21 m lifts the feet ~9 cm clear while the head stays in view.
+const LIFT_HEIGHT = 0.21;
+const LIFT_RATE = 0.7; // m/s easing toward LIFT_HEIGHT
 
 export async function createDuckRuntime(options) {
   const runtime = new DuckRuntime(options);
@@ -63,6 +67,8 @@ class DuckRuntime {
   #pick = null;
   #quackAt = -Infinity;
   #grabbed = false;
+  #lift = null; // { z } while picked up
+  #cameraPan = 0; // smoothed vertical camera pan following a lifted trunk
   #sleeping = false;
   #suspended = false;
   #disposed = false;
@@ -171,15 +177,27 @@ class DuckRuntime {
         }
         break;
       case "grab-start":
-        this.#wakeIfNeeded();
+        // Picked up: no policy runs while held; whatever it was doing is over.
+        this.#wakeIfNeeded(false);
         this.#leases.clearAll();
         this.#cancelPeck();
+        this.#clearTimers();
+        this.#mode = "walk";
+        this.#sitFlag = 0;
+        this.#recovery = null;
+        this.#fallDebounce = 0;
+        this.#lastAction.fill(0);
+        this.#lift = { z: this.#data ? this.#data.qpos[2] : LIFT_HEIGHT };
         this.#grabbed = true;
         this.#onSound({ name: "wheee", on: true });
         this.#emit();
         break;
       case "grab-end":
+        // Let go: gravity takes over from wherever it hangs; the walker (or the
+        // get-up policy after a tumble) handles the landing.
         this.#grabbed = false;
+        this.#lift = null;
+        this.#leases.clearAll();
         this.#onSound({ name: "wheee", on: false });
         this.#emit();
         break;
@@ -217,6 +235,7 @@ class DuckRuntime {
       appearance: this.#appearance,
       motionSource: this.#leases.current().source,
       facing: this.#data ? this.#facing() : 0,
+      height: this.#data ? this.#data.qpos[2] : 0,
     });
   }
 
@@ -459,6 +478,12 @@ class DuckRuntime {
   }
 
   async #controlStep() {
+    if (this.#grabbed && this.#lift) {
+      this.#holdLifted();
+      this.#recenter();
+      this.#soundStep();
+      return;
+    }
     const session = this.#recovery?.state === "recovering" ? this.#sessions.stand
       : this.#pick ? this.#sessions.groundpick
       : this.#mode === "walk" ? this.#sessions.walk
@@ -476,6 +501,28 @@ class DuckRuntime {
     this.#soundStep();
     this.#advancePick();
     this.#updateRecovery();
+  }
+
+  // Held in the air: ease the trunk up to LIFT_HEIGHT and pin it there each
+  // physics substep (level, current yaw, no velocity) while the legs relax to
+  // the default pose. Gravity resumes the moment grab-end clears #lift.
+  #holdLifted() {
+    const q = this.#data.qpos;
+    const v = this.#data.qvel;
+    this.#lift.z = Math.min(LIFT_HEIGHT, this.#lift.z + LIFT_RATE * CTRL_DT);
+    const yaw = Math.atan2(2 * (q[3] * q[6] + q[4] * q[5]), 1 - 2 * (q[5] * q[5] + q[6] * q[6]));
+    for (let joint = 0; joint < NUM_JOINTS; joint++) this.#data.ctrl[joint] = DEFAULT_POSE[joint];
+    for (let step = 0; step < DECIMATION; step++) {
+      q[0] = 0;
+      q[1] = 0;
+      q[2] = this.#lift.z;
+      q[3] = Math.cos(yaw / 2);
+      q[4] = 0;
+      q[5] = 0;
+      q[6] = Math.sin(yaw / 2);
+      for (let i = 0; i < 6; i++) v[i] = 0;
+      this.#mujoco.mj_step(this.#model, this.#data);
+    }
   }
 
   // One-shot ground pick: peck the ground and stand back up (~2.8 s).
@@ -597,6 +644,12 @@ class DuckRuntime {
       this.#lastSleepRender = now;
       if (this.#data && this.#trunk) {
         const qpos = this.#data.qpos;
+        // Camera follows a lifted duck (70% of the lift, eased) so the head stays
+        // in frame while the ground shadow remains visible; eases back on landing.
+        const wantedPan = Math.max(0, qpos[2] - 0.12) * 0.7;
+        this.#cameraPan += (wantedPan - this.#cameraPan) * 0.15;
+        this.#camera.position.y = 0.23 + this.#cameraPan;
+        this.#camera.lookAt(0, 0.12 + this.#cameraPan, 0);
         this.#trunk.position.set(qpos[0], qpos[1], qpos[2]);
         this.#trunk.quaternion.set(qpos[4], qpos[5], qpos[6], qpos[3]);
         for (let joint = 0; joint < NUM_JOINTS; joint++) {

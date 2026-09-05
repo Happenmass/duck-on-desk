@@ -1,5 +1,7 @@
 "use strict";
 
+const DUCK_APPEARANCES = Object.freeze(["classic", "charcoal", "purple", "blue"]);
+
 // ── Settings actions (transport-agnostic) ──
 //
 // Two registries:
@@ -416,6 +418,14 @@ const updateRegistry = {
   disableMiniMode: requireBoolean("disableMiniMode"),
   freeRoam: requireBoolean("freeRoam"),
   roamConstrainAxis: requireBoolean("roamConstrainAxis"),
+  // duck-on-desk: 3D duck skin + mute (tray/context menu and Settings). Without a
+  // registry entry the controller rejects the key as unknown and the menu is inert.
+  duckAppearance(value) {
+    return DUCK_APPEARANCES.includes(value)
+      ? { status: "ok" }
+      : { status: "error", message: `duckAppearance must be one of ${DUCK_APPEARANCES.join(", ")}` };
+  },
+  duckMuted: requireBoolean("duckMuted"),
   keepSizeAcrossDisplays: requireBoolean("keepSizeAcrossDisplays"),
   fullscreenOverlay: requireBoolean("fullscreenOverlay"),
   fullscreenAutoHide: requireBoolean("fullscreenAutoHide"),
