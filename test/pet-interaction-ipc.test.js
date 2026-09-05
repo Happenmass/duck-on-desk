@@ -149,6 +149,7 @@ test("pet interaction IPC registers owned channels and disposes them", () => {
     "drag-end",
     "drag-lock",
     "drag-move",
+    "duck-fall",
     "duck-lift",
     "end-drag-reaction",
     "exit-mini-mode",
@@ -540,16 +541,38 @@ test("pet drop does not ping the hit window when the terminal launch fails", asy
   assert.ok(logs.some((m) => m.includes("launch failed") && m.includes("no terminal")), logs.join("; "));
 });
 
-test("duck-lift start expands the hit window before the phase is forwarded; other phases just forward", () => {
-  const { ipcMain, calls } = createHarness();
-  ipcMain.send("duck-lift", { phase: "start", dy: 0 });
-  ipcMain.send("duck-lift", { phase: "move", dy: -120 });
-  ipcMain.send("duck-lift", { phase: "end", dy: 0 });
+test("duck-lift: start records the ground line and expands the hit window; moves carry the window and report the rise", () => {
+  const { ipcMain, calls, state } = createHarness();
+  ipcMain.send("duck-lift", { phase: "start" });
+  state.petWindowBounds = { ...state.petWindowBounds, y: 20 - 150 };   // moveWindowForDrag is faked; simulate the carry
+  ipcMain.send("duck-lift", { phase: "move" });
+  state.petWindowBounds = { ...state.petWindowBounds, y: 20 + 40 };    // below the pick-up spot
+  ipcMain.send("duck-lift", { phase: "move" });
+  ipcMain.send("duck-lift", { phase: "end" });
   ipcMain.send("duck-lift", { phase: "bogus" });
-  assert.deepStrictEqual(calls.filter((c) => c[0] === "expandHitWindowForLift" || c[1] === "duck-lift"), [
+  assert.deepStrictEqual(calls.filter((c) => ["expandHitWindowForLift", "moveWindowForDrag"].includes(c[0]) || c[1] === "duck-lift"), [
     ["expandHitWindowForLift"],
-    ["sendToRenderer", "duck-lift", { phase: "start", dy: 0 }],
-    ["sendToRenderer", "duck-lift", { phase: "move", dy: -120 }],
-    ["sendToRenderer", "duck-lift", { phase: "end", dy: 0 }],
+    ["sendToRenderer", "duck-lift", { phase: "start", pxPerMetre: 250 }],
+    ["moveWindowForDrag"],
+    ["sendToRenderer", "duck-lift", { phase: "move", dy: -150 }],
+    ["moveWindowForDrag"],
+    ["sendToRenderer", "duck-lift", { phase: "move", dy: 40 }],
+    ["sendToRenderer", "duck-lift", { phase: "end" }],
   ]);
+});
+
+test("duck-fall rides the window down the reported height to the ground line and marks a protected period", () => {
+  const { ipcMain, calls, state, runtime } = createHarness();
+  state.petWindowBounds = { x: 10, y: 400, width: 120, height: 80 }; // released 1.2 m up: ground line is 400 + 300
+  assert.equal(runtime.isDuckLiftFalling(), false);
+  ipcMain.send("duck-fall", { height: 1.2, done: false });
+  assert.equal(runtime.isDuckLiftFalling(), true);
+  assert.deepStrictEqual(calls.filter((c) => c[0] === "applyPetWindowBounds"), [], "first report only fixes the ground line");
+  ipcMain.send("duck-fall", { height: 0.6, done: false });
+  ipcMain.send("duck-fall", { height: 0.05, done: false });
+  ipcMain.send("duck-fall", { height: 0, done: true });
+  const writes = calls.filter((c) => c[0] === "applyPetWindowBounds").map((c) => c[1].y);
+  assert.deepStrictEqual(writes, [550, 687, 700]);
+  assert.equal(runtime.isDuckLiftFalling(), false);
+  assert.ok(calls.some((c) => c[0] === "syncHitWin"));
 });

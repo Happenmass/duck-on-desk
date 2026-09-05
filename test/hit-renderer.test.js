@@ -103,13 +103,13 @@ function createHarness({ isMac = false, sendState = {} } = {}) {
     fakeDocument._dispatch("pointerup", { button, ctrlKey, metaKey, clientX });
   }
 
-  function pointerdown({ button = 0, pointerId = 1, clientX = 100, clientY = 100, screenY = clientY + 500 } = {}) {
+  function pointerdown({ button = 0, pointerId = 1, clientX = 100, clientY = 100 } = {}) {
     const cb = area.listeners.get("pointerdown");
-    if (cb) cb({ button, pointerId, clientX, clientY, screenY, preventDefault() {} });
+    if (cb) cb({ button, pointerId, clientX, clientY, preventDefault() {} });
   }
 
-  function pointermove({ clientX = 100, clientY = 100, screenY = clientY + 500 } = {}) {
-    fakeDocument._dispatch("pointermove", { clientX, clientY, screenY });
+  function pointermove({ clientX = 100, clientY = 100 } = {}) {
+    fakeDocument._dispatch("pointermove", { clientX, clientY });
   }
 
   function fireTimer(predicate) {
@@ -124,21 +124,19 @@ function createHarness({ isMac = false, sendState = {} } = {}) {
 }
 
 describe("hit-renderer input layer", () => {
-  it("middle-button lift holds the drag lock so main keeps routing input to this window", () => {
+  it("middle-button lift is a drag-locked carry: main moves the window and lifts the duck per move", () => {
     const h = createHarness();
-    h.pointerdown({ button: 1, clientY: 80, screenY: 900 });
-    // Main enlarges the window to the display on start, so client coordinates
-    // jump; the lift must measure travel in screen coordinates.
-    h.pointermove({ clientY: 850, screenY: 850 });
-    h.pointermove({ clientY: 620, screenY: 620 });
+    h.pointerdown({ button: 1, clientY: 80 });
+    h.pointermove({ clientY: 30 });
+    h.pointermove({ clientY: -200 });          // far outside the small hit window
     h.pointerup({ button: 1 });
     h.pointerup({ button: 1 });                // second release: nothing more
     assert.deepStrictEqual(h.apiCalls, [
       ["dragLock", true],
-      ["duckLift", "start", 0],
-      ["duckLift", "move", -50],
-      ["duckLift", "move", -280],
-      ["duckLift", "end", 0],
+      ["duckLift", "start", undefined],
+      ["duckLift", "move", undefined],
+      ["duckLift", "move", undefined],
+      ["duckLift", "end", undefined],
       ["dragLock", false],
     ]);
   });

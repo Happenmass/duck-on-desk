@@ -131,14 +131,45 @@ function registerPetInteractionIpc(options = {}) {
     }
   });
 
-  // duck-on-desk: middle-button pick-up gesture from the hit window, forwarded
-  // to the 3D renderer untouched by the visual projection (it is not a visual).
+  // duck-on-desk: middle-button pick-up. The hit window holds drag-lock, so
+  // each move carries the window under the pointer exactly like a left-button
+  // drag; the window's rise above where the duck was picked up becomes its
+  // height in the scene (LIFT_PX_PER_METRE px per metre, camera follows). After
+  // the release the renderer streams the trunk's height while it falls
+  // (duck-fall) and the window rides it back down to the ground line.
+  const LIFT_PX_PER_METRE = 250;
+  let liftGroundY = null; // window y at pick-up
+  let fallGroundY = null; // ground line of the current fall; null = not falling
   on("duck-lift", (_event, payload) => {
     const phase = payload && ["start", "move", "end"].includes(payload.phase) ? payload.phase : null;
     if (!phase) return;
-    const dy = payload && Number.isFinite(payload.dy) ? payload.dy : 0;
-    if (phase === "start") expandHitWindowForLift();
-    sendToRenderer("duck-lift", { phase, dy });
+    if (phase === "start") {
+      const bounds = getPetWindowBounds();
+      liftGroundY = bounds ? bounds.y : null;
+      fallGroundY = null;
+      expandHitWindowForLift();
+      sendToRenderer("duck-lift", { phase, pxPerMetre: LIFT_PX_PER_METRE });
+    } else if (phase === "move") {
+      moveWindowForDrag();
+      const bounds = getPetWindowBounds();
+      sendToRenderer("duck-lift", { phase, dy: bounds && liftGroundY !== null ? bounds.y - liftGroundY : 0 });
+    } else {
+      liftGroundY = null;
+      sendToRenderer("duck-lift", { phase });
+    }
+  });
+  on("duck-fall", (_event, payload) => {
+    const height = payload && Number.isFinite(payload.height) ? Math.max(0, payload.height) : 0;
+    const done = !!(payload && payload.done);
+    const bounds = getPetWindowBounds();
+    if (!bounds) { fallGroundY = null; return; }
+    if (fallGroundY === null) fallGroundY = bounds.y + Math.round(height * LIFT_PX_PER_METRE);
+    const y = done ? fallGroundY : fallGroundY - Math.round(height * LIFT_PX_PER_METRE);
+    if (y !== bounds.y) {
+      applyPetWindowBounds({ ...bounds, y });
+      syncHitWin();
+    }
+    if (done) fallGroundY = null;
   });
 
   on("start-drag-reaction", (_event, direction) => {
@@ -247,6 +278,9 @@ function registerPetInteractionIpc(options = {}) {
   });
 
   return {
+    // duck-on-desk: the post-release fall writes the window every frame — a
+    // reconcile-protected period, like roam.
+    isDuckLiftFalling: () => fallGroundY !== null,
     dispose() {
       while (disposers.length) {
         const dispose = disposers.pop();

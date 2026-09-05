@@ -74,11 +74,10 @@ function clearQueuedDragMove() {
 // sets the lift height; releasing drops it. The left button keeps its upstream
 // meaning (drag the window, click reactions) and never lifts.
 let liftActive = false;
-let liftStartY = 0;
 function endLift() {
   if (!liftActive) return;
   liftActive = false;
-  window.hitAPI.duckLift({ phase: "end", dy: 0 });
+  window.hitAPI.duckLift({ phase: "end" });
   window.hitAPI.dragLock(false);
 }
 area.addEventListener("auxclick", (e) => { if (e.button === 1) e.preventDefault(); });
@@ -90,16 +89,11 @@ area.addEventListener("pointerdown", (e) => {
     if (miniMode) return;
     area.setPointerCapture(e.pointerId);
     liftActive = true;
-    // Screen coordinates: main enlarges this window to the display for the
-    // lift, which shifts client coordinates but not screen ones.
-    liftStartY = e.screenY;
-    // Hold main's drag lock for the whole lift: without it main's cursor poll
-    // flips this window back to ignore-mouse-events the moment the pointer
-    // leaves the pet's hit rect, which cancels the capture (lostpointercapture)
-    // a few px into the drag. The lock never moves the window — no drag-move
-    // is sent — it only keeps the input routing pinned to us.
+    // The lift is a drag that also lifts: main's drag lock + drag-move carry
+    // the window under the pointer exactly like a left-button drag, and main
+    // turns the window's rise into the duck's height in the scene.
     window.hitAPI.dragLock(true);
-    window.hitAPI.duckLift({ phase: "start", dy: 0 });
+    window.hitAPI.duckLift({ phase: "start" });
     return;
   }
   if (e.button === 0) {
@@ -118,7 +112,7 @@ area.addEventListener("pointerdown", (e) => {
 
 document.addEventListener("pointermove", (e) => {
   if (liftActive) {
-    window.hitAPI.duckLift({ phase: "move", dy: e.screenY - liftStartY });
+    window.hitAPI.duckLift({ phase: "move" });
     return;
   }
   if (isDragging) {

@@ -1,6 +1,6 @@
 // Consumes the main-process preload contract (src/preload.js) and drives the duck.
 // The only mandatory reply is notifyPetVisualSettled; without it main reloads the window after 9750 ms.
-export function connectPetBridge({ api = window.electronAPI, runtime, behaviours, audio }) {
+export function connectPetBridge({ api = window.electronAPI, runtime, behaviours, audio, raf = (fn) => requestAnimationFrame(fn) }) {
   const settle = (request, file) => api.notifyPetVisualSettled({
     themeId: (request && request.themeId) || "duck",
     displayState: (request && request.displayState) || null,
@@ -43,27 +43,47 @@ export function connectPetBridge({ api = window.electronAPI, runtime, behaviours
     if (request && typeof request.file === "string") settle(request, request.file);
   });
   api.onEndDragReaction(() => {});
-  // Middle-button pick-up: press holds the duck where it is; every
-  // LIFT_PX_PER_METRE px the pointer travels above the press point raises it
-  // one metre in the scene (the camera rig follows, so the window itself never
-  // changes and the drag is not bounded by it); below the press point it rests
-  // on the ground, still held; releasing drops it from wherever it hangs.
-  const LIFT_PX_PER_METRE = 250;
+  // Middle-button pick-up (main side: pet-interaction-ipc.js). Main carries
+  // the window under the pointer; the window's rise above the pick-up spot
+  // (dy < 0) is the duck's height here, pxPerMetre px per metre, with the
+  // camera rig following so it stays framed. After the release the trunk
+  // falls under the scene's gravity and its height is streamed back so main
+  // can ride the window down with it until it has landed and settled.
   const LIFT_MAX = 5;
+  const REST_HEIGHT = 0.12;
+  const LANDED_BELOW = 0.02;
+  const LANDED_FRAMES = 3;
+  const FALL_MAX_MS = 5000;
   let held = false;
+  let pxPerMetre = 250;
+  let fall = null; // { calm, started } while streaming the fall
+  const fallFrame = () => {
+    if (!fall) return;
+    const s = runtime.snapshot();
+    const height = Math.max(0, (s && Number.isFinite(s.height) ? s.height : REST_HEIGHT) - REST_HEIGHT);
+    fall.calm = height < LANDED_BELOW ? fall.calm + 1 : 0;
+    const done = fall.calm >= LANDED_FRAMES || Date.now() - fall.started > FALL_MAX_MS;
+    api.reportDuckFall?.({ height: done ? 0 : height, done });
+    if (done) fall = null;
+    else raf(fallFrame);
+  };
   api.onDuckLift?.((lift) => {
     if (lift.phase === "start") {
       if (held) return;
       held = true;
+      fall = null;
+      if (Number.isFinite(lift.pxPerMetre) && lift.pxPerMetre > 0) pxPerMetre = lift.pxPerMetre;
       runtime.command({ type: "grab-start", source: "local" });
     } else if (lift.phase === "move") {
       if (!held) return;
-      const h = Math.max(0, Math.min(LIFT_MAX, -(Number(lift.dy) || 0) / LIFT_PX_PER_METRE));
+      const h = Math.max(0, Math.min(LIFT_MAX, -(Number(lift.dy) || 0) / pxPerMetre));
       runtime.command({ type: "grab-lift", height: h, source: "local" });
     } else if (lift.phase === "end") {
       if (!held) return;
       held = false;
       runtime.command({ type: "grab-end", source: "local" });
+      fall = { calm: 0, started: Date.now() };
+      raf(fallFrame);
     }
   });
   api.onPlayClickReaction(() => runtime.command({ type: "perform", action: "quack", source: "local" }));

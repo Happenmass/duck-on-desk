@@ -40,22 +40,31 @@ test("drag and click reactions become grab and quack intents", async () => {
   assert.deepEqual(commands.map((c) => c.type + (c.action ? ":" + c.action : "")), ["perform:quack"]);
 });
 
-test("middle-button lift: press holds, upward travel lifts 1 m per 250 px, release drops", async () => {
+test("middle-button lift: rise -> height at main's px/m, release -> fall streamed until landed", async () => {
   const { connectPetBridge } = await import("../renderer/src/pet-bridge.js");
   const api = fakeApi();
   const commands = [];
-  connectPetBridge({ api, runtime: { command: (i) => commands.push(i) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} } });
-  api.handlers.lift({ phase: "end", dy: 0 });                 // release before any press: ignored
-  api.handlers.lift({ phase: "start", dy: 0 });
-  api.handlers.lift({ phase: "start", dy: 0 });               // repeated start: ignored
-  api.handlers.lift({ phase: "move", dy: -200 });             // 200 px up -> 0.8 m
-  api.handlers.lift({ phase: "move", dy: 50 });               // below the start point -> on the ground
-  api.handlers.lift({ phase: "move", dy: -900 });             // 900 px up -> 3.6 m (not bounded by the window)
+  const falls = [];
+  const frames = [];
+  api.reportDuckFall = (p) => falls.push(p);
+  let height = 0.12;
+  connectPetBridge({ api, runtime: { command: (i) => commands.push(i), snapshot: () => ({ height }) }, behaviours: { apply() {}, eye() {}, dispose() {} }, audio: { setAppearance() {} }, raf: (fn) => frames.push(fn) });
+  api.handlers.lift({ phase: "end" });                        // release before any press: ignored
+  api.handlers.lift({ phase: "start", pxPerMetre: 200 });
+  api.handlers.lift({ phase: "start", pxPerMetre: 200 });     // repeated start: ignored
+  api.handlers.lift({ phase: "move", dy: -100 });             // window 100 px above the pick-up spot -> 0.5 m
+  api.handlers.lift({ phase: "move", dy: 30 });               // below it -> on the ground
   api.handlers.lift({ phase: "move", dy: -9999 });            // capped at 5 m
-  api.handlers.lift({ phase: "end", dy: 0 });
-  api.handlers.lift({ phase: "end", dy: 0 });
-  assert.deepEqual(commands.map((c) => c.type), ["grab-start", "grab-lift", "grab-lift", "grab-lift", "grab-lift", "grab-end"]);
-  assert.deepEqual(commands.filter((c) => c.type === "grab-lift").map((c) => +c.height.toFixed(3)), [0.8, 0, 3.6, 5]);
+  api.handlers.lift({ phase: "end" });
+  assert.deepEqual(commands.map((c) => c.type), ["grab-start", "grab-lift", "grab-lift", "grab-lift", "grab-end"]);
+  assert.deepEqual(commands.filter((c) => c.type === "grab-lift").map((c) => +c.height.toFixed(3)), [0.5, 0, 5]);
+  // The fall: heights stream every frame until three calm frames on the ground.
+  const drop = [1.32, 1.0, 0.6, 0.2, 0.13, 0.125, 0.12, 0.118];
+  let i = 0;
+  while (frames.length) { height = drop[Math.min(i++, drop.length - 1)]; frames.shift()(); }
+  assert.deepEqual(falls.map((f) => [+f.height.toFixed(2), f.done]), [[1.2, false], [0.88, false], [0.48, false], [0.08, false], [0.01, false], [0.01, false], [0, true]]);
+  api.handlers.lift({ phase: "start" });
+  assert.equal(commands.at(-1).type, "grab-start", "a new press is accepted after the drop");
 });
 
 test("roam: the duck's stride is reported to main only while roaming", async () => {

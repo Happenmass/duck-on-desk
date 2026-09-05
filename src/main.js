@@ -826,6 +826,7 @@ function setAccessoryMirrored(mirrored) {
   syncHitWin();
 }
 
+let _petIpc = null; // duck-on-desk: pet-interaction-ipc handle (lift fall = protected period)
 const petWindowRuntime = createPetWindowRuntime({
   screen,
   isWin,
@@ -882,7 +883,7 @@ const petWindowRuntime = createPetWindowRuntime({
   // Issue #690 plan §4.3.10's fourth reconcile protection period (lazy-bound
   // like isMiniAnimating above — _roam is constructed after petWindowRuntime,
   // but this closure isn't invoked until well after module load finishes).
-  isRoamAnimating: () => _roam.isRoamAnimating(),
+  isRoamAnimating: () => _roam.isRoamAnimating() || (_petIpc !== null && _petIpc.isDuckLiftFalling()),
   isNearWorkAreaEdge: (bounds) => isNearWorkAreaEdge(bounds),
   flushRuntimeStateToPrefs: () => flushRuntimeStateToPrefs(),
   handleMiniDisplayChange: () => _mini.handleDisplayChange(),
@@ -3113,7 +3114,7 @@ function createWindow() {
 
   syncSessionHudVisibility();
 
-  registerPetInteractionIpc({
+  _petIpc = registerPetInteractionIpc({
     ipcMain,
     showContextMenu: (event) => showPetContextMenu(event),
     moveWindowForDrag: () => moveWindowForDrag(),
