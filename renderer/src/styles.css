@@ -11,6 +11,4 @@ body { user-select: none; -webkit-user-select: none; }
 #stage { position: absolute; inset: 0; pointer-events: none; }
 #stage canvas { display: block; width: 100%; height: 100%; }
 
-html:not([data-electron="true"]) body {
-  background: radial-gradient(circle at 50% 58%, #243047, #0c111c 72%);
-}
+/* No opaque fallback here: the render window is a transparent Electron surface; clawd's preload never sets data-electron. */
