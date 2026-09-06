@@ -395,15 +395,15 @@ module.exports = function initRoam(ctx) {
     const leftRoom = bounds.x - minDist - xMin;
     const rightRoom = xMax - bounds.x - minDist;
     // No room on the side the duck leans to (it is parked at that screen edge):
-    // skip this walk instead of wandering the other way; the autonomy sweep
-    // will lean it back toward open space within a few seconds.
+    // Main owns 3D locomotion, including turning back: there is no independent
+    // idle sweep to rescue a duck facing an edge. Keep legacy themes' skip.
     let leanSide = 0;
     if (lean < 0) {
-      if (leftRoom < 0) return null;
-      leanSide = -1;
+      if (leftRoom < 0 && (!ctx.duckDrivesRoam || rightRoom < 0)) return null;
+      leanSide = leftRoom < 0 ? 1 : -1;
     } else if (lean > 0) {
-      if (rightRoom < 0) return null;
-      leanSide = 1;
+      if (rightRoom < 0 && (!ctx.duckDrivesRoam || leftRoom < 0)) return null;
+      leanSide = rightRoom < 0 ? -1 : 1;
     }
     for (let i = 0; i < ROAM_TARGET_ATTEMPTS; i += 1) {
       let targetX;
@@ -578,6 +578,7 @@ module.exports = function initRoam(ctx) {
     let curX = startX;
     let curY = startY;
     let blockedMs = 0;
+    let blockedSince = null;
     let lastDbg = 0;
     pendingDx = 0;
     pendingDy = 0;
@@ -608,7 +609,11 @@ module.exports = function initRoam(ctx) {
         if (startY >= f.top && startY + roamH <= f.bottom) ny = Math.min(Math.max(ny, f.top), f.bottom - roamH);
       }
       const blocked = moved && Math.abs(nx - wantX) > 0.5 && Math.abs(nx - curX) < 0.5;
-      blockedMs = blocked ? blockedMs + ROAM_FRAME_MS : 0;
+      // Reports arrive every 40ms, while this loop runs every 16ms. Empty
+      // frames are not evidence that the duck is unblocked: retain the hold
+      // until an actual stride succeeds, and measure wall-clock duration.
+      if (moved) blockedSince = blocked ? (blockedSince ?? elapsed) : null;
+      blockedMs = blockedSince === null ? 0 : elapsed - blockedSince;
       curX = nx;
       curY = ny;
       const travelled = Math.hypot(curX - startX, curY - startY);

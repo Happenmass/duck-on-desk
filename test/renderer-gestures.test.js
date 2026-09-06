@@ -31,8 +31,8 @@ test("idle actions are picked by cumulative weight", async () => {
   near(IDLE_ACTIONS.reduce((sum, [, w]) => sum + w, 0), 1);
   assert.equal(chooseIdleAction(0), "look");
   assert.equal(chooseIdleAction(0.44), "look");
-  assert.equal(chooseIdleAction(0.46), "wander");
-  assert.equal(chooseIdleAction(0.65), "wander");
+  assert.equal(chooseIdleAction(0.46), "look");
+  assert.equal(chooseIdleAction(0.65), "look");
   assert.equal(chooseIdleAction(0.85), "peck");
   assert.equal(chooseIdleAction(0.95), "quack");
   assert.equal(chooseIdleAction(0.9999), "quack");

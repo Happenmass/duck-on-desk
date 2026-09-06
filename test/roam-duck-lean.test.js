@@ -104,6 +104,19 @@ describe("roam follows the duck's stride (duckDrivesRoam)", () => {
     return { h, roam };
   }
 
+  it("turns toward available space without relying on an idle autonomy sweep", () => {
+    for (const [x, lean, heading] of [[300, -1, "R"], [1500, 1, "L"]]) {
+      const h = makeCtx({ x, lean });
+      h.ctx.duckDrivesRoam = true;
+      const roam = roamModule(h.ctx);
+      roam.setEnabled(true);
+      runFor(roam, 9);
+      assert.equal(h.ctx.getCurrentState(), "roam");
+      assert.deepStrictEqual(h.headings, [heading]);
+      roam.setEnabled(false);
+    }
+  });
+
   it("moves the window by exactly the reported stride and ignores its own tween", () => {
     const { h, roam } = startWalk();
     mock.timers.tick(500);
@@ -147,5 +160,43 @@ describe("roam follows the duck's stride (duckDrivesRoam)", () => {
     runFor(roam, 9);
     mock.timers.tick(16);
     assert.deepStrictEqual(h.applied.at(-1), { x: 900, y: 400 });
+  });
+
+  it("stops at the edge with real 40ms IPC gaps between 16ms frames", () => {
+    // Run recursive timeouts at their individual deadlines, including empty
+    // frames between reports (coalescing timers would hide this race).
+    mock.timers.reset();
+    let now = 1000;
+    let id = 0;
+    const timers = new Map();
+    mock.method(Date, "now", () => now);
+    mock.method(global, "setTimeout", (fn, ms) => { timers.set(++id, { fn, at: now + ms }); return id; });
+    mock.method(global, "clearTimeout", (key) => timers.delete(key));
+    mock.method(Math, "random", () => 0.5);
+    function advance(ms) {
+      const end = now + ms;
+      while (true) {
+        const next = [...timers].sort((a, b) => a[1].at - b[1].at)[0];
+        if (!next || next[1].at > end) break;
+        timers.delete(next[0]);
+        now = next[1].at;
+        next[1].fn();
+      }
+      now = end;
+    }
+    const h = makeCtx({ x: 900, lean: -1 });
+    Object.assign(h.ctx, { duckDrivesRoam: true,
+      clampToScreenVisual: (x, y, w, h) => ({ x: Math.min(910, x), y: 400, width: w, height: h }) });
+    const roam = roamModule(h.ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    advance(8000);
+    assert.equal(h.ctx.getCurrentState(), "roam");
+    for (let ms = 0; ms < 1600 && h.ctx.getCurrentState() === "roam"; ms += 8) {
+      if (ms % 40 === 0) roam.onDisplacement(2, 0);
+      advance(8);
+    }
+    assert.equal(h.applied.at(-1).x, 910);
+    assert.equal(h.ctx.getCurrentState(), "idle", "blocked duck must stop walking even between IPC samples");
   });
 });

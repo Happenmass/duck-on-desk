@@ -1,13 +1,13 @@
 // Idle repertoire when nobody is touching the duck. Weights sum to 1;
 // `roll` is a [0,1) sample so the choice is testable without Math.random.
-export const IDLE_ACTIONS = [["look", 0.45], ["wander", 0.35], ["peck", 0.12], ["quack", 0.08]];
+// Main owns locomotion through duck-roam. An idle move would animate the
+// feet while pet-bridge discards its displacement and the window stays put.
+export const IDLE_ACTIONS = [["look", 0.80], ["peck", 0.12], ["quack", 0.08]];
 export function chooseIdleAction(roll = Math.random()) {
   let acc = 0;
   for (const [name, weight] of IDLE_ACTIONS) if (roll < (acc += weight)) return name;
   return IDLE_ACTIONS[IDLE_ACTIONS.length - 1][0];
 }
-
-import { FACING_HALF_CONE } from "../runtime/gestures.js";
 
 const rand = (a, b) => a + Math.random() * (b - a);
 export const GLANCE_MIN_MS = 700;
@@ -95,15 +95,6 @@ export class AutonomyAdapter {
       case "quack":
         cmd({ type: "perform", action: "quack" });
         return rand(1_500, 3_000);
-      default: {
-        // Sweep inside the camera-facing cone: aim at the side opposite the
-        // current facing so the duck turns through the viewer, never away.
-        const facing = this.#runtime.snapshot().facing ?? 0;
-        const heading = (facing > 0 ? -1 : 1) * rand(0.2, FACING_HALF_CONE - 0.2);
-        const duration = rand(3_000, 5_000);
-        cmd({ type: "move", forward: rand(0.6, 0.9), heading, ttlMs: duration });
-        return duration + rand(4_000, 8_000);
-      }
     }
   }
 }
