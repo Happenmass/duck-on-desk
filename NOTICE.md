@@ -31,3 +31,9 @@ were trained in `Vottivott/microduck-playground` (Apache-2.0).
 ## Agent icons
 
 `assets/icons/agents/` derived from `@lobehub/icons-static-png@1.95.0` (https://lobehub.com/icons).
+
+## Demo video
+
+`docs/media/demo.gif` and the `duck-on-desk-demo.mp4` release asset show the app over the Pollen Robotics
+Microduck web page. Music: "Fluffing a Duck" by Kevin MacLeod (https://incompetech.com), Creative Commons
+Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/).

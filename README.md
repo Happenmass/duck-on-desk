@@ -4,6 +4,12 @@ A physics-driven 3D Microduck that lives on your desktop and reacts to your AI c
 
 > AGPL-3.0 derivative of [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk) (baseline `5ca26b5c`). The duck is the official Pollen Robotics Microduck simulator rig, MuJoCo physics and RL walking policies, not pre-baked animation. See `NOTICE.md`.
 
+## Demo
+
+![Duck on Desk: skins, roller skates and stilts on the desktop](docs/media/demo.gif)
+
+[Full demo with sound (80 s, MP4)](https://github.com/Happenmass/duck-on-desk/releases/download/v0.1.0/duck-on-desk-demo.mp4)
+
 ## Install
 
 Prebuilt apps are on the [Releases](https://github.com/Happenmass/duck-on-desk/releases) page:
@@ -61,6 +67,7 @@ Tray → Skin: Cream, Graphite, Lavender, Sky (the four real Microduck colourway
 - [Microduck](https://github.com/pollen-robotics/microduck) by Pollen Robotics (Apache-2.0): the tiny biped duck robot itself; [microduck_rl](https://github.com/pollen-robotics/microduck_rl): the RL training environments behind the walking, sitting, ground-pick and roller policies; and the [Microduck simulator Space](https://huggingface.co/spaces/pollen-robotics/microduck-simulator): the 3D rig, MJCF, voices and the policies this duck runs (3D assets and voices are non-commercial, see `NOTICE.md`).
 - [microduck-playground](https://github.com/Vottivott/microduck-playground) by Vottivott (Apache-2.0) and the [microduck-stilts](https://huggingface.co/HannesVonEssen/microduck-stilts) weights by HannesVonEssen: the community stilt training and policies.
 - Footsteps and thumps are CC0 samples by [Kenney](https://kenney.nl); the notification sound is CC0 by iut_Paris8 on freesound; agent icons come from [LobeHub Icons](https://lobehub.com/icons).
+- The demo video's music is "Fluffing a Duck" by Kevin MacLeod ([incompetech.com](https://incompetech.com)), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ## License
 AGPL-3.0-only for code. 3D assets and voice banks are non-commercial (see `NOTICE.md`).
