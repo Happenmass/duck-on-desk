@@ -29,7 +29,8 @@ test("every __dirname-relative file literal in src/ points at an existing file",
     while ((m = re.exec(source))) {
       const segments = [...m[1].matchAll(/"([^"]+)"/g)].map(x => x[1]);
       const target = path.resolve(path.dirname(file), ...segments);
-      const rel = path.relative(path.join(SRC, ".."), target);
+      // POSIX separators so KNOWN_MISSING and the failure message match on Windows.
+      const rel = path.relative(path.join(SRC, ".."), target).split(path.sep).join("/");
       if (!fs.existsSync(target) && !KNOWN_MISSING.has(rel)) missing.push(`${path.relative(SRC, file)} -> ${rel}`);
     }
   }
