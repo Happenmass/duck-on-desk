@@ -23,7 +23,7 @@ test("stilt policies resolve to the pinned Hub snapshot in the HF cache", () => 
   const { resolvePolicyRequest, STILTS_COMMIT } = require("../src/pet-model-protocol");
   const ok = resolvePolicyRequest("pet-model://policy/stilts%2F25cm%2Fpolicy.onnx", { homeDir: "/home/u", exists: () => true });
   assert.equal(ok.status, 200);
-  assert.equal(ok.file, `/home/u/.cache/huggingface/hub/models--HannesVonEssen--microduck-stilts/snapshots/${STILTS_COMMIT}/25cm/policy.onnx`);
+  assert.equal(ok.file, path.join("/home/u", ".cache", "huggingface", "hub", "models--HannesVonEssen--microduck-stilts", "snapshots", STILTS_COMMIT, "25cm", "policy.onnx"));
   assert.equal(resolvePolicyRequest("pet-model://policy/stilts%2F30cm%2Fpolicy.onnx", { homeDir: "/home/u", exists: () => true }).status, 404);
   assert.equal(resolvePolicyRequest("pet-model://policy/stilts%2F25cm%2Fcheckpoint.pt", { homeDir: "/home/u", exists: () => true }).status, 404);
   assert.equal(resolvePolicyRequest("pet-model://policy/stilts%2F25cm%2Fpolicy.onnx", { homeDir: "/home/u", exists: () => false }).status, 404);
@@ -34,6 +34,6 @@ test("the official roller policies resolve from the simulator cache", () => {
   for (const name of ["BEST_roller.onnx", "BEST_roller_crouch.onnx"]) {
     const ok = resolvePolicyRequest(`pet-model://policy/${name}`, { homeDir: "/home/u", exists: () => true });
     assert.equal(ok.status, 200);
-    assert.equal(ok.file, `/home/u/.cache/huggingface/microduck-simulator/${POLICY_COMMIT}/policies/${name}`);
+    assert.equal(ok.file, path.join("/home/u", ".cache", "huggingface", "microduck-simulator", POLICY_COMMIT, "policies", name));
   }
 });

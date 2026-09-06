@@ -11,9 +11,9 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            build: npm run build:mac
+            build: npm run build:mac -- --publish never
           - os: windows-latest
-            build: npm run build:win:all
+            build: npm run build:win:all -- --publish never
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
