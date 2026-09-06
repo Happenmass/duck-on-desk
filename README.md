@@ -10,7 +10,7 @@ A physics-driven 3D Microduck that lives on your desktop and reacts to your AI c
 
 ![Duck on Desk: skins, roller skates and stilts on the desktop](docs/media/demo.gif)
 
-[Full demo with sound (80 s, MP4)](https://github.com/Happenmass/duck-on-desk/releases/download/v0.1.0/duck-on-desk-demo.mp4)
+[Full demo with sound (80 s, MP4)](https://github.com/Happenmass/duck-on-desk/releases/latest/download/duck-on-desk-demo.mp4)
 
 ## Install
 

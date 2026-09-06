@@ -10,7 +10,7 @@
 
 ![Duck on Desk：桌面上的皮肤、轮滑与高跷](docs/media/demo.gif)
 
-[完整演示（80 秒，MP4，带音乐）](https://github.com/Happenmass/duck-on-desk/releases/download/v0.1.0/duck-on-desk-demo.mp4)
+[完整演示（80 秒，MP4，带音乐）](https://github.com/Happenmass/duck-on-desk/releases/latest/download/duck-on-desk-demo.mp4)
 
 ## 安装
 
