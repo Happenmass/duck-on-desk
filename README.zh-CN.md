@@ -1,5 +1,7 @@
 # Duck on Desk
 
+[English](README.md) | 简体中文
+
 一只基于物理引擎的 3D Microduck，常驻你的桌面，实时响应你的 AI 编程 Agent —— Claude Code、Codex CLI、Pi 和 opencode。你提问时它思考，工具运行时它走动，Agent 需要审批时它冲你嘎嘎叫，出错时垂头丧气，你离开时它睡觉。
 
 > AGPL-3.0 衍生自 [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk)（基线 commit `5ca26b5c`）。这只鸭子由 Pollen Robotics 官方 Microduck 仿真骨架、MuJoCo 物理引擎和强化学习行走策略驱动，不是预制帧动画。详见 `NOTICE.md`。

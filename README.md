@@ -1,5 +1,7 @@
 # Duck on Desk
 
+English | [简体中文](README.zh-CN.md)
+
 A physics-driven 3D Microduck that lives on your desktop and reacts to your AI coding agents — Claude Code, Codex CLI, Pi and opencode. Thinking when you prompt, walking when tools run, quacking at you when an agent needs approval, sulking on errors, sleeping when you step away.
 
 > AGPL-3.0 derivative of [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk) (baseline `5ca26b5c`). The duck is the official Pollen Robotics Microduck simulator rig, MuJoCo physics and RL walking policies, not pre-baked animation. See `NOTICE.md`.
