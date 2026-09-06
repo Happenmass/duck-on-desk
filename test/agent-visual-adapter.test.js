@@ -11,7 +11,7 @@ test("planForVisual maps every duck intent id to a behaviour", async () => {
   assert.deepEqual(planForVisual("duck-juggling"), { kind: "sweep", forward: 0.8, amplitude: 0.8, periodMs: 3000 });
   assert.deepEqual(planForVisual("duck-notification"), { kind: "face", quackEveryMs: 2500 });
   assert.deepEqual(planForVisual("duck-attention"), { kind: "face", quackEveryMs: 0 });
-  assert.deepEqual(planForVisual("duck-sweeping"), { kind: "peck", everyMs: 4000 });
+  assert.deepEqual(planForVisual("duck-sweeping"), { kind: "look", everyMs: 1500, peckEveryMs: 10000 });
   assert.deepEqual(planForVisual("duck-carrying"), { kind: "peck", everyMs: 0 });
   assert.deepEqual(planForVisual("duck-error"), { kind: "sulk" });
   assert.deepEqual(planForVisual("duck-sleeping"), { kind: "sleep" });
@@ -37,6 +37,10 @@ test("createBehaviours issues runtime commands and clears timers on change", asy
   b.apply("duck-notification");
   assert.equal(timers.size, 1);
   assert.ok(commands.some((c) => c.type === "perform" && c.action === "quack"));
+  b.apply("duck-sweeping");
+  assert.equal(timers.size, 2); // walk-in-place lease + the occasional peck
+  assert.deepEqual(commands.at(-1), { type: "perform", source: "system", action: "peck" });
+  assert.deepEqual([...timers.values()].map((t) => t.ms), [1500, 10000]);
   b.apply("duck-idle");
   assert.equal(autonomy.paused, false);
   assert.equal(timers.size, 0);

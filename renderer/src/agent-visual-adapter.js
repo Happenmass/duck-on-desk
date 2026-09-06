@@ -16,7 +16,9 @@ export function planForVisual(file) {
     case "duck-working": return { kind: "walk", forward: 0.7, heading: 0, periodMs: 2000 };
     case "duck-juggling": return { kind: "sweep", forward: 0.8, amplitude: 0.8, periodMs: 3000 };
     case "duck-carrying": return { kind: "peck", everyMs: 0 };
-    case "duck-sweeping": return { kind: "peck", everyMs: 4000 };
+    // Compacting can run for minutes: stay busy (walk in place) and only
+    // peck now and then, instead of pecking non-stop for the whole time.
+    case "duck-sweeping": return { kind: "look", everyMs: 1500, peckEveryMs: 10000 };
     case "duck-attention": return { kind: "face", quackEveryMs: 0 };
     case "duck-notification": return { kind: "face", quackEveryMs: 2500 };
     case "duck-error": return { kind: "sulk" };
@@ -36,13 +38,13 @@ const rand = (a, b) => a + Math.random() * (b - a);
 export const ROAM_FORWARD = 0.6;
 
 export function createBehaviours({ runtime, autonomy, clock = globalThis }) {
-  let timer = null;
+  let timers = [];
   let current = "duck-idle";
   let roamLeft = null; // last roam-heading from main; null until the first roam
   const roamHeading = () => (roamLeft ? 1 : -1) * FACING_HALF_CONE;
   const cmd = (intent) => runtime.command({ source: SYSTEM, ...intent });
-  const every = (ms, fn) => { fn(); timer = clock.setInterval(fn, ms); };
-  const stopTimer = () => { if (timer !== null) { clock.clearInterval(timer); timer = null; } };
+  const every = (ms, fn) => { fn(); timers.push(clock.setInterval(fn, ms)); };
+  const stopTimer = () => { for (const t of timers) clock.clearInterval(t); timers = []; };
 
   function apply(file) {
     stopTimer();
@@ -67,6 +69,7 @@ export function createBehaviours({ runtime, autonomy, clock = globalThis }) {
           cmd({ type: "move", forward: 0.6, heading: 0, ttlMs: plan.everyMs * 2 });
           cmd({ type: "look", headYaw: rand(-0.6, 0.6), headPitch: rand(-0.25, 0.25), neckPitch: rand(-0.2, 0.2), headRoll: 0 });
         });
+        if (plan.peckEveryMs > 0) every(plan.peckEveryMs, () => cmd({ type: "perform", action: "peck" }));
         break;
       case "walk":
         every(plan.periodMs, () => cmd({ type: "move", forward: plan.forward, heading: plan.heading, ttlMs: plan.periodMs + 600 }));

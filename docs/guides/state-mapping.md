@@ -12,7 +12,7 @@ Duck's animation is driven by a physics-based 3D renderer (`renderer/`, Vite roo
 | working | `duck-working` | `move {forward:0.7, heading:0}`, held (2s TTL, re-leased on loop) |
 | juggling | `duck-juggling` | `move {forward:0.8, heading:±0.8}`, direction flips every 3s |
 | carrying | `duck-carrying` | `perform peck` once |
-| sweeping | `duck-sweeping` | `perform peck` every 4s |
+| sweeping | `duck-sweeping` | walk in place + `perform peck` every 10s |
 | attention | `duck-attention` | `move {heading:0}` for 1.5s + `perform quack` once |
 | notification | `duck-notification` | `move {heading:0}` + `perform quack` every 2.5s |
 | error | `duck-error` | `perform sit` + `look {headPitch:0.5}` |

@@ -12,7 +12,7 @@ Duck 的动画由基于物理引擎的 3D 渲染层驱动（`renderer/`，Vite r
 | working | `duck-working` | `move {forward:0.7, heading:0}` 持续（2 秒 TTL，循环续租） |
 | juggling | `duck-juggling` | `move {forward:0.8, heading:±0.8}`，每 3 秒换向 |
 | carrying | `duck-carrying` | `perform peck` 一次 |
-| sweeping | `duck-sweeping` | `perform peck` 每 4 秒 |
+| sweeping | `duck-sweeping` | 原地踏步 + `perform peck` 每 10 秒 |
 | attention | `duck-attention` | `move {heading:0}` 持续 1.5 秒 + `perform quack` 一次 |
 | notification | `duck-notification` | `move {heading:0}` + `perform quack` 每 2.5 秒 |
 | error | `duck-error` | `perform sit` + `look {headPitch:0.5}` |
