@@ -1,6 +1,6 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
-const { __test } = require("../src/doctor-ipc");
+const { __test } = require("../src/shell/doctor-ipc");
 
 describe("Doctor IPC helpers", () => {
   it("single-flights concurrent doctor checks and resets after completion", async () => {

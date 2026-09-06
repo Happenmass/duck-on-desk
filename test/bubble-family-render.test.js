@@ -11,8 +11,8 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { describe, it } = require("node:test");
 
-const RENDERER_SRC = fs.readFileSync(path.join(__dirname, "..", "src", "bubble-renderer.js"), "utf8");
-const bubbleFormat = require("../src/bubble-format");
+const RENDERER_SRC = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "bubble-renderer.js"), "utf8");
+const bubbleFormat = require("../src/shell/bubble-format");
 
 function fakeEl(tag = "div") {
   const el = {

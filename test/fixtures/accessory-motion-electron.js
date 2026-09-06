@@ -8,17 +8,17 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const {
   PET_ACCESSORY_CATALOG,
   PET_MOUTH_ACCESSORY_CATALOG,
-} = require(path.join(ROOT, "src", "pet-customization-catalog"));
-const { computeDynamicAccessoryLayout } = require(path.join(ROOT, "src", "pet-accessory-layout"));
-const { isAccessoryMirrored } = require(path.join(ROOT, "src", "pet-accessory-mirror"));
-const { resolveAccessoryDescriptor } = require(path.join(ROOT, "src", "pet-accessory-descriptor"));
+} = require(path.join(ROOT, "src", "shell", "pet-customization-catalog"));
+const { computeDynamicAccessoryLayout } = require(path.join(ROOT, "src", "shell", "pet-accessory-layout"));
+const { isAccessoryMirrored } = require(path.join(ROOT, "src", "shell", "pet-accessory-mirror"));
+const { resolveAccessoryDescriptor } = require(path.join(ROOT, "src", "shell", "pet-accessory-descriptor"));
 const {
   BUILTIN_ACCESSORY_MOTION_PADDING,
   BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING,
   resolveAccessoryAwareHitBox,
-} = require(path.join(ROOT, "src", "pet-accessory-hitbox"));
-const hitGeometry = require(path.join(ROOT, "src", "hit-geometry"));
-const themeLoader = require(path.join(ROOT, "src", "theme-loader"));
+} = require(path.join(ROOT, "src", "shell", "pet-accessory-hitbox"));
+const hitGeometry = require(path.join(ROOT, "src", "shell", "hit-geometry"));
+const themeLoader = require(path.join(ROOT, "src", "shell", "theme-loader"));
 
 themeLoader.init(path.join(ROOT, "src"));
 
@@ -41,7 +41,7 @@ const SLOT_AUDITS = Object.freeze([
 const MOTION_EPSILON = 0.15;
 const SCREEN_EPSILON = 0.51;
 const LARGE_SCREEN_BOUNDS = Object.freeze({ x: 0, y: 0, width: 6000, height: 6000 });
-// Mirrors src/tick.js POINTER_BRIDGE_STATES, intersected with the visuals that
+// Mirrors src/shell/tick.js POINTER_BRIDGE_STATES, intersected with the visuals that
 // actually carry an accessory followTarget.
 const POINTER_DRIVEN = new Set(["cloudling-idle.svg", "cloudling-mini-idle.svg"]);
 const MINI_PAD_X = 25;
@@ -323,7 +323,7 @@ async function auditTheme(win, builtin) {
     await win.loadFile(svgPath);
     const matrices = await sampleMatrices(win, targetId, {
       // Every visual the pointer bridge drives, not just idle:
-      // src/tick.js's POINTER_BRIDGE_STATES covers mini-idle too, and probing
+      // src/shell/tick.js's POINTER_BRIDGE_STATES covers mini-idle too, and probing
       // only idle measured mini-idle's breath-only subspace and called it the
       // envelope.
       cloudlingPointer: builtin.id === "cloudling" && POINTER_DRIVEN.has(file),

@@ -42,7 +42,7 @@ function setupHermeticSupersetHome({ withDb = true } = {}) {
 // the helper in test/focus-iterm-tab.test.js.
 function loadFocusWithMock(execFileMock, options = {}) {
   const cpKey = require.resolve("child_process");
-  const focusKey = require.resolve("../src/focus");
+  const focusKey = require.resolve("../src/shell/focus");
   const platform = options.platform || "darwin";
 
   const origCp = require.cache[cpKey];
@@ -57,7 +57,7 @@ function loadFocusWithMock(execFileMock, options = {}) {
   delete require.cache[focusKey];
   let initFocus;
   try {
-    initFocus = require("../src/focus");
+    initFocus = require("../src/shell/focus");
   } finally {
     Object.defineProperty(process, "platform", origPlatform);
   }

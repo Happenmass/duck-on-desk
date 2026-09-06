@@ -9,7 +9,7 @@ const {
   WAKE_TIMEOUT_MS,
   createSystemWakeRecovery,
   normalizeWakeStatus,
-} = require("../src/system-wake-recovery");
+} = require("../src/shell/system-wake-recovery");
 
 function createClock(start = 1000) {
   let current = start;

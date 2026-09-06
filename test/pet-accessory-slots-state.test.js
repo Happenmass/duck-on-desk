@@ -10,7 +10,7 @@ const {
   getPetAccessorySlotsSnapshot,
   preparePetAccessorySlotsDelivery,
   resetPetAccessoryStateForTests,
-} = require("../src/pet-accessory-state");
+} = require("../src/shell/pet-accessory-state");
 
 const NONE = { id: "none", assetFile: null, aspect: 1, widthScale: 1, offsetY: 0 };
 const HAT = { id: "cowboy-hat", assetFile: "cowboy-hat.svg", aspect: 2, widthScale: 1, offsetY: 0 };

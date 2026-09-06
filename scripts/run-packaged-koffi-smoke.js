@@ -4,7 +4,7 @@
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
-const { getReleaseTarget } = require("../src/native-package-target");
+const { getReleaseTarget } = require("../src/shell/native-package-target");
 
 function parseArgs(argv) {
   const options = { executable: "", targetId: "", output: "", timeoutMs: 60000, useXvfb: false };

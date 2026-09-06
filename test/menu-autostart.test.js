@@ -1,7 +1,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const { getLoginItemSettings } = require("../src/login-item");
+const { getLoginItemSettings } = require("../src/shell/login-item");
 
 describe("login item settings", () => {
   it("includes the app path when enabling login items for an unpackaged Windows app", () => {

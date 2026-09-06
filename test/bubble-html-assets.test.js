@@ -5,7 +5,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const bubbleHtml = fs.readFileSync(path.join(__dirname, "..", "src", "bubble.html"), "utf8");
+const bubbleHtml = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "bubble.html"), "utf8");
 
 describe("permission bubble HTML assets", () => {
   it("loads external bubble CSS and renderer scripts under CSP", () => {

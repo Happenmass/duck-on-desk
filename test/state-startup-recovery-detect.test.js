@@ -2,8 +2,8 @@ const { describe, it, beforeEach, afterEach } = require("node:test");
 const assert = require("node:assert");
 const path = require("path");
 const childProcess = require("child_process");
-const themeLoader = require("../src/theme-loader");
-const { createTranslator } = require("../src/i18n");
+const themeLoader = require("../src/shell/theme-loader");
+const { createTranslator } = require("../src/shell/i18n");
 
 themeLoader.init(path.join(__dirname, "..", "src"));
 const defaultTheme = themeLoader.loadTheme("duck");
@@ -50,7 +50,7 @@ describe("detectRunningAgentProcesses() agent coverage", () => {
     originalExec = childProcess.exec;
     originalExecFile = childProcess.execFile;
     originalPlatform = process.platform;
-    api = require("../src/state")(makeCtx());
+    api = require("../src/state/state")(makeCtx());
   });
 
   afterEach(() => {
@@ -116,7 +116,7 @@ describe("detectRunningAgentProcesses() agent coverage", () => {
 
   it("filters the process query to enabled agents", async () => {
     api.cleanup();
-    api = require("../src/state")(makeCtx({
+    api = require("../src/state/state")(makeCtx({
       hasAnyEnabledAgent: () => true,
       isAgentEnabled: (agentId) => agentId === "opencode",
     }));
@@ -143,7 +143,7 @@ describe("detectRunningAgentProcesses() agent coverage", () => {
   ]) {
     it(`keeps exact-name and node filters separate when only ${agentId} is enabled`, async () => {
       api.cleanup();
-      api = require("../src/state")(makeCtx({
+      api = require("../src/state/state")(makeCtx({
         hasAnyEnabledAgent: () => true,
         isAgentEnabled: (enabledAgentId) => enabledAgentId === agentId,
       }));

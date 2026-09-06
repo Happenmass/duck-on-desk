@@ -76,7 +76,7 @@ function normalizeOrcaPaneKey(value) {
 
 // Orca runs every terminal under a detached daemon, so no ancestor of the agent
 // identifies the IDE and no window title carries the cwd — the process-tree
-// strategy in src/focus.js cannot see it at all. ORCA_PANE_KEY ("<tabId>:<leafId>")
+// strategy in src/shell/focus.js cannot see it at all. ORCA_PANE_KEY ("<tabId>:<leafId>")
 // survives Orca runtime restarts; ORCA_TERMINAL_HANDLE does not (`orca terminal
 // switch` rejects it with terminal_handle_stale), so the pane key is the only
 // durable identifier worth shipping. Orca is a third-party CLI with no stability
@@ -134,7 +134,7 @@ function applyOrcaPaneKey(body, env = process.env) {
 // Liveness probe with ZERO subprocess spawn: process.kill(pid, 0) is a syscall,
 // not a spawn (so it never risks the WindowsTerminal console flash this whole
 // change exists to avoid). ESRCH => process gone; EPERM => alive but not ours.
-// Cannot detect PID reuse (same limitation as src/state.js isProcessAlive) —
+// Cannot detect PID reuse (same limitation as src/state/state.js isProcessAlive) —
 // callers pair it with session-scoped cache invalidation. See
 // docs/plans/plan-issue-627-hook-snapshot-flash-cache.md.
 function processAlive(pid) {
@@ -342,8 +342,8 @@ const SKIP_REASON_SELF_NOT_FOUND = "snapshot-self-not-found";
 // ({"continue":true} / {"decision":"allow"}) to {}. [] is falsy-length
 // everywhere, so every adapter skips the field cleanly. stablePid:null is safe to ship: the six
 // adapters that assign source_pid unconditionally emit an explicit null, which
-// src/server-route-state.js normalizes identically to an absent field
-// (Number.isFinite(null) === false), and src/state.js merges it as
+// src/state/server-route-state.js normalizes identically to an absent field
+// (Number.isFinite(null) === false), and src/state/state.js merges it as
 // `sourcePid || existing.sourcePid || null` — an already-known PID survives.
 function unavailableMetadata(skipReason, attempted) {
   return {
@@ -727,7 +727,7 @@ function createPidResolver(options) {
     //       broke at i=0. snapshotOk is true here, which is exactly what makes
     //       (b) the sharper trap.
     //
-    // A wrong pid is worse than no pid: src/state.js merges
+    // A wrong pid is worse than no pid: src/state/state.js merges
     // `sourcePid || existing.sourcePid`, so a truthy-but-wrong value does not
     // merely fail to help — it OVERWRITES a correct pid the server already knew,
     // and click-to-focus starts targeting a dead process for the rest of the

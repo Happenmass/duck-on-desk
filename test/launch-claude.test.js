@@ -18,7 +18,7 @@ const {
   quoteForPowerShell,
   launchClaudeSession,
   findClaudeCmd,
-} = require("../src/launch-claude");
+} = require("../src/state/launch-claude");
 
 const WIN_PATH = "C:\\Program Files\\nodejs\\node_modules\\@anthropic\\claude.cmd";
 

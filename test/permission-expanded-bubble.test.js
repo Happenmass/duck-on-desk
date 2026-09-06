@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const Module = require("node:module");
 const { describe, it } = require("node:test");
 
-const modulePath = require.resolve("../src/permission");
+const modulePath = require.resolve("../src/state/permission");
 delete require.cache[modulePath];
 const originalLoad = Module._load;
 Module._load = function patchedLoad(request) {
@@ -20,7 +20,7 @@ Module._load = function patchedLoad(request) {
   }
   return originalLoad.apply(this, arguments);
 };
-const initPermission = require("../src/permission");
+const initPermission = require("../src/state/permission");
 Module._load = originalLoad;
 
 function interaction(capabilities = {}) {

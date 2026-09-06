@@ -7,13 +7,13 @@
 | 层 | 主要入口 | 当前职责 |
 | --- | --- | --- |
 | Coding Agent 接入 | `agents/registry.js`、`hooks/` | Claude Code、Codex CLI、Pi、opencode；hook 安装、进程识别和会话状态采集；Codex official hooks 优先，JSONL 兜底 |
-| 本地服务 | `src/server.js`、`server-route-state.js`、`server-route-permission.js` | 在 127.0.0.1:24333–24337 接收状态与权限请求 |
-| 会话与权限 | `src/agent-runtime-main.js`、`state.js`、`permission.js` | 多会话聚合、状态优先级、显示时长、权限气泡；Pi 只同步状态 |
+| 本地服务 | `src/state/server.js`、`server-route-state.js`、`server-route-permission.js` | 在 127.0.0.1:24333–24337 接收状态与权限请求 |
+| 会话与权限 | `src/state/agent-runtime-main.js`、`state.js`、`permission.js` | 多会话聚合、状态优先级、显示时长、权限气泡；Pi 只同步状态 |
 | 桌面外壳 | `src/main.js`、`pet-window-runtime.js`、`pet-interaction-ipc.js` | Electron 透明宠物窗、命中窗、托盘、浮层；左键拖窗、中键抓起和物理落下 |
-| 设置 | `src/prefs.js`、`settings-controller.js`、`settings-store.js` | schema v20，统一读写；Agent 接入、外观、音量、移动方式、漫步范围等 |
+| 设置 | `src/shell/prefs.js`、`settings-controller.js`、`settings-store.js` | schema v20，统一读写；Agent 接入、外观、音量、移动方式、漫步范围等 |
 | 3D 状态桥 | `renderer/src/pet-bridge.js`、`agent-visual-adapter.js` | state-change → duck intent → runtime command，并回报 pet-visual-settled |
 | 物理运行时 | `renderer/src/runtime/duck-runtime.js` | Three.js 渲染、MuJoCo 物理、ONNX 策略；动作租约、恢复、形态切换和位移投影 |
-| 自由漫步 | `src/roam.js` | 选目标、等待、边界与打断；接收步幅，移动窗口并同步命中区和浮层 |
+| 自由漫步 | `src/robots/duck/roam.js` | 选目标、等待、边界与打断；接收步幅，移动窗口并同步命中区和浮层 |
 
 3D 宠物还支持四种皮肤、分组音量、轮滑、高跷、啄地、叫声、坐站和睡眠。
 忙碌状态的原地踏步是既有产品行为；空闲时的屏幕行走由自由漫步负责。

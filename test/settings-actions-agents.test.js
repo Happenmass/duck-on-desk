@@ -3,9 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert");
 
-const prefs = require("../src/prefs");
-const agentCommands = require("../src/settings-actions-agents");
-const { commandRegistry } = require("../src/settings-actions");
+const prefs = require("../src/shell/prefs");
+const agentCommands = require("../src/shell/settings-actions-agents");
+const { commandRegistry } = require("../src/shell/settings-actions");
 
 test("settings agent actions expose the command surface", () => {
   assert.deepStrictEqual(Object.keys(agentCommands).sort(), [

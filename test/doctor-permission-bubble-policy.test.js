@@ -1,6 +1,6 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
-const { checkPermissionBubblePolicy } = require("../src/doctor-detectors/permission-bubble-policy");
+const { checkPermissionBubblePolicy } = require("../src/shell/doctor-detectors/permission-bubble-policy");
 
 describe("checkPermissionBubblePolicy", () => {
   it("passes when permission bubbles are enabled", () => {

@@ -7,8 +7,8 @@ const {
   computeFinalDragBounds,
   needsFinalClampAdjustment,
   materializeVirtualBounds,
-} = require("../src/drag-position");
-const { computeLooseClamp } = require("../src/work-area");
+} = require("../src/shell/drag-position");
+const { computeLooseClamp } = require("../src/shell/work-area");
 
 const wa = (x, y, w, h) => ({ x, y, width: w, height: h });
 const display = (x, y, w, h) => ({ workArea: wa(x, y, w, h) });

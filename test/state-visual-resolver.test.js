@@ -12,7 +12,7 @@ const {
   selectTieredStateFile,
   getWinningSessionDisplayHint,
   getSvgOverride,
-} = require("../src/state-visual-resolver");
+} = require("../src/state/state-visual-resolver");
 
 function session(state, overrides = {}) {
   return { state, updatedAt: 1000, headless: false, ...overrides };

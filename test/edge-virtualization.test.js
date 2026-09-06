@@ -13,8 +13,8 @@
 const { describe, it, beforeEach, afterEach, mock } = require("node:test");
 const assert = require("node:assert/strict");
 
-const createPetWindowRuntime = require("../src/pet-window-runtime");
-const { registerPetInteractionIpc } = require("../src/pet-interaction-ipc");
+const createPetWindowRuntime = require("../src/shell/pet-window-runtime");
+const { registerPetInteractionIpc } = require("../src/shell/pet-interaction-ipc");
 
 // ── makeWindow/FakeIpcMain — copied from test/pet-window-runtime.test.js and
 // test/pet-interaction-ipc.test.js. Test files in this codebase are
@@ -83,7 +83,7 @@ class FakeIpcMain {
 // undefined.
 function loadMiniWithElectron(screenExports) {
   const electronPath = require.resolve("electron");
-  const miniPath = require.resolve("../src/mini");
+  const miniPath = require.resolve("../src/shell/mini");
   const previousElectron = Object.prototype.hasOwnProperty.call(require.cache, electronPath)
     ? require.cache[electronPath]
     : null;
@@ -102,7 +102,7 @@ function loadMiniWithElectron(screenExports) {
   delete require.cache[miniPath];
 
   return {
-    initMini: require("../src/mini"),
+    initMini: require("../src/shell/mini"),
     restore() {
       if (previousElectron) require.cache[electronPath] = previousElectron;
       else delete require.cache[electronPath];
@@ -188,7 +188,7 @@ function makeMiniTheme(offsetRatio) {
 // hitGeometry/getThemeMarginBox/computeThemeAnchorRect fakes —
 // pet-window-runtime.js's own petGeometryMain construction doesn't accept
 // those as pass-through options, so this has to go through the actual
-// src/hit-geometry.js + src/visible-margins.js code) for verifying
+// src/shell/hit-geometry.js + src/shell/visible-margins.js code) for verifying
 // getSessionHudAnchorRect() converges to the same X the render/hit windows
 // do. Deliberately omits theme.layout.contentBox, so
 // hit-geometry.js's usesNormalizedLayout()/usesObjectChannel() both take
@@ -230,7 +230,7 @@ function createEdgeVirtualizationHarness(overrides = {}) {
   // PR #751 Codex review #10 (rework batch B-5): mini.js and
   // pet-window-runtime.js each hold their OWN separate reference to
   // `screen`, so they need separate counters, not one shared one. mini.js's
-  // own resolveMiniTopology() call (src/mini.js ~line 75) was already capped
+  // own resolveMiniTopology() call (src/shell/mini.js ~line 75) was already capped
   // at exactly 1/transition by Phase 3 (threaded through animCtx as
   // edgeContext) — that is NOT what B-5 changes. What B-5 fixes is the
   // RUNTIME's own internal enumeration
@@ -506,7 +506,7 @@ describe("edge virtualization cross-module integration (#690 §6.7)", () => {
     // mini is disabled for this specific scenario because of a genuine
     // arithmetic fact about this exact fixture, not a limitation of the
     // harness: clampToScreenVisual's rest ceiling for a 203px-wide window is
-    // 1920 - 203 + round(203*0.25) = 1768 (src/pet-window-runtime.js's
+    // 1920 - 203 + round(203*0.25) = 1768 (src/shell/pet-window-runtime.js's
     // clampToScreenVisual, its own independent 0.25 margin), while
     // checkMiniModeSnap()'s own snap threshold is
     // 1768 - SNAP_TOLERANCE(30) = 1738. Since 1768 >= 1738 unconditionally,
@@ -573,7 +573,7 @@ describe("edge virtualization cross-module integration (#690 §6.7)", () => {
   it("task item 7a: checkMiniModeSnap() reaches X=1738, enters mini mode, and settles at the correct logical X (not a stale/physical value)", () => {
     // checkMiniModeSnap()'s OWN threshold check already read
     // ctx.getPetWindowBounds() before this batch (an earlier batch's fix,
-    // not Phase 3's) -- verified empirically via git show dbe3045:src/mini.js
+    // not Phase 3's) -- verified empirically via git show dbe3045:src/shell/mini.js
     // (the commit immediately preceding Phase 3's mini.js rewrite): the
     // getMiniMode()===true assertion alone is GREEN even against that older
     // mini.js, so it does not by itself discriminate this batch's changes.
@@ -911,7 +911,7 @@ describe("edge virtualization cross-module integration (#690 §6.7)", () => {
   // PR #751 Codex review #10 (rework batch B-5, non-blocking): replaces
   // test/mini.test.js's mock-based "screen.getAllDisplays() <= 1/2" budget
   // assertions with a real-assembly version. Those mock-based tests only
-  // ever counted mini.js's OWN resolveMiniTopology() call (src/mini.js
+  // ever counted mini.js's OWN resolveMiniTopology() call (src/shell/mini.js
   // ~line 75, already capped at 1/transition since Phase 3) because their
   // ctx.applyPetWindowBounds is a plain mock that never reaches the real
   // pet-window-runtime.js machinery — so they could never have caught the
@@ -949,9 +949,9 @@ describe("edge virtualization cross-module integration (#690 §6.7)", () => {
     // not 1, here: unlike the old mock test (which called enterMiniMode()
     // directly, in isolation), this test drives the real drag-end IPC, so
     // it also exercises checkMiniModeSnap()'s OWN direct screen.getAllDisplays()
-    // call (src/mini.js:400, deciding WHICH display/edge to snap to) BEFORE
+    // call (src/shell/mini.js:400, deciding WHICH display/edge to snap to) BEFORE
     // it hands off to enterMiniMode() -> resolveMiniTopology()'s separate
-    // call (src/mini.js:75, resolving the transition's own topology) — two
+    // call (src/shell/mini.js:75, resolving the transition's own topology) — two
     // independent, legitimate, pre-existing call sites for two different
     // concerns, same reasoning as the "via-menu" test's own <=2 bound above
     // (crabwalk + mini handoff), not a regression.
@@ -991,7 +991,7 @@ describe("edge virtualization cross-module integration (#690 §6.7)", () => {
     // separate reposition call) but BEFORE entering mini mode. Deliberately
     // NOT advancing any mock timers around this call: animateWindowX() (the
     // drag-path entry's slide) runs its first step() SYNCHRONOUSLY inside
-    // enterMiniMode() itself (see src/mini.js's animateWindowX, which calls
+    // enterMiniMode() itself (see src/shell/mini.js's animateWindowX, which calls
     // step() directly, not just schedules it) — so this single call already
     // produces exactly one applyMiniFrameBounds() write (and one syncHitWin()
     // call), with zero elapsed time. That keeps this test clear of

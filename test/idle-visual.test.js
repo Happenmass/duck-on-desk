@@ -7,7 +7,7 @@ const {
   listIdleVisualOptions,
   resolveIdleVisualChoice,
   humanizeIdleVisualLabel,
-} = require("../src/idle-visual");
+} = require("../src/shell/idle-visual");
 
 function makeTheme(overrides = {}) {
   return {

@@ -24,7 +24,7 @@ const {
   extractAssistantTextFromRecord,
 } = require("../hooks/codex-assistant-output");
 const { parseCodexUserInputRecord } = require("../hooks/codex-user-input");
-const { normalizeCodexTurnId } = require("../src/codex-turn-id");
+const { normalizeCodexTurnId } = require("../src/state/codex-turn-id");
 
 const MAX_TRACKED_FILES = 50;
 const MAX_RETIRED_TRACKED_FILES = 100;

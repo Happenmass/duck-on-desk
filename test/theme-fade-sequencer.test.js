@@ -4,7 +4,7 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
 
-const createThemeFadeSequencer = require("../src/theme-fade-sequencer");
+const createThemeFadeSequencer = require("../src/shell/theme-fade-sequencer");
 
 class FakeContents extends EventEmitter {
   constructor() {

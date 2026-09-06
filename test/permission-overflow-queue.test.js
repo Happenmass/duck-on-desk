@@ -61,7 +61,7 @@ function loadPermission() {
     unregister(accelerator) { registered.delete(accelerator); },
     isRegistered(accelerator) { return registered.has(accelerator); },
   };
-  const modulePath = require.resolve("../src/permission");
+  const modulePath = require.resolve("../src/state/permission");
   delete require.cache[modulePath];
   const originalLoad = Module._load;
   Module._load = function patchedLoad(request, parent, isMain) {
@@ -77,7 +77,7 @@ function loadPermission() {
     }
     return originalLoad.apply(this, arguments);
   };
-  const initPermission = require("../src/permission");
+  const initPermission = require("../src/state/permission");
   Module._load = originalLoad;
   return { initPermission, registered };
 }

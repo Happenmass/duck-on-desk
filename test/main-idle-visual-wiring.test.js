@@ -17,13 +17,13 @@ describe("main default idle visual wiring", () => {
   const mainSource = fs.readFileSync(MAIN_JS, "utf8");
 
   it("resolves the choice against the live theme and wires both named runtime ctxs", () => {
-    assert.ok(mainSource.includes('require("./idle-visual")'));
+    assert.ok(mainSource.includes('require("./shell/idle-visual")'));
     assert.match(
       mainSource,
       /function getIdleVisualChoice\(\) \{\s*return resolveIdleVisualChoice\(getActiveTheme\(\), _settingsController\.get\("idleVisual"\)\);/
     );
-    const stateCtx = sectionBetween(mainSource, "const _stateCtx = {", 'const _state = require("./state")');
-    const tickCtx = sectionBetween(mainSource, "const _tickCtx = {", 'const _tick = require("./tick")');
+    const stateCtx = sectionBetween(mainSource, "const _stateCtx = {", 'const _state = require("./state/state")');
+    const tickCtx = sectionBetween(mainSource, "const _tickCtx = {", 'const _tick = require("./shell/tick")');
     assert.ok(stateCtx.includes("  getIdleVisualChoice,"), "state ctx should expose the live choice");
     assert.ok(tickCtx.includes("  getIdleVisualChoice,"), "tick ctx should expose the live choice");
     assert.ok(

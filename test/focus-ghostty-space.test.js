@@ -17,7 +17,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const { __test } = require("../src/focus")({});
+const { __test } = require("../src/shell/focus")({});
 
 function assertReadOnlyProbe(script, label) {
   assert.ok(!/\bfocus \w+/.test(script), `${label}: probe must not focus\n${script}`);

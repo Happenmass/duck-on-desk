@@ -2,7 +2,7 @@
 
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
-const { resolveAccessoryDescriptor } = require("../src/pet-accessory-descriptor");
+const { resolveAccessoryDescriptor } = require("../src/shell/pet-accessory-descriptor");
 
 describe("pet accessory descriptor resolver", () => {
   const attachments = {

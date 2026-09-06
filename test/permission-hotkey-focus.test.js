@@ -3,9 +3,9 @@
 const assert = require("node:assert");
 const Module = require("node:module");
 const { afterEach, test, mock } = require("node:test");
-const { classifyPermissionInteraction } = require("../src/permission-automation-policy");
+const { classifyPermissionInteraction } = require("../src/state/permission-automation-policy");
 
-const PERMISSION_MODULE_PATH = require.resolve("../src/permission");
+const PERMISSION_MODULE_PATH = require.resolve("../src/state/permission");
 
 function loadPermissionWithMocks({ electron, childProcess, platform = "darwin" }) {
   delete require.cache[PERMISSION_MODULE_PATH];
@@ -25,7 +25,7 @@ function loadPermissionWithMocks({ electron, childProcess, platform = "darwin" }
   };
 
   try {
-    return require("../src/permission");
+    return require("../src/state/permission");
   } finally {
     Module._load = originalLoad;
     Object.defineProperty(process, "platform", originalPlatform);

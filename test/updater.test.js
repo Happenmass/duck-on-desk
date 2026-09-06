@@ -1,7 +1,7 @@
 const { describe, it, beforeEach, mock } = require("node:test");
 const assert = require("node:assert");
 
-let initUpdater = require("../src/updater");
+let initUpdater = require("../src/shell/updater");
 
 it("allows ten minutes for git-source dependency installation", () => {
   assert.strictEqual(initUpdater.__test.DEPENDENCY_INSTALL_TIMEOUT_MS, 10 * 60 * 1000);
@@ -195,8 +195,8 @@ function makeSequencedHttpsGet(responses, requests = []) {
 describe("updater visual flow", () => {
   beforeEach(() => {
     mock.restoreAll();
-    delete require.cache[require.resolve("../src/updater")];
-    initUpdater = require("../src/updater");
+    delete require.cache[require.resolve("../src/shell/updater")];
+    initUpdater = require("../src/shell/updater");
   });
 
   it("shows checking state and up-to-date bubble when latest version matches", async () => {
@@ -1546,8 +1546,8 @@ describe("updater visual flow", () => {
 describe("updater Windows ARM64 migration helpers", () => {
   beforeEach(() => {
     mock.restoreAll();
-    delete require.cache[require.resolve("../src/updater")];
-    initUpdater = require("../src/updater");
+    delete require.cache[require.resolve("../src/shell/updater")];
+    initUpdater = require("../src/shell/updater");
   });
 
   it("detects only packaged Windows x64 apps running under ARM64 translation", () => {
@@ -1611,8 +1611,8 @@ describe("updater Windows ARM64 migration helpers", () => {
 describe("updater #329 background scheduler", () => {
   beforeEach(() => {
     mock.restoreAll();
-    delete require.cache[require.resolve("../src/updater")];
-    initUpdater = require("../src/updater");
+    delete require.cache[require.resolve("../src/shell/updater")];
+    initUpdater = require("../src/shell/updater");
   });
 
   // Tiny in-memory prefs store. Mirrors the controller API surface the
@@ -1718,8 +1718,8 @@ describe("updater #329 background scheduler", () => {
     assert.ok(setTimeoutCalls[0] >= 2 * 60 * 1000, `first delay too short: ${setTimeoutCalls[0]}`);
     assert.ok(setTimeoutCalls[0] <= 5 * 60 * 1000, `first delay too long: ${setTimeoutCalls[0]}`);
 
-    delete require.cache[require.resolve("../src/updater")];
-    initUpdater = require("../src/updater");
+    delete require.cache[require.resolve("../src/shell/updater")];
+    initUpdater = require("../src/shell/updater");
     const setTimeoutCalls2 = [];
     const updater2 = initUpdater(makeCtxWithPrefs(makePrefs()), makeDeps({
       app: { isPackaged: true, getVersion: () => "0.5.0", relaunch() {}, exit() {} },

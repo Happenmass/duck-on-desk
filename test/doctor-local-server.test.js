@@ -2,8 +2,8 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
 
-const initServer = require("../src/server");
-const { checkLocalServer } = require("../src/doctor-detectors/local-server");
+const initServer = require("../src/state/server");
+const { checkLocalServer } = require("../src/shell/doctor-detectors/local-server");
 
 // #681: identity defaults to a valid file owned by this (alive) process, so the
 // pre-existing port cases below keep testing the PORT branch. Injected rather

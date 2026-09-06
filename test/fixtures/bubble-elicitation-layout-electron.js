@@ -6,7 +6,7 @@ const path = require("node:path");
 const { app, BrowserWindow, protocol } = require("electron");
 
 const ROOT = path.resolve(__dirname, "..", "..");
-const BUBBLE_CSS = fs.readFileSync(path.join(ROOT, "src", "bubble.css"), "utf8");
+const BUBBLE_CSS = fs.readFileSync(path.join(ROOT, "src", "shell", "bubble.css"), "utf8");
 const TEXT_SCALE = 1.25;
 
 protocol.registerSchemesAsPrivileged([

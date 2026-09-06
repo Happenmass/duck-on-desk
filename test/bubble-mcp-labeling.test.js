@@ -9,14 +9,14 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
-const { SUPPORTED_LANGS } = require("../src/i18n");
+const { SUPPORTED_LANGS } = require("../src/shell/i18n");
 
 const RENDERER_SRC = fs.readFileSync(
-  path.join(__dirname, "..", "src", "bubble-renderer.js"),
+  path.join(__dirname, "..", "src", "shell", "bubble-renderer.js"),
   "utf8"
 );
 const PERMISSION_SRC = fs.readFileSync(
-  path.join(__dirname, "..", "src", "permission.js"),
+  path.join(__dirname, "..", "src", "state", "permission.js"),
   "utf8"
 );
 

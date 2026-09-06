@@ -8,7 +8,7 @@ const {
   isAllBubblesHidden,
   buildAggregateHideCommit,
   buildCategoryEnabledCommit,
-} = require("../src/bubble-policy");
+} = require("../src/shell/bubble-policy");
 
 describe("bubble policy", () => {
   it("keeps permission bubbles visible without auto-close by default", () => {

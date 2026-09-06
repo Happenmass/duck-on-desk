@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const Module = require("node:module");
 const { describe, it } = require("node:test");
 
-const MENU_MODULE_PATH = require.resolve("../src/menu");
+const MENU_MODULE_PATH = require.resolve("../src/shell/menu");
 
 function loadMenuWithElectron(fakeElectron) {
   delete require.cache[MENU_MODULE_PATH];
@@ -12,7 +12,7 @@ function loadMenuWithElectron(fakeElectron) {
     return originalLoad.apply(this, arguments);
   };
   try {
-    return require("../src/menu");
+    return require("../src/shell/menu");
   } finally {
     Module._load = originalLoad;
   }

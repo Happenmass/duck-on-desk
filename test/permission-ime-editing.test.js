@@ -23,7 +23,7 @@ Module._load = function (request) {
   if (request === "electron") return __electronMock;
   return __origModuleLoad.apply(this, arguments);
 };
-const initPermission = require("../src/permission");
+const initPermission = require("../src/state/permission");
 Module._load = __origModuleLoad;
 
 function read(rel) {
@@ -37,7 +37,7 @@ function read(rel) {
 // in one file that silently breaks the chain gets caught.
 describe("macOS IME editing wiring", () => {
   it("renderer reports text-input focus/blur to the main process", () => {
-    const renderer = read("bubble-renderer.js");
+    const renderer = read("shell/bubble-renderer.js");
     assert.match(renderer, /addEventListener\("focusin"/);
     assert.match(renderer, /addEventListener\("focusout"/);
     assert.match(renderer, /setImeEditing\(true\)/);
@@ -54,7 +54,7 @@ describe("macOS IME editing wiring", () => {
   });
 
   it("permission main handles the channel and toggles the editing flag", () => {
-    const permission = read("permission.js");
+    const permission = read("state/permission.js");
     assert.match(permission, /on\("bubble-ime-editing"/);
     assert.match(permission, /function handleImeEditing/);
     assert.match(permission, /__duckMacImeEditing = true/);

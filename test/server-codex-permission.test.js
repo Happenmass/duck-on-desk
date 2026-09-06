@@ -4,8 +4,8 @@ const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
 const { describe, it } = require("node:test");
 
-const initServer = require("../src/server");
-const { makeSessionKey } = require("../src/session-key");
+const initServer = require("../src/state/server");
+const { makeSessionKey } = require("../src/state/session-key");
 
 const localSessionKey = (rawSessionId) => makeSessionKey({
   profileId: "local",

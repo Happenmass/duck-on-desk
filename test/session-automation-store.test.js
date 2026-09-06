@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const {
   createSessionAutomationStore,
   sanitizeDisplayLabel,
-} = require("../src/session-automation-store");
+} = require("../src/state/session-automation-store");
 
 function identity(agentId = "claude-code", sessionId = "local|claude-code|s1") {
   return { agentId, sessionId };

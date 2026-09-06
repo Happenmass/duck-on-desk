@@ -6,9 +6,9 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-const geometry = require("../src/roam-fence-picker-geometry");
+const geometry = require("../src/robots/duck/roam-fence-picker-geometry");
 const rendererSource = fs.readFileSync(
-  path.join(__dirname, "..", "src", "roam-fence-picker-renderer.js"),
+  path.join(__dirname, "..", "src", "robots", "duck", "roam-fence-picker-renderer.js"),
   "utf8",
 );
 

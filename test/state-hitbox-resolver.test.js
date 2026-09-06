@@ -6,7 +6,7 @@ const assert = require("node:assert");
 const {
   createHitboxRuntime,
   resolveHitBoxForSvg,
-} = require("../src/state-hitbox-resolver");
+} = require("../src/state/state-hitbox-resolver");
 
 describe("state hitbox resolver", () => {
   it("normalizes theme hitbox runtime inputs", () => {

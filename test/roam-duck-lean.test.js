@@ -3,9 +3,9 @@
 // only modestly up or down, and skips the walk when that side has no room.
 const { describe, it, beforeEach, afterEach, mock } = require("node:test");
 const assert = require("node:assert");
-const roamModule = require("../src/roam");
+const roamModule = require("../src/robots/duck/roam");
 
-function makeCtx({ x, lean, speed }) {
+function makeCtx({ x, lean, speed, canRoam = true }) {
   const bounds = { x, y: 400, width: 120, height: 120 };
   const applied = [];
   const headings = [];
@@ -20,6 +20,7 @@ function makeCtx({ x, lean, speed }) {
     getNearestWorkArea: () => ({ x: 0, y: 0, width: 1920, height: 1080 }),
     clampToScreenVisual: (cx, cy, w, h) => ({ x: cx, y: cy, width: w, height: h }),
     getMiniMode: () => false,
+    canRoam: () => canRoam,
     getCurrentState: () => currentState,
     dragLocked: false, miniTransitioning: false,
     applyState: (s) => { currentState = s; },
@@ -51,6 +52,15 @@ describe("roam follows the duck's lean", () => {
     const dx = Math.abs(last.x - h.start.x);
     const dy = Math.abs(last.y - h.start.y);
     assert.ok(dy <= Math.max(24, Math.round(dx * 0.6)) + 1, `vertical drift ${dy} exceeds 60% of horizontal ${dx}`);
+  });
+
+  it("never walks a pet body that has no mobile base", () => {
+    const h = makeCtx({ x: 900, lean: -1, canRoam: false });
+    const roam = roamModule(h.ctx);
+    roam.setEnabled(true);
+    runFor(roam, 12);
+    assert.strictEqual(h.applied.length, 0, "Reachy Mini cannot walk its window across the desktop");
+    assert.deepStrictEqual(h.headings, []);
   });
 
   it("walks right when the duck leans right", () => {

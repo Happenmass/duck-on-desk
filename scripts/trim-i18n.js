@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-// Rewrites src/i18n.js and src/settings-i18n.js keeping only KEEP_LANGS and dropping removed-subsystem keys.
+// Rewrites src/shell/i18n.js and src/shell/settings-i18n.js keeping only KEEP_LANGS and dropping removed-subsystem keys.
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
@@ -36,7 +36,7 @@ function serializeDict(dict, pad) {
   return `{\n${langs.join("\n")}\n${outer}}`;
 }
 
-const i18nPath = path.join(root, "src", "i18n.js");
+const i18nPath = path.join(root, "src", "shell", "i18n.js");
 const i18n = trimDict(require(i18nPath).i18n);
 fs.writeFileSync(i18nPath, `"use strict";
 
@@ -59,7 +59,7 @@ function createTranslator(getLang) {
 module.exports = { i18n, SUPPORTED_LANGS, createTranslator };
 `);
 
-const sPath = path.join(root, "src", "settings-i18n.js");
+const sPath = path.join(root, "src", "shell", "settings-i18n.js");
 const sandbox = {};
 vm.runInNewContext(fs.readFileSync(sPath, "utf8"), { globalThis: sandbox });
 const { STRINGS, MAINTAINERS, CONTRIBUTORS } = sandbox.DuckSettingsI18n;

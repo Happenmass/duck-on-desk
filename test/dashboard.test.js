@@ -7,7 +7,7 @@ const Module = require("node:module");
 const path = require("node:path");
 const { describe, it } = require("node:test");
 
-const DASHBOARD_MODULE_PATH = require.resolve("../src/dashboard");
+const DASHBOARD_MODULE_PATH = require.resolve("../src/shell/dashboard");
 
 function loadDashboardWithElectron(fakeElectron) {
   delete require.cache[DASHBOARD_MODULE_PATH];
@@ -17,7 +17,7 @@ function loadDashboardWithElectron(fakeElectron) {
     return originalLoad.apply(this, arguments);
   };
   try {
-    return require("../src/dashboard");
+    return require("../src/shell/dashboard");
   } finally {
     Module._load = originalLoad;
   }
@@ -1093,7 +1093,7 @@ describe("dashboard window", () => {
   });
 
   it("exposes a Duck-only hide action instead of a terminal close action", () => {
-    const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "dashboard-renderer.js"), "utf8");
+    const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "dashboard-renderer.js"), "utf8");
     const preloadSource = fs.readFileSync(path.join(__dirname, "..", "src", "preload-dashboard.js"), "utf8");
 
     assert.match(rendererSource, /dashboardHideSessionTitle/);
@@ -1106,7 +1106,7 @@ describe("dashboard window", () => {
 
   it("wires Dashboard persistence to the Dashboard bounds key in main", () => {
     const mainSource = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
-    const start = mainSource.indexOf('const _dashboard = require("./dashboard")({');
+    const start = mainSource.indexOf('const _dashboard = require("./shell/dashboard")({');
     const end = mainSource.indexOf("\n});", start);
     assert.ok(start >= 0 && end > start, "Dashboard runtime wiring block must exist");
     const wiring = mainSource.slice(start, end);
@@ -1123,7 +1123,7 @@ describe("dashboard window", () => {
   });
 
   it("does not replace an open session automation select on the one-second render tick", () => {
-    const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "dashboard-renderer.js"), "utf8");
+    const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "dashboard-renderer.js"), "utf8");
 
     assert.match(rendererSource, /function hasFocusedSessionAutomationSelect\(\)/);
     assert.match(rendererSource, /active\.tagName === "SELECT"/);

@@ -14,9 +14,9 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const initPermission = require("../src/permission");
+const initPermission = require("../src/state/permission");
 const { computePermissionAutoCloseRemainingMs } = initPermission.__test;
-const { classifyPermissionInteraction } = require("../src/permission-automation-policy");
+const { classifyPermissionInteraction } = require("../src/state/permission-automation-policy");
 
 function createMockResponse() {
   const captured = {

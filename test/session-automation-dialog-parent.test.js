@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   selectSessionAutomationDialogParent,
-} = require("../src/session-automation-dialog-parent");
+} = require("../src/state/session-automation-dialog-parent");
 
 function windowStub(destroyed = false) {
   return { isDestroyed: () => destroyed };

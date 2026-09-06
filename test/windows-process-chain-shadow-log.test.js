@@ -5,7 +5,7 @@ const assert = require("node:assert");
 const {
   createWindowsProcessChainShadowLogger,
   sanitizeShadowRecord,
-} = require("../src/windows-process-chain-shadow-log");
+} = require("../src/state/windows-process-chain-shadow-log");
 
 describe("windows process-chain shadow log", () => {
   it("keeps only the bounded diagnostic allowlist", () => {

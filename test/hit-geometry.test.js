@@ -2,7 +2,7 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const path = require("path");
 
-const hitGeometry = require("../src/hit-geometry");
+const hitGeometry = require("../src/shell/hit-geometry");
 const { loadSpriteTheme } = require("./fixtures/sprite-theme");
 
 // SVG/APNG hit geometry is sprite-only: measured against the sprite fixtures.

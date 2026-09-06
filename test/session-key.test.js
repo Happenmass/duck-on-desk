@@ -7,7 +7,7 @@ const {
   LOCAL_SESSION_PROFILE_ID,
   makeSessionKey,
   resolveSessionIdentity,
-} = require("../src/session-key");
+} = require("../src/state/session-key");
 
 test("local session action ids use the same opaque profile envelope", () => {
   const key = makeSessionKey({

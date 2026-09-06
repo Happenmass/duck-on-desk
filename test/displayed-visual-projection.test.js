@@ -4,8 +4,8 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const {
   createDisplayedVisualProjection,
-} = require("../src/displayed-visual-projection");
-const policy = require("../src/pet-visual-swap-policy");
+} = require("../src/shell/displayed-visual-projection");
+const policy = require("../src/shell/pet-visual-swap-policy");
 
 function createClock() {
   let now = 0;

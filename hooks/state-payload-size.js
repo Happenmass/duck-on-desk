@@ -18,7 +18,7 @@
 // so the completion + #406 gate fields always reach Duck.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Server cap is 16 KiB (src/server-route-state.js MAX_STATE_BODY_BYTES); keep a
+// Server cap is 16 KiB (src/state/server-route-state.js MAX_STATE_BODY_BYTES); keep a
 // 2 KiB cushion for transport overhead and future fields.
 const DEFAULT_TARGET_BYTES = 14 * 1024;
 

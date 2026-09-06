@@ -9,9 +9,9 @@ Claude Code 状态同步（command hook，非阻塞）：
   Claude Code 触发事件
     → hooks/duck-hook.js（零依赖 Node 脚本，stdin 读 JSON 取 session_id + source_pid）
     → HTTP POST 127.0.0.1:24333/state { state, session_id, event, source_pid, cwd }
-    → src/server.js HTTP 壳 → src/server-route-state.js → src/agent-runtime-main.js → src/state.js 状态机（多会话追踪 + 优先级 + 最小显示时长 + 睡眠序列）
+    → src/state/server.js HTTP 壳 → src/state/server-route-state.js → src/state/agent-runtime-main.js → src/state/state.js 状态机（多会话追踪 + 优先级 + 最小显示时长 + 睡眠序列）
     → IPC state-change 事件
-    → src/renderer.js（<object> SVG 预加载 + 淡入切换 + 眼球追踪）
+    → src/shell/renderer.js（<object> SVG 预加载 + 淡入切换 + 眼球追踪）
 
 Codex CLI 状态同步（official hooks primary + JSONL fallback）：
   Codex 触发 SessionStart / UserPromptSubmit / PreToolUse / PostToolUse / Stop
@@ -22,7 +22,7 @@ Codex CLI 状态同步（official hooks primary + JSONL fallback）：
 本机 Codex `SessionStart` 首次 POST 发现 Duck 离线时，只有 durable gate 同时满足 `integrationInstalled=true`、`enabled=true`、`autoStartWithCodex=true` 才调用 `auto-start.js` 冷启动桌面应用并重试事件。全新安装的独立开关默认关闭；prefs v17→v18 为已有用户回填 true 以保持升级前行为。remote、WSL 与 WSL interop 路径一律不冷启动。
   Codex 写入 ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl
     → agents/codex-log-monitor.js（fallback：hook 未覆盖事件、hook 禁用/不可用、历史兼容）
-    → src/agent-runtime-main.js 对 hook-active session 做事件级 suppression，避免重复状态/重复气泡；本地 JSONL 路径不经过 HTTP server
+    → src/state/agent-runtime-main.js 对 hook-active session 做事件级 suppression，避免重复状态/重复气泡；本地 JSONL 路径不经过 HTTP server
 
 本机 Codex 注册使用每个 `CODEX_HOME` 下固定的分平台入口。Windows 的固定
 `commandWindows` 使用 PowerShell call-operator 直连：
@@ -114,7 +114,7 @@ opencode 权限气泡（event hook + 反向 bridge，非阻塞）：
 
 ## Local Recap Projection
 
-The recap is a local projection of accepted runtime activity, not a second observer at the HTTP or `updateSession()` entry. After agent gates, Codex source/replay arbitration, permission provenance handling, subagent filtering, and completion arbitration settle, `src/state.js` maps the accepted boundary through `src/recap-metrics.js` and sends an allowlisted canonical event to `src/recap-runtime.js`.
+The recap is a local projection of accepted runtime activity, not a second observer at the HTTP or `updateSession()` entry. After agent gates, Codex source/replay arbitration, permission provenance handling, subagent filtering, and completion arbitration settle, `src/state/state.js` maps the accepted boundary through `src/recap-metrics.js` and sends an allowlisted canonical event to `src/recap-runtime.js`.
 
 `src/recap-journal.js` freezes the desktop civil time and replaces any stable scope/session/dedupe identities with installation-local HMACs before appending a 14-day ticket. The same normalized record updates `src/recap-aggregate.js`; `src/recap-coverage.js` independently records when Duck could receive signals. Daily aggregates and coverage remain bounded to 400 local days under `~/.duck-on-desk/recap-v1/`. Query IPC returns only the broad `local` / `wsl` / `remote` scope class and never returns HMAC values, profile IDs, or distribution names. Startup rebuilds the 14-day aggregate in bounded event-loop batches; unsupported pre-release aggregate/coverage schemas are quarantined instead of migrated.
 
@@ -126,9 +126,9 @@ DND remains an interaction/visual gate and does not stop recap or coverage. Susp
 
 | Boundary | Owner |
 |---|---|
-| HTTP `/state` / `/permission` | `src/server-route-state.js` / `src/server-route-permission.js`；`src/server.js` 负责监听、端口与组合 |
-| official hook / local monitor 仲裁 | `src/agent-runtime-main.js`，配合 `src/codex-turn-fence.js` / `src/codex-official-activity.js` |
-| 双窗口与浮层 | `src/pet-window-runtime.js` 创建/定位 render + hit window；`src/floating-window-runtime.js` / `src/topmost-runtime.js` 管浮层重排与 z-order |
+| HTTP `/state` / `/permission` | `src/state/server-route-state.js` / `src/state/server-route-permission.js`；`src/state/server.js` 负责监听、端口与组合 |
+| official hook / local monitor 仲裁 | `src/state/agent-runtime-main.js`，配合 `src/state/codex-turn-fence.js` / `src/state/codex-official-activity.js` |
+| 双窗口与浮层 | `src/shell/pet-window-runtime.js` 创建/定位 render + hit window；`src/shell/floating-window-runtime.js` / `src/shell/topmost-runtime.js` 管浮层重排与 z-order |
 | Settings 写入与副作用 | `settings-controller` 是唯一写入者；`settings-actions*` 是 pre-commit gates；`settings-effect-router` 是 post-commit runtime effects |
 | Settings UI | `settings-ui-core` 持有 shared UI state，`settings-renderer` 是侧栏/tab shell，业务页在 `settings-tab-*` |
 | Theme | `theme-loader` 是 stateless loader；`theme-runtime` 是唯一 active-theme owner |
@@ -158,7 +158,7 @@ CodeBuddy direct HTTP `PermissionRequest` 不经过 Duck command hook，因此�
 - `agents/registry.js` — agent 注册表：按 ID 或进程名查找 agent 配置
 - `agents/codex-log-monitor.js` — Codex JSONL fallback 增量轮询器（文件监视 + 增量读取 + 状态 / metadata fallback，不再做审批猜测）
 
-运行时的 agent 安装意图 / 启停 / 权限气泡开关通过 `src/agent-gate.js` 读 `prefs.agents[id].integrationInstalled` / `.enabled` / `.permissionsEnabled`。`enabled` 仍然只表示是否处理该 agent 的事件：关闭会让 `state.js` / `server.js` 停止处理事件、清理 session / bubble；`integrationInstalled` 才表示本机 hook/plugin/extension 是否由 Duck 维护。snapshot 缺字段时 gate 保守默认 true 以兼容旧版；新安装的 schema 会显式把 Claude Code / Codex 设为已安装且启用，其余 agent 设为未安装且未启用。Claude Code 额外有 `.subagentPermissionsEnabled` 子开关（#451，仅 claude-code 默认条目携带该 flag），控制 Task 子 agent 发起的 PermissionRequest 是否弹泡泡。
+运行时的 agent 安装意图 / 启停 / 权限气泡开关通过 `src/state/agent-gate.js` 读 `prefs.agents[id].integrationInstalled` / `.enabled` / `.permissionsEnabled`。`enabled` 仍然只表示是否处理该 agent 的事件：关闭会让 `state.js` / `server.js` 停止处理事件、清理 session / bubble；`integrationInstalled` 才表示本机 hook/plugin/extension 是否由 Duck 维护。snapshot 缺字段时 gate 保守默认 true 以兼容旧版；新安装的 schema 会显式把 Claude Code / Codex 设为已安装且启用，其余 agent 设为未安装且未启用。Claude Code 额外有 `.subagentPermissionsEnabled` 子开关（#451，仅 claude-code 默认条目携带该 flag），控制 Task 子 agent 发起的 PermissionRequest 是否弹泡泡。
 
 动态 custom Agent 是上述安装模型的明确例外：`customApplications` 是注册真相，validate post-pass 保证每个已注册 ID 都有 gate entry，且始终显式写 `integrationInstalled=false`、`permissionsEnabled=false`。它不会进入 integration sync map；`enabled` 只控制 `/state` ingress。删除注册项会同步清 session、权限残留和该 ID 的 recent-event ring，并删除 stale custom gate；未知的非-custom agent entry 仍保留向前兼容。
 
@@ -177,17 +177,17 @@ CodeBuddy 的 PermissionRequest HTTP 所有权只认严格的本机 managed URL�
 
 ### Claude hook 健康巡检与自愈（#657）
 
-`src/claude-settings-watcher.js` 除了原有的目录 watcher（盯 `~/.claude/` 目录、debounce 1 秒）外，还跑一个自调度的低频只读健康巡检：
+`src/state/claude-settings-watcher.js` 除了原有的目录 watcher（盯 `~/.claude/` 目录、debounce 1 秒）外，还跑一个自调度的低频只读健康巡检：
 
 - 默认周期 5 分钟，不依赖任何 settings.json fs 事件——hook 脚本在其他目录（如系统 Temp）被删除也能发现，watcher 和周期巡检共用同一个 `runHealthCheck(reason)` 决策函数。
-- 判断逻辑收敛在 `src/claude-hook-health.js` 的 `inspectClaudeHookHealth()`：解析 command、校验 nodeBin/scriptPath、比对当前权威路径（`hooks/install.js` 的 `getClaudeHookScriptPath()` / `getClaudeAutoStartScriptPath()` / `CLAUDE_CORE_HOOK_EVENTS`），复用 Doctor 的 `agent-node-bin-parser.js` 解析器，不另起一套正则。
+- 判断逻辑收敛在 `src/state/claude-hook-health.js` 的 `inspectClaudeHookHealth()`：解析 command、校验 nodeBin/scriptPath、比对当前权威路径（`hooks/install.js` 的 `getClaudeHookScriptPath()` / `getClaudeAutoStartScriptPath()` / `CLAUDE_CORE_HOOK_EVENTS`），复用 Doctor 的 `agent-node-bin-parser.js` 解析器，不另起一套正则。
 - env-indirected state hook 先复用 `hooks/json-utils.js` 的严格 ownership classifier，再进入健康判定；它不会把未展开的 `${DUCK_NODE_BIN}` / `${DUCK_HOOK_PATH}` 交给普通 target validator。可安全迁移和 owned duplicate 产生专属 automatic repair class；Node 路径无法验证或 ownership 证据不足只产生 degraded 诊断，不消耗 3 次自动修复预算。watcher 的 suspicious-shrink snapshot 也复用同一 classifier，避免把待迁移的 Duck env hook 误记成第三方 hook。
-- 可自动修复的问题（`buildClaudeRepairSignature()` 判定）经 `src/claude-hook-operations.js` 的实例级队列串行 repair，repair 后重新读盘用同一 inspector 复验，不只信 installer 的 `updated>0`。
+- 可自动修复的问题（`buildClaudeRepairSignature()` 判定）经 `src/state/claude-hook-operations.js` 的实例级队列串行 repair，repair 后重新读盘用同一 inspector 复验，不只信 installer 的 `updated>0`。
 - 同一 repair signature 连续 3 次修复+复验失败后进入 `manual-fix-required`，停止自动 mutation，只保留 5 分钟只读复查；健康恢复或 repair class 集合实际变化时清计数。
 - `settings.json` suspicious-shrink 期间只弹一次 `notifySuspiciousShrink`，不会每个周期重复通知。
 - 当前安装包的 hook 源脚本（`getClaudeHookScriptPath()`）本身不存在时，不会尝试任何 reconcile（写了也没用），状态设为 `source-script-missing`，Doctor 提示重装/重新解压而不是提供配置 Repair。
 - 巡检严格受 `manageClaudeHooksAutomatically`、`claude-code.integrationInstalled`、`claude-code.enabled` 三个 gate 保护，和目录 watcher 共用同一套 gate。
-- 所有 mutation 入口（启动 reconcile、watcher 自动恢复、周期自愈、Settings Agent Install/Enable、Doctor Fix、`autoStartWithClaude` 开关、Settings Agent Uninstall、legacy hooks Install/Uninstall、About 页 `cleanupIntegrations`）都经过 `src/server.js` 持有的同一个 `claude-hook-operations.js` 队列实例，串行执行、互不覆盖；statusline 注册/卸载只在 startup、Settings Agent Install/Enable、Settings Agent Uninstall、About cleanup 这几个来源触发，周期巡检和 Doctor Fix 不碰 statusline。
+- 所有 mutation 入口（启动 reconcile、watcher 自动恢复、周期自愈、Settings Agent Install/Enable、Doctor Fix、`autoStartWithClaude` 开关、Settings Agent Uninstall、legacy hooks Install/Uninstall、About 页 `cleanupIntegrations`）都经过 `src/state/server.js` 持有的同一个 `claude-hook-operations.js` 队列实例，串行执行、互不覆盖；statusline 注册/卸载只在 startup、Settings Agent Install/Enable、Settings Agent Uninstall、About cleanup 这几个来源触发，周期巡检和 Doctor Fix 不碰 statusline。
 - 历史 key `claudeQuotaCollectionEnabled` 现在是本机 Claude statusline metadata（context window + 可用 quota）的唯一用户授权。关闭或卸载时，server 先用进程内 suppression 挡住未结尾包，再 ownership-safe 卸载并清除 `profileId="local"`（含 WSL）会话的 statusline 分母所有权，同时从 account-quota store 定向删除所有非 `remote:` 来源的 `claudeQuota` 并立即广播、持久化；同源 Codex provider 的 quota 保留。关闭态启动也会执行同一缓存迁移。statusline 上报拥有 limit，普通 transcript hook 仍可更新 used，并按保留的权威 limit 重算 percent。
 - `server.getClaudeHookHealthStatus()` 暴露供 Doctor 使用的只读状态（`healthy` / `repairing` / `degraded` / `manual-fix-required` / `guarded` / `stopped`），与既有的 `getClaudeHookGuardStatus()`（仅覆盖 suspicious-shrink 一种通知）并存，互不替代。
 
@@ -271,5 +271,5 @@ opencode 是 plugin 形式集成的 agent；其他 agent 主要是 hook 脚本�
 ## i18n
 
 - 支持 en / zh / zh-TW / ko / ja / pt-BR / es
-- 文案集中在 `src/i18n.js`
+- 文案集中在 `src/shell/i18n.js`
 - 语言偏好持久化到 `duck-prefs.json`，启动时通过 `hydrate()` 灌入 controller

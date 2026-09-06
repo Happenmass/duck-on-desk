@@ -1,0 +1,1291 @@
+"use strict";
+
+const DUCK_APPEARANCES = Object.freeze(["classic", "charcoal", "purple", "blue"]);
+const DUCK_STILTS = [0, 10, 15, 20, 25, 50, 100, 140, 200];
+const DUCK_LOCOMOTIONS = ["legs", "rollers"];
+
+// ── Settings actions (transport-agnostic) ──
+//
+// Two registries:
+//
+//   updateRegistry  — single-field updates. Each entry is EITHER:
+//
+//     (a) a plain function `(value, deps) => { status, message? }` —
+//         a PURE VALIDATOR with no side effect. Used for fields whose
+//         truth lives entirely inside prefs (lang, soundMuted, ...).
+//         Reactive UI projection lives in main.js subscribers.
+//
+//     (b) an object `{ validate, effect }` — a PRE-COMMIT GATE for
+//         fields whose truth depends on the OUTSIDE WORLD (the OS login
+//         items database, ~/.claude/settings.json, etc.). The effect
+//         actually performs the system call; if it fails, the controller
+//         does NOT commit, so prefs cannot drift away from system reality.
+//         Effects can be sync or async; effects throw → controller wraps
+//         as { status: 'error' }.
+//
+//     Why both forms coexist: the gate-vs-projection split is real (see
+//     plan-settings-panel.md §4.2). Forcing every entry to be a gate
+//     would create empty effect functions for pure-data fields and blur
+//     the contract. Forcing every effect into a subscriber would make
+//     "save the system call's failure" impossible because subscribers
+//     run AFTER commit and can't unwind it.
+//
+//   commandRegistry — non-field actions like `removeTheme`, `installHooks`,
+//                     `registerShortcut`. These return
+//                     `{ status, message?, commit? }`. If `commit` is present,
+//                     the controller calls `_commit(commit)` after success so
+//                     commands can update store fields atomically with their
+//                     side effects.
+//
+// This module imports nothing from electron, the store, or the controller.
+// All deps that an action needs are passed via the second argument:
+//
+//   actionFn(value, { snapshot, ...injectedDeps })
+//
+// `injectedDeps` is whatever main.js passed to `createSettingsController`. For
+// effect-bearing entries this MUST include the system helpers the effect
+// needs (e.g. `setLoginItem`, `registerHooks`) — actions never `require()`
+// electron or fs directly so the test suite can inject mocks.
+//
+// HYDRATE PATH: `controller.hydrate(partial)` runs only the validator and
+// SKIPS the effect. This is how startup imports system-backed values into
+// prefs without writing them right back. Object-form entries must therefore
+// keep validate side-effect-free.
+
+const {
+  CURRENT_VERSION,
+  MAX_CUSTOM_DISCOVERY_PATHS,
+  isValidSettingsWindowBounds,
+  normalizePathList,
+} = require("./prefs");
+const {
+  MAX_CUSTOM_APPLICATIONS,
+  normalizeCustomApplications,
+} = require("../state/custom-applications");
+const {
+  TEXT_SCALE_MIN,
+  TEXT_SCALE_MAX,
+  isValidTextScale,
+  normalizeTextScaleByDisplay,
+} = require("./text-scale");
+const {
+  isPetTintId,
+  isPetAccessoryId,
+  isPetMouthAccessoryId,
+} = require("./pet-customization-catalog");
+const { isValidDisplaySnapshot } = require("./work-area");
+const {
+  MAX_AUTO_CLOSE_SECONDS,
+  buildAggregateHideCommit,
+  buildCategoryEnabledCommit,
+} = require("./bubble-policy");
+const {
+  normalizeSessionAliases,
+  pruneExpiredSessionAliases,
+  sanitizeSessionAlias,
+  sessionAliasKey,
+} = require("../state/session-alias");
+const { validateShortcutMapShape } = require("./shortcut-actions");
+const {
+  requireBoolean,
+  requireFiniteNumber,
+  requireNonNegativeFiniteNumber,
+  requireNumberInRange,
+  requireIntegerInRange,
+  requireEnum,
+  requireString,
+  requirePlainObject,
+} = require("./settings-validators");
+const { listIdleVisualOptions } = require("./idle-visual");
+const {
+  registerShortcut,
+  resetShortcut,
+  resetAllShortcuts,
+} = require("./settings-actions-shortcuts");
+const {
+  addCustomApplication,
+  clearAgentCleanupHints,
+  clearAgentInstallHints,
+  deployToWsl,
+  dismissAgentCleanupHints,
+  installAgentIntegration,
+  dismissAgentInstallHints,
+  removeFromWsl,
+  removeCustomApplication,
+  setAgentCustomDiscoveryPaths,
+  setAgentFlag,
+  setAgentPermissionMode,
+  uninstallAgentIntegration,
+  repairAgentIntegration,
+} = require("./settings-actions-agents");
+const {
+  ANIMATION_OVERRIDES_EXPORT_VERSION,
+  ONESHOT_OVERRIDE_STATES,
+  importAnimationOverrides,
+  resetThemeOverrides,
+  setAnimationOverride,
+  setSoundOverride,
+  setThemeOverrideDisabled,
+  setWideHitboxOverride,
+} = require("./settings-actions-theme-overrides");
+const {
+  autoStartWithClaude,
+  autoStartWithCodex,
+  createRepairDoctorIssue,
+  installHooks,
+  manageClaudeHooksAutomatically,
+  openAtLogin,
+  repairLocalServer,
+  uninstallHooks,
+} = require("./settings-actions-system");
+const MANAGED_CLEANUP_AGENT_IDS = Object.freeze([
+  "claude-code",
+  "codex",
+  "opencode",
+  "pi",
+]);
+
+// ── updateRegistry ──
+// Maps prefs field name → validator. Controller looks up by key and runs.
+
+const updateRegistry = {
+  // ── Window state ──
+  x: requireFiniteNumber("x"),
+  y: requireFiniteNumber("y"),
+  size(value) {
+    if (typeof value !== "string") {
+      return { status: "error", message: "size must be a string" };
+    }
+    if (value === "S" || value === "M" || value === "L") return { status: "ok" };
+    if (/^P:\d+(?:\.\d+)?$/.test(value)) return { status: "ok" };
+    return {
+      status: "error",
+      message: `size must be S/M/L or P:<num>, got: ${value}`,
+    };
+  },
+
+  // ── Mini mode persisted state ──
+  miniMode: requireBoolean("miniMode"),
+  miniEdge: requireEnum("miniEdge", ["left", "right"]),
+  preMiniX: requireFiniteNumber("preMiniX"),
+  preMiniY: requireFiniteNumber("preMiniY"),
+  positionSaved: requireBoolean("positionSaved"),
+  positionThemeId: requireString("positionThemeId", { allowEmpty: true }),
+  positionVariantId: requireString("positionVariantId", { allowEmpty: true }),
+  // Written only by flushRuntimeStateToPrefs() with a snapshot Electron just
+  // handed us; null marks "no snapshot yet" (legacy prefs, headless CI, the
+  // rare startup race where screen.* is still coming up).
+  positionDisplay: (value) => {
+    if (value === null || isValidDisplaySnapshot(value)) return { status: "ok" };
+    return { status: "error", message: "positionDisplay must be null or a valid display snapshot" };
+  },
+  savedPixelWidth: requireNonNegativeFiniteNumber("savedPixelWidth"),
+  savedPixelHeight: requireNonNegativeFiniteNumber("savedPixelHeight"),
+  settingsWindowBounds: (value) => {
+    if (value === null || isValidSettingsWindowBounds(value)) return { status: "ok" };
+    return {
+      status: "error",
+      message: "settingsWindowBounds must be null or integer { x, y, width, height } with positive dimensions",
+    };
+  },
+  dashboardWindowBounds: (value) => {
+    if (value === null || isValidSettingsWindowBounds(value)) return { status: "ok" };
+    return {
+      status: "error",
+      message: "dashboardWindowBounds must be null or integer { x, y, width, height } with positive dimensions",
+    };
+  },
+  // #408: frozen-origin work area for keepSizeAcrossDisplays. null = unknown
+  // (legacy prefs / never seeded); otherwise positive width+height.
+  savedPixelWorkArea: (value) => {
+    if (value === null) return { status: "ok" };
+    if (!value || typeof value !== "object") {
+      return { status: "error", message: "savedPixelWorkArea must be null or { width, height }" };
+    }
+    const w = Number(value.width);
+    const h = Number(value.height);
+    if (!Number.isFinite(w) || w <= 0 || !Number.isFinite(h) || h <= 0) {
+      return { status: "error", message: "savedPixelWorkArea.width/height must be positive finite numbers" };
+    }
+    return { status: "ok" };
+  },
+
+  // ── Pure data prefs (function-form: validator only) ──
+  lang: requireEnum("lang", ["en", "zh", "zh-TW"]),
+  soundMuted: requireBoolean("soundMuted"),
+  soundVolume: requireNumberInRange("soundVolume", 0, 1),
+  textScale: requireNumberInRange("textScale", TEXT_SCALE_MIN, TEXT_SCALE_MAX),
+  // Committed by the setTextScaleForDisplay command (the controller requires
+  // every commit key to have a registry entry). Strict per-entry validation
+  // so a direct settings:update can't park junk in the in-memory store.
+  textScaleByDisplay: (value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { status: "error", message: "textScaleByDisplay must be an object map" };
+    }
+    for (const [key, raw] of Object.entries(value)) {
+      if (typeof key !== "string" || !key.trim() || !isValidTextScale(raw)) {
+        return {
+          status: "error",
+          message: `textScaleByDisplay entry "${key}" must map a display id to ${TEXT_SCALE_MIN}–${TEXT_SCALE_MAX}`,
+        };
+      }
+    }
+    return { status: "ok" };
+  },
+  flashTaskbarOnComplete: requireBoolean("flashTaskbarOnComplete"),
+  flashIntervalMs: requireNumberInRange("flashIntervalMs", 200, 2000),
+  flashDurationMs: requireNumberInRange("flashDurationMs", 0, 60000),
+  testReactionsEnabled: requireBoolean("testReactionsEnabled"),
+  codexHookHealthNotifyEnabled: requireBoolean("codexHookHealthNotifyEnabled"),
+  codexHookHealthLastNotified: requireString("codexHookHealthLastNotified", { allowEmpty: true }),
+  lowPowerIdleMode: requireBoolean("lowPowerIdleMode"),
+  keepAwakeWhileWorking: requireBoolean("keepAwakeWhileWorking"),
+  petTint(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { status: "error", message: "petTint must be a theme-to-tint object" };
+    }
+    for (const [themeId, tintId] of Object.entries(value)) {
+      if (
+        !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(themeId)
+        || !isPetTintId(tintId)
+        || tintId === "none"
+      ) {
+        return {
+          status: "error",
+          message: `petTint entry "${themeId}" must map a safe theme id to a non-default catalog tint id`,
+        };
+      }
+    }
+    return { status: "ok" };
+  },
+  petAccessory(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { status: "error", message: "petAccessory must be a theme-to-accessory object" };
+    }
+    for (const [themeId, accessoryId] of Object.entries(value)) {
+      if (
+        !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(themeId)
+        || !isPetAccessoryId(accessoryId)
+        || accessoryId === "none"
+      ) {
+        return {
+          status: "error",
+          message: `petAccessory entry "${themeId}" must map a safe theme id to a non-default catalog accessory id`,
+        };
+      }
+    }
+    return { status: "ok" };
+  },
+  petMouthAccessory(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { status: "error", message: "petMouthAccessory must be a theme-to-accessory object" };
+    }
+    for (const [themeId, accessoryId] of Object.entries(value)) {
+      if (
+        !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(themeId)
+        || !isPetMouthAccessoryId(accessoryId)
+        || accessoryId === "none"
+      ) {
+        return {
+          status: "error",
+          message: `petMouthAccessory entry "${themeId}" must map a safe theme id to a non-default catalog accessory id`,
+        };
+      }
+    }
+    return { status: "ok" };
+  },
+  holidayAccessoryEnabled(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { status: "error", message: "holidayAccessoryEnabled must be a theme-to-boolean object" };
+    }
+    for (const [themeId, enabled] of Object.entries(value)) {
+      if (
+        !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(themeId)
+        || enabled !== true
+      ) {
+        return {
+          status: "error",
+          message: `holidayAccessoryEnabled entry "${themeId}" must map a safe theme id to true`,
+        };
+      }
+    }
+    return { status: "ok" };
+  },
+  bubbleFollowPet: requireBoolean("bubbleFollowPet"),
+  bubbleFollowPreference: requireEnum("bubbleFollowPreference", ["auto", "left", "right"]),
+  bubbleFixedCorner: requireEnum("bubbleFixedCorner", [
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right",
+  ]),
+  sessionHudEnabled: requireBoolean("sessionHudEnabled"),
+  sessionHudShowStateLabels: requireBoolean("sessionHudShowStateLabels"),
+  sessionHudShowElapsed: requireBoolean("sessionHudShowElapsed"),
+  sessionHudShowContextUsage: requireBoolean("sessionHudShowContextUsage"),
+  claudeQuotaCollectionEnabled: {
+    validate: requireBoolean("claudeQuotaCollectionEnabled"),
+    effect(value, deps = {}) {
+      if (typeof deps.setClaudeQuotaCollectionEnabled !== "function") {
+        return { status: "error", message: "Claude usage collection is unavailable" };
+      }
+      return deps.setClaudeQuotaCollectionEnabled(value);
+    },
+  },
+  sessionHudCleanupDetached: requireBoolean("sessionHudCleanupDetached"),
+  sessionHudPinned: requireBoolean("sessionHudPinned"),
+  hideBubbles: requireBoolean("hideBubbles"),
+  permissionBubblesEnabled: requireBoolean("permissionBubblesEnabled"),
+  // Permission automation is safety-sensitive: the command path owns its
+  // warning/confirmation gate and the coupled mode + dismissal commit. Keep
+  // the validators available for defensive command validation, but reject
+  // generic applyUpdate/applyBulk/hydrate callers at the controller boundary.
+  permissionAutomationMode: {
+    validate: requireEnum("permissionAutomationMode", [
+      "off",
+      "auto-tools",
+      "unattended",
+    ]),
+    commandOnly: true,
+  },
+  permissionAutomationAutoToolsWarningDismissed: {
+    validate: requireBoolean("permissionAutomationAutoToolsWarningDismissed"),
+    commandOnly: true,
+  },
+  permissionAutomationUnattendedWarningDismissed: {
+    validate: requireBoolean("permissionAutomationUnattendedWarningDismissed"),
+    commandOnly: true,
+  },
+  // Legacy tombstone: readable/validatable for old snapshots, never writable
+  // through a generic controller API.
+  autoApproveAllPermissions: {
+    validate: requireBoolean("autoApproveAllPermissions"),
+    commandOnly: true,
+  },
+  notificationBubbleAutoCloseSeconds: requireIntegerInRange(
+    "notificationBubbleAutoCloseSeconds",
+    0,
+    MAX_AUTO_CLOSE_SECONDS
+  ),
+  permissionBubbleAutoCloseSeconds: requireIntegerInRange(
+    "permissionBubbleAutoCloseSeconds",
+    0,
+    MAX_AUTO_CLOSE_SECONDS
+  ),
+  updateBubbleAutoCloseSeconds: requireIntegerInRange(
+    "updateBubbleAutoCloseSeconds",
+    0,
+    MAX_AUTO_CLOSE_SECONDS
+  ),
+  // Session stale-cleanup intervals. Cross-field invariant
+  // (sessionStaleMs > 0 -> workingStaleMs <= sessionStaleMs) is enforced
+  // here against the live snapshot AND atomically through the
+  // `sessionCleanup.setTriple` command below. Hand-edit fallback lives in
+  // prefs.normalizeStaleTriple.
+  sessionStaleMs(value, deps = {}) {
+    if (value === 0) return { status: "ok" };
+    const base = requireIntegerInRange("sessionStaleMs", 60_000, 86_400_000)(value);
+    if (base.status !== "ok") return base;
+    const snapshot = (deps && deps.snapshot) || {};
+    const currentWorking = Number(snapshot.workingStaleMs);
+    if (Number.isFinite(currentWorking) && currentWorking > value) {
+      return {
+        status: "error",
+        message:
+          `sessionStaleMs (${value}) must be >= workingStaleMs (${currentWorking}). ` +
+          "To lower both, use the Reset / paired control.",
+      };
+    }
+    return { status: "ok" };
+  },
+  workingStaleMs(value, deps = {}) {
+    const base = requireIntegerInRange("workingStaleMs", 30_000, 86_400_000)(value);
+    if (base.status !== "ok") return base;
+    const snapshot = (deps && deps.snapshot) || {};
+    const currentSession = Number(snapshot.sessionStaleMs);
+    if (Number.isFinite(currentSession) && currentSession > 0 && value > currentSession) {
+      return {
+        status: "error",
+        message: `workingStaleMs (${value}) must be <= sessionStaleMs (${currentSession}).`,
+      };
+    }
+    return { status: "ok" };
+  },
+  codexWorkingStaleMs(value) {
+    if (value === 0) return { status: "ok" };
+    return requireIntegerInRange("codexWorkingStaleMs", 30_000, 86_400_000)(value);
+  },
+  detachedIdleStaleMs: requireIntegerInRange("detachedIdleStaleMs", 5_000, 300_000),
+  allowEdgePinning: requireBoolean("allowEdgePinning"),
+  disableMiniMode: requireBoolean("disableMiniMode"),
+  freeRoam: requireBoolean("freeRoam"),
+  roamConstrainAxis: requireBoolean("roamConstrainAxis"),
+  // duck-on-desk: 3D duck skin + mute (tray/context menu and Settings). Without a
+  // registry entry the controller rejects the key as unknown and the menu is inert.
+  duckAppearance(value) {
+    return DUCK_APPEARANCES.includes(value)
+      ? { status: "ok" }
+      : { status: "error", message: `duckAppearance must be one of ${DUCK_APPEARANCES.join(", ")}` };
+  },
+  duckLocomotion(value) {
+    return DUCK_LOCOMOTIONS.includes(value)
+      ? { status: "ok" }
+      : { status: "error", message: `duckLocomotion must be one of ${DUCK_LOCOMOTIONS.join(", ")}` };
+  },
+  duckStilts(value) {
+    return DUCK_STILTS.includes(value)
+      ? { status: "ok" }
+      : { status: "error", message: `duckStilts must be one of ${DUCK_STILTS.join(", ")}` };
+  },
+  duckMuted: requireBoolean("duckMuted"),
+  petRobot(value) {
+    return ["duck", "reachy-mini"].includes(value) ? { status: "ok" } : { status: "error", message: "Unknown robot" };
+  },
+  reachyAutoConnect: requireBoolean("reachyAutoConnect"),
+  reachyExpressions: requireBoolean("reachyExpressions"),
+  reachyHost(value) {
+    return typeof value === "string" && (value === "" || require("../robots/reachy/reachy-mini-client").daemonUrl(value))
+      ? { status: "ok" } : { status: "error", message: "Use a robot hostname or http://host:port" };
+  },
+  duckVoiceVolume: requireNumberInRange("duckVoiceVolume", 0, 1),
+  duckStepVolume: requireNumberInRange("duckStepVolume", 0, 1),
+  keepSizeAcrossDisplays: requireBoolean("keepSizeAcrossDisplays"),
+  fullscreenOverlay: requireBoolean("fullscreenOverlay"),
+  fullscreenAutoHide: requireBoolean("fullscreenAutoHide"),
+
+  // ── System-backed prefs (object-form: validate + effect pre-commit gate) ──
+  autoStartWithClaude,
+  autoStartWithCodex,
+  manageClaudeHooksAutomatically,
+  openAtLogin,
+
+  // openAtLoginHydrated is set exactly once by hydrateSystemBackedSettings()
+  //   on first run after the openAtLogin field is added. Pure validator —
+  //   no effect. After hydration prefs becomes the source of truth and the
+  //   user-visible toggle goes through the openAtLogin gate above.
+  openAtLoginHydrated: requireBoolean("openAtLoginHydrated"),
+
+  // ── macOS visibility (cross-field validation) ──
+  showTray(value, { snapshot }) {
+    if (typeof value !== "boolean") {
+      return { status: "error", message: "showTray must be a boolean" };
+    }
+    if (!value && snapshot && snapshot.showDock === false) {
+      return {
+        status: "error",
+        message: "Cannot hide Menu Bar while Dock is also hidden — Duck would become unquittable.",
+      };
+    }
+    return { status: "ok" };
+  },
+  showDock(value, { snapshot }) {
+    if (typeof value !== "boolean") {
+      return { status: "error", message: "showDock must be a boolean" };
+    }
+    if (!value && snapshot && snapshot.showTray === false) {
+      return {
+        status: "error",
+        message: "Cannot hide Dock while Menu Bar is also hidden — Duck would become unquittable.",
+      };
+    }
+    return { status: "ok" };
+  },
+
+  // Strict activation gate. Startup uses the lenient path + hydrate() so
+  // a deleted theme can't brick boot without polluting this effect.
+  theme: {
+    validate: requireString("theme"),
+    effect(value, deps) {
+      if (!deps || typeof deps.activateTheme !== "function") {
+        return {
+          status: "error",
+          message: "theme effect requires activateTheme dep",
+        };
+      }
+      try {
+        const snapshot = (deps && deps.snapshot) || {};
+        const currentOverrides = snapshot.themeOverrides || {};
+        deps.activateTheme(value, null, currentOverrides[value] || null);
+        return { status: "ok" };
+      } catch (err) {
+        return {
+          status: "error",
+          message: `theme: ${err && err.message}`,
+        };
+      }
+    },
+  },
+
+  // ── #329 background update check (Phase 4) ──
+  autoUpdateCheck: requireBoolean("autoUpdateCheck"),
+  pendingUpdateVersion: requireString("pendingUpdateVersion", { allowEmpty: true }),
+  dismissedUpdateVersions(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { status: "error", message: "dismissedUpdateVersions must be a plain object" };
+    }
+    for (const key of Object.keys(value)) {
+      if (typeof key !== "string" || !key) {
+        return { status: "error", message: "dismissedUpdateVersions keys must be non-empty strings" };
+      }
+      if (value[key] !== true) {
+        return { status: "error", message: `dismissedUpdateVersions["${key}"] must be the literal true` };
+      }
+    }
+    return { status: "ok" };
+  },
+  dismissedAgentInstallHints(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { status: "error", message: "dismissedAgentInstallHints must be a plain object" };
+    }
+    for (const key of Object.keys(value)) {
+      if (typeof key !== "string" || !key) {
+        return { status: "error", message: "dismissedAgentInstallHints keys must be non-empty strings" };
+      }
+      if (value[key] !== true) {
+        return { status: "error", message: `dismissedAgentInstallHints["${key}"] must be the literal true` };
+      }
+    }
+    return { status: "ok" };
+  },
+  dismissedAgentCleanupHints(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { status: "error", message: "dismissedAgentCleanupHints must be a plain object" };
+    }
+    for (const key of Object.keys(value)) {
+      if (typeof key !== "string" || !key) {
+        return { status: "error", message: "dismissedAgentCleanupHints keys must be non-empty strings" };
+      }
+      if (value[key] !== true) {
+        return { status: "error", message: `dismissedAgentCleanupHints["${key}"] must be the literal true` };
+      }
+    }
+    return { status: "ok" };
+  },
+
+  // Custom application commands commit these top-level prefs fields. Keep
+  // strict registry entries here because the controller rejects every command
+  // commit key that is not registered, even when prefs.js already knows it.
+  customToolDiscoveryPaths(value) {
+    if (!Array.isArray(value)) {
+      return { status: "error", message: "customToolDiscoveryPaths must be an array" };
+    }
+    const normalized = normalizePathList(value, { maxEntries: MAX_CUSTOM_DISCOVERY_PATHS + 1 });
+    if (
+      normalized.length !== value.length
+      || normalized.length > MAX_CUSTOM_DISCOVERY_PATHS
+      || normalized.some((entry, index) => entry !== value[index])
+    ) {
+      return {
+        status: "error",
+        message: `customToolDiscoveryPaths must contain at most ${MAX_CUSTOM_DISCOVERY_PATHS} normalized unique paths`,
+      };
+    }
+    return { status: "ok" };
+  },
+  customApplications(value) {
+    if (!Array.isArray(value) || value.length > MAX_CUSTOM_APPLICATIONS) {
+      return {
+        status: "error",
+        message: `customApplications must be an array with at most ${MAX_CUSTOM_APPLICATIONS} entries`,
+      };
+    }
+    const normalized = normalizeCustomApplications(value);
+    const allowedKeys = new Set(["id", "name", "sourcePath", "executablePath", "processName", "category"]);
+    const isNormalized = normalized.length === value.length && normalized.every((entry, index) => {
+      const original = value[index];
+      return original
+        && typeof original === "object"
+        && !Array.isArray(original)
+        && Object.keys(original).every((key) => allowedKeys.has(key))
+        && Object.keys(entry).every((key) => entry[key] === original[key]);
+    });
+    return isNormalized
+      ? { status: "ok" }
+      : { status: "error", message: "customApplications must contain normalized unique custom application entries" };
+  },
+
+  // ── Phase 2/3 placeholders — schema reserves these so applyUpdate accepts them ──
+  agents: requirePlainObject("agents"),
+  themeOverrides: requirePlainObject("themeOverrides"),
+  sessionAliases(value, deps = {}) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { status: "error", message: "sessionAliases must be a plain object" };
+    }
+    const normalized = normalizeSessionAliases(value, { now: deps.now });
+    if (Object.keys(normalized).length !== Object.keys(value).length) {
+      return { status: "error", message: "sessionAliases must contain valid alias entries" };
+    }
+    return { status: "ok" };
+  },
+
+  // Phase 3b-swap: per-theme variant selection. NO effect — the runtime switch
+  // runs through the `setThemeSelection` command which atomically commits
+  // `theme` + `themeVariant` after calling activateTheme(themeId, variantId).
+  // Letting this field have an effect would double-activate when the UI
+  // updates `theme` and `themeVariant` separately.
+  themeVariant: requirePlainObject("themeVariant"),
+  // #509: per-theme default idle visual. Writes go through the `setIdleVisual`
+  // command (which validates the file against the active theme); this entry
+  // exists so applyCommand's commit re-validation accepts the key.
+  idleVisual: requirePlainObject("idleVisual"),
+
+  shortcuts: {
+    validate(value) {
+      return validateShortcutMapShape(value);
+    },
+  },
+
+  // ── Internal — version is owned by prefs.js / migrate(), shouldn't normally
+  //    be set via applyUpdate, but we accept it so programmatic upgrades work. ──
+  version(value) {
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 1) {
+      return { status: "error", message: "version must be a positive number" };
+    }
+    if (value > CURRENT_VERSION) {
+      return {
+        status: "error",
+        message: `version ${value} is newer than supported (${CURRENT_VERSION})`,
+      };
+    }
+    return { status: "ok" };
+  },
+};
+
+// ── commandRegistry ──
+// Non-field actions. Phase 0 has only stubs — they'll be filled in by later phases.
+
+function notImplemented(name) {
+  return function () {
+    return {
+      status: "error",
+      message: `${name}: not implemented yet (Phase 0 stub)`,
+    };
+  };
+}
+
+function setAllBubblesHidden(payload, deps) {
+  const hidden = typeof payload === "boolean" ? payload : payload && payload.hidden;
+  if (typeof hidden !== "boolean") {
+    return { status: "error", message: "setAllBubblesHidden.hidden must be a boolean" };
+  }
+  return { status: "ok", commit: buildAggregateHideCommit(hidden, deps && deps.snapshot) };
+}
+
+// Permission automation writer. A plain settings:update cannot reach this
+// field; both automatic modes require confirmation at the data layer, including
+// an auto-tools -> unattended escalation. Turning automation off is always
+// allowed immediately.
+function setPermissionAutomationMode(payload, deps) {
+  if (!payload || typeof payload !== "object") {
+    return { status: "error", message: "setPermissionAutomationMode: payload must be an object" };
+  }
+  const mode = payload.mode;
+  if (!["off", "auto-tools", "unattended"].includes(mode)) {
+    return {
+      status: "error",
+      message: "setPermissionAutomationMode.mode must be off, auto-tools, or unattended",
+    };
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(payload, "suppressFutureConfirmation")
+    && typeof payload.suppressFutureConfirmation !== "boolean"
+  ) {
+    return {
+      status: "error",
+      message: "setPermissionAutomationMode.suppressFutureConfirmation must be a boolean",
+    };
+  }
+  const warningKey = mode === "auto-tools"
+    ? "permissionAutomationAutoToolsWarningDismissed"
+    : (mode === "unattended"
+      ? "permissionAutomationUnattendedWarningDismissed"
+      : null);
+  const snapshot = (deps && deps.snapshot) || {};
+  const confirmedNow = payload.confirmed === true;
+  const confirmedPreviously = warningKey && snapshot[warningKey] === true;
+  if (mode !== "off" && !confirmedNow && !confirmedPreviously) {
+    return {
+      status: "error",
+      message: "setPermissionAutomationMode: automatic modes require current or remembered confirmation",
+    };
+  }
+  if (mode === "off" && payload.suppressFutureConfirmation === true) {
+    return {
+      status: "error",
+      message: "setPermissionAutomationMode: off mode cannot suppress a warning",
+    };
+  }
+  if (payload.suppressFutureConfirmation === true && !confirmedNow) {
+    return {
+      status: "error",
+      message: "setPermissionAutomationMode: suppressing future warnings requires confirmed:true",
+    };
+  }
+  const commit = { permissionAutomationMode: mode };
+  if (warningKey && payload.suppressFutureConfirmation === true) {
+    commit[warningKey] = true;
+  }
+  return { status: "ok", commit };
+}
+
+function setBubbleCategoryEnabled(payload, deps) {
+  if (!payload || typeof payload !== "object") {
+    return { status: "error", message: "setBubbleCategoryEnabled: payload must be an object" };
+  }
+  const { category, enabled } = payload;
+  const result = buildCategoryEnabledCommit((deps && deps.snapshot) || {}, category, enabled);
+  if (result.error) return { status: "error", message: result.error };
+  return { status: "ok", commit: result.commit };
+}
+
+// Atomic writer for the session-cleanup intervals. The historical command name
+// is retained for renderer/backward compatibility even though the policy now
+// includes a fourth, Codex-specific value. Lives as a
+// command (not as `applyBulk`) because applyBulk runs each single-key
+// validator against the PRE-bulk snapshot, which would reject a Reset that
+// lowers both knobs simultaneously. The controller's command path re-runs
+// validators against the merged snapshot, so the cross-field invariant is
+// checked against the values being written together rather than mixed
+// with the current state.
+function setSessionCleanupTriple(payload, deps) {
+  if (!payload || typeof payload !== "object") {
+    return { status: "error", message: "sessionCleanup.setTriple: payload must be an object" };
+  }
+  const snapshot = (deps && deps.snapshot) || {};
+
+  // Strict presence check: a present-but-wrong-type value is a programmer
+  // error and must surface, not silently fall back to the snapshot.
+  function pick(key, fallbackDefault = null) {
+    if (key in payload) {
+      const v = payload[key];
+      if (!Number.isInteger(v)) {
+        return { error: `${key} must be an integer (received ${typeof v})` };
+      }
+      return { value: v };
+    }
+    const fallback = Number(snapshot[key]);
+    if (Number.isFinite(fallback)) return { value: fallback };
+    if (Number.isFinite(fallbackDefault)) return { value: fallbackDefault };
+    return { error: `${key} missing from payload and not present in snapshot` };
+  }
+
+  const s = pick("sessionStaleMs");
+  if (s.error) return { status: "error", message: s.error };
+  const w = pick("workingStaleMs");
+  if (w.error) return { status: "error", message: w.error };
+  // Older controller snapshots predate the fourth value. An absent key
+  // receives the shipped default; a present malformed value still fails
+  // closed through the strict branch above.
+  const c = pick("codexWorkingStaleMs", 1_200_000);
+  if (c.error) return { status: "error", message: c.error };
+  const d = pick("detachedIdleStaleMs");
+  if (d.error) return { status: "error", message: d.error };
+
+  const sessionStaleMs = s.value;
+  const workingStaleMs = w.value;
+  const codexWorkingStaleMs = c.value;
+  const detachedIdleStaleMs = d.value;
+
+  if (!(sessionStaleMs === 0 || (sessionStaleMs >= 60_000 && sessionStaleMs <= 86_400_000))) {
+    return { status: "error", message: `sessionStaleMs out of range: ${sessionStaleMs}` };
+  }
+  if (!(workingStaleMs >= 30_000 && workingStaleMs <= 86_400_000)) {
+    return { status: "error", message: `workingStaleMs out of range: ${workingStaleMs}` };
+  }
+  if (!(codexWorkingStaleMs === 0 || (codexWorkingStaleMs >= 30_000 && codexWorkingStaleMs <= 86_400_000))) {
+    return { status: "error", message: `codexWorkingStaleMs out of range: ${codexWorkingStaleMs}` };
+  }
+  if (!(detachedIdleStaleMs >= 5_000 && detachedIdleStaleMs <= 300_000)) {
+    return { status: "error", message: `detachedIdleStaleMs out of range: ${detachedIdleStaleMs}` };
+  }
+
+  if (sessionStaleMs > 0 && workingStaleMs > sessionStaleMs) {
+    return {
+      status: "error",
+      message: `workingStaleMs (${workingStaleMs}) must be <= sessionStaleMs (${sessionStaleMs}).`,
+    };
+  }
+
+  return {
+    status: "ok",
+    commit: { sessionStaleMs, workingStaleMs, codexWorkingStaleMs, detachedIdleStaleMs },
+  };
+}
+
+function sessionAliasMapEqual(a, b) {
+  const aKeys = Object.keys(a || {});
+  const bKeys = Object.keys(b || {});
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    const av = a[key];
+    const bv = b[key];
+    if (!bv || av.title !== bv.title || av.updatedAt !== bv.updatedAt) return false;
+  }
+  return true;
+}
+
+function getCommandNow(deps) {
+  const now = deps && typeof deps.now === "function" ? deps.now() : deps && deps.now;
+  return Number.isFinite(Number(now)) && Number(now) > 0 ? Number(now) : Date.now();
+}
+
+function getActiveSessionAliasKeys(deps) {
+  if (!deps || typeof deps.getActiveSessionAliasKeys !== "function") return new Set();
+  try {
+    const keys = deps.getActiveSessionAliasKeys();
+    if (keys instanceof Set) return keys;
+    if (Array.isArray(keys)) return new Set(keys);
+    if (keys && typeof keys[Symbol.iterator] === "function") return new Set(keys);
+  } catch {}
+  return new Set();
+}
+
+function setSessionAlias(payload, deps) {
+  if (!payload || typeof payload !== "object") {
+    return { status: "error", message: "setSessionAlias: payload must be an object" };
+  }
+  const { host, agentId, sessionId, rawSessionId, profileId, alias } = payload;
+  // sessionId is the canonical action id for remote sessions. Alias storage
+  // is keyed by the trusted profile scope plus the separately transported raw
+  // id so the opaque action id never leaks into visible/legacy alias keys.
+  const aliasSessionId = typeof rawSessionId === "string" && rawSessionId.trim()
+    ? rawSessionId
+    : sessionId;
+  const key = sessionAliasKey(host, agentId, aliasSessionId, { profileId });
+  if (!key) {
+    return { status: "error", message: "setSessionAlias.sessionId must be a non-empty string" };
+  }
+  const cleanAlias = sanitizeSessionAlias(alias);
+  if (cleanAlias === null) {
+    return { status: "error", message: "setSessionAlias.alias must be a string" };
+  }
+
+  const now = getCommandNow(deps);
+  const snapshot = (deps && deps.snapshot) || {};
+  const currentAliases = normalizeSessionAliases(snapshot.sessionAliases || {}, { now });
+  const nextAliases = { ...currentAliases };
+  if (cleanAlias) {
+    const existing = currentAliases[key];
+    if (!existing || existing.title !== cleanAlias) {
+      nextAliases[key] = { title: cleanAlias, updatedAt: now };
+    }
+  }
+  else delete nextAliases[key];
+
+  const prunedAliases = pruneExpiredSessionAliases(nextAliases, {
+    now,
+    activeKeys: getActiveSessionAliasKeys(deps),
+  });
+
+  if (sessionAliasMapEqual(prunedAliases, currentAliases)) {
+    return { status: "ok", noop: true };
+  }
+  return { status: "ok", commit: { sessionAliases: prunedAliases } };
+}
+
+const _validateRemoveThemeId = requireString("removeTheme.themeId");
+async function removeTheme(payload, deps) {
+  const themeId = typeof payload === "string" ? payload : (payload && payload.themeId);
+  const idCheck = _validateRemoveThemeId(themeId);
+  if (idCheck.status !== "ok") return idCheck;
+
+  if (!deps || typeof deps.getThemeInfo !== "function" || typeof deps.removeThemeDir !== "function") {
+    return {
+      status: "error",
+      message: "removeTheme effect requires getThemeInfo and removeThemeDir deps",
+    };
+  }
+
+  let info;
+  try {
+    info = deps.getThemeInfo(themeId);
+  } catch (err) {
+    return { status: "error", message: `removeTheme: ${err && err.message}` };
+  }
+  if (!info) {
+    return { status: "error", message: `removeTheme: theme "${themeId}" not found` };
+  }
+  if (info.builtin) {
+    return { status: "error", message: `removeTheme: cannot delete built-in theme "${themeId}"` };
+  }
+  if (info.active) {
+    return {
+      status: "error",
+      message: `removeTheme: cannot delete active theme "${themeId}" — switch to another theme first`,
+    };
+  }
+  if (info.managedCodexPet) {
+    return {
+      status: "error",
+      message: `removeTheme: cannot delete managed Codex Pet theme "${themeId}" — remove it from Petdex instead`,
+    };
+  }
+
+  try {
+    await deps.removeThemeDir(themeId);
+  } catch (err) {
+    return { status: "error", message: `removeTheme: ${err && err.message}` };
+  }
+
+  const snapshot = deps.snapshot || {};
+  const currentOverrides = snapshot.themeOverrides || {};
+  const currentVariantMap = snapshot.themeVariant || {};
+  const currentIdleVisual = snapshot.idleVisual || {};
+  const currentPetTint = snapshot.petTint || {};
+  const currentPetAccessory = snapshot.petAccessory || {};
+  const currentPetMouthAccessory = snapshot.petMouthAccessory || {};
+  const currentHolidayAccessoryEnabled = snapshot.holidayAccessoryEnabled || {};
+  const nextCommit = {};
+  if (currentOverrides[themeId]) {
+    const nextOverrides = { ...currentOverrides };
+    delete nextOverrides[themeId];
+    nextCommit.themeOverrides = nextOverrides;
+  }
+  if (currentVariantMap[themeId] !== undefined) {
+    const nextVariantMap = { ...currentVariantMap };
+    delete nextVariantMap[themeId];
+    nextCommit.themeVariant = nextVariantMap;
+  }
+  if (currentIdleVisual[themeId] !== undefined) {
+    const nextIdleVisual = { ...currentIdleVisual };
+    delete nextIdleVisual[themeId];
+    nextCommit.idleVisual = nextIdleVisual;
+  }
+  if (currentPetTint[themeId] !== undefined) {
+    const nextPetTint = { ...currentPetTint };
+    delete nextPetTint[themeId];
+    nextCommit.petTint = nextPetTint;
+  }
+  if (currentPetAccessory[themeId] !== undefined) {
+    const nextPetAccessory = { ...currentPetAccessory };
+    delete nextPetAccessory[themeId];
+    nextCommit.petAccessory = nextPetAccessory;
+  }
+  if (currentPetMouthAccessory[themeId] !== undefined) {
+    const nextPetMouthAccessory = { ...currentPetMouthAccessory };
+    delete nextPetMouthAccessory[themeId];
+    nextCommit.petMouthAccessory = nextPetMouthAccessory;
+  }
+  if (currentHolidayAccessoryEnabled[themeId] !== undefined) {
+    const nextHolidayAccessoryEnabled = { ...currentHolidayAccessoryEnabled };
+    delete nextHolidayAccessoryEnabled[themeId];
+    nextCommit.holidayAccessoryEnabled = nextHolidayAccessoryEnabled;
+  }
+  if (Object.keys(nextCommit).length > 0) {
+    return { status: "ok", commit: nextCommit };
+  }
+  return { status: "ok" };
+}
+
+// Phase 3b-swap: atomic theme + variant switch.
+//   payload: { themeId: string, variantId?: string }
+// Why a dedicated command vs. letting the `theme` field effect handle it:
+// the theme effect only commits `{theme}`, so the dirty "author deleted the
+// variant user had selected" scenario leaves `themeVariant[themeId]` pointing
+// at a dead variantId. Fix: call activateTheme which lenient-fallbacks unknown
+// variants, read back the actually-resolved variantId, and commit both fields.
+// See docs/plans/plan-settings-panel-3b-swap.md §6.2 "Runtime 切换路径".
+const _validateSetThemeSelectionThemeId = requireString("setThemeSelection.themeId");
+function setThemeSelection(payload, deps) {
+  const themeId = typeof payload === "string" ? payload : (payload && payload.themeId);
+  const variantIdInput = (payload && typeof payload === "object") ? payload.variantId : null;
+  const idCheck = _validateSetThemeSelectionThemeId(themeId);
+  if (idCheck.status !== "ok") return idCheck;
+  if (variantIdInput != null && (typeof variantIdInput !== "string" || !variantIdInput)) {
+    return { status: "error", message: "setThemeSelection.variantId must be a non-empty string when provided" };
+  }
+
+  if (!deps || typeof deps.activateTheme !== "function") {
+    return { status: "error", message: "setThemeSelection effect requires activateTheme dep" };
+  }
+
+  const snapshot = deps.snapshot || {};
+  const currentVariantMap = snapshot.themeVariant || {};
+  const currentOverrides = snapshot.themeOverrides || {};
+  const targetVariant = variantIdInput || currentVariantMap[themeId] || "default";
+  const targetOverrideMap = currentOverrides[themeId] || null;
+
+  let resolved;
+  try {
+    resolved = deps.activateTheme(themeId, targetVariant, targetOverrideMap);
+  } catch (err) {
+    return { status: "error", message: `setThemeSelection: ${err && err.message}` };
+  }
+  // activateTheme returns { themeId, variantId } — the variantId here reflects
+  // lenient fallback (dead variant → "default"). We commit the resolved value
+  // so prefs self-heal away from stale ids.
+  const resolvedVariant = (resolved && typeof resolved === "object" && typeof resolved.variantId === "string")
+    ? resolved.variantId
+    : targetVariant;
+  const activeTheme = typeof deps.getActiveTheme === "function" ? deps.getActiveTheme() : null;
+  const customizationCapabilities = (
+    activeTheme
+    && activeTheme._id === themeId
+    && activeTheme._capabilities
+    && typeof activeTheme._capabilities === "object"
+    && !Array.isArray(activeTheme._capabilities)
+  )
+    ? {
+        petTint: activeTheme._capabilities.petTint === true,
+        accessories: activeTheme._capabilities.accessories === true,
+        mouthAccessories: activeTheme._capabilities.mouthAccessories === true,
+      }
+    : null;
+
+  const nextVariantMap = { ...currentVariantMap, [themeId]: resolvedVariant };
+  return {
+    status: "ok",
+    commit: { theme: themeId, themeVariant: nextVariantMap },
+    customizationCapabilities,
+  };
+}
+
+// #509: default idle visual picker.
+//   payload: { themeId: string, file: string|null }  (null = back to theme default)
+// Validates against the LOADED active theme (only it knows the real file list
+// after variants/overrides), so only the active theme's entry can be written.
+const _validateSetIdleVisualThemeId = requireString("setIdleVisual.themeId");
+function setIdleVisual(payload, deps) {
+  const themeId = payload && payload.themeId;
+  const file = payload && typeof payload === "object" ? payload.file : undefined;
+  const idCheck = _validateSetIdleVisualThemeId(themeId);
+  if (idCheck.status !== "ok") return idCheck;
+  if (file !== null && (typeof file !== "string" || !file)) {
+    return { status: "error", message: "setIdleVisual.file must be a non-empty string or null" };
+  }
+
+  if (!deps || typeof deps.getActiveTheme !== "function") {
+    return { status: "error", message: "setIdleVisual effect requires getActiveTheme dep" };
+  }
+  const activeTheme = deps.getActiveTheme();
+  if (!activeTheme || activeTheme._id !== themeId) {
+    return { status: "error", message: `setIdleVisual: theme "${themeId}" is not the active theme` };
+  }
+
+  let nextFile = file;
+  if (nextFile !== null) {
+    const match = listIdleVisualOptions(activeTheme).find((option) => option.file === nextFile);
+    if (!match) {
+      return { status: "error", message: `setIdleVisual: "${nextFile}" is not an idle visual of theme "${themeId}"` };
+    }
+    // Theme default is represented by the absence of an entry.
+    if (match.isThemeDefault) nextFile = null;
+  }
+
+  const snapshot = (deps && deps.snapshot) || {};
+  const currentMap = snapshot.idleVisual || {};
+  const nextMap = { ...currentMap };
+  if (nextFile === null) {
+    if (nextMap[themeId] === undefined) return { status: "ok", noop: true };
+    delete nextMap[themeId];
+    return { status: "ok", commit: { idleVisual: nextMap } };
+  }
+  if (nextMap[themeId] === nextFile) return { status: "ok", noop: true };
+  nextMap[themeId] = nextFile;
+  return { status: "ok", commit: { idleVisual: nextMap } };
+}
+
+function resizePet(payload, deps) {
+  // Settings panel slider entry point. Routes to menu.resizeWindow via
+  // deps.resizePet so it picks up the full side-effect chain (actual window
+  // resize, hitWin sync, bubble reposition, runtime flush) that a raw
+  // applyUpdate("size", ...) would miss. menu.resizeWindow itself writes
+  // prefs.size through the controller, so this command returns no commit.
+  if (typeof payload !== "string" || !/^P:\d+(?:\.\d+)?$/.test(payload)) {
+    return { status: "error", message: `resizePet: invalid size "${payload}"` };
+  }
+  if (!deps || typeof deps.resizePet !== "function") {
+    return { status: "error", message: "resizePet requires deps.resizePet" };
+  }
+  try {
+    deps.resizePet(payload);
+    return { status: "ok" };
+  } catch (err) {
+    return { status: "error", message: `resizePet: ${err && err.message}` };
+  }
+}
+
+function cleanupMessage(result) {
+  const summary = result && result.summary;
+  if (!summary) return "Integration cleanup finished";
+  const failed = Number(summary.failed || 0);
+  const affected = Number(summary.agentsAffected || 0);
+  const removed = Number(summary.entriesRemoved || 0);
+  return failed > 0
+    ? `Integration cleanup finished with ${failed} failure(s); removed ${removed} item(s) from ${affected} integration(s).`
+    : `Integration cleanup finished; removed ${removed} item(s) from ${affected} integration(s).`;
+}
+
+function normalizeAgentDismissMapForCommit(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out = {};
+  for (const key of Object.keys(value)) {
+    if (typeof key === "string" && key && value[key] === true) out[key] = true;
+  }
+  return out;
+}
+
+function markDismissedAgentInstallHints(snapshot, agentIds) {
+  const next = normalizeAgentDismissMapForCommit(snapshot && snapshot.dismissedAgentInstallHints);
+  for (const agentId of agentIds) next[agentId] = true;
+  return next;
+}
+
+function clearDismissedAgentCleanupHints(snapshot, agentIds) {
+  const next = normalizeAgentDismissMapForCommit(snapshot && snapshot.dismissedAgentCleanupHints);
+  for (const agentId of agentIds) delete next[agentId];
+  return next;
+}
+
+async function cleanupIntegrationsCommand(_payload, deps = {}) {
+  if (!deps || typeof deps.cleanupIntegrations !== "function") {
+    return { status: "error", message: "cleanupIntegrations requires cleanupIntegrations dep" };
+  }
+
+  const snapshot = deps.snapshot || {};
+  let agents = { ...((snapshot && snapshot.agents) || {}) };
+  let agentsChanged = false;
+
+  for (const agentId of MANAGED_CLEANUP_AGENT_IDS) {
+    const flagDeps = {
+      ...deps,
+      snapshot: { ...snapshot, agents },
+    };
+    const result = setAgentFlag({ agentId, flag: "enabled", value: false }, flagDeps);
+    if (!result || result.status !== "ok") {
+      return result || { status: "error", message: `Failed to disable ${agentId}` };
+    }
+    if (result.commit && result.commit.agents) {
+      agents = result.commit.agents;
+      agentsChanged = true;
+    }
+    const currentEntry = agents[agentId] && typeof agents[agentId] === "object"
+      ? agents[agentId]
+      : {};
+    if (currentEntry.integrationInstalled !== false) {
+      agents = {
+        ...agents,
+        [agentId]: {
+          ...currentEntry,
+          integrationInstalled: false,
+        },
+      };
+      agentsChanged = true;
+    }
+  }
+
+  let cleanup;
+  try {
+    cleanup = await deps.cleanupIntegrations({ source: "about", backup: true });
+  } catch (err) {
+    cleanup = {
+      status: "error",
+      message: err && err.message ? err.message : String(err),
+      summary: { agentsChecked: 0, agentsAffected: 0, entriesRemoved: 0, skipped: 0, failed: 1 },
+    };
+  }
+
+  const response = {
+    status: "ok",
+    cleanup,
+    message: cleanup.status === "error" ? cleanup.message : cleanupMessage(cleanup),
+    commit: {
+      dismissedAgentInstallHints: markDismissedAgentInstallHints(snapshot, MANAGED_CLEANUP_AGENT_IDS),
+      dismissedAgentCleanupHints: clearDismissedAgentCleanupHints(snapshot, MANAGED_CLEANUP_AGENT_IDS),
+    },
+  };
+  if (agentsChanged) response.commit.agents = agents;
+  return response;
+}
+
+cleanupIntegrationsCommand.lockKey = "agentIntegration";
+
+const repairDoctorIssue = createRepairDoctorIssue({
+  repairAgentIntegration,
+  setBubbleCategoryEnabled,
+});
+
+// textScale is per-display: the slider edits the entry for the display the
+// settings window currently sits on (what you see is what you tune). The
+// renderer can't know which display that is, so the key is resolved
+// main-side via the injected resolveTextScaleDisplayKey dep. Without display
+// context (tests, headless) fall back to committing the legacy global so the
+// slider still works.
+function setTextScaleForDisplay(payload, deps) {
+  const value = Number(payload && payload.value);
+  if (!isValidTextScale(value)) {
+    return {
+      status: "error",
+      message: `textScale must be a number between ${TEXT_SCALE_MIN} and ${TEXT_SCALE_MAX}`,
+    };
+  }
+  const key = deps && typeof deps.resolveTextScaleDisplayKey === "function"
+    ? deps.resolveTextScaleDisplayKey()
+    : null;
+  if (typeof key !== "string" || !key) {
+    return { status: "ok", commit: { textScale: value } };
+  }
+  const snapshot = (deps && deps.snapshot) || {};
+  // New key goes first so the normalize cap can only trim stale displays,
+  // never the entry being written.
+  const prev = { ...(snapshot.textScaleByDisplay || {}) };
+  delete prev[key];
+  const next = normalizeTextScaleByDisplay({ [key]: value, ...prev });
+  return { status: "ok", commit: { textScaleByDisplay: next } };
+}
+
+const commandRegistry = {
+  addCustomApplication,
+  removeTheme,
+  installHooks,
+  uninstallHooks,
+  cleanupIntegrations: cleanupIntegrationsCommand,
+  clearAgentCleanupHints,
+  clearAgentInstallHints,
+  deployToWsl,
+  dismissAgentCleanupHints,
+  dismissAgentInstallHints,
+  installAgentIntegration,
+  removeFromWsl,
+  removeCustomApplication,
+  repairAgentIntegration,
+  setAgentCustomDiscoveryPaths,
+  uninstallAgentIntegration,
+  repairLocalServer,
+  repairDoctorIssue,
+  resizePet,
+  registerShortcut,
+  resetShortcut,
+  resetAllShortcuts,
+  setAgentFlag,
+  setAgentPermissionMode,
+  setAllBubblesHidden,
+  setPermissionAutomationMode,
+  setBubbleCategoryEnabled,
+  "sessionCleanup.setTriple": setSessionCleanupTriple,
+  setSessionAlias,
+  setTextScaleForDisplay,
+  setAnimationOverride,
+  setSoundOverride,
+  setThemeOverrideDisabled,
+  resetThemeOverrides,
+  importAnimationOverrides,
+  setWideHitboxOverride,
+  setThemeSelection,
+  setIdleVisual,
+};
+
+module.exports = {
+  updateRegistry,
+  commandRegistry,
+  ONESHOT_OVERRIDE_STATES,
+  ANIMATION_OVERRIDES_EXPORT_VERSION,
+  MANAGED_CLEANUP_AGENT_IDS,
+  // Exposed for tests
+  requireBoolean,
+  requireFiniteNumber,
+  requireEnum,
+  requireString,
+  requirePlainObject,
+  requireIntegerInRange,
+};

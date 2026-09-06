@@ -10,7 +10,7 @@ const {
   MAX_SUBAGENT_TYPE_LENGTH,
   normalizeSubagentMetadata,
   resolveHookAgentId,
-} = require("../src/server-agent-id");
+} = require("../src/state/server-agent-id");
 
 const SUBAGENT_UUID = "0199f2c5-1bb8-7892-9e3b-1d6f4a1c2b3d";
 

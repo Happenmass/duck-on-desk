@@ -19,10 +19,10 @@ const {
   isCodexNativeNotificationSoundEnabled,
   isCodexPermissionInterceptEnabled,
   shouldSyncAgentIntegration,
-} = require("../src/agent-gate");
-const { commandRegistry } = require("../src/settings-actions");
-const { createSettingsController } = require("../src/settings-controller");
-const prefs = require("../src/prefs");
+} = require("../src/state/agent-gate");
+const { commandRegistry } = require("../src/shell/settings-actions");
+const { createSettingsController } = require("../src/shell/settings-controller");
+const prefs = require("../src/shell/prefs");
 
 describe("isAgentEnabled", () => {
   it("returns true when snapshot is missing", () => {

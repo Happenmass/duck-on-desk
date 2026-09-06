@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const { __test } = require("../src/mac-window");
+const { __test } = require("../src/shell/mac-window");
 
 function makeTransaction(overrides = {}) {
   const calls = [];

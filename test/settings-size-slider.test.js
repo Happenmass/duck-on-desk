@@ -7,7 +7,7 @@ const {
   createSizeSliderController,
   getSizeSliderAnchorPx,
   SIZE_SLIDER_THUMB_DIAMETER,
-} = require("../src/settings-size-slider");
+} = require("../src/shell/settings-size-slider");
 
 describe("settings size slider controller", () => {
   it("previews during drag and commits only once when drag-end signals race", async () => {

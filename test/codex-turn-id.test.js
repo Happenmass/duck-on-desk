@@ -7,7 +7,7 @@ const {
   MAX_CODEX_TURN_ID_LENGTH,
   normalizeCodexTurnId,
   digestCodexTurnId,
-} = require("../src/codex-turn-id");
+} = require("../src/state/codex-turn-id");
 
 describe("codex turn identity", () => {
   it("normalizes opaque bounded string IDs without interpreting their format", () => {

@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 
-const createPetGeometryMain = require("../src/pet-geometry-main");
+const createPetGeometryMain = require("../src/shell/pet-geometry-main");
 
 const BOUNDS = { x: 10, y: 20, width: 120, height: 90 };
 const THEME = {

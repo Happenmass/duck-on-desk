@@ -4,7 +4,7 @@ const path = require("node:path");
 
 test("fetch-policies plans every official and stilt policy from the pinned sources into the cache", () => {
   const { plan } = require("../scripts/fetch-policies");
-  const { POLICY_NAMES, STILT_HEIGHTS_CM, POLICY_COMMIT, STILTS_COMMIT } = require("../src/pet-model-protocol");
+  const { POLICY_NAMES, STILT_HEIGHTS_CM, POLICY_COMMIT, STILTS_COMMIT } = require("../src/robots/duck/pet-model-protocol");
   const items = plan({ homeDir: "/home/u" });
   assert.equal(items.length, POLICY_NAMES.size + STILT_HEIGHTS_CM.size);
   for (const item of items) {

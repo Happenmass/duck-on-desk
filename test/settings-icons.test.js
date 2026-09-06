@@ -7,8 +7,8 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const SRC_DIR = path.join(__dirname, "..", "src");
-const SETTINGS_ICONS = path.join(SRC_DIR, "settings-icons.js");
-const SETTINGS_RENDERER = path.join(SRC_DIR, "settings-renderer.js");
+const SETTINGS_ICONS = path.join(SRC_DIR, "shell", "settings-icons.js");
+const SETTINGS_RENDERER = path.join(SRC_DIR, "shell", "settings-renderer.js");
 
 function loadIcons() {
   const context = { globalThis: null };

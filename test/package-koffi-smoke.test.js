@@ -15,7 +15,7 @@ const {
   nativeWindowHandleId,
   runWindowsFullscreenIdentityProbe,
   runHitWindowNoActivateRoundTrip,
-} = require("../src/package-koffi-smoke");
+} = require("../src/shell/package-koffi-smoke");
 const {
   parseArgs: parseRunnerArgs,
   cleanupSmokeUserData,

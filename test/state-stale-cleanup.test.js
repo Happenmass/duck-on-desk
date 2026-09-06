@@ -11,7 +11,7 @@ const {
   isWorkingLikeState,
   isLocalCodexWorkingLikeSession,
   getStaleSessionDecision,
-} = require("../src/state-stale-cleanup");
+} = require("../src/state/state-stale-cleanup");
 
 function session(overrides = {}) {
   return {

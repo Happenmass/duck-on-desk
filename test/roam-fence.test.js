@@ -1,7 +1,7 @@
 "use strict";
 
 // test/roam-fence.test.js — validation and failure semantics of the roam
-// fence loader (src/roam-fence.js). The contract under test (PR #810 review,
+// fence loader (src/robots/duck/roam-fence.js). The contract under test (PR #810 review,
 // rounds 1 and 2):
 //   • get() is null (UNKNOWN) until the loader confirms a first status —
 //     a valid parse, a valid enabled:false, or ENOENT proving absence;
@@ -18,7 +18,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const createRoamFenceLoader = require("../src/roam-fence");
+const createRoamFenceLoader = require("../src/robots/duck/roam-fence");
 
 const VALID = JSON.stringify({
   enabled: true,

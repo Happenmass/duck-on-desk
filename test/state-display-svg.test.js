@@ -4,7 +4,7 @@ const path = require("path");
 
 // themes/duck is a duck3d theme: its state files are intent ids and it declares
 // no displayHintMap, so hook display hints are exercised on the sprite fixture.
-const themeLoader = require("../src/theme-loader");
+const themeLoader = require("../src/shell/theme-loader");
 const { loadSpriteTheme } = require("./fixtures/sprite-theme");
 themeLoader.init(path.join(__dirname, "..", "src"));
 const _defaultTheme = themeLoader.loadTheme("duck");
@@ -40,7 +40,7 @@ describe("display_svg session hints (updateSession path)", () => {
   const pid = process.pid;
 
   beforeEach(() => {
-    api = require("../src/state")(makeCtx(_spriteTheme));
+    api = require("../src/state/state")(makeCtx(_spriteTheme));
   });
 
   function baseOpts(overrides = {}) {
@@ -93,30 +93,30 @@ describe("default idle visual (getIdleVisualChoice ctx hook)", () => {
   it("getSvgOverride('idle') returns the user choice when set", () => {
     const ctx = makeCtx();
     ctx.getIdleVisualChoice = () => "duck-carrying";
-    const api = require("../src/state")(ctx);
+    const api = require("../src/state/state")(ctx);
     assert.strictEqual(api.getSvgOverride("idle"), "duck-carrying");
   });
 
   it("getSvgOverride('idle') falls back to the follow sprite when unset", () => {
     const ctx = makeCtx();
     ctx.getIdleVisualChoice = () => null;
-    const api = require("../src/state")(ctx);
+    const api = require("../src/state/state")(ctx);
     assert.strictEqual(api.getSvgOverride("idle"), "duck-idle");
 
-    const apiNoHook = require("../src/state")(makeCtx());
+    const apiNoHook = require("../src/state/state")(makeCtx());
     assert.strictEqual(apiNoHook.getSvgOverride("idle"), "duck-idle");
   });
 
   it("applyState('idle') with no override rests on the user choice", () => {
     const ctx = makeCtx();
     ctx.getIdleVisualChoice = () => "duck-carrying";
-    const api = require("../src/state")(ctx);
+    const api = require("../src/state/state")(ctx);
     api.applyState("idle");
     assert.strictEqual(api.getCurrentSvg(), "duck-carrying");
   });
 
   it("applyState('idle') without the hook keeps today's behavior", () => {
-    const api = require("../src/state")(makeCtx());
+    const api = require("../src/state/state")(makeCtx());
     api.applyState("idle");
     assert.strictEqual(api.getCurrentSvg(), "duck-idle");
   });
@@ -124,7 +124,7 @@ describe("default idle visual (getIdleVisualChoice ctx hook)", () => {
   it("an explicit svgOverride still wins over the user choice", () => {
     const ctx = makeCtx();
     ctx.getIdleVisualChoice = () => "duck-carrying";
-    const api = require("../src/state")(ctx);
+    const api = require("../src/state/state")(ctx);
     api.applyState("idle", "duck-notification");
     assert.strictEqual(api.getCurrentSvg(), "duck-notification");
   });

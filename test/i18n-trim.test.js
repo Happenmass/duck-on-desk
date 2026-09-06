@@ -5,13 +5,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 test("runtime i18n only ships en, zh and zh-TW", () => {
-  const { i18n, SUPPORTED_LANGS } = require("../src/i18n");
+  const { i18n, SUPPORTED_LANGS } = require("../src/shell/i18n");
   assert.deepEqual([...SUPPORTED_LANGS], ["en", "zh", "zh-TW"]);
   assert.deepEqual(Object.keys(i18n).sort(), ["en", "zh", "zh-TW"]);
 });
 
 test("settings i18n has no strings for removed subsystems", () => {
-  const src = fs.readFileSync(path.join(__dirname, "..", "src", "settings-i18n.js"), "utf8");
+  const src = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "settings-i18n.js"), "utf8");
   const root = {};
   vm.runInNewContext(src, { globalThis: root });
   const strings = root.DuckSettingsI18n.STRINGS;

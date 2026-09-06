@@ -3,7 +3,7 @@
 const assert = require("node:assert");
 const { describe, it } = require("node:test");
 
-const { createMacDockVisibilityCoordinator } = require("../src/mac-dock-visibility");
+const { createMacDockVisibilityCoordinator } = require("../src/shell/mac-dock-visibility");
 
 describe("macOS Dock visibility coordinator", () => {
   it("shows Dock synchronously through activation policy without DockShow", async () => {

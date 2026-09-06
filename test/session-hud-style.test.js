@@ -3,8 +3,8 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const sessionHudHtml = fs.readFileSync(path.join(__dirname, "..", "src", "session-hud.html"), "utf8");
-const sessionHudRenderer = fs.readFileSync(path.join(__dirname, "..", "src", "session-hud-renderer.js"), "utf8");
+const sessionHudHtml = fs.readFileSync(path.join(__dirname, "..", "src", "state", "session-hud.html"), "utf8");
+const sessionHudRenderer = fs.readFileSync(path.join(__dirname, "..", "src", "state", "session-hud-renderer.js"), "utf8");
 
 describe("session HUD is sessions-only", () => {
   it("does not render an account-quota strip inside the HUD", () => {

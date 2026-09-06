@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const { EventEmitter } = require("node:events");
 const test = require("node:test");
 
-const { createTrayBalloonOwner } = require("../src/tray-balloon-owner");
+const { createTrayBalloonOwner } = require("../src/shell/tray-balloon-owner");
 
 class FakeTray extends EventEmitter {
   constructor() {

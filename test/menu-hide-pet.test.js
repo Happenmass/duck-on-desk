@@ -3,7 +3,7 @@ const Module = require("node:module");
 const path = require("node:path");
 const { describe, it } = require("node:test");
 
-const MENU_MODULE_PATH = require.resolve("../src/menu");
+const MENU_MODULE_PATH = require.resolve("../src/shell/menu");
 
 function loadMenuWithElectron(fakeElectron, fakeTaskbar = null, platform = null) {
   delete require.cache[MENU_MODULE_PATH];
@@ -18,7 +18,7 @@ function loadMenuWithElectron(fakeElectron, fakeTaskbar = null, platform = null)
     return originalLoad.apply(this, arguments);
   };
   try {
-    return require("../src/menu");
+    return require("../src/shell/menu");
   } finally {
     Module._load = originalLoad;
     if (platform) Object.defineProperty(process, "platform", originalPlatform);

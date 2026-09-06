@@ -1,7 +1,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const path = require("path");
-const { validateOpencodeEntry } = require("../src/doctor-detectors/opencode-entry-validator");
+const { validateOpencodeEntry } = require("../src/shell/doctor-detectors/opencode-entry-validator");
 
 function fakeFs({ dirs = [], files = [], contents = null } = {}) {
   const dirSet = new Set(dirs);

@@ -6,7 +6,7 @@ const assert = require("node:assert");
 const {
   isTrustedMainFrameEvent,
   registerPetInteractionIpc,
-} = require("../src/pet-interaction-ipc");
+} = require("../src/shell/pet-interaction-ipc");
 
 class FakeIpcMain {
   constructor() {
@@ -58,6 +58,7 @@ function createHarness(overrides = {}) {
     getCurrentState: () => state.currentState,
     getCurrentSvg: () => state.currentSvg,
     sendToRenderer: (...args) => calls.push(["sendToRenderer", ...args]),
+    onPetIntent: overrides.onPetIntent,
     settleVisual: (event, payload) => calls.push(["settleVisual", event.sender, payload]),
     recoverVisiblePetAfterRendererLoad: (event) => calls.push(["recoverVisiblePetAfterRendererLoad", event.sender]),
     setDragLocked: (value) => calls.push(["setDragLocked", value]),
@@ -265,6 +266,14 @@ test("pet interaction IPC relays only supported drag directions", () => {
     ["sendToRenderer", "start-drag-reaction", "right"],
     ["sendToRenderer", "start-drag-reaction", null],
   ]);
+});
+
+test("click reactions expose a semantic quack intent before renderer projection", () => {
+  const intents = [];
+  const { ipcMain, calls } = createHarness({ onPetIntent: intent => intents.push(intent) });
+  ipcMain.send("play-click-reaction", "click.svg", 900);
+  assert.deepStrictEqual(intents, [{ type: "perform", action: "quack", source: "local" }]);
+  assert.deepStrictEqual(calls, [["sendToRenderer", "play-click-reaction", "click.svg", 900]]);
 });
 
 test("pet interaction IPC preserves drag lock lifecycle", () => {

@@ -7,30 +7,30 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const SRC_DIR = path.join(__dirname, "..", "src");
-const SETTINGS_HTML = path.join(SRC_DIR, "settings.html");
-const SETTINGS_CSS = path.join(SRC_DIR, "settings.css");
-const LANGUAGE_PICKER_JS = path.join(SRC_DIR, "language-picker.js");
-const LANGUAGE_PICKER_CSS = path.join(SRC_DIR, "language-picker.css");
-const SETTINGS_TAB_GENERAL = path.join(SRC_DIR, "settings-tab-general.js");
-const SETTINGS_RENDERER = path.join(SRC_DIR, "settings-renderer.js");
-const SETTINGS_UI_CORE = path.join(SRC_DIR, "settings-ui-core.js");
-const SETTINGS_ANIM_OVERRIDES_MERGE = path.join(SRC_DIR, "settings-anim-overrides-merge.js");
-const SETTINGS_I18N = path.join(SRC_DIR, "settings-i18n.js");
-const SETTINGS_DOCTOR_MODAL = path.join(SRC_DIR, "settings-doctor-modal.js");
-const SETTINGS_ANIMATION_PREVIEW = path.join(SRC_DIR, "settings-animation-preview.html");
+const SETTINGS_HTML = path.join(SRC_DIR, "shell", "settings.html");
+const SETTINGS_CSS = path.join(SRC_DIR, "shell", "settings.css");
+const LANGUAGE_PICKER_JS = path.join(SRC_DIR, "shell", "language-picker.js");
+const LANGUAGE_PICKER_CSS = path.join(SRC_DIR, "shell", "language-picker.css");
+const SETTINGS_TAB_GENERAL = path.join(SRC_DIR, "shell", "settings-tab-general.js");
+const SETTINGS_RENDERER = path.join(SRC_DIR, "shell", "settings-renderer.js");
+const SETTINGS_UI_CORE = path.join(SRC_DIR, "shell", "settings-ui-core.js");
+const SETTINGS_ANIM_OVERRIDES_MERGE = path.join(SRC_DIR, "shell", "settings-anim-overrides-merge.js");
+const SETTINGS_I18N = path.join(SRC_DIR, "shell", "settings-i18n.js");
+const SETTINGS_DOCTOR_MODAL = path.join(SRC_DIR, "shell", "settings-doctor-modal.js");
+const SETTINGS_ANIMATION_PREVIEW = path.join(SRC_DIR, "shell", "settings-animation-preview.html");
 const PRELOAD_SETTINGS = path.join(SRC_DIR, "preload-settings.js");
 const MAIN_PROCESS = path.join(SRC_DIR, "main.js");
-const SETTINGS_IPC = path.join(SRC_DIR, "settings-ipc.js");
-const DOCTOR_IPC = path.join(SRC_DIR, "doctor-ipc.js");
-const { SUPPORTED_LANGS } = require("../src/i18n");
+const SETTINGS_IPC = path.join(SRC_DIR, "shell", "settings-ipc.js");
+const DOCTOR_IPC = path.join(SRC_DIR, "shell", "doctor-ipc.js");
+const { SUPPORTED_LANGS } = require("../src/shell/i18n");
 const TAB_MODULES = [
-  path.join(SRC_DIR, "settings-tab-general.js"),
-  path.join(SRC_DIR, "settings-tab-agents.js"),
-  path.join(SRC_DIR, "settings-tab-theme.js"),
-  path.join(SRC_DIR, "settings-tab-anim-map.js"),
-  path.join(SRC_DIR, "settings-tab-anim-overrides.js"),
-  path.join(SRC_DIR, "settings-tab-shortcuts.js"),
-  path.join(SRC_DIR, "settings-tab-about.js"),
+  path.join(SRC_DIR, "shell", "settings-tab-general.js"),
+  path.join(SRC_DIR, "shell", "settings-tab-agents.js"),
+  path.join(SRC_DIR, "shell", "settings-tab-theme.js"),
+  path.join(SRC_DIR, "shell", "settings-tab-anim-map.js"),
+  path.join(SRC_DIR, "shell", "settings-tab-anim-overrides.js"),
+  path.join(SRC_DIR, "shell", "settings-tab-shortcuts.js"),
+  path.join(SRC_DIR, "shell", "settings-tab-about.js"),
 ];
 const VERIFIED_GITHUB_CONTRIBUTORS = [
   "Bynlk",
@@ -719,7 +719,7 @@ function loadGeneralLanguageRowForTest({
   vm.runInContext(fs.readFileSync(LANGUAGE_PICKER_JS, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_ANIM_OVERRIDES_MERGE, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
-  const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8")
+  const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8")
     .replace(
       "root.DuckSettingsTabGeneral = { init };",
       "root.DuckSettingsTabGeneral = { init, __test: { buildLanguageRow } };"
@@ -846,7 +846,7 @@ function loadGeneralTabForTest({
   vm.runInContext(fs.readFileSync(LANGUAGE_PICKER_JS, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_ANIM_OVERRIDES_MERGE, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8"), context);
 
   const core = context.DuckSettingsCore;
   core.state.snapshot = snapshot || {};
@@ -1059,7 +1059,7 @@ function loadThemeTabForTest({
   vm.runInContext(fs.readFileSync(LANGUAGE_PICKER_JS, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_ANIM_OVERRIDES_MERGE, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-theme.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-theme.js"), "utf8"), context);
 
   const core = context.DuckSettingsCore;
   core.state.snapshot = {
@@ -1231,8 +1231,8 @@ function loadAgentsTabForTest({
   vm.runInContext(fs.readFileSync(LANGUAGE_PICKER_JS, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_ANIM_OVERRIDES_MERGE, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-agent-order.js"), "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "shell", "settings-agent-order.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-agents.js"), "utf8"), context);
 
   const core = context.DuckSettingsCore;
   core.state.snapshot = snapshot || { agents: {} };
@@ -1314,8 +1314,8 @@ function loadAnimMapTabForTest({
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(SETTINGS_ANIM_OVERRIDES_MERGE, "utf8"), context);
   vm.runInContext(fs.readFileSync(SETTINGS_UI_CORE, "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-map.js"), "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-overrides.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-anim-map.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-anim-overrides.js"), "utf8"), context);
 
   const core = context.DuckSettingsCore;
   core.state.snapshot = snapshot || { theme: "duck", themeOverrides: {} };
@@ -1388,7 +1388,7 @@ function loadAboutTabForTest({
   context.window = context;
   context.globalThis = context;
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-about.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-about.js"), "utf8"), context);
 
   const core = {
     state: {
@@ -1480,8 +1480,8 @@ function loadAnimOverridesTabForTest({
   };
   context.globalThis = context;
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "language-picker.js"), "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-overrides.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "shell", "language-picker.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-anim-overrides.js"), "utf8"), context);
   const core = {
     state: { activeTab: "animOverrides", mountedControls: {} },
     runtime,
@@ -1613,7 +1613,7 @@ describe("settings renderer browser environment", () => {
     const coreSource = fs.readFileSync(SETTINGS_UI_CORE, "utf8");
     const i18nSource = fs.readFileSync(SETTINGS_I18N, "utf8");
     const doctorModalSource = fs.readFileSync(SETTINGS_DOCTOR_MODAL, "utf8");
-    const agentOrderSource = fs.readFileSync(path.join(SRC_DIR, "settings-agent-order.js"), "utf8");
+    const agentOrderSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-agent-order.js"), "utf8");
 
     assert.ok(rendererSource.includes("globalThis.DuckSettingsCore"));
     assert.ok(rendererSource.includes("settingsAPI.getPetTintOptions"));
@@ -1781,7 +1781,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("keeps About contributors visible and includes verified GitHub contributors", () => {
-    const aboutSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-about.js"), "utf8");
+    const aboutSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-about.js"), "utf8");
     const coreSource = fs.readFileSync(SETTINGS_UI_CORE, "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
     const i18nBundle = loadSettingsI18nBundleForTest();
@@ -2149,7 +2149,7 @@ describe("settings renderer browser environment", () => {
     // settings pages that cannot scroll to the bottom. Every occurrence must
     // divide by --duck-text-zoom or use the zoom-aware 100% chain instead.
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
-    const dashboardHtml = fs.readFileSync(path.join(SRC_DIR, "dashboard.html"), "utf8");
+    const dashboardHtml = fs.readFileSync(path.join(SRC_DIR, "shell", "dashboard.html"), "utf8");
     const mainSource = fs.readFileSync(MAIN_PROCESS, "utf8");
     const bare = css.match(/\d+(?:\.\d+)?v[hw]\b(?!\s*\/\s*var\(--duck-text-zoom)/g) || [];
     assert.deepStrictEqual(bare, [], "settings.css has uncompensated viewport units");
@@ -2282,7 +2282,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("renders the Settings language picker as a dropdown over all supported langs", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const coreSource = fs.readFileSync(SETTINGS_UI_CORE, "utf8");
     const pickerSource = fs.readFileSync(LANGUAGE_PICKER_JS, "utf8");
     const pickerCss = fs.readFileSync(LANGUAGE_PICKER_CSS, "utf8");
@@ -3358,7 +3358,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("exposes aggregate and split bubble controls in the General tab", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const i18nSource = fs.readFileSync(SETTINGS_I18N, "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
     assert.ok(generalSource.includes('key: "hideBubbles"'));
@@ -3506,7 +3506,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("renders Free roam movement style as a dependent segmented choice", async () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const i18nSource = fs.readFileSync(SETTINGS_I18N, "utf8");
     assert.ok(generalSource.includes("function buildFreeRoamGroup()"));
     assert.ok(generalSource.includes('id: "general:free-roam"'));
@@ -3763,10 +3763,10 @@ describe("settings renderer browser environment", () => {
   });
 
   it("registers the Session cleanup group with four number rows, atomic reset, and i18n keys", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const i18nSource = fs.readFileSync(SETTINGS_I18N, "utf8");
     const uiCoreSource = fs.readFileSync(SETTINGS_UI_CORE, "utf8");
-    const actionsSource = fs.readFileSync(path.join(SRC_DIR, "settings-actions.js"), "utf8");
+    const actionsSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-actions.js"), "utf8");
 
     // Group is mounted top-level in the General tab (not nested under HUD).
     assert.ok(generalSource.includes("buildSessionCleanupGroup()"));
@@ -3821,7 +3821,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("uses collapsible option lists for Session HUD and sound controls", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
     const i18nSource = fs.readFileSync(SETTINGS_I18N, "utf8");
     assert.ok(generalSource.includes("function buildSessionHudOptionsList("));
@@ -3873,7 +3873,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("stacks wide General controls from their zoom-corrected card width", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
     assert.ok(generalSource.includes('row.className = "row volume-slider-row"'));
     assert.match(css, /\.sound-collapsible \.settings-option-list\s*\{\s*container-type:\s*inline-size;/s);
@@ -3893,7 +3893,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("auto-commits bubble seconds shortly after valid input instead of waiting only for change", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     assert.ok(generalSource.includes("BUBBLE_SECONDS_AUTO_COMMIT_DELAY_MS"));
     assert.ok(generalSource.includes('input.addEventListener("input", () => {'));
     assert.ok(generalSource.includes("scheduleSecondsCommit(next);"));
@@ -3909,7 +3909,7 @@ describe("settings renderer browser environment", () => {
   it("keeps update bubble disable confirmation inside the Settings renderer", () => {
     const preloadSource = fs.readFileSync(PRELOAD_SETTINGS, "utf8");
     const mainSource = fs.readFileSync(MAIN_PROCESS, "utf8");
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const i18nSource = fs.readFileSync(SETTINGS_I18N, "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
     const uiCoreSource = fs.readFileSync(SETTINGS_UI_CORE, "utf8");
@@ -3933,10 +3933,10 @@ describe("settings renderer browser environment", () => {
   it("keeps Claude hooks confirmations inside the Settings renderer", () => {
     const preloadSource = fs.readFileSync(PRELOAD_SETTINGS, "utf8");
     const mainSource = fs.readFileSync(MAIN_PROCESS, "utf8");
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const i18nSource = fs.readFileSync(SETTINGS_I18N, "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
-    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
+    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-agents.js"), "utf8");
     const uiCoreSource = fs.readFileSync(SETTINGS_UI_CORE, "utf8");
     assert.ok(agentsSource.includes("confirmDisableClaudeHookManagement"));
     assert.ok(agentsSource.includes("runDisconnectClaudeHooks"));
@@ -3959,7 +3959,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("renders three permission automation modes with two confirmation-gated automatic choices", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const coreSource = fs.readFileSync(SETTINGS_UI_CORE, "utf8");
     const i18nSource = fs.readFileSync(SETTINGS_I18N, "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
@@ -4850,8 +4850,8 @@ describe("settings renderer browser environment", () => {
   });
 
   it("moves Claude hook management out of General into the Agents claude-code group", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
-    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
+    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-agents.js"), "utf8");
     // No longer rendered or patched by the General tab.
     assert.ok(!generalSource.includes('key: "manageClaudeHooksAutomatically"'));
     assert.ok(!generalSource.includes('key: "autoStartWithClaude"'));
@@ -4873,8 +4873,8 @@ describe("settings renderer browser environment", () => {
   });
 
   it("keeps every provider's quota collection opt-in on its own Agents card", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
-    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
+    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-agents.js"), "utf8");
     // Collection is per-provider and lives on that provider's own agent card,
     // so one page answers "which providers am I reading from".
     assert.ok(!generalSource.includes('key: "claudeQuotaCollectionEnabled"'));
@@ -5111,15 +5111,16 @@ describe("settings renderer browser environment", () => {
   it("routes every Settings disclosure implementation through the shared controller", () => {
     const coreSource = fs.readFileSync(SETTINGS_UI_CORE, "utf8");
     const doctorSource = fs.readFileSync(SETTINGS_DOCTOR_MODAL, "utf8");
-    const animSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-overrides.js"), "utf8");
-    const aboutSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-about.js"), "utf8");
+    const animSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-anim-overrides.js"), "utf8");
+    const aboutSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-about.js"), "utf8");
     assert.ok(coreSource.includes("const controller = attachSettingsDisclosure({"));
     assert.ok(doctorSource.includes("core.helpers.attachSettingsDisclosure({"));
     assert.ok(animSource.includes("helpers.attachSettingsDisclosure({"));
     assert.ok(aboutSource.includes("helpers.attachSettingsDisclosure({"));
-    const rendererSources = fs.readdirSync(SRC_DIR)
+    const settingsDir = path.join(SRC_DIR, "shell");
+    const rendererSources = fs.readdirSync(settingsDir)
       .filter((name) => /^settings(?:-.+)?\.js$/.test(name) || name === "settings.html")
-      .map((name) => ({ name, source: fs.readFileSync(path.join(SRC_DIR, name), "utf8") }));
+      .map((name) => ({ name, source: fs.readFileSync(path.join(settingsDir, name), "utf8") }));
     for (const { name, source } of rendererSources) {
       assert.ok(!/createElement\(\s*["']details["']\s*\)/.test(source), `${name} must not create native details`);
       assert.ok(!/<details(?:\s|>)/i.test(source), `${name} must not render native details markup`);
@@ -5130,7 +5131,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("groups Theme cards and exposes theme import actions in Settings", () => {
-    const tabSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-theme.js"), "utf8");
+    const tabSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-theme.js"), "utf8");
     const generalSource = fs.readFileSync(SETTINGS_TAB_GENERAL, "utf8");
     const preloadSource = fs.readFileSync(PRELOAD_SETTINGS, "utf8");
     const settingsIpcSource = fs.readFileSync(SETTINGS_IPC, "utf8");
@@ -5799,7 +5800,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("collapses only the detailed bubble policy controls while keeping primary bubble rows visible", () => {
-    const generalSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-general.js"), "utf8");
+    const generalSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-general.js"), "utf8");
     const i18nSource = fs.readFileSync(SETTINGS_I18N, "utf8");
     assert.ok(generalSource.includes("buildBubblePolicySummary"));
     assert.ok(generalSource.includes("helpers.buildCollapsibleGroup({"));
@@ -5818,7 +5819,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("renders Agent management as collapsed per-agent groups with master switches always visible", () => {
-    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
+    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-agents.js"), "utf8");
     assert.ok(agentsSource.includes("function buildAgentGroup(agent)"));
     assert.ok(agentsSource.includes("const masterRow = buildAgentMasterRow(agent);"));
     assert.ok(agentsSource.includes("const detailRows = buildAgentDetailRows(agent);"));
@@ -5833,8 +5834,8 @@ describe("settings renderer browser environment", () => {
   });
 
   it("uses a dedicated Settings agent ordering helper before rendering Agent management groups", () => {
-    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
-    const agentOrderSource = fs.readFileSync(path.join(SRC_DIR, "settings-agent-order.js"), "utf8");
+    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-agents.js"), "utf8");
+    const agentOrderSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-agent-order.js"), "utf8");
     assert.ok(agentOrderSource.includes("function isAgentCollapsible("));
     assert.ok(agentOrderSource.includes("function sortAgentMetadataForSettings("));
     assert.ok(agentOrderSource.includes("COLLAPSIBLE_AGENT_PRIORITY"));
@@ -5847,10 +5848,10 @@ describe("settings renderer browser environment", () => {
   });
 
   it("lists agents flat, with no Coding AI / Office AI grouping layer", () => {
-    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
-    const orderSource = fs.readFileSync(path.join(SRC_DIR, "settings-agent-order.js"), "utf8");
-    const i18nSource = fs.readFileSync(path.join(SRC_DIR, "settings-i18n.js"), "utf8");
-    const css = fs.readFileSync(path.join(SRC_DIR, "settings.css"), "utf8");
+    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-agents.js"), "utf8");
+    const orderSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-agent-order.js"), "utf8");
+    const i18nSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-i18n.js"), "utf8");
+    const css = fs.readFileSync(path.join(SRC_DIR, "shell", "settings.css"), "utf8");
     assert.ok(agentsSource.includes("function buildAgentRows("));
     assert.ok(!agentsSource.includes("buildAgentCategoryGroup("));
     assert.ok(!agentsSource.includes("categorizeAgentsByType("));
@@ -5939,10 +5940,10 @@ describe("settings renderer browser environment", () => {
   });
 
   it("renders Custom AI detection under one manual folder picker", () => {
-    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
-    const coreSource = fs.readFileSync(path.join(SRC_DIR, "settings-ui-core.js"), "utf8");
+    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-agents.js"), "utf8");
+    const coreSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-ui-core.js"), "utf8");
     const preloadSource = fs.readFileSync(PRELOAD_SETTINGS, "utf8");
-    const css = fs.readFileSync(path.join(SRC_DIR, "settings.css"), "utf8");
+    const css = fs.readFileSync(path.join(SRC_DIR, "shell", "settings.css"), "utf8");
 
     assert.ok(coreSource.includes("function readCustomToolDetectionResults("));
     assert.ok(coreSource.includes("function readCustomAgentDetectionResults("));
@@ -6358,8 +6359,8 @@ describe("settings renderer browser environment", () => {
   });
 
   it("confirms before uninstalling an agent integration", () => {
-    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-agents.js"), "utf8");
-    const i18nSource = fs.readFileSync(path.join(SRC_DIR, "settings-i18n.js"), "utf8");
+    const agentsSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-agents.js"), "utf8");
+    const i18nSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-i18n.js"), "utf8");
     assert.ok(agentsSource.includes('window.confirm(t("agentIntegrationUninstallConfirm"))'));
     assert.ok(i18nSource.includes("agentIntegrationUninstallConfirm"));
   });
@@ -7520,8 +7521,8 @@ describe("settings renderer browser environment", () => {
   });
 
   it("uses animated switches and local theme override patching in the Animation Map subtab", () => {
-    const animMapSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-map.js"), "utf8");
-    const overridesSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-overrides.js"), "utf8");
+    const animMapSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-anim-map.js"), "utf8");
+    const overridesSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-anim-overrides.js"), "utf8");
     const coreSource = fs.readFileSync(SETTINGS_UI_CORE, "utf8");
     assert.ok(animMapSource.includes("state.transientUiState.animMapSwitches"));
     assert.ok(animMapSource.includes("state.mountedControls.animMapSwitches"));
@@ -7756,7 +7757,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("keeps stale sound override prefs resettable from the settings UI", () => {
-    const overridesSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-overrides.js"), "utf8");
+    const overridesSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-anim-overrides.js"), "utf8");
     assert.ok(
       overridesSource.includes("resetBtn.disabled = !slot.hasStoredOverride;"),
       "sound override row reset must stay enabled when prefs still contain a stale sound override entry"
@@ -7764,7 +7765,7 @@ describe("settings renderer browser environment", () => {
   });
 
   it("uses the shared SVG chevron treatment for Animation Overrides rows", () => {
-    const overridesSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-overrides.js"), "utf8");
+    const overridesSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-anim-overrides.js"), "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
 
     assert.ok(!overridesSource.includes('chevron.textContent = "\\u25B8";'));
@@ -7813,15 +7814,15 @@ describe("settings renderer browser environment", () => {
     const html = fs.readFileSync(SETTINGS_HTML, "utf8");
     const css = fs.readFileSync(SETTINGS_CSS, "utf8");
     const previewHtml = fs.readFileSync(SETTINGS_ANIMATION_PREVIEW, "utf8");
-    const overridesSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-anim-overrides.js"), "utf8");
-    const animationOverridesSource = fs.readFileSync(path.join(SRC_DIR, "settings-animation-overrides-main.js"), "utf8");
+    const overridesSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-anim-overrides.js"), "utf8");
+    const animationOverridesSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-animation-overrides-main.js"), "utf8");
     const preloadSource = fs.readFileSync(PRELOAD_SETTINGS, "utf8");
     const rendererSource = fs.readFileSync(SETTINGS_RENDERER, "utf8");
 
     assert.ok(html.includes("img-src 'self' data: file:"));
     assert.ok(!html.includes("frame-src"));
     assert.ok(html.includes("settings-anim-overrides-merge.js"));
-    const themeTabSource = fs.readFileSync(path.join(SRC_DIR, "settings-tab-theme.js"), "utf8");
+    const themeTabSource = fs.readFileSync(path.join(SRC_DIR, "shell", "settings-tab-theme.js"), "utf8");
     assert.ok(!html.includes("object-src"));
     assert.ok(css.includes(".theme-thumb-atlas-frame"));
     assert.ok(css.includes("width: 800%;"));

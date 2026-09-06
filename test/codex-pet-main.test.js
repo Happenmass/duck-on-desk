@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const createCodexPetMain = require("../src/codex-pet-main");
+const createCodexPetMain = require("../src/state/codex-pet-main");
 
 function createQueueRuntime(overrides = {}) {
   const parseCalls = [];

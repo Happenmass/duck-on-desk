@@ -5,12 +5,12 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const os = require("node:os");
 const fs = require("node:fs");
-const createState = require("../src/state");
-const createRuntime = require("../src/agent-runtime-main");
+const createState = require("../src/state/state");
+const createRuntime = require("../src/state/agent-runtime-main");
 const Monitor = require("../agents/codex-log-monitor");
 const agent = require("../agents/codex");
-const themeLoader = require("../src/theme-loader");
-const { makeSessionKey } = require("../src/session-key");
+const themeLoader = require("../src/shell/theme-loader");
+const { makeSessionKey } = require("../src/state/session-key");
 
 function fixture(t, showCard = false) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "duck-input-fence-"));

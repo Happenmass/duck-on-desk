@@ -5,8 +5,8 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const { fileURLToPath } = require("node:url");
 
-const createThemeContext = require("../src/theme-context");
-const themeLoader = require("../src/theme-loader");
+const createThemeContext = require("../src/shell/theme-context");
+const themeLoader = require("../src/shell/theme-loader");
 
 const ROOT = path.join(__dirname, "..");
 const SOUNDS_DIR = path.join(ROOT, "assets", "sounds");

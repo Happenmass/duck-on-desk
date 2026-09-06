@@ -27,7 +27,7 @@ Module._load = function (request) {
   if (request === "electron") return __electronMock;
   return __origModuleLoad.apply(this, arguments);
 };
-const initPermission = require("../src/permission");
+const initPermission = require("../src/state/permission");
 Module._load = __origModuleLoad;
 
 function createMockResponse() {

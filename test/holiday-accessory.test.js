@@ -14,7 +14,7 @@ const {
   getEffectivePetAccessoryIdForTheme,
   getNextHolidayRefreshDelay,
   createHolidayAccessoryRuntime,
-} = require("../src/holiday-accessory");
+} = require("../src/shell/holiday-accessory");
 
 function localDate(month, day, hour = 12, year = 2026) {
   return new Date(year, month - 1, day, hour, 0, 0, 0);
@@ -75,7 +75,7 @@ describe("holiday accessory date rules", () => {
   });
 
   it("uses the user's UTC+14 local date at a holiday boundary", () => {
-    const modulePath = path.join(__dirname, "..", "src", "holiday-accessory.js");
+    const modulePath = path.join(__dirname, "..", "src", "shell", "holiday-accessory.js");
     const script = [
       `const { getHolidayAccessoryForDate } = require(${JSON.stringify(modulePath)});`,
       "const result = getHolidayAccessoryForDate(new Date('2026-12-21T10:30:00.000Z'));",

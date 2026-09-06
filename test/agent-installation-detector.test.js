@@ -9,8 +9,8 @@ const path = require("node:path");
 const {
   detectAgentInstallation,
   detectAgentInstallations,
-} = require("../src/agent-installation-detector");
-const { getAgentDescriptor } = require("../src/doctor-detectors/agent-descriptors");
+} = require("../src/state/agent-installation-detector");
+const { getAgentDescriptor } = require("../src/shell/doctor-detectors/agent-descriptors");
 const tempDirs = [];
 
 function makeHome() {

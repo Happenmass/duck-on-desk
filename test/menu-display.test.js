@@ -2,7 +2,7 @@ const assert = require("node:assert");
 const Module = require("node:module");
 const { describe, it } = require("node:test");
 
-const MENU_MODULE_PATH = require.resolve("../src/menu");
+const MENU_MODULE_PATH = require.resolve("../src/shell/menu");
 
 function loadMenuWithElectron(fakeElectron, fakeTaskbar = null) {
   delete require.cache[MENU_MODULE_PATH];
@@ -13,7 +13,7 @@ function loadMenuWithElectron(fakeElectron, fakeTaskbar = null) {
     return originalLoad.apply(this, arguments);
   };
   try {
-    return require("../src/menu");
+    return require("../src/shell/menu");
   } finally {
     Module._load = originalLoad;
   }
@@ -68,7 +68,7 @@ describe("menu send-to-display", () => {
   // The mini-mode context menu entry itself (previously covered here) was
   // dropped in Task 7 of the 3D renderer plan: duck3d is the only built-in
   // theme and declares miniMode.supported = false, so the menu no longer
-  // offers it. buildMiniModeMenuItem()/isMiniSupported() stay in src/menu.js
+  // offers it. buildMiniModeMenuItem()/isMiniSupported() stay in src/shell/menu.js
   // unreachable until Plan 04 removes them for good.
   it("uses shared proportional sizing and repositions floating bubbles even when follow is off", () => {
     const displays = [

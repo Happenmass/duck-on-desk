@@ -5,14 +5,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const { describe, it } = require("node:test");
-const createRuntime = require("../src/permission-automation-confirmation");
+const createRuntime = require("../src/state/permission-automation-confirmation");
 const {
   computeCenteredBounds,
   RESULT_CHANNEL,
   STATE_CHANNEL,
   READY_CHANNEL,
   STATE_APPLIED_CHANNEL,
-} = require("../src/permission-automation-confirmation");
+} = require("../src/state/permission-automation-confirmation");
 
 function createHarness(overrides = {}) {
   const listeners = new Map();
@@ -341,7 +341,7 @@ describe("permission automation confirmation runtime", () => {
 describe("permission automation confirmation document", () => {
   it("declares accessible dialog semantics", () => {
     const html = fs.readFileSync(
-      path.join(__dirname, "../src/permission-automation-confirmation.html"),
+      path.join(__dirname, "../src/state/permission-automation-confirmation.html"),
       "utf8"
     );
     assert.match(
@@ -350,7 +350,7 @@ describe("permission automation confirmation document", () => {
     );
     assert.match(html, /<svg class="warning-glyph"/);
     assert.match(html, /img-src 'self'/);
-    assert.match(html, /<img class="brand-icon" src="\.\.\/assets\/icons\/64x64\.png" alt="" aria-hidden="true">/);
+    assert.match(html, /<img class="brand-icon" src="\.\.\/\.\.\/assets\/icons\/64x64\.png" alt="" aria-hidden="true">/);
     assert.strictEqual(
       fs.existsSync(path.join(__dirname, "../assets/icons/64x64.png")),
       true,
@@ -363,7 +363,7 @@ describe("permission automation confirmation document", () => {
 
   it("uses shared visual tokens and visible keyboard focus treatments", () => {
     const css = fs.readFileSync(
-      path.join(__dirname, "../src/permission-automation-confirmation.css"),
+      path.join(__dirname, "../src/state/permission-automation-confirmation.css"),
       "utf8"
     );
     assert.match(css, /--accent:\s*#d97757/);
@@ -418,7 +418,7 @@ describe("permission automation confirmation renderer", () => {
       },
     };
     const source = fs.readFileSync(
-      path.join(__dirname, "../src/permission-automation-confirmation-renderer.js"),
+      path.join(__dirname, "../src/state/permission-automation-confirmation-renderer.js"),
       "utf8"
     );
     vm.runInNewContext(source, sandbox);

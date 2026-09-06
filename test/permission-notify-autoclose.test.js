@@ -8,9 +8,9 @@ const path = require("node:path");
 const { describe, it, afterEach, mock } = require("node:test");
 const {
   classifyPermissionInteraction,
-} = require("../src/permission-automation-policy");
+} = require("../src/state/permission-automation-policy");
 
-const PERMISSION_MODULE_PATH = require.resolve("../src/permission");
+const PERMISSION_MODULE_PATH = require.resolve("../src/state/permission");
 const tempLogPaths = new Set();
 
 function loadPermissionWithElectron(fakeElectron) {
@@ -21,7 +21,7 @@ function loadPermissionWithElectron(fakeElectron) {
     return originalLoad.apply(this, arguments);
   };
   try {
-    return require("../src/permission");
+    return require("../src/state/permission");
   } finally {
     Module._load = originalLoad;
   }

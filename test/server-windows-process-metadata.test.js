@@ -11,7 +11,7 @@ const {
   normalizeInstanceGeneration,
   normalizeWindowsProcessChainMode,
   processMetadataForState,
-} = require("../src/server-windows-process-metadata");
+} = require("../src/state/server-windows-process-metadata");
 
 function time(low) {
   return { high: 1, low };

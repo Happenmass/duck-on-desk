@@ -6,7 +6,7 @@ const {
   formatAgentDetail,
   formatDiagnosticReport,
   normalizeDisplayPathSeparators,
-} = require("../src/doctor-report");
+} = require("../src/shell/doctor-report");
 
 describe("doctor report redaction", () => {
   it("redacts home paths across common platforms", () => {

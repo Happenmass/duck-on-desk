@@ -3,8 +3,8 @@
 const { describe, it, beforeEach, afterEach, mock } = require("node:test");
 const assert = require("node:assert");
 const path = require("path");
-const themeLoader = require("../src/theme-loader");
-const { createTranslator } = require("../src/i18n");
+const themeLoader = require("../src/shell/theme-loader");
+const { createTranslator } = require("../src/shell/i18n");
 
 themeLoader.init(path.join(__dirname, "..", "src"));
 const defaultTheme = themeLoader.loadTheme("duck");
@@ -75,7 +75,7 @@ describe("updateSession: Notification hook gate", () => {
     // fire" contract.
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "notification", "Notification", { agentId: "claude-code" });
 
@@ -90,7 +90,7 @@ describe("updateSession: Notification hook gate", () => {
   it("lets Notification events through when the per-agent flag is on", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "notification", "Notification", { agentId: "claude-code" });
 
@@ -104,7 +104,7 @@ describe("updateSession: Notification hook gate", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true, theme: spriteTheme });
     ctx.miniMode = true;
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "attention", "Stop", { agentId: "claude-code" });
     assert.strictEqual(api.getCurrentState(), "mini-happy", "completion should still show mini-happy");
@@ -130,7 +130,7 @@ describe("updateSession: Notification hook gate", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
     ctx.miniMode = true;
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "notification", "Notification", { agentId: "claude-code" });
 
@@ -144,7 +144,7 @@ describe("updateSession: Notification hook gate", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
     ctx.miniMode = true;
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "attention", "Stop", { agentId: "claude-code" });
     mock.timers.tick(defaultTheme.timings.autoReturn["mini-happy"] + 1);
@@ -171,7 +171,7 @@ describe("updateSession: Notification hook gate", () => {
   it("keeps post-completion Notification alerts enabled outside mini mode", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "attention", "Stop", { agentId: "claude-code" });
     mock.timers.tick(defaultTheme.timings.autoReturn.attention + 1);
@@ -189,7 +189,7 @@ describe("updateSession: Notification hook gate", () => {
   it("mutes a non-Claude Notification bell + animation when the per-agent flag is off", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("pi-1", "notification", "Notification", { agentId: "pi" });
 
@@ -204,7 +204,7 @@ describe("updateSession: Notification hook gate", () => {
   it("lets a non-Claude Notification through when the per-agent flag is on", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("pi-1", "notification", "Notification", { agentId: "pi" });
 
@@ -222,7 +222,7 @@ describe("updateSession: Notification hook gate", () => {
     // answers that decision.
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("pi-1", "notification", "Notification", { agentId: "pi" });
 
@@ -237,7 +237,7 @@ describe("updateSession: Notification hook gate", () => {
   it("lets state-only notifications through when the per-agent flag is on", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("pi-1", "notification", "Notification", { agentId: "pi" });
 
@@ -250,7 +250,7 @@ describe("updateSession: Notification hook gate", () => {
   it("mutes passive attention notifications when the per-agent flag is off", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("opencode-1", "attention", "Notification", { agentId: "opencode" });
 
@@ -264,7 +264,7 @@ describe("updateSession: Notification hook gate", () => {
   it("lets passive attention notifications through when the per-agent flag is on", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("opencode-1", "attention", "Notification", { agentId: "opencode" });
 
@@ -279,7 +279,7 @@ describe("updateSession: Notification hook gate", () => {
     // reaches the Notification-hook check.
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "notification", "PermissionRequest", { agentId: "claude-code" });
 
@@ -291,7 +291,7 @@ describe("updateSession: Notification hook gate", () => {
   it("can mute only the Codex native PermissionRequest prompt sound", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("codex-1", "notification", "PermissionRequest", {
       agentId: "codex",
@@ -307,7 +307,7 @@ describe("updateSession: Notification hook gate", () => {
   it("lets Codex PermissionRequest play confirm when no mute flag is set", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("codex-1", "notification", "PermissionRequest", {
       agentId: "codex",
@@ -319,7 +319,7 @@ describe("updateSession: Notification hook gate", () => {
   it("keeps Codex native prompt sound muted across notification auto-return", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("codex-1", "notification", "PermissionRequest", {
       agentId: "codex",
@@ -335,7 +335,7 @@ describe("updateSession: Notification hook gate", () => {
   it("keeps Codex native prompt sound muted through the pending min-display path", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.applyState("attention");
     ctx._soundsPlayed.length = 0;
@@ -353,7 +353,7 @@ describe("updateSession: Notification hook gate", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
     ctx.miniMode = true;
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("codex-1", "notification", "PermissionRequest", {
       agentId: "codex",
@@ -369,7 +369,7 @@ describe("updateSession: Notification hook gate", () => {
   it("keeps Codex completion sound even when native prompt sound is muted", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("codex-1", "attention", "Stop", {
       agentId: "codex",
@@ -385,7 +385,7 @@ describe("updateSession: Notification hook gate", () => {
     // must be event-name-specific, not state-specific.
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "notification", "Elicitation", { agentId: "claude-code" });
 
@@ -399,7 +399,7 @@ describe("updateSession: Notification hook gate", () => {
     // to idle and wouldn't prove the event landed.
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: false });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "thinking", "UserPromptSubmit", { agentId: "claude-code" });
     api.updateSession("cc-1", "working", "PreToolUse", { agentId: "claude-code" });
@@ -414,7 +414,7 @@ describe("updateSession: Notification hook gate", () => {
     mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     ctx = makeCtx({ notificationHookEnabled: true });
     delete ctx.isAgentNotificationHookEnabled;
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     api.updateSession("cc-1", "notification", "Notification", { agentId: "claude-code" });
 
@@ -430,7 +430,7 @@ describe("updateSession: Notification hook gate", () => {
     const perAgent = { "claude-code": false, pi: true };
     ctx = makeCtx({ notificationHookEnabled: true });
     ctx.isAgentNotificationHookEnabled = (id) => perAgent[id] !== false;
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
 
     // Prime the session with its agentId via a normal event.
     api.updateSession("cc-1", "thinking", "UserPromptSubmit", { agentId: "claude-code" });

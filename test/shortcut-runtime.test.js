@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 
-const createShortcutRuntime = require("../src/shortcut-runtime");
+const createShortcutRuntime = require("../src/shell/shortcut-runtime");
 
 class FakeIpcMain {
   constructor() {

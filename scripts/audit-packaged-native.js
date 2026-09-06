@@ -5,8 +5,8 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const asar = require("@electron/asar");
-const { getReleaseTarget } = require("../src/native-package-target");
-const { KOFFI_TRIPLET_SET } = require("../src/koffi-package-contract");
+const { getReleaseTarget } = require("../src/shell/native-package-target");
+const { KOFFI_TRIPLET_SET } = require("../src/shell/koffi-package-contract");
 const defaultPolicy = require("./native-package-policy.json");
 
 const PE_MACHINES = new Map([

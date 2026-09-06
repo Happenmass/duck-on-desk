@@ -5,7 +5,7 @@ const { withCommandEnv } = require("../hooks/codex-install-utils");
 const {
   validateHookCommand,
   validateHookTarget,
-} = require("../src/doctor-detectors/agent-node-bin-parser");
+} = require("../src/shell/doctor-detectors/agent-node-bin-parser");
 
 function fakeFs(existingPaths) {
   const existing = new Set(existingPaths);

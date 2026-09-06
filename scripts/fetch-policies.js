@@ -8,7 +8,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   POLICY_COMMIT, POLICY_NAMES, STILTS_COMMIT, STILT_HEIGHTS_CM, policyDirectory, stiltsDirectory,
-} = require("../src/pet-model-protocol");
+} = require("../src/robots/duck/pet-model-protocol");
 
 const SPACE_URL = `https://huggingface.co/spaces/pollen-robotics/microduck-simulator/resolve/${POLICY_COMMIT}/app/public/policies/`;
 const STILTS_URL = `https://huggingface.co/HannesVonEssen/microduck-stilts/resolve/${STILTS_COMMIT}/`;

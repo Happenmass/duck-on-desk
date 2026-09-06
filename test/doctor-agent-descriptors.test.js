@@ -5,7 +5,7 @@ const {
   AGENT_DESCRIPTORS,
   getAgentDescriptor,
   getAgentDescriptors,
-} = require("../src/doctor-detectors/agent-descriptors");
+} = require("../src/shell/doctor-detectors/agent-descriptors");
 
 describe("doctor agent descriptors", () => {
   it("covers all supported agents", () => {

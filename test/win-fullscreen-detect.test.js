@@ -9,7 +9,7 @@ const {
   isDesktopShellWindowClass,
   isMaximizedNormalWindow,
   FULLSCREEN_TOLERANCE_PX,
-} = require("../src/win-fullscreen-detect");
+} = require("../src/shell/win-fullscreen-detect");
 
 // A koffi stand-in: load().func(signature) returns a stub keyed off the API
 // name, mimicking koffi's _Out_/_Inout_ marshalling by writing into the passed

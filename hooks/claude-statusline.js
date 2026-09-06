@@ -131,7 +131,7 @@ function buildStateBody(payload, contextUsage, options = {}) {
   // metadata_only routes this around the updateSession lifecycle machine:
   // context usage is annotated onto an existing session and dropped otherwise -
   // never creating a session, touching recentEvents, or bumping updatedAt
-  // (src/server-route-state.js + state.js updateSessionMetadata).
+  // (src/state/server-route-state.js + state.js updateSessionMetadata).
   // state/preserve_state stay as a defensive fallback shape only.
   const body = {
     state: "idle",

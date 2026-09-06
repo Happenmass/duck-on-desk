@@ -4,8 +4,8 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const asar = require("@electron/asar");
-const { resolveReleaseTarget } = require("../src/native-package-target");
-const { KOFFI_VERSION, KOFFI_TRIPLETS } = require("../src/koffi-package-contract");
+const { resolveReleaseTarget } = require("../src/shell/native-package-target");
+const { KOFFI_VERSION, KOFFI_TRIPLETS } = require("../src/shell/koffi-package-contract");
 const { parseNativeFile, toPosix } = require("./audit-packaged-native");
 
 const KOFFI_2163_TRIPLETS = KOFFI_TRIPLETS;
@@ -93,7 +93,7 @@ function assertSafeKoffiRoot({ appOutDir, resourcesRoot, nativeRoot }) {
 
 function pruneKoffiNative({ appOutDir, targetId, outputPath = "", asarModule = asar } = {}) {
   if (!appOutDir) throw new TypeError("appOutDir is required");
-  const target = require("../src/native-package-target").getReleaseTarget(targetId);
+  const target = require("../src/shell/native-package-target").getReleaseTarget(targetId);
   const appRoot = locateAppRoot(appOutDir, target);
   const resourcesRoot = locateResourcesRoot(appRoot, target);
   const archivePath = path.join(resourcesRoot, "app.asar");

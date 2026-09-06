@@ -6,13 +6,13 @@ const { EventEmitter } = require("node:events");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const createTopmostRuntime = require("../src/topmost-runtime");
-const createPetWindowRuntime = require("../src/pet-window-runtime");
+const createTopmostRuntime = require("../src/shell/topmost-runtime");
+const createPetWindowRuntime = require("../src/shell/pet-window-runtime");
 const {
   createHitWindowActivationController,
   createHitWindowFocusableSetter,
   WS_EX_NOACTIVATE,
-} = require("../src/win-hit-window-activation");
+} = require("../src/shell/win-hit-window-activation");
 
 class FakeWindow extends EventEmitter {
   constructor(options = {}) {
@@ -124,14 +124,14 @@ describe("topmost runtime Windows recovery", () => {
 
   // PR #751 Codex review #12 (rework batch B-7, non-blocking): every
   // applyPetWindowPosition spy in this file now captures the 3rd argument
-  // too (opts), not just (x, y). applyFreshNudge() (src/topmost-runtime.js)
+  // too (opts), not just (x, y). applyFreshNudge() (src/shell/topmost-runtime.js)
   // deliberately passes {force:true} on both its calls — plan §12.12's
   // safety line, since the whole point of a nudge is a real native write —
   // and main.js's real applyPetWindowPosition wrapper used to silently drop
   // a 3rd argument entirely (found and fixed earlier in this same PR #751
   // rework, batch A: it broke this exact force:true). A spy that only ever
   // recorded (x, y) could never have caught that regression. restorePendingNudge()'s
-  // own call (src/topmost-runtime.js:418) passes no options at all — expect
+  // own call (src/shell/topmost-runtime.js:418) passes no options at all — expect
   // `undefined` there, not force:true, to keep that distinction visible.
   it("guards main-window topmost loss by nudging input routing and scheduling recovery", () => {
     const timers = makeTimers();
@@ -265,7 +265,7 @@ describe("topmost runtime Windows recovery", () => {
     timers.timeouts[0].fn();
 
     // The third entry is restorePendingNudge()'s own call
-    // (src/topmost-runtime.js:418) — it passes no options at all (undefined),
+    // (src/shell/topmost-runtime.js:418) — it passes no options at all (undefined),
     // unlike applyFreshNudge()'s two force:true calls above it.
     assert.deepStrictEqual(positions, [[11, 20, { force: true }], [10, 20, { force: true }], [10, 20, undefined]]);
     assert.deepStrictEqual(current, { x: 10, y: 20, width: 100, height: 100 });

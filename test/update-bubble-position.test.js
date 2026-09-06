@@ -1,7 +1,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const updateBubble = require("../src/update-bubble");
+const updateBubble = require("../src/shell/update-bubble");
 
 describe("update bubble follow-pet positioning", () => {
   it("anchors a short bubble below the follow rect with a fixed gap when there is room", () => {

@@ -6,9 +6,9 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const themeLoader = require("../src/theme-loader");
-const createThemeContext = require("../src/theme-context");
-const { resolvePetAccessoryPayload } = require("../src/pet-customization-catalog");
+const themeLoader = require("../src/shell/theme-loader");
+const createThemeContext = require("../src/shell/theme-context");
+const { resolvePetAccessoryPayload } = require("../src/shell/pet-customization-catalog");
 
 const ROOT_FRAME = { cx: 50, baseY: 20, width: 30 };
 const MINI_FRAME = { cx: 10, baseY: 4, width: 6 };

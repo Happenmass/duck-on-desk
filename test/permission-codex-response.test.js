@@ -4,7 +4,7 @@ const assert = require("node:assert");
 const Module = require("node:module");
 const { describe, it } = require("node:test");
 
-const PERMISSION_MODULE_PATH = require.resolve("../src/permission");
+const PERMISSION_MODULE_PATH = require.resolve("../src/state/permission");
 
 function loadPermissionWithElectron(fakeElectron = null) {
   delete require.cache[PERMISSION_MODULE_PATH];
@@ -23,7 +23,7 @@ function loadPermissionWithElectron(fakeElectron = null) {
     return originalLoad.apply(this, arguments);
   };
   try {
-    return require("../src/permission");
+    return require("../src/state/permission");
   } finally {
     Module._load = originalLoad;
   }

@@ -223,7 +223,7 @@ describe("#681 no-degraded — an attempted-but-failed snapshot reports nothing,
   // does not contain US. snapshotOk is true, the walk still reads nothing, and
   // `terminalPid || lastGoodPid` hands back the untouched startPid.
   //
-  // Shipping that is worse than shipping nothing. src/state.js merges
+  // Shipping that is worse than shipping nothing. src/state/state.js merges
   // `sourcePid || existing.sourcePid`, so a truthy-but-wrong pid OVERWRITES the
   // correct one the server already learned — see
   // test/state-source-pid-merge.test.js, which proves a null is absorbed and a

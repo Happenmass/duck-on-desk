@@ -6,10 +6,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const RENDERER = path.join(__dirname, "..", "src", "renderer.js");
-const ACCESSORY_LAYOUT = path.join(__dirname, "..", "src", "pet-accessory-layout.js");
-const ACCESSORY_MIRROR = path.join(__dirname, "..", "src", "pet-accessory-mirror.js");
-const ACCESSORY_DESCRIPTOR = path.join(__dirname, "..", "src", "pet-accessory-descriptor.js");
+const RENDERER = path.join(__dirname, "..", "src", "shell", "renderer.js");
+const ACCESSORY_LAYOUT = path.join(__dirname, "..", "src", "shell", "pet-accessory-layout.js");
+const ACCESSORY_MIRROR = path.join(__dirname, "..", "src", "shell", "pet-accessory-mirror.js");
+const ACCESSORY_DESCRIPTOR = path.join(__dirname, "..", "src", "shell", "pet-accessory-descriptor.js");
 const PRELOAD = path.join(__dirname, "..", "src", "preload.js");
 const MAIN = path.join(__dirname, "..", "src", "main.js");
 
@@ -1055,7 +1055,7 @@ describe("renderer test-result reactions", () => {
   });
 
   it("keeps mini mirroring and viewport translation independent from failure shake", () => {
-    const css = readNormalized(path.join(__dirname, "..", "src", "styles.css"));
+    const css = readNormalized(path.join(__dirname, "..", "src", "shell", "styles.css"));
     assert.match(css, /#pet-facing-stage\.duck-test-shake\s*\{[^}]*animation:/);
     assert.match(css, /@keyframes duck-test-shake\s*\{[\s\S]*translate:[\s\S]*rotate:/);
     assert.ok(!/#pet-container\.duck-test-shake/.test(css));
@@ -2637,8 +2637,8 @@ describe("renderer pet accessory wardrobe", () => {
   });
 
   it("keeps the structural stages full-size and uses independent transform properties", () => {
-    const html = readNormalized(path.join(__dirname, "..", "src", "index.html"));
-    const css = readNormalized(path.join(__dirname, "..", "src", "styles.css"));
+    const html = readNormalized(path.join(__dirname, "..", "src", "shell", "index.html"));
+    const css = readNormalized(path.join(__dirname, "..", "src", "shell", "styles.css"));
     const renderer = readNormalized(RENDERER);
     const preload = readNormalized(PRELOAD);
 
@@ -3119,7 +3119,7 @@ describe("renderer viewport offset X (#690)", () => {
     assert.strictEqual(harness.container.id, "pet-container");
     assert.strictEqual(harness.container.style.translate, "30px 0");
     // #pet-facing-stage (mini-left's mirror layer) and #pet-effect-stage are
-    // both direct children of #pet-container in the real DOM (src/index.html)
+    // both direct children of #pet-container in the real DOM (src/shell/index.html)
     // and in this harness (container.appendChild(facingStage) /
     // container.appendChild(effectStage)). Neither should receive its own
     // translate from this handler — the shift must come from the parent
@@ -3150,7 +3150,7 @@ describe("renderer viewport offset X (#690)", () => {
   it("restores the current offset through the same did-finish-load resend path as viewport-offset (Y)", () => {
     const preload = readNormalized(PRELOAD);
     const main = readNormalized(MAIN);
-    const runtime = readNormalized(path.join(__dirname, "..", "src", "pet-window-runtime.js"));
+    const runtime = readNormalized(path.join(__dirname, "..", "src", "shell", "pet-window-runtime.js"));
 
     // PR #751 Codex review #12 (rework batch B-8): preload's bridge now
     // normalizes a non-finite value to 0 (see the "§6.6" behavioral test
@@ -3182,7 +3182,7 @@ describe("renderer viewport offset X (#690)", () => {
   // receives viewport-offset-x at all, while a context with a genuine
   // non-zero X offset (Linux edge-virtualization) does.
   it("resendViewportOffsets() behaviorally sends Y unconditionally and X only when non-zero", () => {
-    const createPetWindowRuntime = require(path.join(__dirname, "..", "src", "pet-window-runtime.js"));
+    const createPetWindowRuntime = require(path.join(__dirname, "..", "src", "shell", "pet-window-runtime.js"));
     const sent = [];
     const runtime = createPetWindowRuntime({
       sendToRenderer: (...args) => sent.push(args),

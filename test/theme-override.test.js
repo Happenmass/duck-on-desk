@@ -13,15 +13,15 @@ const { describe, it, beforeEach, afterEach } = require("node:test");
 const assert = require("node:assert");
 const path = require("path");
 
-const themeLoader = require("../src/theme-loader");
+const themeLoader = require("../src/shell/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
 const _defaultTheme = themeLoader.loadTheme("duck");
 
 const {
   commandRegistry,
   ONESHOT_OVERRIDE_STATES,
-} = require("../src/settings-actions");
-const prefs = require("../src/prefs");
+} = require("../src/shell/settings-actions");
+const prefs = require("../src/shell/prefs");
 
 // ── state.js gate tests ────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ describe("state.js applyState() gate", () => {
 
   it("non-disabled oneshot: attention 正常播放", () => {
     ctx = makeCtx({ isOneshotDisabled: () => false });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
     ctx._stateChanges.length = 0;
     ctx._sounds.length = 0;
     api.applyState("attention");
@@ -86,7 +86,7 @@ describe("state.js applyState() gate", () => {
 
   it("disabled attention: 不播 visual、不响音、回落到 idle", () => {
     ctx = makeCtx({ isOneshotDisabled: disabledSet(new Set(["attention"])) });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
     ctx._stateChanges.length = 0;
     ctx._sounds.length = 0;
     api.applyState("attention");
@@ -100,7 +100,7 @@ describe("state.js applyState() gate", () => {
       miniMode: true,
       isOneshotDisabled: disabledSet(new Set(["notification"])),
     });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
     ctx._stateChanges.length = 0;
     ctx._sounds.length = 0;
     api.applyState("notification");
@@ -115,7 +115,7 @@ describe("state.js applyState() gate", () => {
       miniMode: true,
       isOneshotDisabled: disabledSet(new Set(["attention"])),
     });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
     ctx._stateChanges.length = 0;
     api.applyState("attention");
     const played = ctx._stateChanges.map((a) => a[0]);
@@ -124,7 +124,7 @@ describe("state.js applyState() gate", () => {
 
   it("PermissionRequest path (updateSession) 被 gate 拦住", () => {
     ctx = makeCtx({ isOneshotDisabled: disabledSet(new Set(["notification"])) });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
     ctx._stateChanges.length = 0;
     ctx._sounds.length = 0;
     api.updateSession("s1", "any", "PermissionRequest", {
@@ -139,7 +139,7 @@ describe("state.js applyState() gate", () => {
   it("non-oneshot state 不受 gate 影响（即便 ctx.isOneshotDisabled 错报 true）", () => {
     // 模拟有 bug 的 ctx：对所有 state 都返回 true
     ctx = makeCtx({ isOneshotDisabled: () => true });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
     ctx._stateChanges.length = 0;
     api.applyState("working");
     const played = ctx._stateChanges.map((a) => a[0]);
@@ -152,7 +152,7 @@ describe("state.js applyState() gate", () => {
         "attention", "error", "sweeping", "notification", "carrying",
       ])),
     });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
     ctx._stateChanges.length = 0;
     api.applyState("attention");
     const played = ctx._stateChanges.map((a) => a[0]);
@@ -167,7 +167,7 @@ describe("state.js applyState() gate", () => {
 
   it("attention disabled + working session: 回落到 working 而不是 attention", () => {
     ctx = makeCtx({ isOneshotDisabled: disabledSet(new Set(["attention"])) });
-    api = require("../src/state")(ctx);
+    api = require("../src/state/state")(ctx);
     // 先触发 working session 让 resolveDisplayState 返回 working
     api.updateSession("s1", "working", "PreToolUse", {
       cwd: "/tmp",

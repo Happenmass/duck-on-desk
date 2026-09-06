@@ -6,7 +6,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
-const { createSessionFolderOpener } = require("../src/session-open-folder");
+const { createSessionFolderOpener } = require("../src/state/session-open-folder");
 
 test("session folder opener re-resolves a local session and opens its existing cwd", async (t) => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "duck-session-folder-"));

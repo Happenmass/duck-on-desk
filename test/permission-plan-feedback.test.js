@@ -8,7 +8,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const Module = require("node:module");
-const { classifyPermissionInteraction } = require("../src/permission-automation-policy");
+const { classifyPermissionInteraction } = require("../src/state/permission-automation-policy");
 
 // ── Mock electron before requiring permission.js ──
 // permission.js does `const { BrowserWindow, globalShortcut } = require("electron")`
@@ -28,7 +28,7 @@ Module._load = function (request) {
   if (request === "electron") return __electronMock;
   return __origModuleLoad.apply(this, arguments);
 };
-const initPermission = require("../src/permission");
+const initPermission = require("../src/state/permission");
 Module._load = __origModuleLoad;
 
 function createMockResponse() {

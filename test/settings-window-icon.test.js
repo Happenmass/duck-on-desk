@@ -13,7 +13,7 @@ const {
   getSettingsWindowTaskbarDetails,
   shouldOpenSettingsWindowFromArgv,
   applyWindowsAppUserModelId,
-} = require("../src/settings-window-icon");
+} = require("../src/shell/settings-window-icon");
 
 describe("settings window icon path", () => {
   it("prefers the 256px project icon for unpackaged Windows runs", () => {

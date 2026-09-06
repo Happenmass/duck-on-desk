@@ -22,7 +22,7 @@ function normalizeSessionText(value) {
 }
 
 // Bound + sanitize a session title before storage or transport. Mirrors the
-// normalizeTitle in hooks/duck-hook.js and src/state-session-snapshot.js:
+// normalizeTitle in hooks/duck-hook.js and src/state/state-session-snapshot.js:
 // collapse control chars and whitespace, cap at 80 chars (with a trailing
 // ellipsis). A 17k-char title would otherwise blow the 16 KiB /state body
 // cap, trigger a headerless 413, and make the plugin distrust the response

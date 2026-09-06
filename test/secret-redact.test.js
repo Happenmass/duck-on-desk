@@ -3,7 +3,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 
-const { redactSecrets } = require("../src/secret-redact");
+const { redactSecrets } = require("../src/shell/secret-redact");
 
 test("redactSecrets masks high-confidence secret shapes", () => {
   const sk = redactSecrets("rotate sk-abcdefghijklmnop1234 now");

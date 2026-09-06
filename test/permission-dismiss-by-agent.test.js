@@ -9,8 +9,8 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const initPermission = require("../src/permission");
-const { classifyPermissionInteraction } = require("../src/permission-automation-policy");
+const initPermission = require("../src/state/permission");
+const { classifyPermissionInteraction } = require("../src/state/permission-automation-policy");
 
 function createMockResponse() {
   const captured = { destroyCalls: 0 };

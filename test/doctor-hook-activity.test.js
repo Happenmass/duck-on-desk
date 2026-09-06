@@ -11,7 +11,7 @@ const {
   evaluateConnectionTest,
   runConnectionTest,
   scanFileMtimeActivity,
-} = require("../src/doctor-hook-activity");
+} = require("../src/shell/doctor-hook-activity");
 
 describe("doctor hook activity connection test", () => {
   it("passes when any HTTP event was accepted", () => {

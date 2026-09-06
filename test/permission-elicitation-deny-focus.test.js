@@ -3,7 +3,7 @@
 // permission layer must (1) send the Elicitation deny response so Claude
 // Code can fall back to the native terminal prompt, and (2) call
 // ctx.focusTerminalForSession so the originating terminal/workspace comes
-// forward. Both steps live in src/permission.js's `isElicitation` branch
+// forward. Both steps live in src/state/permission.js's `isElicitation` branch
 // of resolvePermissionEntry — replacing the bubble button with
 // "deny-and-focus" would skip step (1) and leave the blocking HTTP hook
 // open.
@@ -11,7 +11,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const initPermission = require("../src/permission");
+const initPermission = require("../src/state/permission");
 
 function createMockResponse() {
   const captured = {

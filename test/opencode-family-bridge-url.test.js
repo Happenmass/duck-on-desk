@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const {
   normalizeOpencodeFamilyBridgeUrl,
   isValidOpencodeFamilyBridgeToken,
-} = require("../src/opencode-family-bridge-url");
+} = require("../src/state/opencode-family-bridge-url");
 
 test("opencode-family bridge accepts only an explicit IPv4 loopback HTTP origin", () => {
   assert.strictEqual(

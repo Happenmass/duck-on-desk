@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 
-const { loadTrayNormalIcon, loadTrayFlashIcon } = require("../src/tray-flash-icon");
+const { loadTrayNormalIcon, loadTrayFlashIcon } = require("../src/shell/tray-flash-icon");
 
 // Minimal nativeImage stand-in: records what was asked of it so the tests can
 // assert on the sizing decisions rather than on real pixels.

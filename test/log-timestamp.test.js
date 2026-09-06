@@ -4,7 +4,7 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
-const { formatLocalTimestamp } = require("../src/log-timestamp");
+const { formatLocalTimestamp } = require("../src/shell/log-timestamp");
 
 describe("formatLocalTimestamp", () => {
   it("formats an east-of-UTC timezone", () => {

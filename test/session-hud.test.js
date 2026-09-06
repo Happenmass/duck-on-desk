@@ -3,7 +3,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const sessionHud = require("../src/session-hud");
+const sessionHud = require("../src/state/session-hud");
 const {
   computeSessionHudBounds,
   computeHudLayout,
@@ -507,7 +507,7 @@ describe("session HUD auto-hide helpers", () => {
 
 describe("session HUD v5 three-state runtime contracts (source-level)", () => {
   const src = fs.readFileSync(
-    path.join(__dirname, "..", "src", "session-hud.js"),
+    path.join(__dirname, "..", "src", "state", "session-hud.js"),
     "utf8"
   );
 

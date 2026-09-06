@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const { i18n, SUPPORTED_LANGS } = require("../src/i18n");
+const { i18n, SUPPORTED_LANGS } = require("../src/shell/i18n");
 
 const ROOT = path.join(__dirname, "..");
 
@@ -43,7 +43,7 @@ function assertLocaleObjectParity(locales, label) {
 }
 
 function loadSettingsI18nStrings() {
-  const source = fs.readFileSync(path.join(ROOT, "src", "settings-i18n.js"), "utf8");
+  const source = fs.readFileSync(path.join(ROOT, "src", "shell", "settings-i18n.js"), "utf8");
   const context = {};
   context.globalThis = context;
   vm.runInNewContext(source, context);
@@ -51,7 +51,7 @@ function loadSettingsI18nStrings() {
 }
 
 function loadBubbleStrings() {
-  const source = fs.readFileSync(path.join(ROOT, "src", "bubble-renderer.js"), "utf8");
+  const source = fs.readFileSync(path.join(ROOT, "src", "shell", "bubble-renderer.js"), "utf8");
   const match = source.match(/const BUBBLE_STRINGS = (\{[\s\S]*?\n\});/);
   assert.ok(match, "bubble-renderer.js should define BUBBLE_STRINGS");
   const context = {};
@@ -59,21 +59,24 @@ function loadBubbleStrings() {
   return context.result;
 }
 
-// Renderers outside the settings window resolve t() against src/i18n.js, and t() falls
+// Renderers outside the settings window resolve t() against src/shell/i18n.js, and t() falls
 // back to returning the key itself, so a string filed under settings-i18n.js by mistake
 // renders its own name into the UI instead of failing loudly.
 function runtimeDictRenderers() {
   const dir = path.join(ROOT, "src");
   const renderers = new Set();
-  for (const html of fs.readdirSync(dir).filter((f) => f.endsWith(".html"))) {
-    const markup = fs.readFileSync(path.join(dir, html), "utf8");
-    const scripts = Array.from(markup.matchAll(/<script[^>]+src="\.?\/?([^"]+\.js)"/g), (m) => m[1]);
-    if (scripts.includes("settings-i18n.js")) continue;
+  for (const html of fs.readdirSync(dir, { recursive: true }).filter((f) => f.endsWith(".html"))) {
+    const htmlPath = path.join(dir, html);
+    const markup = fs.readFileSync(htmlPath, "utf8");
+    const scripts = Array.from(markup.matchAll(/<script[^>]+src="([^"]+\.js)"/g), (m) => m[1]);
+    if (scripts.some((script) => path.basename(script) === "settings-i18n.js")) continue;
     for (const script of scripts) {
-      const file = path.join(dir, script);
+      const file = path.resolve(path.dirname(htmlPath), script);
       if (!fs.existsSync(file)) continue;
       const source = fs.readFileSync(file, "utf8");
-      if (/function t\(key\)/.test(source) && /getI18n\(/.test(source)) renderers.add(script);
+      if (/function t\(key\)/.test(source) && /getI18n\(/.test(source)) {
+        renderers.add(path.relative(dir, file).split(path.sep).join("/"));
+      }
     }
   }
   return Array.from(renderers);
@@ -152,9 +155,9 @@ describe("i18n locales", () => {
   });
 
   it("keeps main-process Settings dialog strings available for every supported language", () => {
-    const settingsIpcSource = fs.readFileSync(path.join(ROOT, "src", "settings-ipc.js"), "utf8");
+    const settingsIpcSource = fs.readFileSync(path.join(ROOT, "src", "shell", "settings-ipc.js"), "utf8");
     const animationOverridesSource = fs.readFileSync(
-      path.join(ROOT, "src", "settings-animation-overrides-main.js"),
+      path.join(ROOT, "src", "shell", "settings-animation-overrides-main.js"),
       "utf8"
     );
     for (const [name, source] of [
@@ -176,7 +179,7 @@ describe("i18n locales", () => {
 
   it("keeps every renderer t(\"key\") literal resolvable in the runtime locale", () => {
     const renderers = runtimeDictRenderers();
-    for (const known of ["session-hud-renderer.js", "dashboard-renderer.js"]) {
+    for (const known of ["state/session-hud-renderer.js", "shell/dashboard-renderer.js"]) {
       assert.ok(renderers.includes(known), `renderer discovery missed ${known}`);
     }
     for (const file of renderers) {
@@ -193,7 +196,7 @@ describe("i18n locales", () => {
       }
       assert.ok(keys.size, `${file} should call t() with literal keys`);
       for (const key of keys) {
-        assert.ok(key in i18n.en, `${file}: i18n key "${key}" is missing from src/i18n.js`);
+        assert.ok(key in i18n.en, `${file}: i18n key "${key}" is missing from src/shell/i18n.js`);
       }
     }
   });
@@ -231,7 +234,7 @@ describe("i18n locales", () => {
   });
 
   it("keeps Codex Pet main dialog strings available for every supported language", () => {
-    const source = fs.readFileSync(path.join(ROOT, "src", "codex-pet-main.js"), "utf8");
+    const source = fs.readFileSync(path.join(ROOT, "src", "state", "codex-pet-main.js"), "utf8");
     for (const name of ["getImportDialogStrings", "getRemovalDialogStrings"]) {
       const start = source.indexOf(`function ${name}()`);
       assert.notStrictEqual(start, -1, `missing ${name}`);

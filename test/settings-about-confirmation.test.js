@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const ABOUT_SOURCE = path.join(__dirname, "..", "src", "settings-tab-about.js");
+const ABOUT_SOURCE = path.join(__dirname, "..", "src", "shell", "settings-tab-about.js");
 
 class FakeElement {
   constructor(tagName) {

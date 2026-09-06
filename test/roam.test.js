@@ -3,7 +3,7 @@
 const { describe, it, beforeEach, afterEach, mock } = require("node:test");
 const assert = require("node:assert");
 
-const roamModule = require("../src/roam");
+const roamModule = require("../src/robots/duck/roam");
 
 function makeCtx(overrides = {}) {
   const bounds = { x: 400, y: 300, width: 120, height: 120 };

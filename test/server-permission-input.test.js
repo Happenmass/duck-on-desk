@@ -13,7 +13,7 @@ const {
   normalizeCodexPermissionToolInput,
   normalizeToolMatchValue,
   buildToolInputFingerprint,
-} = require("../src/server-permission-utils");
+} = require("../src/state/server-permission-utils");
 
 describe("permission input normalization", () => {
   it("truncates deeply nested preview values without mutating the source", () => {

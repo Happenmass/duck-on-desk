@@ -1,4 +1,4 @@
-// Unit tests for the Superset deep-link helpers in src/focus.js.
+// Unit tests for the Superset deep-link helpers in src/shell/focus.js.
 //
 // These cover the deterministic parts of the Superset focus path
 // (data-dir discovery, scheme derivation, workspace-id sqlite lookup)
@@ -12,7 +12,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
-const focus = require("../src/focus");
+const focus = require("../src/shell/focus");
 const {
   findSupersetDataDirs,
   supersetSchemeForDir,

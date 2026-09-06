@@ -12,7 +12,7 @@ const {
   probeSvgCycle,
   probeGifCycle,
   probeApngCycle,
-} = require("../src/animation-cycle");
+} = require("../src/shell/animation-cycle");
 
 function buildGifFrame(delayCs) {
   return Buffer.from([

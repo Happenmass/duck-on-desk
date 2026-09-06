@@ -1,7 +1,7 @@
 const assert = require("assert");
 const { describe, it } = require("node:test");
 
-const { keepOutOfTaskbar, __test } = require("../src/taskbar");
+const { keepOutOfTaskbar, __test } = require("../src/shell/taskbar");
 
 describe("taskbar helpers", () => {
   it("reasserts skipTaskbar on Windows and Linux", () => {

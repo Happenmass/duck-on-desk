@@ -3,8 +3,8 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const bubbleCss = fs.readFileSync(path.join(__dirname, "..", "src", "bubble.css"), "utf8");
-const bubbleRenderer = fs.readFileSync(path.join(__dirname, "..", "src", "bubble-renderer.js"), "utf8");
+const bubbleCss = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "bubble.css"), "utf8");
+const bubbleRenderer = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "bubble-renderer.js"), "utf8");
 
 describe("AskUserQuestion bubble Other option", () => {
   it("defines Other copy and textarea placeholders for all supported bubble locales", () => {

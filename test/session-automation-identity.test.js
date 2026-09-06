@@ -6,7 +6,7 @@ const assert = require("node:assert");
 const {
   ADAPTER_POLICY,
   assessSessionAutomationIdentity,
-} = require("../src/session-automation-identity");
+} = require("../src/state/session-automation-identity");
 
 function assess(agentId, rawSessionId, overrides = {}) {
   return assessSessionAutomationIdentity({

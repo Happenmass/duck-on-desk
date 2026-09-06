@@ -17,7 +17,7 @@ const {
   normalizeTextScaleByDisplay,
   textScaleToUiPercent,
   uiPercentToTextScale,
-} = require("../src/text-scale");
+} = require("../src/shell/text-scale");
 
 describe("text-scale clamp and validation", () => {
   it("accepts the full supported range", () => {

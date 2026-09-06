@@ -7,7 +7,7 @@ const path = require("node:path");
 const {
   sanitizeSvg,
   collectSafeRasterRefs,
-} = require("../src/theme-sanitizer");
+} = require("../src/shell/theme-sanitizer");
 
 test("sanitizeSvg strips unsafe script, href, and CSS URL surfaces", () => {
   const svg = [

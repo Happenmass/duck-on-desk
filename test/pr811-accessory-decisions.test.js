@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const { loadSpriteTheme, CRAB_SVG_DIR } = require("./fixtures/sprite-theme");
-const accessoryLayout = require("../src/pet-accessory-layout");
+const accessoryLayout = require("../src/shell/pet-accessory-layout");
 
 
 const VISIBLE_MOUTH_FILES = Object.freeze([
@@ -250,7 +250,7 @@ test("the canonical cigarette frame reproduces the pinned standard-pose coordina
 test("every visible animated cigarette has a measured or authored hit envelope", () => {
   const theme = loadSpriteTheme("crab", { strict: true });
   const files = theme.customization.mouthAccessories.files;
-  const measured = require("../src/pet-accessory-hitbox")
+  const measured = require("../src/shell/pet-accessory-hitbox")
     .BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING.duck;
 
   for (const file of VISIBLE_MOUTH_FILES) {

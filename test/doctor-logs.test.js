@@ -10,7 +10,7 @@ const {
   isAllowedLogBasename,
   openDuckLog,
   resolveDuckLogTarget,
-} = require("../src/doctor-logs");
+} = require("../src/shell/doctor-logs");
 
 describe("doctor log opener", () => {
   it("accepts only bare .log file names", () => {

@@ -1,13 +1,13 @@
 "use strict";
 
-// This file mocks process.platform while loading src/focus; keep those mocks contained here.
+// This file mocks process.platform while loading src/shell/focus; keep those mocks contained here.
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
 
 function loadFocusWithMock(options = {}) {
   const cpKey = require.resolve("child_process");
-  const focusKey = require.resolve("../src/focus");
+  const focusKey = require.resolve("../src/shell/focus");
   const origCp = require.cache[cpKey];
   const origFocus = require.cache[focusKey];
   const origPlatform = Object.getOwnPropertyDescriptor(process, "platform");
@@ -42,7 +42,7 @@ function loadFocusWithMock(options = {}) {
 
   let initFocus;
   try {
-    initFocus = require("../src/focus");
+    initFocus = require("../src/shell/focus");
   } finally {
     Object.defineProperty(process, "platform", origPlatform);
   }

@@ -3,12 +3,12 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { detectIrreversible } = require("../src/bubble-format");
-const { SUPPORTED_LANGS } = require("../src/i18n");
+const { detectIrreversible } = require("../src/shell/bubble-format");
+const { SUPPORTED_LANGS } = require("../src/shell/i18n");
 
-const bubbleRenderer = fs.readFileSync(path.join(__dirname, "..", "src", "bubble-renderer.js"), "utf8");
-const bubbleHtml = fs.readFileSync(path.join(__dirname, "..", "src", "bubble.html"), "utf8");
-const bubbleCss = fs.readFileSync(path.join(__dirname, "..", "src", "bubble.css"), "utf8");
+const bubbleRenderer = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "bubble-renderer.js"), "utf8");
+const bubbleHtml = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "bubble.html"), "utf8");
+const bubbleCss = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "bubble.css"), "utf8");
 
 describe("detectIrreversible — destructive shell commands get a hint", () => {
   const hits = [

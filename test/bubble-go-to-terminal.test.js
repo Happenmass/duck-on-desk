@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const SOURCE = fs.readFileSync(path.join(__dirname, "..", "src", "bubble-renderer.js"), "utf8");
+const SOURCE = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "bubble-renderer.js"), "utf8");
 
 function interaction(intent, capabilities = {}) {
   return {

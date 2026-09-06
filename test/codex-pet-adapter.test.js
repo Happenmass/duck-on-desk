@@ -5,9 +5,9 @@ const os = require("node:os");
 const path = require("node:path");
 const zlib = require("node:zlib");
 
-const adapter = require("../src/codex-pet-adapter");
-const themeLoader = require("../src/theme-loader");
-const { sanitizeSvg } = require("../src/theme-sanitizer");
+const adapter = require("../src/state/codex-pet-adapter");
+const themeLoader = require("../src/shell/theme-loader");
+const { sanitizeSvg } = require("../src/shell/theme-sanitizer");
 
 const FIXTURE_DIR = path.join(__dirname, "fixtures", "codex-pets", "tiny-atlas-png");
 const FRAME_WIDTH = 192;
@@ -573,7 +573,7 @@ describe("codex-pet-adapter package validation", () => {
 
 describe("codex-pet-adapter wrapper generation and materialization", () => {
   it("keeps the renderer Codex Pet visual map aligned with generated wrappers", () => {
-    const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "renderer.js"), "utf8");
+    const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "renderer.js"), "utf8");
     const mapBlock = rendererSource.match(
       /const CODEX_PET_VISUAL_BY_FILE = Object\.freeze\(\{([\s\S]*?)\}\);/
     );

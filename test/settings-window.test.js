@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert");
 const path = require("node:path");
 
-const createSettingsWindowRuntime = require("../src/settings-window");
+const createSettingsWindowRuntime = require("../src/shell/settings-window");
 
 class FakeBrowserWindow {
   static instances = [];

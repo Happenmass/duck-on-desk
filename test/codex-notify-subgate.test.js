@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const { shouldSuppressCodexNotifyBubble } = require("../src/permission").__test;
+const { shouldSuppressCodexNotifyBubble } = require("../src/state/permission").__test;
 
 describe("shouldSuppressCodexNotifyBubble", () => {
   it("returns false for the default live path", () => {

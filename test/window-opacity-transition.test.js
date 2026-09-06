@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const { describe, it } = require("node:test");
 
-const { animateWindowOpacity } = require("../src/window-opacity-transition");
+const { animateWindowOpacity } = require("../src/shell/window-opacity-transition");
 
 function createFakeTimers() {
   let now = 0;

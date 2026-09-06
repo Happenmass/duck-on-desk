@@ -4,12 +4,12 @@ const { afterEach, describe, it } = require("node:test");
 const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
 
-const initServer = require("../src/server");
+const initServer = require("../src/state/server");
 const {
   MAX_CODEX_OFFICIAL_TURNS,
   resolveCodexOfficialHookState,
-} = require("../src/server-codex-official-turns");
-const { makeSessionKey } = require("../src/session-key");
+} = require("../src/state/server-codex-official-turns");
+const { makeSessionKey } = require("../src/state/session-key");
 const { getClaudeHookScriptPath, getClaudeAutoStartScriptPath } = require("../hooks/install");
 
 const EXPECTED_HOOK_SCRIPT_PATH = getClaudeHookScriptPath();

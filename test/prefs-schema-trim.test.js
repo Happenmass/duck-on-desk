@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const prefs = require("../src/prefs");
+const prefs = require("../src/shell/prefs");
 
 const REMOVED = ["telegramMigrationLastNotified", "feishuApprovalMigrationLastNotified", "recapEnabled",
   "kimiQuotaCollectionEnabled", "mobilePreviewEnabled", "remoteSsh", "discordPresence", "feishuApproval",

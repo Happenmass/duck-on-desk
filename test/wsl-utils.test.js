@@ -1,6 +1,6 @@
 "use strict";
 
-// Unit tests for src/wsl-utils.js (parseDistroList, excluded distros, etc.)
+// Unit tests for src/state/wsl-utils.js (parseDistroList, excluded distros, etc.)
 // Does NOT require Windows or WSL — tests only the pure functions.
 
 const { describe, it } = require("node:test");
@@ -9,7 +9,7 @@ const assert = require("node:assert");
 const {
   parseDistroList,
   EXCLUDED_DISTROS,
-} = require("../src/wsl-utils");
+} = require("../src/state/wsl-utils");
 
 describe("wsl-utils", () => {
   describe("parseDistroList", () => {

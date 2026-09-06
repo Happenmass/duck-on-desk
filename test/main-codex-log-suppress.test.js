@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 
-const createAgentRuntimeMain = require("../src/agent-runtime-main");
+const createAgentRuntimeMain = require("../src/state/agent-runtime-main");
 
 describe("main Codex official hook JSONL suppression", () => {
   it("suppresses guardian_assessment for hook-active Codex sessions", () => {

@@ -11,7 +11,7 @@
 // so pointing it at fixtures/src loads these as *built-in* themes, the same
 // trust level the tests were written against.
 const path = require("node:path");
-const themeLoader = require("../../src/theme-loader");
+const themeLoader = require("../../src/shell/theme-loader");
 
 const FIXTURE_SRC = path.join(__dirname, "src");
 const REAL_SRC = path.join(__dirname, "..", "..", "src");

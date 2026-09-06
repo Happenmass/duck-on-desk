@@ -8,7 +8,7 @@ const {
   parseMacOSMajorVersion,
   resolveRuntimeDockIconPolicy,
   shouldInstallRuntimeDockIcon,
-} = require("../src/mac-dock-icon-runtime");
+} = require("../src/shell/mac-dock-icon-runtime");
 
 describe("macOS runtime Dock icon policy", () => {
   it("parses numeric macOS major versions without string ordering", () => {

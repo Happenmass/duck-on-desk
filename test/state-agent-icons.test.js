@@ -9,7 +9,7 @@ const zlib = require("zlib");
 const { fileURLToPath } = require("url");
 
 const { getAllAgents } = require("../agents/registry");
-const { INSTALLABLE_AGENT_IDS } = require("../src/settings-actions-agents");
+const { INSTALLABLE_AGENT_IDS } = require("../src/shell/settings-actions-agents");
 const {
   ARTWORK_SIZE,
   CONTRAST_TILE_SIZE,
@@ -34,7 +34,7 @@ const {
   getAgentIconPath,
   getAgentIcon,
   getAgentIconUrl,
-} = require("../src/state-agent-icons");
+} = require("../src/state/state-agent-icons");
 
 function readPngSize(filePath) {
   const buffer = fs.readFileSync(filePath);

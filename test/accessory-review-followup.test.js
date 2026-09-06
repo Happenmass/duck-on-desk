@@ -3,16 +3,16 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const createPetGeometryMain = require("../src/pet-geometry-main");
-const { resolveAccessoryAwareHitBox } = require("../src/pet-accessory-hitbox");
-const { createHolidayAccessoryRuntime } = require("../src/holiday-accessory");
-const schema = require("../src/theme-schema");
+const createPetGeometryMain = require("../src/shell/pet-geometry-main");
+const { resolveAccessoryAwareHitBox } = require("../src/shell/pet-accessory-hitbox");
+const { createHolidayAccessoryRuntime } = require("../src/shell/holiday-accessory");
+const schema = require("../src/shell/theme-schema");
 const {
   commitPetAccessoryPayload,
   describeGeometrySync,
   getPetAccessoryPayloadSnapshot,
   resetPetAccessoryStateForTests,
-} = require("../src/pet-accessory-state");
+} = require("../src/shell/pet-accessory-state");
 
 const PARTY = {
   id: "party-hat",

@@ -7,7 +7,7 @@ const {
   RECENT_EVENT_LIMIT,
   pushRecentEvent,
   pickDisplayHint,
-} = require("../src/state-session-events");
+} = require("../src/state/state-session-events");
 
 describe("state session events", () => {
   it("pushes a rolling recent event history capped at RECENT_EVENT_LIMIT", () => {

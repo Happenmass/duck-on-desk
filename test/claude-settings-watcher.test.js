@@ -9,7 +9,7 @@ const {
   createClaudeSettingsWatcher,
   isSuspiciousShrink,
   takeSnapshot,
-} = require("../src/claude-settings-watcher");
+} = require("../src/state/claude-settings-watcher");
 const { CLAUDE_CORE_HOOK_EVENTS } = require("../hooks/install");
 
 const EXPECTED_HOOK_SCRIPT_PATH = "C:/app/resources/app.asar.unpacked/hooks/duck-hook.js";

@@ -369,7 +369,7 @@ describe("opencode-family registry", () => {
     // doctor-logs falls back to this basename list when picking the most
     // recent log; a typo'd entry silently drops the member from that path.
     // eslint-disable-next-line global-require
-    const { DEFAULT_LOG_BASENAMES } = require("../src/doctor-logs");
+    const { DEFAULT_LOG_BASENAMES } = require("../src/shell/doctor-logs");
     for (const [agentId, cfg] of Object.entries(OPENCODE_FAMILY)) {
       assert.ok(
         DEFAULT_LOG_BASENAMES.includes(cfg.logFileName),

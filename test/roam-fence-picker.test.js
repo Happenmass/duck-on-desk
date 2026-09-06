@@ -7,14 +7,14 @@ const path = require("node:path");
 const test = require("node:test");
 const { pathToFileURL } = require("node:url");
 
-const createRoamFencePicker = require("../src/roam-fence-picker");
+const createRoamFencePicker = require("../src/robots/duck/roam-fence-picker");
 const {
   READY_CHANNEL,
   APPLIED_CHANNEL,
   RESULT_CHANNEL,
   STATE_CHANNEL,
   selectionToFence,
-} = require("../src/roam-fence-picker");
+} = require("../src/robots/duck/roam-fence-picker");
 
 class FakeIpcMain extends EventEmitter {}
 
@@ -136,7 +136,7 @@ test("selection uses the overlay's realized integer size for fractional work are
 });
 
 test("picker page limits local content with a restrictive CSP", () => {
-  const html = fs.readFileSync(path.join(__dirname, "..", "src", "roam-fence-picker.html"), "utf8");
+  const html = fs.readFileSync(path.join(__dirname, "..", "src", "robots", "duck", "roam-fence-picker.html"), "utf8");
   assert.match(html, /Content-Security-Policy/);
   assert.match(html, /default-src 'none'; style-src 'unsafe-inline'; script-src 'self'/);
   assert.match(html, /touch-action:\s*none/);

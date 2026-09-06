@@ -29,7 +29,7 @@ const {
   isPetMouthAccessorySupportedForTheme,
   buildPetMouthAccessoryPayload,
   listPetMouthAccessoryOptions,
-} = require("../src/pet-customization-catalog");
+} = require("../src/shell/pet-customization-catalog");
 
 describe("pet customization catalog", () => {
   it("keeps one ordered, immutable source of truth for persisted tint ids", () => {

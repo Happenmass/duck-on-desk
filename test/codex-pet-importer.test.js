@@ -6,8 +6,8 @@ const os = require("node:os");
 const path = require("node:path");
 const zlib = require("node:zlib");
 
-const importer = require("../src/codex-pet-importer");
-const adapter = require("../src/codex-pet-adapter");
+const importer = require("../src/state/codex-pet-importer");
+const adapter = require("../src/state/codex-pet-adapter");
 
 const FIXTURE_DIR = path.join(__dirname, "fixtures", "codex-pets", "tiny-atlas-png");
 

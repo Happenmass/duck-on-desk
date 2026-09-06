@@ -11,7 +11,7 @@ const {
   getStatePriority,
   resolveDominantSessionState,
   resolveDisplayStateFromSessions,
-} = require("../src/state-priority");
+} = require("../src/state/state-priority");
 
 function session(state, overrides = {}) {
   return { state, updatedAt: 1000, headless: false, ...overrides };

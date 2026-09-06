@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
-const initPermission = require("../src/permission");
+const initPermission = require("../src/state/permission");
 
 const {
   DUCK_SERVER_HEADER,
@@ -18,13 +18,13 @@ const {
   shouldBypassCCSubagentBubble,
   shouldBypassCodexBubble,
   shouldBypassFamilyBubble,
-} = require("../src/server-route-permission");
+} = require("../src/state/server-route-permission");
 const {
   INTERACTION_INTENT,
   classifyPermissionInteraction,
   isValidInteraction,
-} = require("../src/permission-automation-policy");
-const { makeSessionKey } = require("../src/session-key");
+} = require("../src/state/permission-automation-policy");
+const { makeSessionKey } = require("../src/state/session-key");
 
 function localSessionKey(rawSessionId) {
   return makeSessionKey({ profileId: "local", rawSessionId });

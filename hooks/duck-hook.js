@@ -722,7 +722,7 @@ function buildStateBody(event, payload, resolve) {
     //     writes the v2 cache),
     //   - UserPromptSubmit → prompt (cache-only, NEVER spawns — even for a
     //     non-cacheable session; the foreground WT handle it used to fresh for
-    //     is sampled server-side now, src/server-route-state.js),
+    //     is sampled server-side now, src/state/server-route-state.js),
     //   - SessionEnd → end (cache-only, fills the final body then drops; never
     //     spawns, never writes back),
     //   - everything else → event (cache hit = zero spawn; a miss falls back to

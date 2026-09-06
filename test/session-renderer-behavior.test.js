@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const test = require("node:test");
-const { i18n, SUPPORTED_LANGS } = require("../src/i18n");
+const { i18n, SUPPORTED_LANGS } = require("../src/shell/i18n");
 
 class FakeClassList {
   constructor(element) { this.element = element; }
@@ -177,8 +177,8 @@ async function loadDashboard(
     setInterval: (callback) => { renderInterval = callback; return 1; },
     requestAnimationFrame: (cb) => cb(),
   });
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "src", "session-focus-unavailable.js"), "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "src", "dashboard-renderer.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "src", "state", "session-focus-unavailable.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "src", "shell", "dashboard-renderer.js"), "utf8"), context);
   await flush();
   return {
     root: document.elements.get("content"),
@@ -212,8 +212,8 @@ async function loadHud(sessions, openResult = { status: "ok" }) {
     setTimeout: (callback) => { feedbackTimeout = callback; return 1; },
     clearTimeout: () => { feedbackTimeout = null; },
   });
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "src", "session-focus-unavailable.js"), "utf8"), context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "src", "session-hud-renderer.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "src", "state", "session-focus-unavailable.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "src", "state", "session-hud-renderer.js"), "utf8"), context);
   await flush();
   snapshotListener({ sessions, orderedIds: sessions.map((entry) => entry.id) });
   return {

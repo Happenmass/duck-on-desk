@@ -3,7 +3,7 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const updateBubble = fs.readFileSync(path.join(__dirname, "..", "src", "update-bubble.html"), "utf8");
+const updateBubble = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "update-bubble.html"), "utf8");
 
 describe("update bubble visual style", () => {
   it("matches the permission bubble's core card styling tokens", () => {

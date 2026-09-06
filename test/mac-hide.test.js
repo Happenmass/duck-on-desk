@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const createMacHideController = require("../src/mac-hide");
+const createMacHideController = require("../src/shell/mac-hide");
 
 function makeHarness(opts = {}) {
   const fakeApp = {

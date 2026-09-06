@@ -1,6 +1,6 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
-const { computeOverall, runDoctorChecks } = require("../src/doctor");
+const { computeOverall, runDoctorChecks } = require("../src/shell/doctor");
 
 describe("doctor aggregate checks", () => {
   it("computes red overall when any check is critical", () => {

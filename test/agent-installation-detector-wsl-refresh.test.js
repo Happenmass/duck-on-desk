@@ -17,11 +17,11 @@ const os = require("node:os");
 const origPlatform = Object.getOwnPropertyDescriptor(process, "platform");
 Object.defineProperty(process, "platform", { ...origPlatform, value: "win32" });
 
-const wslUtils = require("../src/wsl-utils");
+const wslUtils = require("../src/state/wsl-utils");
 const {
   refreshWslDetection,
   detectAgentInstallations,
-} = require("../src/agent-installation-detector");
+} = require("../src/state/agent-installation-detector");
 
 const origWslFns = {
   getWslDistributions: wslUtils.getWslDistributions,

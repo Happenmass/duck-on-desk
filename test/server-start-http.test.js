@@ -4,7 +4,7 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
 
-const initServer = require("../src/server");
+const initServer = require("../src/state/server");
 
 // Fake HTTP server whose listen() emits 'listening' asynchronously (like the
 // real net.Server) unless the requested port is in `occupied`, in which case it

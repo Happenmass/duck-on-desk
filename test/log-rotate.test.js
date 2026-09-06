@@ -3,7 +3,7 @@ const assert = require("node:assert");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const { rotatedAppend, DEFAULT_MAX_BYTES } = require("../src/log-rotate");
+const { rotatedAppend, DEFAULT_MAX_BYTES } = require("../src/shell/log-rotate");
 
 const tempDirs = [];
 

@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 
-const themeOverrideCommands = require("../src/settings-actions-theme-overrides");
+const themeOverrideCommands = require("../src/shell/settings-actions-theme-overrides");
 
 test("settings theme override actions expose the command surface", () => {
   assert.deepStrictEqual(Object.keys(themeOverrideCommands).sort(), [

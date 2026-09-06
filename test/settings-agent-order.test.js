@@ -7,7 +7,7 @@ const {
   getAgentEventSourceBadgeKey,
   isAgentCollapsible,
   sortAgentMetadataForSettings,
-} = require("../src/settings-agent-order");
+} = require("../src/shell/settings-agent-order");
 
 describe("settings agent order", () => {
   it("maps agent event sources to badge labels", () => {

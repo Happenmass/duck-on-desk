@@ -2,7 +2,7 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
 const { loadSpriteTheme } = require("./fixtures/sprite-theme");
-const hitGeometry = require("../src/hit-geometry");
+const hitGeometry = require("../src/shell/hit-geometry");
 const {
   getThemeMarginBox,
   computeThemeAnchorRect,
@@ -10,7 +10,7 @@ const {
   computeStableVisibleContentMargins,
   getLooseDragMargins,
   getRestClampMargins,
-} = require("../src/visible-margins");
+} = require("../src/shell/visible-margins");
 
 
 describe("visible margin envelopes", () => {

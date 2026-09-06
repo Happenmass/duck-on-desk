@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const { identifyCustomApplication, normalizeCustomApplications } = require("../src/custom-applications");
+const { identifyCustomApplication, normalizeCustomApplications } = require("../src/state/custom-applications");
 
 function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "duck-custom-ai-"));

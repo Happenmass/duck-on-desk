@@ -7,8 +7,8 @@ const os = require("os");
 const {
   checkAgentIntegrations,
   findOpencodePluginEntry,
-} = require("../src/doctor-detectors/agent-integrations");
-const { getAgentDescriptor } = require("../src/doctor-detectors/agent-descriptors");
+} = require("../src/shell/doctor-detectors/agent-integrations");
+const { getAgentDescriptor } = require("../src/shell/doctor-detectors/agent-descriptors");
 const {
   CODEX_WINDOWS_STABLE_ARG,
   buildCodexHookCommand,
@@ -18,8 +18,8 @@ const {
 const {
   computeCodexHookTrustedHash,
   findCodexHookTrustPositions,
-} = require("../src/doctor-detectors/codex-features-check");
-const { validateHookTarget } = require("../src/doctor-detectors/agent-node-bin-parser");
+} = require("../src/shell/doctor-detectors/codex-features-check");
+const { validateHookTarget } = require("../src/shell/doctor-detectors/agent-node-bin-parser");
 
 const tempDirs = [];
 
@@ -1138,7 +1138,7 @@ describe("checkAgentIntegrations", () => {
 
   it("descriptor configJsonc matches the family registry's jsonc flag (drift lock)", () => {
     // eslint-disable-next-line global-require
-    const { AGENT_DESCRIPTORS } = require("../src/doctor-detectors/agent-descriptors");
+    const { AGENT_DESCRIPTORS } = require("../src/shell/doctor-detectors/agent-descriptors");
     // eslint-disable-next-line global-require
     const { OPENCODE_FAMILY } = require("../agents/opencode-family");
     for (const [agentId, cfg] of Object.entries(OPENCODE_FAMILY)) {

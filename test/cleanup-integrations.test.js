@@ -14,10 +14,10 @@ const {
 const { resolvePluginDir } = require("../hooks/opencode-install");
 const { registerCodexHooks, CODEX_OFFICIAL_HOOK_EVENTS } = require("../hooks/codex-install");
 const { stableCodexHookPaths } = require("../hooks/codex-install-utils");
-const agentCommands = require("../src/settings-actions-agents");
-const { MANAGED_CLEANUP_AGENT_IDS, commandRegistry } = require("../src/settings-actions");
-const { createIntegrationSyncRuntime } = require("../src/integration-sync");
-const prefs = require("../src/prefs");
+const agentCommands = require("../src/shell/settings-actions-agents");
+const { MANAGED_CLEANUP_AGENT_IDS, commandRegistry } = require("../src/shell/settings-actions");
+const { createIntegrationSyncRuntime } = require("../src/state/integration-sync");
+const prefs = require("../src/shell/prefs");
 
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });

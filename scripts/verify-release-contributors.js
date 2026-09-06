@@ -70,7 +70,7 @@ function parseReleaseIdentities(logText) {
 }
 
 function loadSettingsContributors(root) {
-  const source = fs.readFileSync(path.join(root, "src", "settings-i18n.js"), "utf8");
+  const source = fs.readFileSync(path.join(root, "src", "shell", "settings-i18n.js"), "utf8");
   const context = {};
   context.globalThis = context;
   vm.runInNewContext(source, context, { filename: "settings-i18n.js" });

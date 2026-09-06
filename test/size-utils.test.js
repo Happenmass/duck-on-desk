@@ -8,7 +8,7 @@ const {
   getProportionalBasePx,
   getProportionalPixelSize,
   getSavedPixelSize,
-} = require("../src/size-utils");
+} = require("../src/shell/size-utils");
 
 describe("size utils", () => {
   it("uses display width on landscape screens", () => {

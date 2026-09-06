@@ -5,13 +5,13 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const createAgentRuntimeMain = require("../src/agent-runtime-main");
+const createAgentRuntimeMain = require("../src/state/agent-runtime-main");
 const CodexSubagentClassifier = require("../agents/codex-subagent-classifier");
-const { resolveCodexOfficialHookState } = require("../src/server-codex-official-turns");
-const { makeSessionKey } = require("../src/session-key");
-const { digestCodexTurnId } = require("../src/codex-turn-id");
-const { CODEX_LOCAL_WORKING_STALE_FLOOR_MS } = require("../src/state-stale-cleanup");
-const themeLoader = require("../src/theme-loader");
+const { resolveCodexOfficialHookState } = require("../src/state/server-codex-official-turns");
+const { makeSessionKey } = require("../src/state/session-key");
+const { digestCodexTurnId } = require("../src/state/codex-turn-id");
+const { CODEX_LOCAL_WORKING_STALE_FLOOR_MS } = require("../src/state/state-stale-cleanup");
+const themeLoader = require("../src/shell/theme-loader");
 
 const SRC_DIR = path.join(__dirname, "..", "src");
 const localSessionKey = (rawSessionId) => makeSessionKey({
@@ -54,7 +54,7 @@ function makeRealStateHarness() {
   const sounds = [];
   const stateChanges = [];
   const noop = () => {};
-  const state = require("../src/state")({
+  const state = require("../src/state/state")({
     lang: "en",
     theme,
     doNotDisturb: false,

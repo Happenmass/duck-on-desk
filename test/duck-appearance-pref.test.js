@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const prefs = require("../src/prefs");
+const prefs = require("../src/shell/prefs");
 
 test("duckAppearance and duckMuted are schema-backed preferences", () => {
   assert.equal(prefs.SCHEMA.duckAppearance.default, "classic");
@@ -9,7 +9,7 @@ test("duckAppearance and duckMuted are schema-backed preferences", () => {
 });
 
 test("settings registry accepts skin and mute updates from the menu", () => {
-  const { updateRegistry } = require("../src/settings-actions");
+  const { updateRegistry } = require("../src/shell/settings-actions");
   assert.equal(updateRegistry.duckAppearance("blue").status, "ok");
   assert.equal(updateRegistry.duckAppearance("neon").status, "error");
   assert.equal(updateRegistry.duckMuted(true).status, "ok");
@@ -17,8 +17,8 @@ test("settings registry accepts skin and mute updates from the menu", () => {
 });
 
 test("duckVoiceVolume and duckStepVolume are 0..1 preferences with their own registry validators", () => {
-  const prefs = require("../src/prefs");
-  const { updateRegistry } = require("../src/settings-actions");
+  const prefs = require("../src/shell/prefs");
+  const { updateRegistry } = require("../src/shell/settings-actions");
   assert.equal(prefs.SCHEMA.duckVoiceVolume.default, 1);
   assert.equal(prefs.SCHEMA.duckStepVolume.default, 1);
   assert.equal(prefs.SCHEMA.duckStepVolume.validate(0.35), true);
@@ -29,8 +29,8 @@ test("duckVoiceVolume and duckStepVolume are 0..1 preferences with their own reg
 });
 
 test("duckStilts is an enumerated height preference (0 = own feet)", () => {
-  const prefs = require("../src/prefs");
-  const { updateRegistry } = require("../src/settings-actions");
+  const prefs = require("../src/shell/prefs");
+  const { updateRegistry } = require("../src/shell/settings-actions");
   assert.equal(prefs.SCHEMA.duckStilts.default, 0);
   assert.equal(prefs.SCHEMA.duckStilts.validate(25), true);
   assert.equal(prefs.SCHEMA.duckStilts.validate(30), false);
@@ -40,8 +40,8 @@ test("duckStilts is an enumerated height preference (0 = own feet)", () => {
 });
 
 test("duckLocomotion is a legs/rollers preference", () => {
-  const prefs = require("../src/prefs");
-  const { updateRegistry } = require("../src/settings-actions");
+  const prefs = require("../src/shell/prefs");
+  const { updateRegistry } = require("../src/shell/settings-actions");
   assert.equal(prefs.SCHEMA.duckLocomotion.default, "legs");
   assert.deepEqual(prefs.SCHEMA.duckLocomotion.enum, ["legs", "rollers"]);
   assert.equal(updateRegistry.duckLocomotion("rollers").status, "ok");

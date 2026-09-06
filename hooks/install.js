@@ -491,7 +491,7 @@ const AUTO_START_HOOK_TIMEOUT_SECONDS = 15;
 
 // Authoritative script paths — the single source of truth for both what
 // registerHooks()/registerHooksAsync() write and what runtime health checks
-// (src/claude-hook-health.js) compare against. Computing this in two places
+// (src/state/claude-hook-health.js) compare against. Computing this in two places
 // would let the installer and the health inspector silently drift apart.
 function getClaudeHookScriptPath() {
   return asarUnpackedPath(path.resolve(__dirname, "duck-hook.js").replace(/\\/g, "/"));

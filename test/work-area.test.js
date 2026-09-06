@@ -1,4 +1,4 @@
-// Tests for src/work-area.js — pure work-area math with empty-display
+// Tests for src/shell/work-area.js — pure work-area math with empty-display
 // fallback. Regression coverage for issue #93: main process crashed when
 // screen.getAllDisplays() briefly returned [] during display topology
 // changes (monitor plug/unplug, lock/unlock, RDP switch).
@@ -15,7 +15,7 @@ const {
   isPointInAnyWorkArea,
   isValidDisplaySnapshot,
   SYNTHETIC_WORK_AREA,
-} = require("../src/work-area");
+} = require("../src/shell/work-area");
 
 const wa = (x, y, w, h) => ({ x, y, width: w, height: h });
 const display = (x, y, w, h) => ({ bounds: wa(x, y, w, h), workArea: wa(x, y, w, h) });

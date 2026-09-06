@@ -6,7 +6,7 @@ const assert = require("node:assert");
 const {
   buildCodexMonitorSessionOptions,
   isCodexMonitorMetadataOnlyEvent,
-} = require("../src/codex-monitor-callback");
+} = require("../src/state/codex-monitor-callback");
 
 describe("Codex monitor callback helpers", () => {
   it("identifies every token_count as a metadata-only event, whatever it carries", () => {

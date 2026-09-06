@@ -274,10 +274,10 @@ describe("Orca pane key validator copies", () => {
     "hooks/shared-process.js",
     "hooks/pi-extension-core.js",
     "hooks/opencode-family-plugin/core.mjs",
-    "src/server-route-state.js",
-    "src/server-route-permission.js",
-    "src/focus.js",
-    "src/session-focus.js",
+    "src/state/server-route-state.js",
+    "src/state/server-route-permission.js",
+    "src/shell/focus.js",
+    "src/state/session-focus.js",
   ];
 
   it("shares one pattern across every copy", () => {
@@ -799,7 +799,7 @@ describe("Windows Orca window fallback", () => {
     withFocus({ platform: "win32" }, (t) => {
       // Both fields ride the same request: wt_hwnd is whatever happened to be
       // foreground when the hook fired (hooks/shared-process.js foregroundWtHwnd),
-      // and src/state.js makes it sticky, so one SessionStart next to a Windows
+      // and src/state/state.js makes it sticky, so one SessionStart next to a Windows
       // Terminal window would otherwise focus that terminal for the rest of the
       // session — and report it as a success.
       const script = t.makeFocusCmd(4242, ["duck-on-desk"], "key", 4660, "tok", ["duck-on-desk"], true);
@@ -878,7 +878,7 @@ describe("Orca focus wiring", () => {
   // test/focus-windows.test.js, which mocks spawn so the real helper never starts.
   it("is dispatched from the Windows and macOS branches, never Linux", () => {
     const fs = require("fs");
-    const src = fs.readFileSync(path.join(__dirname, "..", "src", "focus.js"), "utf8");
+    const src = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "focus.js"), "utf8");
     const calls = src.match(/scheduleOrcaPaneFocus\(request\./g) || [];
     assert.strictEqual(calls.length, 2, "expected one dispatch per supported platform");
     // Linux still has no raise it can trust — WM_CLASS "orca" also matches GNOME's
@@ -1015,8 +1015,8 @@ describe("Orca focus wiring", () => {
       ["src/main.js", "if (entry.orcaPaneKey) focusEntry.orcaPaneKey = entry.orcaPaneKey;"],
       ["src/main.js", "orcaPaneKey: session.orcaPaneKey,"],
       ["src/main.js", "if (!session || (!session.sourcePid && !session.orcaPaneKey)) return false;"],
-      ["src/permission.js", "if (perm.orcaPaneKey) focusEntry.orcaPaneKey = perm.orcaPaneKey;"],
-      ["src/state-session-snapshot.js", "orcaPaneKey: (session && session.orcaPaneKey) || null,"],
+      ["src/state/permission.js", "if (perm.orcaPaneKey) focusEntry.orcaPaneKey = perm.orcaPaneKey;"],
+      ["src/state/state-session-snapshot.js", "orcaPaneKey: (session && session.orcaPaneKey) || null,"],
     ];
     for (const [rel, needle] of sites) {
       const src = fs.readFileSync(path.join(repo, rel), "utf8");

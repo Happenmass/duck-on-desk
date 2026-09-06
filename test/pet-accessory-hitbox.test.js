@@ -4,18 +4,18 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
 const { loadSpriteTheme } = require("./fixtures/sprite-theme");
-const hitGeometry = require("../src/hit-geometry");
+const hitGeometry = require("../src/shell/hit-geometry");
 const {
   PET_ACCESSORY_IDS,
   PET_MOUTH_ACCESSORY_IDS,
   buildPetMouthAccessoryPayload,
   resolvePetAccessoryPayload,
-} = require("../src/pet-customization-catalog");
+} = require("../src/shell/pet-customization-catalog");
 const {
   BUILTIN_ACCESSORY_MOTION_PADDING,
   BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING,
   resolveAccessoryAwareHitBox,
-} = require("../src/pet-accessory-hitbox");
+} = require("../src/shell/pet-accessory-hitbox");
 
 const EPSILON = 1e-9;
 

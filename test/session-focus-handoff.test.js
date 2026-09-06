@@ -6,7 +6,7 @@ const assert = require("node:assert");
 const {
   focusCodexThreadTarget,
   sanitizeFocusError,
-} = require("../src/session-focus-handoff");
+} = require("../src/state/session-focus-handoff");
 
 describe("session focus handoff", () => {
   it("opens Codex Desktop thread URLs and logs success", async () => {

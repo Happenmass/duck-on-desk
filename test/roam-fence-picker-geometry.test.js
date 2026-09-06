@@ -7,7 +7,7 @@ const {
   cursorForMode,
   hitTestSelection,
   updateSelection,
-} = require("../src/roam-fence-picker-geometry");
+} = require("../src/robots/duck/roam-fence-picker-geometry");
 
 const area = { width: 1000, height: 800 };
 const selection = { x: 200, y: 150, width: 400, height: 300 };

@@ -4,8 +4,8 @@ const test = require("node:test");
 const assert = require("node:assert");
 const Module = require("node:module");
 
-const PERMISSION_MODULE_PATH = require.resolve("../src/permission");
-const UPDATE_BUBBLE_MODULE_PATH = require.resolve("../src/update-bubble");
+const PERMISSION_MODULE_PATH = require.resolve("../src/state/permission");
+const UPDATE_BUBBLE_MODULE_PATH = require.resolve("../src/shell/update-bubble");
 
 class FakeIpcMain {
   constructor() {

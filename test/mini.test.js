@@ -13,7 +13,7 @@ function cloneTheme(theme) {
 
 function loadMiniWithElectron(screenExports) {
   const electronPath = require.resolve("electron");
-  const miniPath = require.resolve("../src/mini");
+  const miniPath = require.resolve("../src/shell/mini");
   const previousElectron = Object.prototype.hasOwnProperty.call(require.cache, electronPath)
     ? require.cache[electronPath]
     : null;
@@ -32,7 +32,7 @@ function loadMiniWithElectron(screenExports) {
   delete require.cache[miniPath];
 
   return {
-    initMini: require("../src/mini"),
+    initMini: require("../src/shell/mini"),
     restore() {
       if (previousElectron) require.cache[electronPath] = previousElectron;
       else delete require.cache[electronPath];

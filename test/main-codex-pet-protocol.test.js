@@ -5,7 +5,7 @@ const path = require("node:path");
 
 const ROOT = path.join(__dirname, "..");
 const MAIN = path.join(ROOT, "src", "main.js");
-const CODEX_PET_MAIN = path.join(ROOT, "src", "codex-pet-main.js");
+const CODEX_PET_MAIN = path.join(ROOT, "src", "state", "codex-pet-main.js");
 const PACKAGE_JSON = path.join(ROOT, "package.json");
 const LAUNCH = path.join(ROOT, "launch.js");
 const SHARED_PROCESS = path.join(ROOT, "hooks", "shared-process.js");
@@ -14,7 +14,7 @@ test("main wires duck:// protocol dispatch through the Codex Pet importer", () =
   const source = fs.readFileSync(MAIN, "utf8");
   const runtimeSource = fs.readFileSync(CODEX_PET_MAIN, "utf8");
 
-  assert.ok(source.includes('const createCodexPetMain = require("./codex-pet-main");'));
+  assert.ok(source.includes('const createCodexPetMain = require("./state/codex-pet-main");'));
   assert.ok(source.includes('app.on("open-url"'));
   assert.ok(source.includes('app.on("second-instance"'));
   assert.ok(source.includes("codexPetMain.enqueueImportUrl(url);"));

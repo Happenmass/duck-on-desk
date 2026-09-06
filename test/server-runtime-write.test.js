@@ -1,6 +1,6 @@
 // test/server-runtime-write.test.js — #681 Slice A1, runtime write robustness.
 //
-// src/server.js calls writeRuntimeConfig inside the 'listening' handler, and
+// src/state/server.js calls writeRuntimeConfig inside the 'listening' handler, and
 // settle() — the thing that resolves startHttpServer's promise with the bound
 // port — is BELOW that call. writeRuntimeConfig's mkdirSync used to sit outside
 // its own try, so an EACCES on ~/.duck escaped as an exception, the handler
@@ -10,7 +10,7 @@
 //
 // Two independent guards, so neither alone is load-bearing:
 //   1. writeRuntimeConfig honors its boolean contract (test/server-config.test.js).
-//   2. src/server.js does not trust that (here) — a throw is caught and reported.
+//   2. src/state/server.js does not trust that (here) — a throw is caught and reported.
 
 "use strict";
 
@@ -18,8 +18,8 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
 
-const initServer = require("../src/server");
-const { checkLocalServer } = require("../src/doctor-detectors/local-server");
+const initServer = require("../src/state/server");
+const { checkLocalServer } = require("../src/shell/doctor-detectors/local-server");
 
 function makeServer({
   writeRuntimeConfig = () => true,

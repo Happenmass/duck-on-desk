@@ -6,8 +6,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
-const { registerSessionIpc } = require("../src/session-ipc");
-const { SUPPORTED_LANGS } = require("../src/i18n");
+const { registerSessionIpc } = require("../src/state/session-ipc");
+const { SUPPORTED_LANGS } = require("../src/shell/i18n");
 
 class FakeIpcMain {
   constructor() {
@@ -54,7 +54,7 @@ function createHarness(overrides = {}) {
   const calls = [];
   const ipcMain = new FakeIpcMain();
   const dashboardMainFrame = {
-    url: pathToFileURL(path.join(__dirname, "..", "src", "dashboard.html")).toString(),
+    url: pathToFileURL(path.join(__dirname, "..", "src", "shell", "dashboard.html")).toString(),
   };
   const dashboardWebContents = { mainFrame: dashboardMainFrame };
   const dashboardWindow = {
@@ -318,7 +318,7 @@ test("dashboard renderer wires the Mark-read button + ackCompletion fallback (so
   // (3) Mark-read click awaits invoke result and re-enables on failure.
   // Manual QA covers the actual click flow.
   const rendererSrc = fs.readFileSync(
-    path.join(__dirname, "..", "src", "dashboard-renderer.js"),
+    path.join(__dirname, "..", "src", "shell", "dashboard-renderer.js"),
     "utf8"
   );
   assert.ok(rendererSrc.includes("session.requiresCompletionAck === true"),
@@ -331,7 +331,7 @@ test("dashboard renderer wires the Mark-read button + ackCompletion fallback (so
   assert.ok(/result\.status !== "ok"[\s\S]+button\.disabled = false/.test(rendererSrc),
     "Mark-read click must re-enable button on ack failure");
 
-  const i18nSrc = fs.readFileSync(path.join(__dirname, "..", "src", "i18n.js"), "utf8");
+  const i18nSrc = fs.readFileSync(path.join(__dirname, "..", "src", "shell", "i18n.js"), "utf8");
   // Both new keys must appear once in every supported language table.
   for (const key of ["dashboardMarkRead", "dashboardMarkReadTitle"]) {
     const matches = i18nSrc.match(new RegExp(`\\b${key}:`, "g"));

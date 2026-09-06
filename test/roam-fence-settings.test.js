@@ -6,9 +6,9 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
-const createRoamFenceLoader = require("../src/roam-fence");
-const createRoamFenceSettings = require("../src/roam-fence-settings");
-const { normalizeFence, publicStatus } = require("../src/roam-fence-settings");
+const createRoamFenceLoader = require("../src/robots/duck/roam-fence");
+const createRoamFenceSettings = require("../src/robots/duck/roam-fence-settings");
+const { normalizeFence, publicStatus } = require("../src/robots/duck/roam-fence-settings");
 
 function makeRuntime() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-roam-fence-settings-"));

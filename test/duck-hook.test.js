@@ -22,7 +22,7 @@ const {
   extractApiErrorFromEntries,
   extractLastAssistantTextFromEntries,
 } = require("../hooks/duck-hook.js");
-const { buildToolInputFingerprint } = require("../src/server").__test;
+const { buildToolInputFingerprint } = require("../src/state/server").__test;
 
 function writeTmpJsonl(entries) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "duck-hook-test-"));
@@ -513,7 +513,7 @@ describe("buildStateBody", () => {
       session_id: "s",
       tool_name: "Read",
       tool_use_id: "toolu_123",
-      tool_input: { file_path: "src/server.js" },
+      tool_input: { file_path: "src/state/server.js" },
       transcript_path: "/tmp/claude-transcript.jsonl",
     };
     const body = buildStateBody("PostToolUse", payload, mockResolve);

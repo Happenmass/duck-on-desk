@@ -1,6 +1,6 @@
 "use strict";
 
-// Unit tests for src/wsl-deploy.js (agent install script mapping, hooks dir
+// Unit tests for src/state/wsl-deploy.js (agent install script mapping, hooks dir
 // resolution, deploy-path validation, byte-exact file piping). Does NOT
 // require Windows or WSL.
 
@@ -20,7 +20,7 @@ const {
   removeFromWsl,
   resolveHooksDir,
   validateDeployRelativePath,
-} = require("../src/wsl-deploy");
+} = require("../src/state/wsl-deploy");
 
 describe("wsl-deploy", () => {
   describe("getAgentInstallScriptName", () => {

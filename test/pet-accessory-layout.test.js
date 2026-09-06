@@ -8,7 +8,7 @@ const {
   computeDynamicAccessoryLayout,
   transformedBounds,
   layoutsEqual,
-} = require("../src/pet-accessory-layout");
+} = require("../src/shell/pet-accessory-layout");
 
 const ACCESSORY = { aspect: 2, widthScale: 1, offsetY: 0 };
 

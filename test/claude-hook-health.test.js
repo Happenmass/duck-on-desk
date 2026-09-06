@@ -12,7 +12,7 @@ const {
   getClaudeHookDegradedDiagnostic,
   reportHasUnparseableCommand,
   isExplicitRepairVerified,
-} = require("../src/claude-hook-health");
+} = require("../src/state/claude-hook-health");
 
 const EXPECTED_HOOK_SCRIPT_PATH = "C:/app/resources/app.asar.unpacked/hooks/duck-hook.js";
 const EXPECTED_AUTO_START_SCRIPT_PATH = "C:/app/resources/app.asar.unpacked/hooks/auto-start.js";

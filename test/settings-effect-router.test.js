@@ -3,11 +3,11 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const createSettingsEffectRouter = require("../src/settings-effect-router");
+const createSettingsEffectRouter = require("../src/shell/settings-effect-router");
 const {
   getPetAccessorySlotsSnapshot,
   resetPetAccessoryStateForTests,
-} = require("../src/pet-accessory-state");
+} = require("../src/shell/pet-accessory-state");
 
 function createFakeSettingsController(initialSnapshot = {}) {
   let snapshot = { shortcuts: {}, ...initialSnapshot };

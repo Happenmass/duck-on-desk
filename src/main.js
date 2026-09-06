@@ -1,10 +1,10 @@
 const { app, BrowserWindow, Notification, screen, ipcMain, globalShortcut, nativeTheme, dialog, shell, nativeImage, powerSaveBlocker, powerMonitor, clipboard, safeStorage, protocol, net } = require("electron");
-const { maybeRunPackageKoffiSmoke } = require("./package-koffi-smoke");
+const { maybeRunPackageKoffiSmoke } = require("./shell/package-koffi-smoke");
 if (maybeRunPackageKoffiSmoke({ app, BrowserWindow })) {
   return;
 }
 
-const { clampTextScale, scaleWidth, scaleHeight, resolveTextScaleForKey } = require("./text-scale");
+const { clampTextScale, scaleWidth, scaleHeight, resolveTextScaleForKey } = require("./shell/text-scale");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -12,97 +12,97 @@ const { EventEmitter } = require("events");
 const {
   applyWindowsAppUserModelId,
   shouldOpenSettingsWindowFromArgv,
-} = require("./settings-window-icon");
-const createSettingsWindowRuntime = require("./settings-window");
-const createRoamFenceLoader = require("./roam-fence");
-const createRoamFenceSettings = require("./roam-fence-settings");
-const createRoamFencePicker = require("./roam-fence-picker");
-const createPermissionAutomationConfirmationRuntime = require("./permission-automation-confirmation");
+} = require("./shell/settings-window-icon");
+const createSettingsWindowRuntime = require("./shell/settings-window");
+const createRoamFenceLoader = require("./robots/duck/roam-fence");
+const createRoamFenceSettings = require("./robots/duck/roam-fence-settings");
+const createRoamFencePicker = require("./robots/duck/roam-fence-picker");
+const createPermissionAutomationConfirmationRuntime = require("./state/permission-automation-confirmation");
 const {
   createSettingsSizePreviewSession,
-} = require("./settings-size-preview-session");
-const { registerSettingsIpc } = require("./settings-ipc");
-const createSettingsEffectRouter = require("./settings-effect-router");
+} = require("./shell/settings-size-preview-session");
+const { registerSettingsIpc } = require("./shell/settings-ipc");
+const createSettingsEffectRouter = require("./shell/settings-effect-router");
 const {
   getPetTintIdForTheme,
   resolvePetTintPayload,
   buildPetAccessoryPayload,
   getPetMouthAccessoryIdForTheme,
   buildPetMouthAccessoryPayload,
-} = require("./pet-customization-catalog");
+} = require("./shell/pet-customization-catalog");
 const {
   finalizePetAccessorySlotsDelivery,
   getPetAccessorySlotsSnapshot,
   preparePetAccessorySlotsDelivery,
-} = require("./pet-accessory-state");
+} = require("./shell/pet-accessory-state");
 const {
   getEffectivePetAccessoryIdForTheme,
   createHolidayAccessoryRuntime,
-} = require("./holiday-accessory");
-const { registerSessionIpc } = require("./session-ipc");
-const { createSessionAutomationStore } = require("./session-automation-store");
-const { createSessionAutomationCoordinator } = require("./session-automation-coordinator");
+} = require("./shell/holiday-accessory");
+const { registerSessionIpc } = require("./state/session-ipc");
+const { createSessionAutomationStore } = require("./state/session-automation-store");
+const { createSessionAutomationCoordinator } = require("./state/session-automation-coordinator");
 const {
   selectSessionAutomationDialogParent,
-} = require("./session-automation-dialog-parent");
-const { createSessionFolderOpener } = require("./session-open-folder");
-const { isTrustedMainFrameEvent, registerPetInteractionIpc } = require("./pet-interaction-ipc");
-const { createSystemWakeRecovery } = require("./system-wake-recovery");
-const { formatLocalTimestamp } = require("./log-timestamp");
-const { launchClaudeSession, openTerminalAt } = require("./launch-claude");
+} = require("./state/session-automation-dialog-parent");
+const { createSessionFolderOpener } = require("./state/session-open-folder");
+const { isTrustedMainFrameEvent, registerPetInteractionIpc } = require("./shell/pet-interaction-ipc");
+const { createSystemWakeRecovery } = require("./shell/system-wake-recovery");
+const { formatLocalTimestamp } = require("./shell/log-timestamp");
+const { launchClaudeSession, openTerminalAt } = require("./state/launch-claude");
 const { dialog: electronDialog } = require("electron");
-const initPermission = require("./permission");
-const { isPassiveNotifyEntry } = require("./passive-notify-entry");
+const initPermission = require("./state/permission");
+const { isPassiveNotifyEntry } = require("./state/passive-notify-entry");
 const { registerPermissionIpc } = initPermission;
-const { resolveAgentDisplayName } = require("./agent-display-name");
-const { createTrayBalloonOwner } = require("./tray-balloon-owner");
-const initUpdateBubble = require("./update-bubble");
+const { resolveAgentDisplayName } = require("./state/agent-display-name");
+const { createTrayBalloonOwner } = require("./shell/tray-balloon-owner");
+const initUpdateBubble = require("./shell/update-bubble");
 const { registerUpdateBubbleIpc } = initUpdateBubble;
-const createSettingsAnimationOverridesMain = require("./settings-animation-overrides-main");
+const createSettingsAnimationOverridesMain = require("./shell/settings-animation-overrides-main");
 const { registerSettingsAnimationOverridesIpc } = createSettingsAnimationOverridesMain;
-const createShortcutRuntime = require("./shortcut-runtime");
+const createShortcutRuntime = require("./shell/shortcut-runtime");
 const {
   findNearestWorkArea,
   buildDisplaySnapshot,
   SYNTHETIC_WORK_AREA,
-} = require("./work-area");
+} = require("./shell/work-area");
 const {
   isUsableWorkArea: isUsableBubbleWorkArea,
   resolveBubbleWorkArea,
-} = require("./bubble-work-area");
+} = require("./shell/bubble-work-area");
 const {
   getLaunchPixelSize,
   getLaunchSizingWorkArea,
   getProportionalPixelSize,
-} = require("./size-utils");
-const { keepOutOfTaskbar } = require("./taskbar");
-const { loadTrayNormalIcon, loadTrayFlashIcon } = require("./tray-flash-icon");
+} = require("./shell/size-utils");
+const { keepOutOfTaskbar } = require("./shell/taskbar");
+const { loadTrayNormalIcon, loadTrayFlashIcon } = require("./shell/tray-flash-icon");
 const {
   installStartupDockIcon,
   resolveRuntimeDockIconPolicy,
-} = require("./mac-dock-icon-runtime");
-const createTopmostRuntime = require("./topmost-runtime");
+} = require("./shell/mac-dock-icon-runtime");
+const createTopmostRuntime = require("./shell/topmost-runtime");
 const { WIN_TOPMOST_LEVEL } = createTopmostRuntime;
 const {
   createHitWindowActivationRuntime,
-} = require("./win-hit-window-activation");
-const createThemeFadeSequencer = require("./theme-fade-sequencer");
-const createThemeRuntime = require("./theme-runtime");
-const createAgentRuntimeMain = require("./agent-runtime-main");
-const createFloatingWindowRuntime = require("./floating-window-runtime");
-const createPetWindowRuntime = require("./pet-window-runtime");
-const { collectRequiredAssetFiles } = require("./theme-schema");
-const { describeGeometrySync } = require("./pet-accessory-state");
-const { createDisplayedVisualProjection } = require("./displayed-visual-projection");
-const { createTestReactionHandler } = require("./test-reaction");
-const createMacHideController = require("./mac-hide");
+} = require("./shell/win-hit-window-activation");
+const createThemeFadeSequencer = require("./shell/theme-fade-sequencer");
+const createThemeRuntime = require("./shell/theme-runtime");
+const createAgentRuntimeMain = require("./state/agent-runtime-main");
+const createFloatingWindowRuntime = require("./shell/floating-window-runtime");
+const createPetWindowRuntime = require("./shell/pet-window-runtime");
+const { collectRequiredAssetFiles } = require("./shell/theme-schema");
+const { describeGeometrySync } = require("./shell/pet-accessory-state");
+const { createDisplayedVisualProjection } = require("./shell/displayed-visual-projection");
+const { createTestReactionHandler } = require("./state/test-reaction");
+const createMacHideController = require("./shell/mac-hide");
 const {
   getFocusableLocalHudSessionIds: selectFocusableLocalHudSessionIds,
   getSessionFocusTarget,
-} = require("./session-focus");
-const { focusCodexThreadTarget } = require("./session-focus-handoff");
-const { isSessionInProgress } = require("./state-session-snapshot");
-const { restoreSessionsFromRecoveryLeases } = require("./session-recovery-loader");
+} = require("./state/session-focus");
+const { focusCodexThreadTarget } = require("./state/session-focus-handoff");
+const { isSessionInProgress } = require("./state/state-session-snapshot");
+const { restoreSessionsFromRecoveryLeases } = require("./state/session-recovery-loader");
 const { getAllAgents } = require("../agents/registry");
 // ── Autoplay policy: allow sound playback without user gesture ──
 // MUST be set before any BrowserWindow is created (before app.whenReady)
@@ -111,7 +111,7 @@ app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 // ── pet-model:// ONNX policy protocol ──
 // MUST be registered before app.whenReady(); the handler is installed inside it.
 const { pathToFileURL } = require("url");
-const petModelProtocol = require("./pet-model-protocol");
+const petModelProtocol = require("./robots/duck/pet-model-protocol");
 petModelProtocol.registerScheme(protocol);
 
 const isMac = process.platform === "darwin";
@@ -140,7 +140,7 @@ if (isWin) {
 // ── Windows: foreground-fullscreen probe (suppress topmost over games) ──
 // Best-effort; degrades to "never fullscreen" if koffi/user32 is unavailable,
 // so a broken probe can never hide the pet.
-const { createForegroundFullscreenProbe } = require("./win-fullscreen-detect");
+const { createForegroundFullscreenProbe } = require("./shell/win-fullscreen-detect");
 const _isForegroundFullscreen = createForegroundFullscreenProbe({
   isWin,
   onError: (err) => console.warn("Duck: win-fullscreen-detect not available:", err && err.message),
@@ -154,7 +154,7 @@ const _hitWindowActivationRuntime = createHitWindowActivationRuntime({
 // ── Windows: DWM cloak inspection + un-cloak (#525 self-heal) ──
 // Best-effort; degrades to "never cloaked / recovery no-op" when koffi/dwmapi
 // or the virtual-desktop COM manager is unavailable.
-const { createCloakInspector } = require("./win-cloak-recovery");
+const { createCloakInspector } = require("./shell/win-cloak-recovery");
 const _cloakInspector = createCloakInspector({
   isWin,
   log: (line) => console.warn(`Duck: ${line}`),
@@ -166,7 +166,7 @@ const _cloakInspector = createCloakInspector({
 // unavailable, so a broken probe never blocks a /state POST — wt_hwnd just
 // falls back to the session's last-known value (state.js merge). Never spawns
 // a subprocess, so it cannot reproduce the console flash it exists to avoid.
-const { createForegroundWindowsTerminalProbe } = require("./win-foreground-terminal");
+const { createForegroundWindowsTerminalProbe } = require("./shell/win-foreground-terminal");
 const _captureForegroundWindowsTerminal = createForegroundWindowsTerminalProbe({
   isWin,
   onError: (err) => console.warn("Duck: win-foreground-terminal not available:", err && err.message),
@@ -223,16 +223,16 @@ const SIZES = {
 // Module-level `lang`/`showTray`/etc. below are mirror caches kept in sync via
 // a subscriber wired after menu.js loads. The ctx setters route writes through
 // `_settingsController.applyUpdate()`, which auto-persists.
-const prefsModule = require("./prefs");
-const { createSettingsController } = require("./settings-controller");
-const { createTranslator, i18n, SUPPORTED_LANGS } = require("./i18n");
+const prefsModule = require("./shell/prefs");
+const { createSettingsController } = require("./shell/settings-controller");
+const { createTranslator, i18n, SUPPORTED_LANGS } = require("./shell/i18n");
 const {
   getBubblePolicy,
   isAllBubblesHidden,
-} = require("./bubble-policy");
-const loginItemHelpers = require("./login-item");
+} = require("./shell/bubble-policy");
+const loginItemHelpers = require("./shell/login-item");
 const { writeCodexAutoStartGate } = require("../hooks/server-config");
-const { createCodexAutoStartGateEvaluator } = require("./agent-gate");
+const { createCodexAutoStartGateEvaluator } = require("./state/agent-gate");
 const PREFS_PATH = path.join(app.getPath("userData"), "duck-prefs.json");
 const _initialPrefsLoad = prefsModule.load(PREFS_PATH);
 // Recovery from readable invalid contents is writable only after the original
@@ -383,11 +383,11 @@ const _settingsController = createSettingsController({
     uninstallIntegrationForAgent: (id) => agentRuntime ? agentRuntime.uninstallIntegrationForAgent(id) : false,
     writeCodexAutoStartGate: _persistCodexAutoStartGate,
     deployHooksToWsl: async (distro, agentId) => {
-      const { deployToWsl } = require("./wsl-deploy");
+      const { deployToWsl } = require("./state/wsl-deploy");
       return deployToWsl(distro, { agentId, isPackaged: app.isPackaged, resourcesPath: process.resourcesPath });
     },
     removeHooksFromWsl: async (distro, agentId) => {
-      const { removeFromWsl } = require("./wsl-deploy");
+      const { removeFromWsl } = require("./state/wsl-deploy");
       return removeFromWsl(distro, { agentId, isPackaged: app.isPackaged, resourcesPath: process.resourcesPath });
     },
     cleanupIntegrations: async (options = {}) => {
@@ -408,7 +408,7 @@ const _settingsController = createSettingsController({
       sessionAutomationCoordinator ? sessionAutomationCoordinator.clearAgent(id) : [],
     dismissPermissionsByAgent: (id, options) => agentRuntime ? agentRuntime.dismissPermissionsByAgent(id, options) : 0,
     clearRecentHookEvents: (id) => _server.clearRecentHookEvents(id),
-    identifyCustomApplication: (sourcePath) => require("./custom-applications").identifyCustomApplication(sourcePath),
+    identifyCustomApplication: (sourcePath) => require("./state/custom-applications").identifyCustomApplication(sourcePath),
     resizePet: _deferredResizePet,
     getActiveSessionAliasKeys: () =>
       _state && typeof _state.getActiveSessionAliasKeys === "function"
@@ -572,8 +572,8 @@ function safeConsoleError(...args) {
 }
 
 // ── Theme loader ──
-const themeLoader = require("./theme-loader");
-const createCodexPetMain = require("./codex-pet-main");
+const themeLoader = require("./shell/theme-loader");
+const createCodexPetMain = require("./state/codex-pet-main");
 themeLoader.init(__dirname, app.getPath("userData"));
 themeRuntime = createThemeRuntime({
   themeLoader,
@@ -1607,11 +1607,11 @@ function moveWindowForDrag() { return petWindowRuntime.moveWindowForDrag(); }
 // the legacy focusable window so desktop click/drag remains available.
 const setHitWinFocusable = _hitWindowActivationRuntime.setHitWinFocusable;
 
-// ── Mini Mode — delegated to src/mini.js ──
+// ── Mini Mode — delegated to src/shell/mini.js ──
 // Initialized after state module (needs applyState, resolveDisplayState, etc.)
 // See _mini initialization below
 
-// ── alwaysOnTop recovery — delegated to src/topmost-runtime.js ──
+// ── alwaysOnTop recovery — delegated to src/shell/topmost-runtime.js ──
 let permissionPresentationRuntime = null;
 const topmostRuntime = createTopmostRuntime({
   isWin,
@@ -1666,10 +1666,10 @@ const {
   startFocusablePoll,
 } = topmostRuntime;
 
-// ── Permission bubble — delegated to src/permission.js ──
+// ── Permission bubble — delegated to src/state/permission.js ──
 const {
   createRuntimeAgentGate,
-} = require("./agent-gate");
+} = require("./state/agent-gate");
 const _runtimeAgentGate = createRuntimeAgentGate({
   getSnapshot: () => _settingsController.getSnapshot(),
   // Both unreadable prefs and a writable recovered-defaults snapshot are
@@ -1860,7 +1860,7 @@ function syncSessionHudVisibilityAndBubbles() {
   return floatingWindowRuntime.syncSessionHudVisibilityAndBubbles();
 }
 
-// ── State machine — delegated to src/state.js ──
+// ── State machine — delegated to src/state/state.js ──
 let showDashboard = () => {};
 let broadcastDashboardSessionSnapshot = () => {};
 let sendDashboardI18n = () => {};
@@ -1874,7 +1874,7 @@ let notifyUpdaterSilentExit = () => {};
 // theme so reads never go stale across theme switches. Returns null when
 // unset/invalid — callers keep their existing fallback. The visible repaint
 // on a pref change is the refreshIdleVisual router hook's job, further down.
-const { resolveIdleVisualChoice } = require("./idle-visual");
+const { resolveIdleVisualChoice } = require("./shell/idle-visual");
 function getIdleVisualChoice() {
   return resolveIdleVisualChoice(getActiveTheme(), _settingsController.get("idleVisual"));
 }
@@ -1893,6 +1893,7 @@ function buildRendererThemeConfig(accessorySnapshot = null) {
     cfg.idleDefaultVisual = getIdleVisualChoice();
     cfg.petTintPayload = resolvePetTintPayload(tintId, activeTheme);
     cfg.duckAppearance = _settingsController.getSnapshot().duckAppearance;
+    cfg.petRobot = _settingsController.get("petRobot");
     cfg.duckMuted = _settingsController.getSnapshot().duckMuted === true;
     cfg.duckVoiceVolume = _settingsController.getSnapshot().duckVoiceVolume;
     cfg.duckStepVolume = _settingsController.getSnapshot().duckStepVolume;
@@ -1927,6 +1928,10 @@ function deliverRendererThemeConfig() {
   return !!finalizePetAccessorySlotsDelivery(delivery, delivered);
 }
 
+// The semantic state machine is created before the Reachy adapter. Keep a
+// nullable forward reference so state decisions never depend on renderer IPC
+// or on adapter construction order.
+let _reachyMini = null;
 const _stateCtx = {
   get theme() { return getActiveTheme(); },
   get win() { return win; },
@@ -1952,6 +1957,7 @@ const _stateCtx = {
   sendToHitWin,
   syncHitWin,
   playSound,
+  onSemanticState: (state, options) => _reachyMini?.handleSemanticState(state, options),
   flashTaskbar,
   t: (key) => t(key),
   focusTerminalWindow: (...args) => focusTerminalWindow(...args),
@@ -2008,7 +2014,7 @@ const _stateCtx = {
   isAgentEnabled: (agentId) => _runtimeAgentGate.isAgentEnabled(agentId),
   hasAnyEnabledAgent: () => _runtimeAgentGate.hasAnyEnabledAgent(),
 };
-const _state = require("./state")(_stateCtx);
+const _state = require("./state/state")(_stateCtx);
 displayedVisualProjection = createDisplayedVisualProjection({
   projectActualFile: ({ actualFile, requested }) => {
     const activeTheme = getActiveTheme();
@@ -2112,7 +2118,7 @@ function getHitRectScreen(bounds) { return petWindowRuntime.getHitRectScreen(bou
 function getUpdateBubbleAnchorRect(bounds) { return petWindowRuntime.getUpdateBubbleAnchorRect(bounds); }
 function getSessionHudAnchorRect(bounds) { return petWindowRuntime.getSessionHudAnchorRect(bounds); }
 
-// ── Main tick — delegated to src/tick.js ──
+// ── Main tick — delegated to src/shell/tick.js ──
 const _tickCtx = {
   get theme() { return getActiveTheme(); },
   get win() { return win; },
@@ -2151,12 +2157,12 @@ const _tickCtx = {
   getAssetPointerPayload,
   get roam() { return _roam; },
 };
-const _tick = require("./tick")(_tickCtx);
+const _tick = require("./shell/tick")(_tickCtx);
 requestFastTick = (maxDelay) => _tick.scheduleSoon(maxDelay);
 const { startMainTick, resetIdleTimer } = _tick;
 
-// ── Terminal focus — delegated to src/focus.js ──
-const _focus = require("./focus")({ _allowSetForeground, focusLog });
+// ── Terminal focus — delegated to src/shell/focus.js ──
+const _focus = require("./shell/focus")({ _allowSetForeground, focusLog });
 const {
   initFocusHelper,
   killFocusHelper,
@@ -2243,7 +2249,7 @@ const openDashboardSessionFolder = createSessionFolderOpener({
   openPath: (cwd) => shell.openPath(cwd),
 });
 
-const _dashboard = require("./dashboard")({
+const _dashboard = require("./shell/dashboard")({
   get lang() { return lang; },
   t: (key) => translate(key),
   getSessionSnapshot: () => _state.buildSessionSnapshot(),
@@ -2264,7 +2270,7 @@ showDashboard = _dashboard.showDashboard;
 broadcastDashboardSessionSnapshot = _dashboard.broadcastSessionSnapshot;
 sendDashboardI18n = _dashboard.sendI18n;
 
-const _sessionHud = require("./session-hud")({
+const _sessionHud = require("./state/session-hud")({
   get win() { return win; },
   get petHidden() { return petWindowRuntime.isPetEffectivelyHidden(); },
   get sessionHudEnabled() { return sessionHudEnabled; },
@@ -2308,7 +2314,7 @@ agentRuntime = createAgentRuntimeMain({
   clearCodexUserInputBubbles: (...args) => clearCodexUserInputBubbles(...args),
 });
 
-// ── HTTP server — delegated to src/server.js ──
+// ── HTTP server — delegated to src/state/server.js ──
 const _serverCtx = {
   get manageClaudeHooksAutomatically() { return manageClaudeHooksAutomatically; },
   get autoStartWithClaude() { return autoStartWithClaude; },
@@ -2336,7 +2342,7 @@ const _serverCtx = {
     });
   },
   // #627 residual: synchronous server-side wt_hwnd sample for UserPromptSubmit
-  // (src/server-route-state.js). Initialized once above; never re-created per
+  // (src/state/server-route-state.js). Initialized once above; never re-created per
   // request.
   captureForegroundWindowsTerminal: _captureForegroundWindowsTerminal,
   debugLog: (msg) => sessionLog(msg),
@@ -2373,18 +2379,18 @@ const _serverCtx = {
   syncPermissionShortcuts,
   permLog,
 };
-const _server = require("./server")(_serverCtx);
+const _server = require("./state/server")(_serverCtx);
 const { startHttpServer, getHookServerPort } = _server;
 
 function updateLog(msg) {
   if (!updateDebugLog) return;
-  const { rotatedAppend } = require("./log-rotate");
+  const { rotatedAppend } = require("./shell/log-rotate");
   rotatedAppend(updateDebugLog, `[${new Date().toISOString()}] ${msg}\n`);
 }
 
 function sessionLog(msg) {
   if (!sessionDebugLog) return;
-  const { rotatedAppend } = require("./log-rotate");
+  const { rotatedAppend } = require("./shell/log-rotate");
   rotatedAppend(sessionDebugLog, `[${formatLocalTimestamp()}] ${msg}\n`);
 }
 
@@ -2400,11 +2406,11 @@ ipcMain.on("sound-playback-error", (_event, payload) => {
 
 function focusLog(msg) {
   if (!focusDebugLog) return;
-  const { rotatedAppend } = require("./log-rotate");
+  const { rotatedAppend } = require("./shell/log-rotate");
   rotatedAppend(focusDebugLog, `[${new Date().toISOString()}] ${msg}\n`);
 }
 
-// ── Menu — delegated to src/menu.js ──
+// ── Menu — delegated to src/shell/menu.js ──
 //
 // Setters that previously assigned to module-level vars now route through
 // `_settingsController.applyUpdate(key, value)`. The mirror cache is updated
@@ -2515,6 +2521,7 @@ function showResumeInput(t) {
   });
 }
 
+let robotPowerControl = null;
 const _menuCtx = {
   get win() { return win; },
   get sessions() { return sessions; },
@@ -2585,6 +2592,13 @@ const _menuCtx = {
   set contextMenu(v) { contextMenu = v; },
   enableDoNotDisturb: () => enableDoNotDisturb(),
   disableDoNotDisturb: () => disableDoNotDisturb(),
+  isRobotSleeping: () => doNotDisturb || ["sleeping", "dozing", "collapsing"].includes(_state.getCurrentState()) || robotPowerControl?.needsWake(),
+  isRobotWaking: () => robotPowerControl?.isBusy(),
+  wakeRobot: async () => {
+    try { await robotPowerControl?.wake(); }
+    catch (error) { await electronDialog.showMessageBox({ type: "error", message: t("robotWakeFailed"), detail: error.message }); }
+    rebuildAllMenus();
+  },
   enterMiniViaMenu: () => {
     if (!disableMiniModeCached) enterMiniViaMenu();
   },
@@ -2691,7 +2705,7 @@ const _menuCtx = {
   ensureUserThemesDir: () => themeLoader.ensureUserThemesDir(),
   openSettingsWindow: (options) => settingsWindowRuntime.open(options),
 };
-const _menu = require("./menu")(_menuCtx);
+const _menu = require("./shell/menu")(_menuCtx);
 const { t, buildContextMenu, buildTrayMenu, rebuildAllMenus, createTray,
         destroyTray, showPetContextMenu, ensureContextMenuOwner,
         requestAppQuit, applyDockVisibility } = _menu;
@@ -2820,7 +2834,7 @@ registerSettingsAnimationOverridesIpc({
   ipcMain,
   animationOverridesMain,
 });
-// ── Auto-updater — delegated to src/updater.js ──
+// ── Auto-updater — delegated to src/shell/updater.js ──
 const _updaterCtx = {
   get doNotDisturb() { return doNotDisturb; },
   get miniMode() { return _mini.getMiniMode(); },
@@ -2846,7 +2860,7 @@ const _updaterCtx = {
     try { _settingsController.applyUpdate(key, value); } catch {}
   },
 };
-const _updater = require("./updater")(_updaterCtx);
+const _updater = require("./shell/updater")(_updaterCtx);
 const {
   setupAutoUpdater,
   checkForUpdates,
@@ -2878,7 +2892,7 @@ try {
 }
 
 // ── Doctor tab IPC ──
-const { registerDoctorIpc } = require("./doctor-ipc");
+const { registerDoctorIpc } = require("./shell/doctor-ipc");
 registerDoctorIpc({
   ipcMain,
   app,
@@ -3084,7 +3098,7 @@ function createWindow() {
   hitWin = petWindowRuntime.createHitWindow({
     BrowserWindow,
     preloadPath: path.join(__dirname, "preload-hit.js"),
-    loadFilePath: path.join(__dirname, "hit.html"),
+    loadFilePath: path.join(__dirname, "shell", "hit.html"),
     hitThemeConfig: themeRuntime.getHitRendererConfig(),
     guardAlwaysOnTop,
     onDidFinishLoad: () => {
@@ -3131,6 +3145,7 @@ function createWindow() {
     sendToRenderer,
     requestDragReaction,
     requestClickReaction,
+    onPetIntent: (intent) => _reachyMini?.handleIntent(intent),
     settleVisual: (event, payload) => {
       if (
         !win
@@ -3402,7 +3417,7 @@ const _miniCtx = {
       : null;
   },
 };
-const _mini = require("./mini")(_miniCtx);
+const _mini = require("./shell/mini")(_miniCtx);
 
 const handleTestResult = createTestReactionHandler({
   getEnabled: () => _settingsController.get("testReactionsEnabled") === true,
@@ -3435,6 +3450,24 @@ ipcMain.on("duck-displacement", (event, d) => {
   _roam.onDisplacement(d && Number.isFinite(d.dx) ? d.dx : 0, d && Number.isFinite(d.dy) ? d.dy : 0);
 });
 
+// duck-on-desk: launch arguments are only a snapshot, so the renderer re-reads
+// the current pet prefs on every reload. Both robots ask for this, so it lives
+// with the other pet IPC and not in the Reachy adapter, which gets disposed.
+ipcMain.handle("pet-runtime-config", (event) => {
+  if (!win || win.isDestroyed() || event.sender !== win.webContents) return null;
+  return {
+    petRobot: _settingsController.get("petRobot"),
+    reachyAutoConnect: _settingsController.get("reachyAutoConnect"),
+    reachyHost: _settingsController.get("reachyHost"),
+    duckMuted: _settingsController.get("duckMuted"),
+    duckVoiceVolume: _settingsController.get("duckVoiceVolume"),
+    duckStepVolume: _settingsController.get("duckStepVolume"),
+    duckAppearance: _settingsController.get("duckAppearance"),
+    duckLocomotion: _settingsController.get("duckLocomotion"),
+    duckStilts: _settingsController.get("duckStilts"),
+  };
+});
+
 const _roamCtx = {
   duckDrivesRoam: true,
   // Only bounds the walk's timeout now (window motion comes from the duck).
@@ -3458,6 +3491,8 @@ const _roamCtx = {
   getNearestWorkArea,
   clampToScreenVisual,
   getMiniMode: () => _mini.getMiniMode(),
+  // Reachy Mini has no mobile base: the window must not wander off on its own.
+  canRoam: () => _settingsController.get("petRobot") !== "reachy-mini",
   getCurrentState: () => _state.getCurrentState(),
   get miniTransitioning() { return _mini.getMiniTransitioning(); },
   applyState: (state, svgOverride, opts) => _state.applyState(state, svgOverride, opts),
@@ -3474,10 +3509,33 @@ const _roamCtx = {
   hasVisiblePermissionBubbles: () => _perm.hasVisiblePermissionBubbles(),
   // #810: optional roam fence — validated async loader for
   // ~/.duck-on-desk/roam-area.json; roam reads its in-memory cache at target pick
-  // time and kicks refresh() when scheduling walks (see src/roam-fence.js).
+  // time and kicks refresh() when scheduling walks (see src/robots/duck/roam-fence.js).
   roamFence: roamFenceLoader,
 };
-const _roam = require("./roam")(_roamCtx);
+const _roam = require("./robots/duck/roam")(_roamCtx);
+_reachyMini = require("./robots/reachy/reachy-mini-main").createReachyMiniMain({
+  ipcMain, settings: _settingsController, getWindow: () => win, sendToRenderer,
+});
+// State may have settled before the adapter was constructed. Seed the current
+// intent without replaying a historical notification or error sound.
+_reachyMini.handleSemanticState(_state.getCurrentState(), { initial: true });
+const { createRobotPowerControl, createRobotErrorNotifier } = require("./robots/reachy/robot-power-control");
+robotPowerControl = createRobotPowerControl({
+  getAdapter: () => _settingsController.get("petRobot") === "reachy-mini" ? _reachyMini : null,
+  wakeDesktop: () => _state.wakeRobot(),
+});
+// An automatic sleep/wake that failed is otherwise invisible; the explicit menu
+// wake is still busy when it publishes, and shows its own dialog instead.
+const notifyRobotError = createRobotErrorNotifier({
+  showError: (detail) => { void electronDialog.showMessageBox({ type: "error", message: t("robotActionFailed"), detail }); },
+  isExplicitWake: () => robotPowerControl.isBusy(),
+});
+let lastRobotPowerState = "";
+_reachyMini.client.on("status", status => {
+  const key = `${status.connected}:${status.motionEnabled}`;
+  if (key !== lastRobotPowerState) { lastRobotPowerState = key; rebuildAllMenus(); }
+  notifyRobotError(status);
+});
 // #810: resolve the fence's initial status right away so the first roam
 // round doesn't have to hold on an UNKNOWN state (get() === null) when a
 // fence file exists — or confirm quickly that none does.
@@ -3642,7 +3700,7 @@ if (!gotTheLock) {
 
   function maybeNudgeCodexHookHealth() {
     try {
-      const { getCodexHookHealth, decideCodexHookNotification } = require("./codex-hook-health");
+      const { getCodexHookHealth, decideCodexHookNotification } = require("./state/codex-hook-health");
       const snapshot = _settingsController.getSnapshot();
       const verdict = getCodexHookHealth({ prefs: snapshot });
       const prevSignature = _settingsController.get("codexHookHealthLastNotified") || "";
@@ -3731,7 +3789,7 @@ if (!gotTheLock) {
     updateDebugLog = path.join(app.getPath("userData"), "update-debug.log");
     sessionDebugLog = path.join(app.getPath("userData"), "session-debug.log");
     focusDebugLog = path.join(app.getPath("userData"), "focus-debug.log");
-    const { createWindowsProcessChainShadowLogger } = require("./windows-process-chain-shadow-log");
+    const { createWindowsProcessChainShadowLogger } = require("./state/windows-process-chain-shadow-log");
     recordWindowsProcessChainShadow = createWindowsProcessChainShadowLogger({
       filePath: path.join(app.getPath("userData"), "windows-process-chain-shadow.log"),
     });
@@ -3847,6 +3905,7 @@ if (!gotTheLock) {
     _updateBubble.cleanup();
     if (displayedVisualProjection) displayedVisualProjection.dispose();
     _state.cleanup();
+    _reachyMini.dispose();
     _tick.cleanup();
     _mini.cleanup();
     if (macHideController) macHideController.stop();

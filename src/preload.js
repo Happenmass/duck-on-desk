@@ -7,6 +7,15 @@ const themeConfig = themeArg ? JSON.parse(themeArg.slice("--theme-config=".lengt
 contextBridge.exposeInMainWorld("themeConfig", themeConfig);
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  getPetRuntimeConfig: () => ipcRenderer.invoke("pet-runtime-config"),
+  onPetRobotChange: (cb) => ipcRenderer.on("pet-robot-change", (_, value) => cb(value)),
+  getReachyStatus: () => ipcRenderer.invoke("reachy-status"),
+  onReachyStatus: (cb) => {
+    const listener = (_, status) => cb(status);
+    ipcRenderer.on("reachy-status", listener);
+    return () => ipcRenderer.removeListener("reachy-status", listener);
+  },
+  onReachyLocalSound: (cb) => ipcRenderer.on("reachy-local-sound", (_, name) => cb(name)),
   // Theme config push (for hot-switch; additionalArguments won't update on reload)
   onThemeConfig: (cb) => ipcRenderer.on("theme-config", (_, cfg) => cb(cfg)),
   // PR #751 Codex review #12 (rework batch B-8, non-blocking): normalize a

@@ -9,8 +9,8 @@ const {
   getFocusableLocalHudSessionIds,
   getSessionFocusTarget,
   isFocusableLocalHudSession,
-} = require("../src/session-focus");
-const { makeSessionKey } = require("../src/session-key");
+} = require("../src/state/session-focus");
+const { makeSessionKey } = require("../src/state/session-key");
 
 describe("session focus helpers", () => {
   it("selects local HUD-visible terminal and Codex Desktop thread sessions", () => {

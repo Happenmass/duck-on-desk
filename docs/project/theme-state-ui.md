@@ -40,7 +40,7 @@ Duck 是主题化桌宠：动画资源、计时、hitbox、眼球追踪参数都
 - 若 `sleepSequence.mode` 为 `full`（默认），需提供 `yawning / dozing / collapsing / waking`；`direct` 可直接进入 `sleeping`
 - 若 `miniMode.supported` 为 true，需提供 8 个基础 mini 状态；`mini-working` 是可选增强，缺失时优雅跳过
 - 能力缺失时走 `VISUAL_FALLBACK_STATES` 回退链
-- 默认配置集中在 `theme-loader.js` 顶部的 `DEFAULT_*` 常量；loader 保持 stateless，`src/theme-runtime.js` 是唯一 active-theme owner，主题 reload/sync/cache 不得另设模块级真相
+- 默认配置集中在 `theme-loader.js` 顶部的 `DEFAULT_*` 常量；loader 保持 stateless，`src/shell/theme-runtime.js` 是唯一 active-theme owner，主题 reload/sync/cache 不得另设模块级真相
 - 变体是白名单 deep-merge；数组和特定字段会整体替换
 - Animation override 是用户 per-slot 覆盖，和作者定义的 variants 正交
 - 配饰是两个独立的主题级槽：`petAccessory` 对应 head，`petMouthAccessory` 对应 mouth。renderer 中两者都是 pet media 的外部兄弟层，固定顺序为 `pet media → head → mouth`，因此 pet tint 不会染到配饰，mouth 也能稳定画在手或 head 配饰之上
@@ -50,7 +50,7 @@ Duck 是主题化桌宠：动画资源、计时、hitbox、眼球追踪参数都
 - 用户主题 SVG 会经过白名单消毒，阻断脚本、事件属性、外部资源、`javascript:` 和路径穿越；内置 SVG 不走运行时 sanitizer，必须由仓库测试做静态安全审计
 - `rendering.objectChannelFiles` 可按 SVG basename 把需要 `contentDocument` 控制、且经逐素材 Electron 验证的少量精灵切到 document-backed `<object>` 通道；普通 CSS / SMIL 动画仍优先使用 `<img>`。这些文件同时进入 required-assets 集合并使主题采用较高功耗档。外部主题仍先走 SVG sanitizer（含动态 SMIL 属性值），该字段不授予脚本能力
 - `trustedRuntime.scriptedSvgFiles` 只对 loader 判定为内置的主题生效；外部主题声明该字段会被忽略
-- 支持 SVG / GIF / APNG / WebP / PNG / JPG；动画周期由 `src/animation-cycle.js` 探测
+- 支持 SVG / GIF / APNG / WebP / PNG / JPG；动画周期由 `src/shell/animation-cycle.js` 探测
 - 更新视觉遵循主题绑定：`checking` 可选走 `theme.updateVisuals.checking`，未声明时回退到当前主题的 `thinking`；发现新版本时会进入 `available -> notification`；`downloading / success / error` 继续分别走 `carrying / attention / error`
 
 主题创建流程见 `docs/guides/guide-theme-creation.md`。
@@ -71,11 +71,11 @@ Settings 是独立 `BrowserWindow`，采用 5 层结构：
 
 | 层 | 文件 | 职责 |
 |---|---|---|
-| Schema / 持久化 | `src/prefs.js` | `SCHEMA` 定义；`load/save/migrate/validate`；JSON 损坏自动 `.bak` + fallback；文件本身不可读时进入不覆盖原文件的 read-failure safe mode |
-| 内存 store | `src/settings-store.js` | `createStore()` 返回 `{ getSnapshot, subscribe, _commit }`；`_commit` closure-private |
-| 控制器 / actions | `src/settings-controller.js` + `src/settings-actions*.js` | controller 是唯一写入者；actions 提供校验、command 与失败可阻止提交的 pre-commit gates |
-| 提交后 effects | `src/settings-effect-router.js` | 订阅 committed changes，更新 tray/dock/window/HUD/renderer 等 runtime 状态与广播；失败不得回滚已提交 prefs |
-| UI | `src/settings-ui-core.js` + `src/settings-renderer.js` + `src/settings-tab-*.js` + `src/settings.html` + `src/preload-settings.js` | core 持 shared state，renderer 是侧栏/tab shell，各 tab 只通过 preload/IPC 调 controller；新增 tab 还要登记 script 与 icon |
+| Schema / 持久化 | `src/shell/prefs.js` | `SCHEMA` 定义；`load/save/migrate/validate`；JSON 损坏自动 `.bak` + fallback；文件本身不可读时进入不覆盖原文件的 read-failure safe mode |
+| 内存 store | `src/shell/settings-store.js` | `createStore()` 返回 `{ getSnapshot, subscribe, _commit }`；`_commit` closure-private |
+| 控制器 / actions | `src/shell/settings-controller.js` + `src/shell/settings-actions*.js` | controller 是唯一写入者；actions 提供校验、command 与失败可阻止提交的 pre-commit gates |
+| 提交后 effects | `src/shell/settings-effect-router.js` | 订阅 committed changes，更新 tray/dock/window/HUD/renderer 等 runtime 状态与广播；失败不得回滚已提交 prefs |
+| UI | `src/shell/settings-ui-core.js` + `src/shell/settings-renderer.js` + `src/settings-tab-*.js` + `src/shell/settings.html` + `src/preload-settings.js` | core 持 shared state，renderer 是侧栏/tab shell，各 tab 只通过 preload/IPC 调 controller；新增 tab 还要登记 script 与 icon |
 
 关键取舍：
 

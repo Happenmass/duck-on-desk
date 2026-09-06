@@ -3,8 +3,8 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 
-const createCodexTurnFence = require("../src/codex-turn-fence");
-const createCodexOfficialActivity = require("../src/codex-official-activity");
+const createCodexTurnFence = require("../src/state/codex-turn-fence");
+const createCodexOfficialActivity = require("../src/state/codex-official-activity");
 
 function event(overrides = {}) {
   return {

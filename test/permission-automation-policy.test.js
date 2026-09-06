@@ -10,7 +10,7 @@ const {
   evaluatePermissionAutomation,
   isValidInteraction,
   isDecisionInteraction,
-} = require("../src/permission-automation-policy");
+} = require("../src/state/permission-automation-policy");
 
 function evaluate(mode, interaction) {
   return evaluatePermissionAutomation({ mode, interaction });

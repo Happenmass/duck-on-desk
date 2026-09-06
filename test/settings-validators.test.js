@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 
-const validators = require("../src/settings-validators");
+const validators = require("../src/shell/settings-validators");
 
 test("settings validators expose the shared helper surface", () => {
   assert.deepStrictEqual(Object.keys(validators).sort(), [

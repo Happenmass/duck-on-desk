@@ -2,7 +2,7 @@
 
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
-const { resolveBubbleWorkArea } = require("../src/bubble-work-area");
+const { resolveBubbleWorkArea } = require("../src/shell/bubble-work-area");
 
 const PET_BOUNDS = { x: 2100, y: 100, width: 120, height: 120 };
 const NEAREST = { x: 1920, y: 0, width: 1920, height: 1040 };

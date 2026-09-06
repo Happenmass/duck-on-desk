@@ -17,7 +17,7 @@ const {
   cleanupOrphanedLeaseLocks,
   loadActiveRecoveryLeases,
 } = require("../hooks/session-recovery-lease");
-const { restoreSessionsFromRecoveryLeases } = require("../src/session-recovery-loader");
+const { restoreSessionsFromRecoveryLeases } = require("../src/state/session-recovery-loader");
 
 describe("durable session recovery leases", () => {
   let recoveryDir;

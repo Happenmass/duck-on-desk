@@ -6,11 +6,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const { loadSpriteTheme, SPRITE_THEMES_DIR, CRAB_SVG_DIR } = require("./fixtures/sprite-theme");
-const { buildThemeMetadata } = require("../src/theme-metadata");
+const { buildThemeMetadata } = require("../src/shell/theme-metadata");
 const {
   collectRequiredAssetFiles,
   projectThemeVisualUsages,
-} = require("../src/theme-schema");
+} = require("../src/shell/theme-schema");
 
 // Accessories are sprite-only: measured against the sprite fixtures (crab is
 // the former built-in duck sprite theme, calico has no accessories).

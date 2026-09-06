@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const createPetWindowRuntime = require("../src/pet-window-runtime");
+const createPetWindowRuntime = require("../src/shell/pet-window-runtime");
 
 const SRC_DIR = path.join(__dirname, "..", "src");
 
@@ -2788,8 +2788,8 @@ describe("PR #751 second-review batch C: event-evidence bit, per-side clamp elig
 
 describe("pet-window-runtime", () => {
   it("keeps context menu owner creation outside the pet runtime and preserves parent ownership", () => {
-    const runtimeSource = fs.readFileSync(path.join(SRC_DIR, "pet-window-runtime.js"), "utf8");
-    const menuSource = fs.readFileSync(path.join(SRC_DIR, "menu.js"), "utf8");
+    const runtimeSource = fs.readFileSync(path.join(SRC_DIR, "shell", "pet-window-runtime.js"), "utf8");
+    const menuSource = fs.readFileSync(path.join(SRC_DIR, "shell", "menu.js"), "utf8");
 
     assert.ok(!runtimeSource.includes("contextMenuOwner"));
     assert.match(menuSource, /parent:\s*ctx\.win/);
@@ -2897,7 +2897,7 @@ describe("pet-window-runtime", () => {
   });
 
   it("uses safe reload helpers for pet render-process-gone handlers", () => {
-    const runtimeSource = fs.readFileSync(path.join(SRC_DIR, "pet-window-runtime.js"), "utf8");
+    const runtimeSource = fs.readFileSync(path.join(SRC_DIR, "shell", "pet-window-runtime.js"), "utf8");
     const mainSource = fs.readFileSync(path.join(SRC_DIR, "main.js"), "utf8");
 
     assert.ok(runtimeSource.includes('reloadRuntimeWindowWebContents(hitWin, { crashKey: "hitWin", details });'));
@@ -2909,7 +2909,7 @@ describe("pet-window-runtime", () => {
   it("wires the first-rendered-visual signal to the non-relocating visibility recovery", () => {
     const mainSource = fs.readFileSync(path.join(SRC_DIR, "main.js"), "utf8");
     const preloadSource = fs.readFileSync(path.join(SRC_DIR, "preload.js"), "utf8");
-    const rendererSource = fs.readFileSync(path.join(SRC_DIR, "renderer.js"), "utf8");
+    const rendererSource = fs.readFileSync(path.join(SRC_DIR, "shell", "renderer.js"), "utf8");
 
     assert.match(preloadSource, /notifyPetVisualReady:\s*\(\)\s*=>\s*ipcRenderer\.send\("pet-visual-ready"\)/);
     assert.match(rendererSource, /notifyPetVisualReadyOnce\(\);/);

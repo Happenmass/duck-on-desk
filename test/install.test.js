@@ -21,7 +21,7 @@ const { classifyManagedClaudeStateHookCommand } = require("../hooks/json-utils")
 const {
   inspectClaudeHookHealth,
   buildClaudeRepairSignature,
-} = require("../src/claude-hook-health");
+} = require("../src/state/claude-hook-health");
 const {
   parseClaudeVersion,
   getWindowsClaudePathSuffixes,

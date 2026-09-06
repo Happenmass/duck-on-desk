@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const createFloatingWindowRuntime = require("../src/floating-window-runtime");
+const createFloatingWindowRuntime = require("../src/shell/floating-window-runtime");
 
 const SRC_DIR = path.join(__dirname, "..", "src");
 

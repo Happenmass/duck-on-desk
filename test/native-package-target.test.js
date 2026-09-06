@@ -8,7 +8,7 @@ const {
   normalizeBuilderArch,
   getReleaseTarget,
   resolveReleaseTarget,
-} = require("../src/native-package-target");
+} = require("../src/shell/native-package-target");
 
 test("native package target map covers the five release targets exactly", () => {
   assert.deepEqual(

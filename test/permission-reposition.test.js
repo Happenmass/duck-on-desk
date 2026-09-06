@@ -1,7 +1,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const permission = require("../src/permission");
+const permission = require("../src/state/permission");
 const { computeBubbleStackLayout, clampBubbleHeight, collectVisibleWindowBounds } = permission.__test;
 
 // Common defaults so each test only spells out what's interesting.
@@ -180,7 +180,7 @@ describe("permission bubble stack layout", () => {
     // area so the OLDEST bubble stays on screen and newer bubbles overflow
     // off the bottom. Rationale: oldest is the longest-waiting request and
     // Claude Code re-sends newest on timeout. Don't flip this without
-    // updating the header comment in src/permission.js.
+    // updating the header comment in src/state/permission.js.
     const bounds = layout({
       followPet: true,
       bubbleHeights: Array(8).fill(200),

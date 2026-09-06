@@ -6,13 +6,13 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const prefs = require("../src/prefs");
+const prefs = require("../src/shell/prefs");
 const {
   createCodexAutoStartGateEvaluator,
   isCodexAutoStartEnabled,
-} = require("../src/agent-gate");
-const { createSettingsController } = require("../src/settings-controller");
-const { commandRegistry, updateRegistry } = require("../src/settings-actions");
+} = require("../src/state/agent-gate");
+const { createSettingsController } = require("../src/shell/settings-controller");
+const { commandRegistry, updateRegistry } = require("../src/shell/settings-actions");
 
 const tempDirs = [];
 function makeTempPath() {

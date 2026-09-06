@@ -16,13 +16,13 @@ const {
   DUCK_METADATA_ACCEPTED_HEADER,
   sendStateHealthResponse,
   handleStatePost,
-} = require("../src/server-route-state");
-const { classifyPermissionInteraction } = require("../src/permission-automation-policy");
+} = require("../src/state/server-route-state");
+const { classifyPermissionInteraction } = require("../src/state/permission-automation-policy");
 const { buildStateBody } = require("../hooks/duck-hook");
-const { makeSessionKey } = require("../src/session-key");
-const createAgentRuntimeMain = require("../src/agent-runtime-main");
-const initState = require("../src/state");
-const themeLoader = require("../src/theme-loader");
+const { makeSessionKey } = require("../src/state/session-key");
+const createAgentRuntimeMain = require("../src/state/agent-runtime-main");
+const initState = require("../src/state/state");
+const themeLoader = require("../src/shell/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
 const metadataContractTheme = themeLoader.loadTheme("duck");
 const localSessionKey = (rawSessionId) => makeSessionKey({

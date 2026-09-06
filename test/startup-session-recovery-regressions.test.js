@@ -6,19 +6,19 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const themeLoader = require("../src/theme-loader");
+const themeLoader = require("../src/shell/theme-loader");
 const {
   getLeaseFilePath,
   readLeaseFile,
   updateRecoveryLeaseFromStateBody,
 } = require("../hooks/session-recovery-lease");
-const { restoreSessionsFromRecoveryLeases } = require("../src/session-recovery-loader");
+const { restoreSessionsFromRecoveryLeases } = require("../src/state/session-recovery-loader");
 
 themeLoader.init(path.join(__dirname, "..", "src"));
 const defaultTheme = themeLoader.loadTheme("duck");
 
 function makeState() {
-  return require("../src/state")({
+  return require("../src/state/state")({
     lang: "en",
     theme: defaultTheme,
     t: (key) => key,

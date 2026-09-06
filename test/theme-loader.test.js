@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const themeLoader = require("../src/theme-loader");
+const themeLoader = require("../src/shell/theme-loader");
 
 afterEach(() => {
   mock.restoreAll();

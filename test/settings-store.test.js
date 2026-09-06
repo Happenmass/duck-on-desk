@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const { createStore } = require("../src/settings-store");
+const { createStore } = require("../src/shell/settings-store");
 
 describe("createStore", () => {
   it("requires an initial snapshot object", () => {

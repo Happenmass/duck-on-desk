@@ -3,7 +3,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const { createClaudeHookOperations } = require("../src/claude-hook-operations");
+const { createClaudeHookOperations } = require("../src/state/claude-hook-operations");
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

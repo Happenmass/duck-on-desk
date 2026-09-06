@@ -3,7 +3,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 
-const { resolveAgentDisplayName } = require("../src/agent-display-name");
+const { resolveAgentDisplayName } = require("../src/state/agent-display-name");
 
 test("resolveAgentDisplayName prefers the built-in registry name", () => {
   assert.strictEqual(

@@ -16,9 +16,9 @@ const {
   sessionDisplayFolder,
   sessionDisplayTitle,
   normalizeTitle,
-} = require("../src/state-session-snapshot");
-const { makeSessionKey } = require("../src/session-key");
-const { sessionAliasKey } = require("../src/session-alias");
+} = require("../src/state/state-session-snapshot");
+const { makeSessionKey } = require("../src/state/session-key");
+const { sessionAliasKey } = require("../src/state/session-alias");
 
 describe("deriveSourceInfo", () => {
   it("derives WSL source from the wsl: host prefix", () => {

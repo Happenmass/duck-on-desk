@@ -10,7 +10,7 @@ const {
   CLOAK_APP,
   CLOAK_SHELL,
   CLOAK_INHERITED,
-} = require("../src/win-cloak-recovery");
+} = require("../src/shell/win-cloak-recovery");
 
 describe("win-cloak-recovery classifyCloakState", () => {
   it("treats flag 0 and malformed flags as clean", () => {

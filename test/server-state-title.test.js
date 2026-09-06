@@ -7,9 +7,9 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
 
-const initServer = require("../src/server");
-const { MAX_STATE_BODY_BYTES } = require("../src/server-route-state");
-const { makeSessionKey } = require("../src/session-key");
+const initServer = require("../src/state/server");
+const { MAX_STATE_BODY_BYTES } = require("../src/state/server-route-state");
+const { makeSessionKey } = require("../src/state/session-key");
 
 const localSessionKey = (rawSessionId) => makeSessionKey({
   profileId: "local",

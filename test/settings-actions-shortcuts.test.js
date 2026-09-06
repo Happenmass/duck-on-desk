@@ -3,8 +3,8 @@
 const test = require("node:test");
 const assert = require("node:assert");
 
-const prefs = require("../src/prefs");
-const shortcutCommands = require("../src/settings-actions-shortcuts");
+const prefs = require("../src/shell/prefs");
+const shortcutCommands = require("../src/shell/settings-actions-shortcuts");
 
 function makeDeps(overrides = {}) {
   const snapshot = overrides.snapshot || prefs.getDefaults();

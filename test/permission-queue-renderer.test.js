@@ -7,7 +7,7 @@ const vm = require("node:vm");
 const { test } = require("node:test");
 
 const RENDERER_SOURCE = fs.readFileSync(
-  path.join(__dirname, "..", "src", "permission-queue-renderer.js"),
+  path.join(__dirname, "..", "src", "state", "permission-queue-renderer.js"),
   "utf8"
 );
 

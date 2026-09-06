@@ -153,7 +153,7 @@ function applyWslSourceFields(body, options = {}) {
 // Liveness is NOT checked here on purpose. os/fs are this module's only
 // dependencies; processAlive lives in shared-process.js, and requiring it back
 // from here would create a cycle now that shared-process.js requires this
-// module. Callers that own a liveness probe (the resolver gate, src/server.js's
+// module. Callers that own a liveness probe (the resolver gate, src/state/server.js's
 // Doctor status) apply it to the returned ownerPid themselves.
 
 const RUNTIME_REASON_MISSING = "runtime-missing";
@@ -278,7 +278,7 @@ function readWindowsProcessChainObservation(agentId, options = {}) {
 
 // Boolean contract: returns true on success, false on ANY failure, and never
 // throws. mkdirSync is INSIDE the try (#681) — it used to sit outside, so an
-// EACCES on ~/.duck escaped as an exception into src/server.js's 'listening'
+// EACCES on ~/.duck escaped as an exception into src/state/server.js's 'listening'
 // handler and stranded startHttpServer's promise before it could settle.
 function writeRuntimeConfig(port, options = {}) {
   const safePort = normalizePort(port);

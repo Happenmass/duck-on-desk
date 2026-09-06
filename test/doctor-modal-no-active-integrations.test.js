@@ -15,11 +15,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const { SUPPORTED_LANGS } = require("../src/i18n");
+const { SUPPORTED_LANGS } = require("../src/shell/i18n");
 
 const ROOT = path.join(__dirname, "..");
-const SETTINGS_I18N = path.join(ROOT, "src", "settings-i18n.js");
-const SETTINGS_DOCTOR_MODAL = path.join(ROOT, "src", "settings-doctor-modal.js");
+const SETTINGS_I18N = path.join(ROOT, "src", "shell", "settings-i18n.js");
+const SETTINGS_DOCTOR_MODAL = path.join(ROOT, "src", "shell", "settings-doctor-modal.js");
 
 function loadSettingsStrings() {
   const context = {};

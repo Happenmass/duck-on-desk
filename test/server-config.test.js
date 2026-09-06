@@ -306,7 +306,7 @@ describe("runtime.json identity (#681)", () => {
 
     // The regression this exists for: mkdirSync used to sit OUTSIDE the try, so
     // an EACCES on ~/.duck escaped as an exception instead of returning false —
-    // and src/server.js's 'listening' handler called this BEFORE settle(), so
+    // and src/state/server.js's 'listening' handler called this BEFORE settle(), so
     // the throw stranded startHttpServer's promise forever.
     it("returns false (not throws) when mkdirSync fails with EACCES", () => {
       const eacces = Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });

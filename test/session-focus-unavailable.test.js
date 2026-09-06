@@ -6,7 +6,7 @@ const test = require("node:test");
 const {
   canOfferLocalFolder,
   focusUnavailableReasonKey,
-} = require("../src/session-focus-unavailable");
+} = require("../src/state/session-focus-unavailable");
 
 test("focusUnavailableReasonKey distinguishes webui, remote, and missing terminal info", () => {
   assert.strictEqual(

@@ -15,10 +15,10 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
-const initPermission = require("../src/permission");
+const initPermission = require("../src/state/permission");
 const {
   classifyPermissionInteraction,
-} = require("../src/permission-automation-policy");
+} = require("../src/state/permission-automation-policy");
 
 function makeCtx(overrides = {}) {
   return {

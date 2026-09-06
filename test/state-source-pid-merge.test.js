@@ -7,9 +7,9 @@
 // 13 is out of scope, and it only stays safe because of the two properties
 // asserted here:
 //
-//   1. src/server-route-state.js normalizes an explicit null identically to an
+//   1. src/state/server-route-state.js normalizes an explicit null identically to an
 //      absent field (Number.isFinite(null) === false).
-//   2. src/state.js MERGES rather than clobbers: a session that already knows
+//   2. src/state/state.js MERGES rather than clobbers: a session that already knows
 //      its terminal PID keeps it when a later event carries none.
 //
 // If either regressed, a single offline hook event would erase a live session's
@@ -22,7 +22,7 @@ const { describe, it, beforeEach, afterEach } = require("node:test");
 const assert = require("node:assert");
 const { EventEmitter } = require("node:events");
 
-const { handleStatePost } = require("../src/server-route-state");
+const { handleStatePost } = require("../src/state/server-route-state");
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. Route normalization: null ≡ absent
@@ -110,7 +110,7 @@ describe("#681 — /state normalizes an explicit source_pid:null exactly like an
 // ═══════════════════════════════════════════════════════════════════════════
 
 const path = require("node:path");
-const themeLoader = require("../src/theme-loader");
+const themeLoader = require("../src/shell/theme-loader");
 themeLoader.init(path.join(__dirname, "..", "src"));
 const _defaultTheme = themeLoader.loadTheme("duck");
 
@@ -150,7 +150,7 @@ function makeCtx() {
 
 describe("#681 — an already-known sourcePid survives a later source_pid:null", () => {
   let api;
-  beforeEach(() => { api = require("../src/state")(makeCtx()); });
+  beforeEach(() => { api = require("../src/state/state")(makeCtx()); });
   afterEach(() => { api.cleanup(); });
 
   const sessionFor = (sid) => api.sessions.get(sid);

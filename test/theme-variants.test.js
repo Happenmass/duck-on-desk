@@ -9,7 +9,7 @@ const {
   buildBaseBindingMetadata,
   applyUserOverridesPatch,
   normalizeTransitionOverride,
-} = require("../src/theme-variants");
+} = require("../src/shell/theme-variants");
 
 afterEach(() => {
   mock.restoreAll();

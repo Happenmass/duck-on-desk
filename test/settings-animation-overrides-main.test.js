@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const createSettingsAnimationOverridesMain = require("../src/settings-animation-overrides-main");
+const createSettingsAnimationOverridesMain = require("../src/shell/settings-animation-overrides-main");
 const {
   registerSettingsAnimationOverridesIpc,
 } = createSettingsAnimationOverridesMain;

@@ -6,7 +6,7 @@ const {
   buildSessionGrantRevokeAction,
   parseSessionGrantRevokeAction,
   createRemoteCardWorkRegistry,
-} = require("../src/session-automation-remote");
+} = require("../src/state/session-automation-remote");
 
 test("persistent revoke action has a separate exact namespace", () => {
   const action = buildSessionGrantRevokeAction("grant-1");

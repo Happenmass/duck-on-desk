@@ -24,11 +24,13 @@ test("ordinary tray callers use the canonical application icon", () => {
     "the byte-identical assets/tray-icon.png copy must stay retired",
   );
 
-  for (const relativePath of ["src/main.js", "src/menu.js"]) {
+  for (const [relativePath, iconJoinArg] of [
+    ["src/main.js", "../assets/icon.png"],
+    ["src/shell/menu.js", "../../assets/icon.png"],
+  ]) {
     const source = fs.readFileSync(path.join(ROOT, relativePath), "utf8");
-    assert.match(
-      source,
-      /iconPath: path\.join\(__dirname, "\.\.\/assets\/icon\.png"\)/,
+    assert.ok(
+      source.includes(`iconPath: path.join(__dirname, "${iconJoinArg}")`),
       `${relativePath} should load the canonical icon for Windows/Linux trays`,
     );
     assert.doesNotMatch(

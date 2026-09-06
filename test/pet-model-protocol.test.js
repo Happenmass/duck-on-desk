@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
-const { POLICY_NAMES, resolvePolicyRequest, policyDirectory } = require("../src/pet-model-protocol");
+const { POLICY_NAMES, resolvePolicyRequest, policyDirectory } = require("../src/robots/duck/pet-model-protocol");
 
 test("policy directory points at the pinned simulator commit in the HF cache", () => {
   const dir = policyDirectory("/home/u");
@@ -20,7 +20,7 @@ test("only whitelisted policy names resolve", () => {
 });
 
 test("stilt policies resolve to the pinned Hub snapshot in the HF cache", () => {
-  const { resolvePolicyRequest, STILTS_COMMIT } = require("../src/pet-model-protocol");
+  const { resolvePolicyRequest, STILTS_COMMIT } = require("../src/robots/duck/pet-model-protocol");
   const ok = resolvePolicyRequest("pet-model://policy/stilts%2F25cm%2Fpolicy.onnx", { homeDir: "/home/u", exists: () => true });
   assert.equal(ok.status, 200);
   assert.equal(ok.file, path.join("/home/u", ".cache", "huggingface", "hub", "models--HannesVonEssen--microduck-stilts", "snapshots", STILTS_COMMIT, "25cm", "policy.onnx"));
@@ -30,7 +30,7 @@ test("stilt policies resolve to the pinned Hub snapshot in the HF cache", () => 
 });
 
 test("the official roller policies resolve from the simulator cache", () => {
-  const { resolvePolicyRequest, POLICY_COMMIT } = require("../src/pet-model-protocol");
+  const { resolvePolicyRequest, POLICY_COMMIT } = require("../src/robots/duck/pet-model-protocol");
   for (const name of ["BEST_roller.onnx", "BEST_roller_crouch.onnx"]) {
     const ok = resolvePolicyRequest(`pet-model://policy/${name}`, { homeDir: "/home/u", exists: () => true });
     assert.equal(ok.status, 200);
@@ -39,7 +39,7 @@ test("the official roller policies resolve from the simulator cache", () => {
 });
 
 test("policies fall back to the app bundle when the cache lacks them", () => {
-  const { resolvePolicyRequest, STILTS_COMMIT } = require("../src/pet-model-protocol");
+  const { resolvePolicyRequest, STILTS_COMMIT } = require("../src/robots/duck/pet-model-protocol");
   const bundledDir = path.join("/app", "resources", "policies");
   const onlyBundled = (file) => file.startsWith(bundledDir);
   const walk = resolvePolicyRequest("pet-model://policy/BEST_alpha_walking.onnx", { homeDir: "/home/u", exists: onlyBundled, bundledDir });

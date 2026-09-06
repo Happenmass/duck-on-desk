@@ -9,10 +9,10 @@ npm start · npm test · npm run build:mac · npm run build:win:all · npm run i
 ## Runtime summary
 
 - hook → `POST 127.0.0.1:24333-24337 /state|/permission`；端口写 `~/.duck-on-desk/runtime.json`；响应头 `x-duck-server: duck-on-desk`
-- `src/server.js` → `server-route-state.js` → `agent-runtime-main.js` → `state.js` → IPC → 渲染窗；权限 `server-route-permission.js` → `permission.js`
-- `agents/registry.js` 的 capabilities 是权限/subagent 路由权威；`src/integration-sync.js` 只同步 codex/opencode/pi；Claude Code 走 `claude-settings-watcher.js` + `claude-hook-operations.js` 队列
+- `src/state/server.js` → `server-route-state.js` → `agent-runtime-main.js` → `state.js` → IPC → 渲染窗；权限 `server-route-permission.js` → `permission.js`
+- `agents/registry.js` 的 capabilities 是权限/subagent 路由权威；`src/state/integration-sync.js` 只同步 codex/opencode/pi；Claude Code 走 `claude-settings-watcher.js` + `claude-hook-operations.js` 队列
 - 设置：`prefs.js`（schema v20）→ `settings-controller.js`（唯一写入者）→ `settings-store.js`
-- 渲染：Plan 02 之前是 `src/renderer.js` + `themes/duck`（螃蟹精灵）；之后是 `renderer/`（Vite + Three.js + MuJoCo）经 `state-change` / `pet-visual-settled` 契约驱动
+- 渲染：Plan 02 之前是 `src/shell/renderer.js` + `themes/duck`（螃蟹精灵）；之后是 `renderer/`（Vite + Three.js + MuJoCo）经 `state-change` / `pet-visual-settled` 契约驱动
 
 ## Constraints
 
@@ -22,7 +22,7 @@ npm start · npm test · npm run build:mac · npm run build:win:all · npm run i
 - Pi 是 state-only：不接管权限、不弹权限气泡
 - Codex official hooks 为主，JSONL 轮询为兜底；`codex-turn-fence.js` 去重
 - 设置 store 是唯一真相，controller 是唯一写入者
-- `~/.claude/settings.json` 的所有进程内 mutation 必须经 `src/claude-hook-operations.js` 串行队列
+- `~/.claude/settings.json` 的所有进程内 mutation 必须经 `src/state/claude-hook-operations.js` 串行队列
 - 不得把 ONNX 权重复制进仓库或安装包；只从用户级 Hugging Face 缓存读取
 
 ## Testing
