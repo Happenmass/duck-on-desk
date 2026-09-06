@@ -19,3 +19,19 @@ export const ROLLER_REST_HEIGHT = 0.12; // trunk height standing on the wheels (
 export const ROLLER_MAX_FORWARD = 0.33;
 export const ROLLER_BRAKE = -0.3; // cmd_x applied while nothing drives and the duck is still rolling
 export const ROLLER_BRAKE_ABOVE = 0.03; // m/s
+
+// BEST_roller never saw a turn command (cmd[2] was always 0 in training; a
+// heading_hold reward kept the yaw where it spawned), so the facing cone and
+// the roam heading are kept by yawing the trunk kinematically, this fast.
+export const ROLLER_YAW_RATE = 0.8; // rad/s
+
+// Rotate a MuJoCo free-joint quaternion [w x y z] at qpos[3..6] about world Z.
+export function yawTrunk(qpos, delta) {
+  const c = Math.cos(delta / 2);
+  const s = Math.sin(delta / 2);
+  const [w, x, y, z] = [qpos[3], qpos[4], qpos[5], qpos[6]];
+  qpos[3] = c * w - s * z;
+  qpos[4] = c * x - s * y;
+  qpos[5] = c * y + s * x;
+  qpos[6] = c * z + s * w;
+}

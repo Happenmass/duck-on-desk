@@ -6,7 +6,7 @@ import { buildRig, geometryToBinaryStl, loadGlbGeometries, loadKinematics, MODEL
 import { DEFAULT_VARIANT, materialHookFor, VARIANTS, applyVariant } from "./variants.js";
 import { MotionLeases } from "./motion-leases.js";
 import { normalizeStilts, STILT_BLEND, STILT_MAX_FORWARD, STILT_MAX_TURN, STILT_SERVO_GAIN, stiltFraming, stiltMassKg, stiltMeshData, stiltPolicyFile } from "./stilts.js";
-import { normalizeLocomotion, ROLLER_BRAKE, ROLLER_BRAKE_ABOVE, ROLLER_CROUCH, ROLLER_MAX_FORWARD, ROLLER_POLICY_FILES, ROLLER_REST_HEIGHT, ROLLER_WHEEL_JOINTS } from "./rollers.js";
+import { normalizeLocomotion, ROLLER_BRAKE, ROLLER_BRAKE_ABOVE, ROLLER_CROUCH, ROLLER_MAX_FORWARD, ROLLER_POLICY_FILES, ROLLER_REST_HEIGHT, ROLLER_WHEEL_JOINTS, ROLLER_YAW_RATE, yawTrunk } from "./rollers.js";
 import {
   CMD_SIZE, CTRL_DT, DECIMATION, DEFAULT_POSE, JOINT_NAMES, MAX_BACK, MAX_FORWARD,
   MAX_TURN, NUM_JOINTS, OBS_SIZE, POLICY_FILES, TIMESTEP,
@@ -63,6 +63,7 @@ class DuckRuntime {
   #ankleIds;
   #cameraBearing = 0;
   #headingEngaged = false;
+  #rollerTurn = 0; // rollers: heading turn applied kinematically in #recenter()
   #displacement = { x: 0, y: 0 }; // stride credited since takeDisplacement() (rig frame, metres)
   #strideRemaining = 0; // metres of the last foot landing's stride still to be paid out
   #lastLandingAt = 0; // performance.now() of the last foot landing (gait-kick bookkeeping)
@@ -578,6 +579,7 @@ class DuckRuntime {
     this.#quackAt = -Infinity;
     this.#prevVz = 0;
     this.#headingEngaged = false;
+    this.#rollerTurn = 0;
     this.#sleeping = false;
     this.#suspended = false;
     this.#mujoco.mj_resetDataKeyframe(this.#model, this.#data, this.#standKeyId);
@@ -664,6 +666,7 @@ class DuckRuntime {
     for (let joint = 0; joint < NUM_JOINTS; joint++) this.#obs[index++] = qvel[this.#dofAdr[joint]];
     for (let joint = 0; joint < NUM_JOINTS; joint++) this.#obs[index++] = this.#lastAction[joint];
     this.#cmd.fill(0);
+    this.#rollerTurn = 0;
     if (this.#mode === "sit" || this.#mode === "sitting" || this.#mode === "standing") {
       this.#cmd[0] = this.#sitFlag;
     } else if (this.#pick) {
@@ -674,22 +677,28 @@ class DuckRuntime {
     } else if (!this.#grabbed && !this.#recovery) {
       const motion = this.#leases.current();
       let { forward, turn } = motion;
-      if (typeof motion.heading === "number") {
+      // On wheels nothing holds the heading between leases (pushes drift the
+      // yaw), so with no heading asked for the cone edge itself is the target.
+      const heading = typeof motion.heading === "number" ? motion.heading
+        : this.#rollers() ? this.#facing() : null;
+      if (heading !== null) {
         // The duck never turns its back on the viewer: whatever a caller asks
         // for, the target facing stays inside the ±FACING_HALF_CONE cone. The
         // bang-bang controller lets the facing wander HEADING_ENGAGE past its
         // target before it re-engages, so the target is inset by that much.
         const limit = FACING_HALF_CONE - HEADING_ENGAGE;
-        const target = clamp(motion.heading, -limit, limit);
+        const target = clamp(heading, -limit, limit);
         const control = headingTurn(this.#facing(), target, this.#headingEngaged);
         this.#headingEngaged = control.engaged;
         turn = control.turn;
-        if (turn) forward = Math.max(forward, HEADING_MIN_FORWARD);
+        if (turn && !this.#rollers()) forward = Math.max(forward, HEADING_MIN_FORWARD);
       }
       if (this.#rollers()) {
-        // BEST_roller was trained with no turning demand (cmd[2] always 0);
+        // BEST_roller was trained with no turning demand (cmd[2] always 0), so
+        // the turn is applied kinematically in #recenter() instead;
         // cmd_x: 0 = coast, > 0 = push, < 0 = brake — brake instead of
         // coasting away whenever nothing is driving.
+        this.#rollerTurn = turn;
         turn = 0;
         const speed = Math.hypot(this.#data.qvel[0], this.#data.qvel[1]);
         if (forward === 0 && speed > ROLLER_BRAKE_ABOVE) forward = ROLLER_BRAKE / ROLLER_MAX_FORWARD;
@@ -847,6 +856,7 @@ class DuckRuntime {
     if (this.#rollers() && !this.#grabbed && !this.#recovery) {
       this.#displacement.x += qpos[0];
       this.#displacement.y += qpos[1];
+      if (this.#rollerTurn) yawTrunk(qpos, this.#rollerTurn * ROLLER_YAW_RATE * CTRL_DT);
     }
     qpos[0] = 0;
     qpos[1] = 0;

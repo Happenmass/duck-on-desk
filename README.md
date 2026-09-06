@@ -13,9 +13,10 @@ The tray menu's **Locomotion** entry switches the duck between its feet and the
 official roller-skate variant: the shipped `BEST_roller` policy drives four
 passive wheels (push, coast, brake) and `BEST_roller_crouch` is its crouch-glide
 trick, which the duck performs whenever it would otherwise peck. Both policies
-are read from the same Hugging Face cache as the walking ones. On skates the duck
-cannot turn (the policy was trained without a turning demand) or sit, and free
-roam slides the window by the distance actually rolled.
+are read from the same Hugging Face cache as the walking ones. The policy was
+trained without a turning demand, so on skates the duck is steered by rotating
+its body directly (it still keeps to the same camera-facing cone as on foot); it
+cannot sit, and free roam slides the window by the distance actually rolled.
 
 ## Stilts (experimental)
 
