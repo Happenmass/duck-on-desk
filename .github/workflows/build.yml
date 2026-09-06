@@ -22,8 +22,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run setup:models
-        continue-on-error: true
+      - run: npm run fetch:policies
       - run: npm run build:renderer
       - run: npm test
         env:

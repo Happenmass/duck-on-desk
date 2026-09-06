@@ -37,3 +37,19 @@ test("the official roller policies resolve from the simulator cache", () => {
     assert.equal(ok.file, path.join("/home/u", ".cache", "huggingface", "microduck-simulator", POLICY_COMMIT, "policies", name));
   }
 });
+
+test("policies fall back to the app bundle when the cache lacks them", () => {
+  const { resolvePolicyRequest, STILTS_COMMIT } = require("../src/pet-model-protocol");
+  const bundledDir = path.join("/app", "resources", "policies");
+  const onlyBundled = (file) => file.startsWith(bundledDir);
+  const walk = resolvePolicyRequest("pet-model://policy/BEST_alpha_walking.onnx", { homeDir: "/home/u", exists: onlyBundled, bundledDir });
+  assert.equal(walk.status, 200);
+  assert.equal(walk.file, path.join(bundledDir, "BEST_alpha_walking.onnx"));
+  const stilt = resolvePolicyRequest("pet-model://policy/stilts%2F25cm%2Fpolicy.onnx", { homeDir: "/home/u", exists: onlyBundled, bundledDir });
+  assert.equal(stilt.file, path.join(bundledDir, "stilts", "25cm", "policy.onnx"));
+  // the cache still wins when it has the file
+  const cached = resolvePolicyRequest("pet-model://policy/BEST_alpha_walking.onnx", { homeDir: "/home/u", exists: () => true, bundledDir });
+  assert.equal(cached.file, path.join("/home/u", ".cache", "huggingface", "microduck-simulator", "183f99a40bd7308da3e848de961ed32bb02624a5", "policies", "BEST_alpha_walking.onnx"));
+  assert.ok(STILTS_COMMIT);
+  assert.equal(resolvePolicyRequest("pet-model://policy/BEST_alpha_walking.onnx", { homeDir: "/home/u", exists: () => false, bundledDir }).status, 404);
+});

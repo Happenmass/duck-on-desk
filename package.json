@@ -31,12 +31,15 @@
     "uninstall:codex-hooks": "node hooks/codex-install.js --uninstall",
     "cleanup:integrations": "node hooks/cleanup-integrations.js --apply",
     "register-protocol:dev": "node launch.js --register-protocol",
-    "setup:models": "node renderer/scripts/link-model-cache.mjs",
+    "fetch:policies": "node scripts/fetch-policies.js",
+    "setup:models": "npm run fetch:policies && node renderer/scripts/link-model-cache.mjs",
     "build:renderer": "vite build --config renderer/vite.config.js",
     "dev:renderer": "vite --config renderer/vite.config.js --host 127.0.0.1",
     "prestart": "npm run build:renderer",
-    "prebuild:mac": "npm run build:renderer",
-    "prebuild:win:all": "npm run build:renderer"
+    "prebuild:mac": "npm run build:renderer && npm run fetch:policies",
+    "prebuild:mac:arm64": "npm run build:renderer && npm run fetch:policies",
+    "prebuild:mac:x64": "npm run build:renderer && npm run fetch:policies",
+    "prebuild:win:all": "npm run build:renderer && npm run fetch:policies"
   },
   "keywords": [
     "duck",
@@ -131,6 +134,10 @@
       {
         "from": "assets/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "models/bundled",
+        "to": "policies"
       }
     ],
     "publish": [

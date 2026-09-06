@@ -16,7 +16,11 @@ code derived from the Pollen Robotics Microduck simulator
 (https://huggingface.co/spaces/pollen-robotics/microduck-simulator, commit 183f99a40bd7308da3e848de961ed32bb02624a5).
 The `microduck_rl` README states its 3D model files are CC BY-SA-NC; the Space declares no
 license for its glue code. Non-commercial use only until clarified with Pollen Robotics.
-ONNX policy weights are NOT bundled; they are read from the user's Hugging Face cache.
+The ONNX policy weights from the same Space (walking, sit/stand, stand-up, ground pick, roller,
+roller crouch) are bundled under `resources/policies/` so the app works without a download; the
+Space declares no licence for them, so they are treated like the other Space assets above.
+The community stilt policies bundled alongside (`HannesVonEssen/microduck-stilts`, Apache-2.0)
+were trained in `Vottivott/microduck-playground` (Apache-2.0).
 
 ## Sounds
 

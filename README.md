@@ -12,17 +12,7 @@ Prebuilt apps are on the [Releases](https://github.com/Happenmass/duck-on-desk/r
   `xattr -dr com.apple.quarantine "/Applications/Duck on Desk.app"`
 - **Windows**: `Duck-on-Desk-Setup-<version>-x64.exe` or `-arm64.exe` (SmartScreen: More info → Run anyway).
 
-The duck's RL policies are not bundled (their licence is unclear, see `NOTICE.md`); fetch the six ONNX files into your Hugging Face cache once:
-
-```bash
-DIR="$HOME/.cache/huggingface/microduck-simulator/183f99a40bd7308da3e848de961ed32bb02624a5/policies"
-mkdir -p "$DIR"
-for f in BEST_alpha_walking BEST_alpha_sitstand BEST_alpha_stand alpha_ground_pick BEST_roller BEST_roller_crouch; do
-  curl -L -o "$DIR/$f.onnx" "https://huggingface.co/spaces/pollen-robotics/microduck-simulator/resolve/183f99a40bd7308da3e848de961ed32bb02624a5/app/public/policies/$f.onnx"
-done
-```
-
-Windows users: the same six files, PowerShell version in `docs/guides/install.md`. Then launch, open the tray menu → Settings → Agents, and install the hooks for Claude Code, Codex, Pi or opencode.
+Everything the duck needs is inside the app, including the RL policies (see `NOTICE.md` for their sources); nothing is downloaded at runtime. Launch, open the tray menu → Settings → Agents, and install the hooks for Claude Code, Codex, Pi or opencode.
 
 ## Roller skates
 
@@ -30,7 +20,7 @@ The tray menu's **Locomotion** entry switches the duck between its feet and the
 official roller-skate variant: the shipped `BEST_roller` policy drives four
 passive wheels (push, coast, brake) and `BEST_roller_crouch` is its crouch-glide
 trick, which the duck performs whenever it would otherwise peck. Both policies
-are read from the same Hugging Face cache as the walking ones. The policy was
+ship with the app like the walking ones. The policy was
 trained without a turning demand, so on skates the duck is steered by rotating
 its body directly, inside a wider ±80° camera-facing cone; a little bearing drag
 on the wheels keeps the glide at a desktop pace. It cannot sit, and free roam
@@ -40,12 +30,7 @@ slides the window by the distance actually rolled.
 
 The tray menu's **Stilts** entry puts the duck on the community stilt policies
 (`HannesVonEssen/microduck-stilts`, trained in `Vottivott/microduck-playground`).
-Like the official policies they are read from your Hugging Face cache, never
-bundled: fetch them once with
-
-```bash
-python3 -c "from huggingface_hub import snapshot_download; snapshot_download('HannesVonEssen/microduck-stilts', allow_patterns=['*.onnx', '*.json', '*.md'])"
-```
+They ship with the app too (Apache-2.0).
 
 Heights 10–25 cm are the printable ones; 50 cm–2 m are simulation-only. On
 stilts the duck walks and turns but does not sit, peck or get up on its own
@@ -68,7 +53,7 @@ See `docs/guides/state-mapping.md`.
 Tray → Skin: Cream, Graphite, Lavender, Sky (the four real Microduck colourways). Voices follow the skin.
 
 ## Development
-`npm ci && npm run setup:models && npm start` · `npm test` · `npm run build:mac` / `npm run build:win:all`
+`npm ci && npm run setup:models && npm start` (`setup:models` fetches the policies into your Hugging Face cache once) · `npm test` · `npm run build:mac` / `npm run build:win:all`
 
 ## Acknowledgements
 

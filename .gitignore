@@ -163,3 +163,5 @@ duck-emoji-final/
 
 renderer-dist/
 renderer/models/
+# Policies staged for packaging by scripts/fetch-policies.js (the source of truth is the HF cache)
+models/bundled/

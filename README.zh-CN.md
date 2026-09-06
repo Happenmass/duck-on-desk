@@ -12,24 +12,13 @@
   `xattr -dr com.apple.quarantine "/Applications/Duck on Desk.app"`
 - **Windows**：`Duck-on-Desk-Setup-<版本>-x64.exe` 或 `-arm64.exe`（SmartScreen 提示时选「更多信息 → 仍要运行」）。
 
-鸭子的强化学习策略不随应用打包（许可证尚不明确，见 `NOTICE.md`），先把六个 ONNX 文件取到你的 Hugging Face 缓存里，只需一次：
-
-```bash
-DIR="$HOME/.cache/huggingface/microduck-simulator/183f99a40bd7308da3e848de961ed32bb02624a5/policies"
-mkdir -p "$DIR"
-for f in BEST_alpha_walking BEST_alpha_sitstand BEST_alpha_stand alpha_ground_pick BEST_roller BEST_roller_crouch; do
-  curl -L -o "$DIR/$f.onnx" "https://huggingface.co/spaces/pollen-robotics/microduck-simulator/resolve/183f99a40bd7308da3e848de961ed32bb02624a5/app/public/policies/$f.onnx"
-done
-```
-
-Windows 用户请看 `docs/guides/install.md` 里同样六个文件的 PowerShell 版本。然后启动应用，打开托盘菜单 → 设置 → Agents，安装 Claude Code、Codex、Pi 或 opencode 的 hooks。
+鸭子需要的一切都在应用里，包括强化学习策略（来源见 `NOTICE.md`），运行时不下载任何东西。启动应用，打开托盘菜单 → 设置 → Agents，安装 Claude Code、Codex、Pi 或 opencode 的 hooks。
 
 ## 轮滑
 
 托盘菜单的「移动方式」在双脚和官方轮滑形态之间切换：随官方发布的 `BEST_roller`
 策略驱动四个被动轮（蹬地、滑行、刹车），`BEST_roller_crouch` 是它的下蹲滑行
-把戏，鸭子在原本要啄地的时候就会做一次。两条策略和走路策略读的是同一个
-Hugging Face 缓存。策略训练时没有转向指令，所以轮滑时的转向是直接旋转身体实现的，
+把戏，鸭子在原本要啄地的时候就会做一次。两条策略和走路策略一样随应用打包。策略训练时没有转向指令，所以轮滑时的转向是直接旋转身体实现的，
 朝向镜头的锥角放宽到 ±80°；轮子上加了一点轴承阻力，让滑行速度适合桌面。轮滑时
 不会坐下，自由漫游按真实滚动距离移动窗口。
 
@@ -37,11 +26,7 @@ Hugging Face 缓存。策略训练时没有转向指令，所以轮滑时的转�
 
 托盘菜单的「踩高跷」把鸭子换到社区训练的高跷策略
 （`HannesVonEssen/microduck-stilts`，训练于 `Vottivott/microduck-playground`）。
-和官方策略一样，它们只从你的 Hugging Face 缓存读取、不随应用打包，先取一次：
-
-```bash
-python3 -c "from huggingface_hub import snapshot_download; snapshot_download('HannesVonEssen/microduck-stilts', allow_patterns=['*.onnx', '*.json', '*.md'])"
-```
+它们同样随应用打包（Apache-2.0）。
 
 10–25 cm 是可打印的高度，50 cm–2 m 只是仿真结果。踩高跷时鸭子会走会转，
 但不会坐下、啄地或自己爬起（摔倒后直接扶起），并把舵机增益加倍：所有 Microduck 策略都是用 BAM 舵机模型训练的，
@@ -62,7 +47,7 @@ python3 -c "from huggingface_hub import snapshot_download; snapshot_download('Ha
 托盘 → Skin：Cream、Graphite、Lavender、Sky（Microduck 官方四种配色）。语音会随皮肤切换。
 
 ## 开发
-`npm ci && npm run setup:models && npm start` · `npm test` · `npm run build:mac` / `npm run build:win:all`
+`npm ci && npm run setup:models && npm start`（`setup:models` 会把策略取到你的 Hugging Face 缓存，只需一次） · `npm test` · `npm run build:mac` / `npm run build:win:all`
 
 ## 致谢
 

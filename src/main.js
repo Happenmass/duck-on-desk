@@ -3693,7 +3693,11 @@ if (!gotTheLock) {
   }
 
   app.whenReady().then(async () => {
-    petModelProtocol.installHandler(protocol, net, pathToFileURL);
+    petModelProtocol.installHandler(protocol, net, pathToFileURL, {
+      // Policies ship with the app (scripts/fetch-policies.js stages them); the
+      // user's Hugging Face cache still wins when it has them.
+      bundledDir: app.isPackaged ? path.join(process.resourcesPath, "policies") : path.join(__dirname, "..", "models", "bundled"),
+    });
     // Older macOS and development builds retain the padded runtime icon from
     // #416. Packaged Tahoe+ leaves the Dock untouched so macOS can apply the
     // user's Default/Dark/Clear/Tinted treatment to the bundle icon (#941).

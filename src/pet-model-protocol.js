@@ -1,5 +1,7 @@
 "use strict";
-// pet-model:// serves the four ONNX policies from the user's Hugging Face cache. Weights are never bundled.
+// pet-model:// serves the duck's ONNX policies: from the user's Hugging Face cache when
+// present, otherwise from the copies bundled with the app (resources/policies, staged
+// by scripts/fetch-policies.js).
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -24,15 +26,24 @@ function stiltsDirectory(homeDir = os.homedir()) {
   return path.join(homeDir, ".cache", "huggingface", "hub", STILTS_REPO, "snapshots", STILTS_COMMIT);
 }
 
-function resolvePolicyRequest(url, { homeDir = os.homedir(), exists = fs.existsSync } = {}) {
+function resolvePolicyRequest(url, { homeDir = os.homedir(), exists = fs.existsSync, bundledDir = null } = {}) {
   let name;
   try { name = decodeURIComponent(new URL(url).pathname.split("/").pop() || ""); } catch { return { status: 404 }; }
-  let file;
+  let cached;
+  let rel;
   const stilts = /^stilts\/(\d+)cm\/policy\.onnx$/.exec(name);
-  if (stilts && STILT_HEIGHTS_CM.has(Number(stilts[1]))) file = path.join(stiltsDirectory(homeDir), `${stilts[1]}cm`, "policy.onnx");
-  else if (POLICY_NAMES.has(name)) file = path.join(policyDirectory(homeDir), name);
-  else return { status: 404 };
-  if (!exists(file)) return { status: 404, reason: "policy missing from global cache" };
+  if (stilts && STILT_HEIGHTS_CM.has(Number(stilts[1]))) {
+    rel = path.join("stilts", `${stilts[1]}cm`, "policy.onnx");
+    cached = path.join(stiltsDirectory(homeDir), `${stilts[1]}cm`, "policy.onnx");
+  } else if (POLICY_NAMES.has(name)) {
+    rel = name;
+    cached = path.join(policyDirectory(homeDir), name);
+  } else {
+    return { status: 404 };
+  }
+  const candidates = bundledDir ? [cached, path.join(bundledDir, rel)] : [cached];
+  const file = candidates.find((candidate) => exists(candidate));
+  if (!file) return { status: 404, reason: "policy missing from the global cache and the app bundle" };
   return { status: 200, file };
 }
 
@@ -43,12 +54,12 @@ function registerScheme(protocol) {
   } }]);
 }
 
-function installHandler(protocol, net, pathToFileURL) {
+function installHandler(protocol, net, pathToFileURL, { bundledDir = null } = {}) {
   protocol.handle(SCHEME, (request) => {
-    const resolved = resolvePolicyRequest(request.url);
+    const resolved = resolvePolicyRequest(request.url, { bundledDir });
     if (resolved.status !== 200) return new Response(resolved.reason || "not found", { status: 404 });
     return net.fetch(pathToFileURL(resolved.file).toString());
   });
 }
 
-module.exports = { SCHEME, POLICY_COMMIT, POLICY_NAMES, STILTS_COMMIT, policyDirectory, stiltsDirectory, resolvePolicyRequest, registerScheme, installHandler };
+module.exports = { SCHEME, POLICY_COMMIT, POLICY_NAMES, STILTS_COMMIT, STILT_HEIGHTS_CM, policyDirectory, stiltsDirectory, resolvePolicyRequest, registerScheme, installHandler };

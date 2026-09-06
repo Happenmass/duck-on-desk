@@ -264,15 +264,21 @@ describe("package build config", () => {
       ]) {
         assert.equal(pkg.scripts[key], undefined, key);
       }
-      // The two surviving prebuild hooks only build the 3D renderer bundle -- they fetch nothing.
-      for (const key of ["prebuild:mac", "prebuild:win:all"]) {
-        assert.strictEqual(pkg.scripts[key], "npm run build:renderer", key);
+      // The surviving prebuild hooks build the 3D renderer bundle and stage the
+      // duck's ONNX policies (pinned Hugging Face sources, see
+      // scripts/fetch-policies.js) -- no sidecar binaries, nothing else.
+      for (const key of ["prebuild:mac", "prebuild:mac:arm64", "prebuild:mac:x64", "prebuild:win:all"]) {
+        assert.strictEqual(pkg.scripts[key], "npm run build:renderer && npm run fetch:policies", key);
       }
       for (const platform of ["win", "mac", "linux"]) {
         const entries = pkg.build[platform] && pkg.build[platform].extraResources;
         assert.equal(entries, undefined, `${platform} should not package an extra sidecar`);
       }
-      assert.deepEqual(pkg.build.extraResources, [{ from: "assets/icon.ico", to: "icon.ico" }]);
+      // The bundled policies are the one extra resource besides the icon.
+      assert.deepEqual(pkg.build.extraResources, [
+        { from: "assets/icon.ico", to: "icon.ico" },
+        { from: "models/bundled", to: "policies" },
+      ]);
     });
 
     it("declares the asar inspector directly and keeps the macOS + Windows build commands", () => {
