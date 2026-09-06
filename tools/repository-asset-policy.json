@@ -50,6 +50,13 @@
       "retentionReason": "Localized README demonstration media."
     },
     {
+      "pattern": "docs/media/**",
+      "class": "docs-marketing",
+      "owner": "docs-readme",
+      "packaged": false,
+      "retentionReason": "README demonstration GIF linked from the docs."
+    },
+    {
       "pattern": "assets/source/cloudling-pointer-bridge/**",
       "class": "source-of-truth",
       "owner": "design-assets",
