@@ -5,7 +5,24 @@ A physics-driven 3D Microduck that lives on your desktop and reacts to your AI c
 > AGPL-3.0 derivative of [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk) (baseline `5ca26b5c`). The duck is the official Pollen Robotics Microduck simulator rig, MuJoCo physics and RL walking policies, not pre-baked animation. See `NOTICE.md`.
 
 ## Install
-See `docs/guides/install.md`. macOS (arm64/x64) and Windows (x64/arm64).
+
+Prebuilt apps are on the [Releases](https://github.com/Happenmass/duck-on-desk/releases) page:
+
+- **macOS**: `Duck-on-Desk-<version>-arm64.dmg` (Apple Silicon) or `-x64.dmg` (Intel). The build is unsigned, so after dragging it to Applications run once:
+  `xattr -dr com.apple.quarantine "/Applications/Duck on Desk.app"`
+- **Windows**: `Duck-on-Desk-Setup-<version>-x64.exe` or `-arm64.exe` (SmartScreen: More info → Run anyway).
+
+The duck's RL policies are not bundled (their licence is unclear, see `NOTICE.md`); fetch the six ONNX files into your Hugging Face cache once:
+
+```bash
+DIR="$HOME/.cache/huggingface/microduck-simulator/183f99a40bd7308da3e848de961ed32bb02624a5/policies"
+mkdir -p "$DIR"
+for f in BEST_alpha_walking BEST_alpha_sitstand BEST_alpha_stand alpha_ground_pick BEST_roller BEST_roller_crouch; do
+  curl -L -o "$DIR/$f.onnx" "https://huggingface.co/spaces/pollen-robotics/microduck-simulator/resolve/183f99a40bd7308da3e848de961ed32bb02624a5/app/public/policies/$f.onnx"
+done
+```
+
+Windows users: the same six files, PowerShell version in `docs/guides/install.md`. Then launch, open the tray menu → Settings → Agents, and install the hooks for Claude Code, Codex, Pi or opencode.
 
 ## Roller skates
 
@@ -52,6 +69,13 @@ Tray → Skin: Cream, Graphite, Lavender, Sky (the four real Microduck colourway
 
 ## Development
 `npm ci && npm run setup:models && npm start` · `npm test` · `npm run build:mac` / `npm run build:win:all`
+
+## Acknowledgements
+
+- [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk) by rullerzhou-afk and contributors (AGPL-3.0): the desktop-pet shell, agent integrations, permission bubbles and settings this project is derived from (baseline commit `5ca26b5c`).
+- [Microduck](https://github.com/pollen-robotics/microduck) by Pollen Robotics (Apache-2.0): the tiny biped duck robot itself; [microduck_rl](https://github.com/pollen-robotics/microduck_rl): the RL training environments behind the walking, sitting, ground-pick and roller policies; and the [Microduck simulator Space](https://huggingface.co/spaces/pollen-robotics/microduck-simulator): the 3D rig, MJCF, voices and the policies this duck runs (3D assets and voices are non-commercial, see `NOTICE.md`).
+- [microduck-playground](https://github.com/Vottivott/microduck-playground) by Vottivott (Apache-2.0) and the [microduck-stilts](https://huggingface.co/HannesVonEssen/microduck-stilts) weights by HannesVonEssen: the community stilt training and policies.
+- Footsteps and thumps are CC0 samples by [Kenney](https://kenney.nl); the notification sound is CC0 by iut_Paris8 on freesound; agent icons come from [LobeHub Icons](https://lobehub.com/icons).
 
 ## License
 AGPL-3.0-only for code. 3D assets and voice banks are non-commercial (see `NOTICE.md`).

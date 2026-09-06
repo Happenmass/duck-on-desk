@@ -5,7 +5,24 @@
 > AGPL-3.0 衍生自 [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk)（基线 commit `5ca26b5c`）。这只鸭子由 Pollen Robotics 官方 Microduck 仿真骨架、MuJoCo 物理引擎和强化学习行走策略驱动，不是预制帧动画。详见 `NOTICE.md`。
 
 ## 安装
-见 `docs/guides/install.md`。支持 macOS（arm64/x64）与 Windows（x64/arm64）。
+
+编译好的程序在 [Releases](https://github.com/Happenmass/duck-on-desk/releases) 页面：
+
+- **macOS**：`Duck-on-Desk-<版本>-arm64.dmg`（Apple Silicon）或 `-x64.dmg`（Intel）。构建未签名，拖进「应用程序」后运行一次：
+  `xattr -dr com.apple.quarantine "/Applications/Duck on Desk.app"`
+- **Windows**：`Duck-on-Desk-Setup-<版本>-x64.exe` 或 `-arm64.exe`（SmartScreen 提示时选「更多信息 → 仍要运行」）。
+
+鸭子的强化学习策略不随应用打包（许可证尚不明确，见 `NOTICE.md`），先把六个 ONNX 文件取到你的 Hugging Face 缓存里，只需一次：
+
+```bash
+DIR="$HOME/.cache/huggingface/microduck-simulator/183f99a40bd7308da3e848de961ed32bb02624a5/policies"
+mkdir -p "$DIR"
+for f in BEST_alpha_walking BEST_alpha_sitstand BEST_alpha_stand alpha_ground_pick BEST_roller BEST_roller_crouch; do
+  curl -L -o "$DIR/$f.onnx" "https://huggingface.co/spaces/pollen-robotics/microduck-simulator/resolve/183f99a40bd7308da3e848de961ed32bb02624a5/app/public/policies/$f.onnx"
+done
+```
+
+Windows 用户请看 `docs/guides/install.md` 里同样六个文件的 PowerShell 版本。然后启动应用，打开托盘菜单 → 设置 → Agents，安装 Claude Code、Codex、Pi 或 opencode 的 hooks。
 
 ## 轮滑
 
@@ -46,6 +63,13 @@ python3 -c "from huggingface_hub import snapshot_download; snapshot_download('Ha
 
 ## 开发
 `npm ci && npm run setup:models && npm start` · `npm test` · `npm run build:mac` / `npm run build:win:all`
+
+## 致谢
+
+- [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk)，作者 rullerzhou-afk 及贡献者（AGPL-3.0）：本项目衍生自它的桌面宠物外壳、Agent 集成、权限气泡和设置系统（基线 commit `5ca26b5c`）。
+- [Microduck](https://github.com/pollen-robotics/microduck)，Pollen Robotics（Apache-2.0）：这只小型双足鸭子机器人本身；[microduck_rl](https://github.com/pollen-robotics/microduck_rl)：行走、坐站、啄地和轮滑策略背后的强化学习训练环境；以及 [Microduck 模拟器 Space](https://huggingface.co/spaces/pollen-robotics/microduck-simulator)：本鸭子使用的 3D 骨架、MJCF、语音和策略（3D 素材与语音仅限非商业使用，见 `NOTICE.md`）。
+- [microduck-playground](https://github.com/Vottivott/microduck-playground)，Vottivott（Apache-2.0）与 HannesVonEssen 的 [microduck-stilts](https://huggingface.co/HannesVonEssen/microduck-stilts) 权重：社区的高跷训练与策略。
+- 脚步声与闷响来自 [Kenney](https://kenney.nl) 的 CC0 素材；通知音来自 freesound 用户 iut_Paris8（CC0）；Agent 图标来自 [LobeHub Icons](https://lobehub.com/icons)。
 
 ## 许可证
 代码采用 AGPL-3.0-only 许可。3D 素材与语音库仅限非商业使用（详见 `NOTICE.md`）。
