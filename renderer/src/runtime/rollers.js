@@ -23,7 +23,9 @@ export const ROLLER_BRAKE_ABOVE = 0.03; // m/s
 // BEST_roller never saw a turn command (cmd[2] was always 0 in training; a
 // heading_hold reward kept the yaw where it spawned), so the facing cone and
 // the roam heading are kept by yawing the trunk kinematically, this fast.
-export const ROLLER_YAW_RATE = 0.8; // rad/s
+export const ROLLER_YAW_RATE = 0.8; // rad/s (≈0.7 effective while rolling; 1.2 made the duck stumble)
+// On skates the duck may show more of its side than on foot (user-set).
+export const ROLLER_HALF_CONE = Math.PI * 4 / 9; // 160° cone facing the camera
 
 // Rotate a MuJoCo free-joint quaternion [w x y z] at qpos[3..6] about world Z.
 export function yawTrunk(qpos, delta) {
@@ -35,3 +37,9 @@ export function yawTrunk(qpos, delta) {
   qpos[5] = c * y + s * x;
   qpos[6] = c * z + s * w;
 }
+
+// Bearing drag on the passive wheels. The model ships with frictionloss 0 and
+// the training curriculum ramps it to this value; without it the duck coasts
+// at the full push speed for good (≈360 px/s on screen), far too fast for a
+// desktop stroll.
+export const ROLLER_WHEEL_FRICTIONLOSS = 0.003; // N·m — higher = slower glide but more of the policy's stumbles

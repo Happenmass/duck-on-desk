@@ -15,8 +15,9 @@ passive wheels (push, coast, brake) and `BEST_roller_crouch` is its crouch-glide
 trick, which the duck performs whenever it would otherwise peck. Both policies
 are read from the same Hugging Face cache as the walking ones. The policy was
 trained without a turning demand, so on skates the duck is steered by rotating
-its body directly (it still keeps to the same camera-facing cone as on foot); it
-cannot sit, and free roam slides the window by the distance actually rolled.
+its body directly, inside a wider ±80° camera-facing cone; a little bearing drag
+on the wheels keeps the glide at a desktop pace. It cannot sit, and free roam
+slides the window by the distance actually rolled.
 
 ## Stilts (experimental)
 

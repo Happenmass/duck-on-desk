@@ -6,7 +6,7 @@ import { buildRig, geometryToBinaryStl, loadGlbGeometries, loadKinematics, MODEL
 import { DEFAULT_VARIANT, materialHookFor, VARIANTS, applyVariant } from "./variants.js";
 import { MotionLeases } from "./motion-leases.js";
 import { normalizeStilts, STILT_BLEND, STILT_MAX_FORWARD, STILT_MAX_TURN, STILT_SERVO_GAIN, stiltFraming, stiltMassKg, stiltMeshData, stiltPolicyFile } from "./stilts.js";
-import { normalizeLocomotion, ROLLER_BRAKE, ROLLER_BRAKE_ABOVE, ROLLER_CROUCH, ROLLER_MAX_FORWARD, ROLLER_POLICY_FILES, ROLLER_REST_HEIGHT, ROLLER_WHEEL_JOINTS, ROLLER_YAW_RATE, yawTrunk } from "./rollers.js";
+import { normalizeLocomotion, ROLLER_BRAKE, ROLLER_BRAKE_ABOVE, ROLLER_CROUCH, ROLLER_MAX_FORWARD, ROLLER_POLICY_FILES, ROLLER_HALF_CONE, ROLLER_REST_HEIGHT, ROLLER_WHEEL_FRICTIONLOSS, ROLLER_WHEEL_JOINTS, ROLLER_YAW_RATE, yawTrunk } from "./rollers.js";
 import {
   CMD_SIZE, CTRL_DT, DECIMATION, DEFAULT_POSE, JOINT_NAMES, MAX_BACK, MAX_FORWARD,
   MAX_TURN, NUM_JOINTS, OBS_SIZE, POLICY_FILES, TIMESTEP,
@@ -525,6 +525,11 @@ class DuckRuntime {
     doc.documentElement.appendChild(keyframe);
     const meshFiles = [...doc.querySelectorAll("asset > mesh")].map((mesh) => mesh.getAttribute("file")).filter(Boolean);
     this.#stiltSites = null;
+    if (this.#rollers()) {
+      for (const joint of doc.querySelectorAll('default[class="passive_joint"] > joint, default[class="passive_wheel"] > joint')) {
+        joint.setAttribute("frictionloss", String(ROLLER_WHEEL_FRICTIONLOSS));
+      }
+    }
     if (this.#stilts > 0) {
       // The stilt policies were trained on the walk model, whose only
       // collision geoms are the feet: drop the leg/trunk collision geoms so a
@@ -683,10 +688,10 @@ class DuckRuntime {
         : this.#rollers() ? this.#facing() : null;
       if (heading !== null) {
         // The duck never turns its back on the viewer: whatever a caller asks
-        // for, the target facing stays inside the ±FACING_HALF_CONE cone. The
+        // for, the target facing stays inside the camera-facing cone. The
         // bang-bang controller lets the facing wander HEADING_ENGAGE past its
         // target before it re-engages, so the target is inset by that much.
-        const limit = FACING_HALF_CONE - HEADING_ENGAGE;
+        const limit = (this.#rollers() ? ROLLER_HALF_CONE : FACING_HALF_CONE) - HEADING_ENGAGE;
         const target = clamp(heading, -limit, limit);
         const control = headingTurn(this.#facing(), target, this.#headingEngaged);
         this.#headingEngaged = control.engaged;
@@ -698,8 +703,13 @@ class DuckRuntime {
         // the turn is applied kinematically in #recenter() instead;
         // cmd_x: 0 = coast, > 0 = push, < 0 = brake — brake instead of
         // coasting away whenever nothing is driving.
+        // (The yaw only takes while rolling: a stationary four-wheel duck cannot
+        // pivot against wheel friction, so a push is kept up through the turn.)
         this.#rollerTurn = turn;
         turn = 0;
+        // The policy has one usable push: at smaller commands (0.6 → 0.2 m/s)
+        // it creeps backwards for seconds, so any push becomes the full one.
+        if (forward > 0) forward = 1;
         const speed = Math.hypot(this.#data.qvel[0], this.#data.qvel[1]);
         if (forward === 0 && speed > ROLLER_BRAKE_ABOVE) forward = ROLLER_BRAKE / ROLLER_MAX_FORWARD;
       } else if (forward > 0.2 && performance.now() - this.#lastLandingAt > GAIT_STALL_MS) {

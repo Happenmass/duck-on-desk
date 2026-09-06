@@ -6,6 +6,7 @@ export const INTENT_IDS = new Set([
 ]);
 
 import { FACING_HALF_CONE } from "./runtime/gestures.js";
+import { ROLLER_HALF_CONE } from "./runtime/rollers.js";
 
 const SYSTEM = "system";
 
@@ -41,7 +42,8 @@ export function createBehaviours({ runtime, autonomy, clock = globalThis }) {
   let timers = [];
   let current = "duck-idle";
   let roamLeft = null; // last roam-heading from main; null until the first roam
-  const roamHeading = () => (roamLeft ? 1 : -1) * FACING_HALF_CONE;
+  const onRollers = () => { const s = typeof runtime.snapshot === "function" ? runtime.snapshot() : null; return !!(s && s.locomotion === "rollers"); };
+  const roamHeading = () => (roamLeft ? 1 : -1) * (onRollers() ? ROLLER_HALF_CONE : FACING_HALF_CONE);
   const cmd = (intent) => runtime.command({ source: SYSTEM, ...intent });
   const every = (ms, fn) => { fn(); timers.push(clock.setInterval(fn, ms)); };
   const stopTimer = () => { for (const t of timers) clock.clearInterval(t); timers = []; };

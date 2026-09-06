@@ -9,6 +9,8 @@ test("rollers module: locomotion normalisation, policy files, wheel joints and t
   assert.equal(r.ROLLER_CROUCH.periodS * r.ROLLER_CROUCH.endPhase, 3.5);
   assert.ok(r.ROLLER_BRAKE < 0 && r.ROLLER_BRAKE_ABOVE > 0);
   assert.equal(r.ROLLER_MAX_FORWARD, 0.33);
+  assert.ok(r.ROLLER_HALF_CONE > Math.PI / 3 && r.ROLLER_HALF_CONE < Math.PI / 2);
+  assert.ok(r.ROLLER_WHEEL_FRICTIONLOSS > 0 && r.ROLLER_WHEEL_FRICTIONLOSS < 0.01);
 });
 
 test("yawTrunk rotates a free-joint quaternion about world Z", async () => {

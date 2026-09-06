@@ -76,3 +76,14 @@ test("roam walks toward the roam heading and re-aims when main changes it", asyn
   b.setRoamHeading(false);
   assert.equal(commands.at(-1).type, "stop");
 });
+
+test("roam aims at the wider roller cone when the duck is on skates", async () => {
+  const { createBehaviours } = await import("../renderer/src/agent-visual-adapter.js");
+  const { ROLLER_HALF_CONE } = await import("../renderer/src/runtime/rollers.js");
+  const commands = [];
+  const clock = { setInterval: () => 1, clearInterval: () => {} };
+  const b = createBehaviours({ runtime: { command: (i) => commands.push(i), snapshot: () => ({ facing: 0.2, mode: "walk", locomotion: "rollers" }) }, autonomy: { pause() {}, resume() {} }, clock });
+  b.apply("duck-roam");
+  assert.equal(commands.at(-1).heading, ROLLER_HALF_CONE);
+  assert.ok(Math.abs(ROLLER_HALF_CONE - Math.PI * 4 / 9) < 1e-12); // ±80°
+});
