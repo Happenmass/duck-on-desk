@@ -50,5 +50,13 @@
 修复：记录首次受阻时间；没有新样本时保留，收到未受阻的实际步幅才清除，按经过时间结束。
 
 回归入口：`node --test test/idle-roam-sync.test.js test/roam-duck-lean.test.js`。
+
 前者运行真实自主动作与状态适配器，覆盖随机动作区间；后者以逐事件虚拟时钟重放 40/16 ms 调度。
 两种复现均先失败、修复后通过。它们验证调度逻辑，不替代真实 MuJoCo/原生窗口的视觉验收。
+
+## 2026-09-07 启动/重载后忙碌状态丢失
+
+主进程在 `did-finish-load` 时下发当前状态，但 3D 渲染端要等 MuJoCo 与 ONNX 策略加载完成（模块顶层 `await`，数秒）才注册 IPC 监听，
+之前送达的 `state-change` 直接丢失；`pet-visual-ready` 在 macOS 上原本只做 Windows 的窗口恢复，不补发状态。
+于是 App 重启或渲染窗口重载时，若会话已处于 working，鸭子只能等 9750 ms 的结算超时重试，重试再丢就一直站着。
+修复：`pet-visual-ready` 到达后重新下发当前状态。回归入口：`node --test test/pet-interaction-ipc.test.js`。

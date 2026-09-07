@@ -182,6 +182,18 @@ test("pet interaction IPC delegates the first rendered visual recovery signal", 
   ]);
 });
 
+test("pet-visual-ready re-sends the current state so a late-listening renderer catches up", () => {
+  const { ipcMain, calls, state } = createHarness({ state: { currentState: "working", currentSvg: "duck-working" } });
+
+  ipcMain.send("pet-visual-ready");
+  state.miniTransitioning = true;
+  ipcMain.send("pet-visual-ready");
+
+  assert.deepStrictEqual(calls.filter((c) => c[0] === "sendToRenderer"), [
+    ["sendToRenderer", "state-change", "working", "duck-working"],
+  ]);
+});
+
 test("pet interaction IPC delegates renderer settlement with the sender intact", () => {
   const { ipcMain, calls } = createHarness();
   const payload = { visualGeneration: 7, outcome: "swapped" };

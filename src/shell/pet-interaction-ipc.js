@@ -97,7 +97,15 @@ function registerPetInteractionIpc(options = {}) {
 
   on("show-context-menu", showContextMenu);
   on("drag-move", () => moveWindowForDrag());
-  on("pet-visual-ready", (event) => recoverVisiblePetAfterRendererLoad(event));
+  on("pet-visual-ready", (event) => {
+    recoverVisiblePetAfterRendererLoad(event);
+    // duck-on-desk: the 3D renderer only starts listening once MuJoCo and the
+    // ONNX policies have loaded, seconds after did-finish-load, so the state
+    // main sent on load (startup recovery, a reload mid-session) never reached
+    // it and a "working" duck stood still. Send the current visual again now.
+    if (isMiniTransitioning()) return;
+    sendToRenderer("state-change", getCurrentState(), getCurrentSvg());
+  });
   on("pet-visual-settled", (event, payload) => settleVisual(event, payload));
 
   on("pause-cursor-polling", () => {
