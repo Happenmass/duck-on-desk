@@ -245,7 +245,7 @@ const SCHEMA = {
   reachyExpressions: { type: "boolean", default: true },
   reachyHost: { type: "string", default: "", validate: v => v === "" || !!require("../robots/reachy/reachy-mini-client").daemonUrl(v) },
   duckMuted: { type: "boolean", default: false },
-  // Per-category duck volumes (0..1): voice = chirps/quacks, steps = footsteps + landing thumps.
+  // Per-category duck volumes (0..1): voice = chirps/quacks, steps = servo whine on steps and landings.
   duckVoiceVolume: { type: "number", default: 1, validate: (v) => Number.isFinite(v) && v >= 0 && v <= 1 },
   duckStepVolume: { type: "number", default: 1, validate: (v) => Number.isFinite(v) && v >= 0 && v <= 1 },
   // Community stilt policies: 0 = own feet, otherwise a released stilt height in cm.

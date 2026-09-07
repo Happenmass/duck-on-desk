@@ -68,7 +68,7 @@ Tray → Skin: Cream, Graphite, Lavender, Sky (the four real Microduck colourway
 - [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk) by rullerzhou-afk and contributors (AGPL-3.0): the desktop-pet shell, agent integrations, permission bubbles and settings this project is derived from (baseline commit `5ca26b5c`).
 - [Microduck](https://github.com/pollen-robotics/microduck) by Pollen Robotics (Apache-2.0): the tiny biped duck robot itself; [microduck_rl](https://github.com/pollen-robotics/microduck_rl): the RL training environments behind the walking, sitting, ground-pick and roller policies; and the [Microduck simulator Space](https://huggingface.co/spaces/pollen-robotics/microduck-simulator): the 3D rig, MJCF, voices and the policies this duck runs (3D assets and voices are non-commercial, see `NOTICE.md`).
 - [microduck-playground](https://github.com/Vottivott/microduck-playground) by Vottivott (Apache-2.0) and the [microduck-stilts](https://huggingface.co/HannesVonEssen/microduck-stilts) weights by HannesVonEssen: the community stilt training and policies.
-- Footsteps and thumps are CC0 samples by [Kenney](https://kenney.nl); the notification sound is CC0 by iut_Paris8 on freesound; agent icons come from [LobeHub Icons](https://lobehub.com/icons).
+- The servo steps and landings are cut from "Small servo (arduino)" by gpag1 (CC0, on [freesound](https://freesound.org/people/gpag1/sounds/520514/)); the notification sound is CC0 by iut_Paris8 on freesound; agent icons come from [LobeHub Icons](https://lobehub.com/icons).
 - The demo video's music is "Fluffing a Duck" by Kevin MacLeod ([incompetech.com](https://incompetech.com)), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ## License

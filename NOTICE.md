@@ -47,7 +47,7 @@ were trained in `Vottivott/microduck-playground` (Apache-2.0).
 
 ## Microduck sounds
 
-- `renderer/public/assets/sfx/` footsteps and thumps: CC0 samples from Kenney.nl ("Impact Sounds"), trimmed by the Space.
+- `renderer/public/assets/servo/` steps and landings: cut from "Small servo (arduino)" by gpag1, CC0 (https://freesound.org/people/gpag1/sounds/520514/). Single moves of a real hobby servo, high-passed at 90 Hz, faded and peak-normalised to -3 dBFS.
 - `renderer/public/assets/voices/duck1..duck4/`: voice banks from the same Space snapshot, treated as CC BY-SA-NC.
 - `assets/sounds/complete.mp3`: "DELETRAZ_Ludivine_2019_2020_notification.wav" by iut_Paris8, CC0 (https://freesound.org/people/iut_Paris8/sounds/510287/).
 

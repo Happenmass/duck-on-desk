@@ -62,7 +62,7 @@
 - [Clawd on Desk](https://github.com/rullerzhou-afk/clawd-on-desk)，作者 rullerzhou-afk 及贡献者（AGPL-3.0）：本项目衍生自它的桌面宠物外壳、Agent 集成、权限气泡和设置系统（基线 commit `5ca26b5c`）。
 - [Microduck](https://github.com/pollen-robotics/microduck)，Pollen Robotics（Apache-2.0）：这只小型双足鸭子机器人本身；[microduck_rl](https://github.com/pollen-robotics/microduck_rl)：行走、坐站、啄地和轮滑策略背后的强化学习训练环境；以及 [Microduck 模拟器 Space](https://huggingface.co/spaces/pollen-robotics/microduck-simulator)：本鸭子使用的 3D 骨架、MJCF、语音和策略（3D 素材与语音仅限非商业使用，见 `NOTICE.md`）。
 - [microduck-playground](https://github.com/Vottivott/microduck-playground)，Vottivott（Apache-2.0）与 HannesVonEssen 的 [microduck-stilts](https://huggingface.co/HannesVonEssen/microduck-stilts) 权重：社区的高跷训练与策略。
-- 脚步声与闷响来自 [Kenney](https://kenney.nl) 的 CC0 素材；通知音来自 freesound 用户 iut_Paris8（CC0）；Agent 图标来自 [LobeHub Icons](https://lobehub.com/icons)。
+- 迈步与落地的舵机声剪自 gpag1 的 "Small servo (arduino)"（CC0，见 [freesound](https://freesound.org/people/gpag1/sounds/520514/)）；通知音来自 freesound 用户 iut_Paris8（CC0）；Agent 图标来自 [LobeHub Icons](https://lobehub.com/icons)。
 - 演示视频的配乐是 Kevin MacLeod（[incompetech.com](https://incompetech.com)）的 "Fluffing a Duck"，[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 许可。
 
 ## 许可证

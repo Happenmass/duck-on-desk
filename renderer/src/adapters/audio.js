@@ -1,11 +1,13 @@
 // Pet sounds, all decoded through one AudioContext behind a master gain
 // (the mute switch) and two category buses the settings control separately:
-// voice (chirps/quacks) and steps (footsteps + landing thumps). Voice banks
-// follow the appearance like the official simulator; footsteps and thumps are
-// the official CC0 sfx. The window never receives a user gesture, so main.cjs
-// sets autoplayPolicy to keep the context running.
+// voice (chirps/quacks) and steps (servo moves). Voice banks follow the
+// appearance like the official simulator; the duck is servo-driven, so its
+// steps and landings are takes of a real hobby servo (CC0, see NOTICE.md) --
+// short ones for a footfall, longer ones that include the settle for a
+// landing. The window never receives a user gesture, so main.cjs sets
+// autoplayPolicy to keep the context running.
 const VOICE_BANK = { classic: "duck1", charcoal: "duck2", purple: "duck3", blue: "duck4" };
-const SFX_TAKES = { step: "abcde", thump: "abc" };
+const SERVO_TAKES = { step: "abcde", thump: "abc" };
 const CHIRP_TAKES = "abcdefghijkl";
 const pick = (takes) => takes[(Math.random() * takes.length) | 0];
 
@@ -84,7 +86,7 @@ export function createAudio() {
           return play(`./assets/voices/${bank}/chirp_${pick(CHIRP_TAKES)}.wav`, BUS_OF.chirp, { gain: 0.7 });
         case "step":
         case "thump":
-          return play(`./assets/sfx/${sound.name}_${pick(SFX_TAKES[sound.name])}.wav`, BUS_OF[sound.name], sound);
+          return play(`./assets/servo/${sound.name}_${pick(SERVO_TAKES[sound.name])}.wav`, BUS_OF[sound.name], sound);
         default:
           return undefined;
       }
