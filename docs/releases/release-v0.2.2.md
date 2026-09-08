@@ -6,10 +6,12 @@ The 3D pet costs about half the CPU it used to while it is just standing there.
   panel — and drew all 70 rig meshes a second time every frame for a real
   shadow map. Both robot runtimes now render at 30 fps, and the shadow map is
   replaced by a painted blob under the feet at the same size and weight
-- Measured on an M-series Mac with a 120 Hz display, the duck standing idle:
-  total app CPU 53.8% of a core -> 25.4%, with the GPU process alone falling
-  25.5% -> 8.4%. The win is smaller on a 60 Hz display, where the frame cap has
-  half as much to remove. Memory is unchanged
+- Measured on an M-series Mac with a 120 Hz display, the duck idling: total app
+  CPU 53.8% of a core -> 26.5% (2 samples before, 10 after; before was tight at
+  53.3-54.2%, after spreads 23.2-30.5% because the remaining cost now tracks
+  what the duck is doing rather than the frame rate). The GPU process alone
+  falls 25.5% -> 8.4%. The win is smaller on a 60 Hz display, where the frame
+  cap has half as much to remove. Memory is unchanged
 - The physics and the control policy were never the expensive part: MuJoCo plus
   the ONNX policy measure ~1.1% of a core together, so nothing about how the
   duck balances, walks, falls or gets picked up has changed
