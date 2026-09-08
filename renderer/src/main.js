@@ -34,6 +34,11 @@ try {
     stilts: Number(themeConfig.duckStilts) || 0,
     locomotion: themeConfig.duckLocomotion || "legs",
   });
+  if (!reachy) {
+    const applyLab = url => runtime.setLabPolicy(url);
+    if (themeConfig.labPolicyUrl) await applyLab(themeConfig.labPolicyUrl).catch(error => console.error("Lab policy rejected", error));
+    api?.onDuckWalkPolicyChange?.(url => applyLab(url).catch(error => console.error("Lab policy rejected", error)));
+  }
   audio.setAppearance(runtime.snapshot().appearance);
   if (reachy && !api) runtime.applyVisual(new URLSearchParams(location.search).get("state") || "duck-idle");
   const autonomy = reachy ? { dispose() {} } : new AutonomyAdapter(runtime);

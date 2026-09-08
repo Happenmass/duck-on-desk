@@ -133,7 +133,7 @@
   // cache; the dynamic ones must be re-fetched on every render so the
   // pending hint and the auto-update toggle reflect current state after
   // the user flips the toggle or the scheduler discovers a new version.
-  const STATIC_ABOUT_KEYS = ["repoUrl", "license", "copyright", "authorName", "authorUrl", "heroSvgContent"];
+  const STATIC_ABOUT_KEYS = ["repoUrl", "license", "copyright", "authorName", "authorUrl", "upstreamAuthorName", "upstreamAuthorUrl", "heroSvgContent"];
   function fetchAboutInfo() {
     if (!window.settingsAPI || typeof window.settingsAPI.getAboutInfo !== "function") {
       return Promise.resolve(runtime.about.infoCache || null);
@@ -150,6 +150,7 @@
       merged.version = info.version;
       merged.pendingUpdateVersion = info.pendingUpdateVersion || "";
       merged.autoUpdateCheck = info.autoUpdateCheck !== false;
+      merged.developerMode = info.developerMode === true;
       merged.updateCheckSnapshot = normalizeUpdateCheckSnapshot(info.updateCheckSnapshot);
       runtime.about.updateCheckSnapshot = merged.updateCheckSnapshot;
       runtime.about.infoCache = merged;
@@ -282,6 +283,60 @@
     return wrap;
   }
 
+  function buildPreferenceRow(key, controlName, initial, reopen = false) {
+    const row = document.createElement("div");
+    row.className = "about-info-row";
+    const label = document.createElement("div");
+    label.className = "about-info-label";
+    const title = document.createElement("div");
+    title.textContent = t(key);
+    const description = document.createElement("div");
+    description.className = "about-info-description";
+    description.textContent = t(key + "Description");
+    label.appendChild(title); label.appendChild(description);
+    const value = document.createElement("div");
+    value.className = "about-info-value about-preference-controls";
+    const sw = document.createElement("div");
+    sw.className = "switch " + (key === "developerMode" ? "about-developer-mode-switch" : "about-auto-update-switch");
+    sw.setAttribute("role", "switch"); sw.setAttribute("tabindex", "0"); sw.setAttribute("aria-label", t(key));
+    let committed = Object.prototype.hasOwnProperty.call(state.snapshot || {}, key) ? state.snapshot[key] === true : initial;
+    let pending = false;
+    const open = document.createElement("button");
+    open.className = "soft-btn about-open-lab"; open.textContent = t("openRobotLab");
+    open.addEventListener("click", async () => {
+      try {
+        const result = await window.settingsAPI.command("openRobotLab");
+        if (result?.status !== "ok") throw new Error(result?.message || t("agentMcpError"));
+      } catch (error) { ops.showToast(error.message, {error:true}); }
+    });
+    function paint() {
+      helpers.setSwitchVisual(sw, committed, {pending});
+      sw.classList.toggle("disabled", pending); sw.setAttribute("aria-disabled", String(pending));
+      open.hidden = !committed; open.disabled = pending;
+    }
+    async function toggle() {
+      if (pending || !window.settingsAPI?.update) return;
+      const previous = committed; committed = !committed; pending = true;
+      runtime.about.infoCache[key] = committed; paint();
+      try {
+        const result = await window.settingsAPI.update(key, committed);
+        if (result?.status !== "ok") throw new Error(result?.message || t("toastSaveFailed"));
+      } catch (error) {
+        committed = previous; runtime.about.infoCache[key] = previous;
+        ops.showToast(error.message, {error:true});
+      } finally { pending = false; if (document.body.contains(sw)) paint(); }
+    }
+    sw.addEventListener("click", toggle);
+    sw.addEventListener("keydown", event => {
+      if (event.key === " " || event.key === "Enter") { event.preventDefault(); toggle(); }
+    });
+    state.mountedControls[controlName] = {element:sw, syncFromSnapshot:() => {
+      committed = state.snapshot[key] === true; runtime.about.infoCache[key] = committed; pending = false; paint();
+    }};
+    paint(); value.appendChild(sw); if (reopen) value.appendChild(open);
+    row.appendChild(label); row.appendChild(value); return row;
+  }
+
   function render(parent) {
     const hero = document.createElement("div");
     hero.className = "about-hero";
@@ -336,7 +391,7 @@
     contribRow.className = "about-info-row";
     const contribLabel = document.createElement("div");
     contribLabel.className = "about-info-label";
-    contribLabel.textContent = t("aboutContributorsLabel") + " (" + i18n.CONTRIBUTORS.length + ")";
+    contribLabel.textContent = t("aboutUpstreamContributorsLabel") + " (" + i18n.CONTRIBUTORS.length + ")";
     contribRow.appendChild(contribLabel);
 
     const contribList = document.createElement("div");
@@ -373,6 +428,11 @@
 
       if (safe.heroSvgContent) {
         crabWrap.innerHTML = safe.heroSvgContent;
+      } else {
+        const icon = document.createElement("img");
+        icon.src = "../../assets/icon.png";
+        icon.alt = "Duck on Desk";
+        crabWrap.appendChild(icon);
       }
       crabWrap.addEventListener("click", () => handleAboutCrabClick(crabWrap));
 
@@ -453,89 +513,8 @@
       };
       applyUpdateCheckStatus(safe.updateCheckSnapshot || runtime.about.updateCheckSnapshot);
 
-      const autoUpdateRow = document.createElement("div");
-      autoUpdateRow.className = "about-info-row";
-      const autoUpdateLabelWrap = document.createElement("div");
-      autoUpdateLabelWrap.className = "about-info-label";
-      const autoUpdateLabel = document.createElement("div");
-      autoUpdateLabel.textContent = t("autoUpdateCheck");
-      const autoUpdateDesc = document.createElement("div");
-      autoUpdateDesc.className = "about-info-description";
-      autoUpdateDesc.textContent = t("autoUpdateCheckDescription");
-      autoUpdateDesc.style.opacity = "0.7";
-      autoUpdateDesc.style.fontSize = "12px";
-      autoUpdateLabelWrap.appendChild(autoUpdateLabel);
-      autoUpdateLabelWrap.appendChild(autoUpdateDesc);
-      const autoUpdateValue = document.createElement("div");
-      autoUpdateValue.className = "about-info-value";
-      const autoUpdateSwitch = document.createElement("div");
-      autoUpdateSwitch.className = "switch about-auto-update-switch";
-      autoUpdateSwitch.setAttribute("role", "switch");
-      autoUpdateSwitch.setAttribute("tabindex", "0");
-      autoUpdateSwitch.setAttribute("aria-label", t("autoUpdateCheck"));
-      let committedAutoUpdate = safe.autoUpdateCheck !== false;
-      let autoUpdatePending = false;
-
-      function paintAutoUpdate(value, pending = autoUpdatePending) {
-        helpers.setSwitchVisual(autoUpdateSwitch, value, { pending });
-        autoUpdateSwitch.classList.toggle("disabled", pending);
-        autoUpdateSwitch.setAttribute("aria-disabled", pending ? "true" : "false");
-      }
-
-      function syncAutoUpdateFromSnapshot() {
-        const snapshotHasValue = state.snapshot
-          && Object.prototype.hasOwnProperty.call(state.snapshot, "autoUpdateCheck");
-        committedAutoUpdate = snapshotHasValue
-          ? state.snapshot.autoUpdateCheck !== false
-          : runtime.about.infoCache.autoUpdateCheck !== false;
-        runtime.about.infoCache.autoUpdateCheck = committedAutoUpdate;
-        autoUpdatePending = false;
-        paintAutoUpdate(committedAutoUpdate, false);
-      }
-
-      function toggleAutoUpdate() {
-        if (autoUpdatePending || !window.settingsAPI || typeof window.settingsAPI.update !== "function") return;
-        const previous = committedAutoUpdate;
-        const next = !committedAutoUpdate;
-        committedAutoUpdate = next;
-        autoUpdatePending = true;
-        runtime.about.infoCache.autoUpdateCheck = next;
-        paintAutoUpdate(next, true);
-        Promise.resolve(window.settingsAPI.update("autoUpdateCheck", next))
-          .then((result) => {
-            if (!result || result.status !== "ok") {
-              committedAutoUpdate = previous;
-              runtime.about.infoCache.autoUpdateCheck = previous;
-              ops.showToast((result && result.message) || t("toastSaveFailed"), { error: true });
-            }
-          })
-          .catch((err) => {
-            committedAutoUpdate = previous;
-            runtime.about.infoCache.autoUpdateCheck = previous;
-            const message = err && err.message ? err.message : "unknown error";
-            ops.showToast(t("toastSaveFailed") + message, { error: true });
-          })
-          .finally(() => {
-            autoUpdatePending = false;
-            if (document.body.contains(autoUpdateSwitch)) paintAutoUpdate(committedAutoUpdate, false);
-          });
-      }
-
-      autoUpdateSwitch.addEventListener("click", toggleAutoUpdate);
-      autoUpdateSwitch.addEventListener("keydown", (event) => {
-        if (event.key !== " " && event.key !== "Enter") return;
-        event.preventDefault();
-        toggleAutoUpdate();
-      });
-      state.mountedControls.aboutAutoUpdate = {
-        element: autoUpdateSwitch,
-        syncFromSnapshot: syncAutoUpdateFromSnapshot,
-      };
-      paintAutoUpdate(committedAutoUpdate, false);
-      autoUpdateValue.appendChild(autoUpdateSwitch);
-      autoUpdateRow.appendChild(autoUpdateLabelWrap);
-      autoUpdateRow.appendChild(autoUpdateValue);
-      infoSection.appendChild(autoUpdateRow);
+      infoSection.appendChild(buildPreferenceRow("autoUpdateCheck", "aboutAutoUpdate", safe.autoUpdateCheck !== false));
+      infoSection.appendChild(buildPreferenceRow("developerMode", "aboutDeveloperMode", safe.developerMode === true, true));
 
       if (safe.repoUrl) {
         infoSection.appendChild(buildAboutLinkRow(
@@ -568,8 +547,23 @@
       }
 
       infoSection.appendChild(maintainersRow);
-      infoSection.appendChild(contribRow);
-      infoSection.appendChild(contribList);
+      infoSection.appendChild(buildAboutLinkRow(t("aboutContributorsLabel"), "https://github.com/Happenmass/duck-on-desk/graphs/contributors", (i18n.PROJECT_CONTRIBUTORS || ["Happenmass"]).map(name => "@" + name).join(" · ")));
+      const upstream = document.createElement("div");
+      upstream.className = "about-upstream";
+      const summary = document.createElement("button"); summary.className = "about-upstream-trigger";
+      summary.type = "button";
+      summary.appendChild(helpers.createDisclosureChevron("about-update-error-chevron"));
+      const upstreamTitle = document.createElement("span"); upstreamTitle.textContent = t("aboutUpstreamTitle");
+      summary.appendChild(upstreamTitle); upstream.appendChild(summary);
+      const upstreamBody = document.createElement("div"); upstreamBody.className = "settings-disclosure-body";
+      const upstreamInner = document.createElement("div"); upstreamInner.className = "settings-disclosure-body-inner";
+      upstreamBody.appendChild(upstreamInner); upstream.appendChild(upstreamBody);
+      upstreamInner.appendChild(buildAboutLinkRow(t("aboutUpstreamAuthorLabel"), safe.upstreamAuthorUrl || "https://github.com/rullerzhou-afk/clawd-on-desk", safe.upstreamAuthorName || "Ruller_Lulu / 鹿鹿"));
+      upstreamInner.appendChild(buildAboutLinkRow(t("aboutUpstreamMaintainersLabel"), "https://github.com/rullerzhou-afk/clawd-on-desk", (i18n.UPSTREAM_MAINTAINERS || []).map(name => "@" + name).join(" · ")));
+      upstreamInner.appendChild(buildAboutLinkRow("Microduck / Reachy Mini", "https://github.com/pollen-robotics", "Pollen Robotics"));
+      upstreamInner.appendChild(contribRow); upstreamInner.appendChild(contribList);
+      helpers.registerMountedDisposable(helpers.attachSettingsDisclosure({root:upstream,trigger:summary,body:upstreamBody,expanded:false}));
+      infoSection.appendChild(upstream);
     });
   }
 
@@ -582,12 +576,12 @@
     core.tabs.about = {
       render,
       patchInPlace(changes) {
-        if (!changes || Object.keys(changes).some((key) => key !== "autoUpdateCheck")) return false;
-        if (!Object.prototype.hasOwnProperty.call(changes, "autoUpdateCheck")) return false;
-        const control = state.mountedControls.aboutAutoUpdate;
-        if (!control || !document.body.contains(control.element)) return false;
-        runtime.about.infoCache.autoUpdateCheck = changes.autoUpdateCheck !== false;
-        control.syncFromSnapshot();
+        if (!changes || !Object.keys(changes).length || Object.keys(changes).some(key => !["autoUpdateCheck", "developerMode"].includes(key))) return false;
+        for (const key of Object.keys(changes)) {
+          const control = state.mountedControls[key === "developerMode" ? "aboutDeveloperMode" : "aboutAutoUpdate"];
+          if (!control || !document.body.contains(control.element)) return false;
+          control.syncFromSnapshot();
+        }
         return true;
       },
       applyUpdateCheckStatus(snapshot) {

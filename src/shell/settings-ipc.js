@@ -558,25 +558,28 @@ function registerSettingsIpc(options = {}) {
     try {
       heroSvgContent = fs.readFileSync(aboutHeroSvgPath, "utf8");
     } catch (err) {
-      console.warn("Duck: failed to read about hero SVG:", err && err.message);
+      // This fork uses the packaged duck icon when no custom hero SVG exists.
+      if (err.code !== "ENOENT") console.warn("Duck: failed to read about hero SVG:", err && err.message);
     }
     let pendingUpdateVersion = "";
     let autoUpdateCheck = true;
+    let developerMode = false;
     try {
       pendingUpdateVersion = String(settingsController.get("pendingUpdateVersion") || "");
       autoUpdateCheck = settingsController.get("autoUpdateCheck") !== false;
+      developerMode = settingsController.get("developerMode") === true;
     } catch {}
     return {
       version: app.getVersion(),
-      // This fork's own source, not the upstream project's: the About panel's
-      // repository link is where a user goes for the source of the build they
-      // are running (and it pointed at a repo that does not exist). Upstream
-      // authorship below stays as the AGPL requires.
+      // Credit this fork separately from the upstream work preserved in NOTICE.md.
       repoUrl: "https://github.com/Happenmass/duck-on-desk",
       license: "AGPL-3.0",
-      copyright: "\u00a9 2026 Ruller_Lulu",
-      authorName: "Ruller_Lulu / \u9e7f\u9e7f",
-      authorUrl: "https://github.com/rullerzhou-afk",
+      copyright: "\u00a9 2026 Happenmass · Upstream \u00a9 2026 Ruller_Lulu",
+      authorName: "Happenmass",
+      authorUrl: "https://github.com/Happenmass",
+      upstreamAuthorName: "Ruller_Lulu / 鹿鹿",
+      upstreamAuthorUrl: "https://github.com/rullerzhou-afk/clawd-on-desk",
+      developerMode,
       heroSvgContent,
       pendingUpdateVersion,
       autoUpdateCheck,

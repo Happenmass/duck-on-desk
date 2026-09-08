@@ -26,9 +26,13 @@ function stiltsDirectory(homeDir = os.homedir()) {
   return path.join(homeDir, ".cache", "huggingface", "hub", STILTS_REPO, "snapshots", STILTS_COMMIT);
 }
 
-function resolvePolicyRequest(url, { homeDir = os.homedir(), exists = fs.existsSync, bundledDir = null } = {}) {
+function resolvePolicyRequest(url, { homeDir = os.homedir(), exists = fs.existsSync, bundledDir = null, resolveLabPolicy = null } = {}) {
   let name;
   try { name = decodeURIComponent(new URL(url).pathname.split("/").pop() || ""); } catch { return { status: 404 }; }
+  const lab = /^lab\/(run_[a-f0-9-]{36})\/policy\.onnx$/.exec(name);
+  if (lab && resolveLabPolicy) {
+    try { return {status:200,file:resolveLabPolicy(lab[1])}; } catch { return {status:404}; }
+  }
   let cached;
   let rel;
   const stilts = /^stilts\/(\d+)cm\/policy\.onnx$/.exec(name);
@@ -54,9 +58,9 @@ function registerScheme(protocol) {
   } }]);
 }
 
-function installHandler(protocol, net, pathToFileURL, { bundledDir = null } = {}) {
+function installHandler(protocol, net, pathToFileURL, { bundledDir = null, resolveLabPolicy = null } = {}) {
   protocol.handle(SCHEME, (request) => {
-    const resolved = resolvePolicyRequest(request.url, { bundledDir });
+    const resolved = resolvePolicyRequest(request.url, { bundledDir, resolveLabPolicy });
     if (resolved.status !== 200) return new Response(resolved.reason || "not found", { status: 404 });
     return net.fetch(pathToFileURL(resolved.file).toString());
   });

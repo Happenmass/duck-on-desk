@@ -1,0 +1,532 @@
+{
+  "timestamp": "2026-09-08T10:52:51.583Z",
+  "transport": "MCP stdio / official SDK client",
+  "calls": [
+    {
+      "tool": "lab_docs_search",
+      "isError": false,
+      "result": {
+        "matches": [
+          {
+            "doc_id": "overview",
+            "line": 11,
+            "text": "6. lab_backend_probe explicitly executes that expected_revision on cpu, mps or cuda. It verifies finite rewards, gradients, parameter updates and inference using synthetic tensors. robot_environment_steps is always 0."
+          },
+          {
+            "doc_id": "scripts",
+            "line": 11,
+            "text": "- training_device: \"cpu\" | \"mps\" | \"cuda\""
+          },
+          {
+            "doc_id": "scripts",
+            "line": 12,
+            "text": "- inference_device: \"cpu\" | \"mps\" | \"cuda\""
+          }
+        ],
+        "total": 7
+      }
+    },
+    {
+      "tool": "lab_docs_read",
+      "isError": false,
+      "result": {
+        "doc_id": "scripts",
+        "total_lines": 22,
+        "start_line": 1,
+        "text": "# Script and configuration API\n\nreward.py defines reward(observation, action, next_observation). For the current synthetic probe, inputs are float32 tensors [batch,61], [batch,14], [batch,61]. Return a finite float32 tensor [batch] on the same device. Slots have NO robot-state meaning in this probe; the template's index 0 is a synthetic feature, not forward velocity.\n\nstrategy.py defines build_policy(observation_dim, action_dim) returning a torch.nn.Module with trainable parameters. The probe moves it to the requested device. It must output finite [batch,14] actions in training and inference mode. This is policy-network authoring; arbitrary PPO algorithm plugins are not implemented.\n\ntraining.json is a strict object with exactly these keys:\n- schema_version: 1\n- task: \"microduck-flat-walk\" (planned task, no environment runner yet)\n- algorithm: \"ppo\" (planned algorithm; the probe is not PPO)\n- training_device: \"cpu\" | \"mps\" | \"cuda\"\n- inference_device: \"cpu\" | \"mps\" | \"cuda\"\n- physics_backend: \"mujoco_cpu\" | \"mujoco_warp_cuda\" (planned environment adapters)\n- seed: integer 0..2147483647\n- max_iterations: integer 1..100000 (reserved for the real runner, not consumed by probe)\n\nlab_backend_probe uses its explicit device argument and the config seed. It performs exactly 3 synthetic optimizer steps, regardless of training_device, inference_device or max_iterations. This permits probing multiple devices against the same immutable revision without pretending the configured training job ran.\n\nDraft writes can contain invalid code/config; validate before executing. Syntax validation does not import code and does not prove safety or numerical correctness. Runtime probe catches invalid output shapes, NaNs, absent gradients and unavailable devices.\n\nFuture real-environment reward API must expose named physical state, units and termination conditions. A deployable artifact must also capture observation order/normalization, action mapping/scales/clips, actuator model, simulation/control timesteps, initial state and model hash. A 61-to-14 tensor shape alone does not establish compatibility. ONNX is an inference artifact, not a resumable PPO checkpoint.\n"
+      }
+    },
+    {
+      "tool": "lab_backends_inspect",
+      "isError": false,
+      "result": {
+        "python": "3.12.12",
+        "torch": "2.9.1",
+        "model_devices": {
+          "mps": true,
+          "cuda": false,
+          "cpu": true
+        },
+        "physics": {
+          "current_desktop": "mujoco_wasm_cpu",
+          "mps_gpu_physics": "not_supported_by_warp",
+          "planned_mps_training": "cpu_physics_plus_mps_model",
+          "planned_cuda_training": "cuda_model_plus_selected_physics_adapter"
+        },
+        "full_robot_training": "not_implemented_in_this_mcp_increment"
+      }
+    },
+    {
+      "tool": "lab_experiment_create",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 1,
+        "updatedAt": "2026-09-08T10:52:52.391Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "28556cb0db8dfd0f3b76b2e545bc0a50f797d2af851eafda28d1a77afca0372f",
+            "bytes": 239
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "0237966d01ea405d5819c8c69c15d4cc9ed0799a7017c56dea8efaba163a7f80",
+            "bytes": 237
+          },
+          {
+            "name": "training.json",
+            "sha256": "719e6e814c624bccd30ec82a4537231fb3f73c678316e995d6166ecbff86769f",
+            "bytes": 211
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_experiment_read",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 1,
+        "updatedAt": "2026-09-08T10:52:52.391Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "28556cb0db8dfd0f3b76b2e545bc0a50f797d2af851eafda28d1a77afca0372f",
+            "bytes": 239
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "0237966d01ea405d5819c8c69c15d4cc9ed0799a7017c56dea8efaba163a7f80",
+            "bytes": 237
+          },
+          {
+            "name": "training.json",
+            "sha256": "719e6e814c624bccd30ec82a4537231fb3f73c678316e995d6166ecbff86769f",
+            "bytes": 211
+          }
+        ],
+        "artifact": "reward.py",
+        "content": "def reward(observation, action, next_observation):\n    \"\"\"Synthetic probe only; index 0 is NOT a robot speed contract.\"\"\"\n    feature_error = next_observation[:, 0] - 0.2\n    return -(feature_error ** 2) - 0.01 * (action ** 2).sum(dim=-1)\n"
+      }
+    },
+    {
+      "tool": "lab_experiment_write",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 2,
+        "updatedAt": "2026-09-08T10:52:52.394Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "492ae277af27c65ffaa1d11185aad14e039dbf1290af5f9143faef3de4983517",
+            "bytes": 206
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "0237966d01ea405d5819c8c69c15d4cc9ed0799a7017c56dea8efaba163a7f80",
+            "bytes": 237
+          },
+          {
+            "name": "training.json",
+            "sha256": "719e6e814c624bccd30ec82a4537231fb3f73c678316e995d6166ecbff86769f",
+            "bytes": 211
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_experiment_write",
+      "isError": true,
+      "result": {
+        "ok": false,
+        "code": "REVISION_CONFLICT",
+        "message": "Expected 1; current revision is 2. Read before retrying."
+      }
+    },
+    {
+      "tool": "lab_experiment_write",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 3,
+        "updatedAt": "2026-09-08T10:52:52.395Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "492ae277af27c65ffaa1d11185aad14e039dbf1290af5f9143faef3de4983517",
+            "bytes": 206
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "252786b80caa25e0b3da3fc743a7c1fef9aa2270df709e24480a3d38c50a6106",
+            "bytes": 197
+          },
+          {
+            "name": "training.json",
+            "sha256": "719e6e814c624bccd30ec82a4537231fb3f73c678316e995d6166ecbff86769f",
+            "bytes": 211
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_experiment_write",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 4,
+        "updatedAt": "2026-09-08T10:52:52.396Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "492ae277af27c65ffaa1d11185aad14e039dbf1290af5f9143faef3de4983517",
+            "bytes": 206
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "252786b80caa25e0b3da3fc743a7c1fef9aa2270df709e24480a3d38c50a6106",
+            "bytes": 197
+          },
+          {
+            "name": "training.json",
+            "sha256": "9d30a02af8f888df124c0966c379c67de45a35093be380bf145f4e8f4bb19308",
+            "bytes": 177
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_experiment_validate",
+      "isError": false,
+      "result": {
+        "syntax_valid": true,
+        "executes_scripts": false,
+        "revision": 4,
+        "robot_training_validated": false
+      }
+    },
+    {
+      "tool": "lab_experiment_read",
+      "isError": true,
+      "result": {
+        "ok": false,
+        "code": "INVALID_ID",
+        "message": "Use an experiment ID returned by lab_experiment_create."
+      }
+    },
+    {
+      "tool": "lab_backend_probe",
+      "isError": true,
+      "result": {
+        "ok": false,
+        "code": "REVISION_CONFLICT",
+        "message": "Reread the experiment before executing a changed revision."
+      }
+    },
+    {
+      "tool": "lab_backend_probe",
+      "isError": false,
+      "result": {
+        "ok": true,
+        "scope": "synthetic_script_and_device_probe_not_robot_training",
+        "requested_device": "cpu",
+        "parameter_device": "cpu",
+        "inference_device": "cpu",
+        "fallback_used": false,
+        "optimizer_steps": 3,
+        "parameter_l1_change": 7.196917653083801,
+        "losses": [
+          0.07268642634153366,
+          0.06673362106084824,
+          0.06111452355980873
+        ],
+        "inference_shape": [
+          16,
+          14
+        ],
+        "reward_shape": [
+          16
+        ],
+        "reward_mean": -0.1364540010690689,
+        "robot_environment_steps": 0,
+        "experiment_id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "revision": 4,
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "492ae277af27c65ffaa1d11185aad14e039dbf1290af5f9143faef3de4983517",
+            "bytes": 206
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "252786b80caa25e0b3da3fc743a7c1fef9aa2270df709e24480a3d38c50a6106",
+            "bytes": 197
+          },
+          {
+            "name": "training.json",
+            "sha256": "9d30a02af8f888df124c0966c379c67de45a35093be380bf145f4e8f4bb19308",
+            "bytes": 177
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_backend_probe",
+      "isError": false,
+      "result": {
+        "ok": true,
+        "scope": "synthetic_script_and_device_probe_not_robot_training",
+        "requested_device": "mps",
+        "parameter_device": "mps",
+        "inference_device": "mps",
+        "fallback_used": false,
+        "optimizer_steps": 3,
+        "parameter_l1_change": 7.189653418958187,
+        "losses": [
+          0.07463034987449646,
+          0.06885198503732681,
+          0.06340707093477249
+        ],
+        "inference_shape": [
+          16,
+          14
+        ],
+        "reward_shape": [
+          16
+        ],
+        "reward_mean": -0.16415593028068542,
+        "robot_environment_steps": 0,
+        "experiment_id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "revision": 4,
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "492ae277af27c65ffaa1d11185aad14e039dbf1290af5f9143faef3de4983517",
+            "bytes": 206
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "252786b80caa25e0b3da3fc743a7c1fef9aa2270df709e24480a3d38c50a6106",
+            "bytes": 197
+          },
+          {
+            "name": "training.json",
+            "sha256": "9d30a02af8f888df124c0966c379c67de45a35093be380bf145f4e8f4bb19308",
+            "bytes": 177
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_backend_probe",
+      "isError": true,
+      "result": {
+        "ok": false,
+        "code": "BACKEND_UNAVAILABLE",
+        "message": "Requested cuda backend is unavailable; no fallback was used."
+      }
+    },
+    {
+      "tool": "lab_experiment_write",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 5,
+        "updatedAt": "2026-09-08T10:52:55.294Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "492ae277af27c65ffaa1d11185aad14e039dbf1290af5f9143faef3de4983517",
+            "bytes": 206
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "252786b80caa25e0b3da3fc743a7c1fef9aa2270df709e24480a3d38c50a6106",
+            "bytes": 197
+          },
+          {
+            "name": "training.json",
+            "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+            "bytes": 2
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_experiment_validate",
+      "isError": true,
+      "result": {
+        "ok": false,
+        "code": "INVALID_CONFIG",
+        "message": "training.json must match the schema in lab://docs/scripts."
+      }
+    },
+    {
+      "tool": "lab_experiment_write",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 6,
+        "updatedAt": "2026-09-08T10:52:55.296Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "492ae277af27c65ffaa1d11185aad14e039dbf1290af5f9143faef3de4983517",
+            "bytes": 206
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "252786b80caa25e0b3da3fc743a7c1fef9aa2270df709e24480a3d38c50a6106",
+            "bytes": 197
+          },
+          {
+            "name": "training.json",
+            "sha256": "9d30a02af8f888df124c0966c379c67de45a35093be380bf145f4e8f4bb19308",
+            "bytes": 177
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_experiment_write",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 7,
+        "updatedAt": "2026-09-08T10:52:55.296Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "8201b8f4baeec22e95b05dcf1db19c1df78dbfd690f6e203a5c33cbf0a280631",
+            "bytes": 11
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "252786b80caa25e0b3da3fc743a7c1fef9aa2270df709e24480a3d38c50a6106",
+            "bytes": 197
+          },
+          {
+            "name": "training.json",
+            "sha256": "9d30a02af8f888df124c0966c379c67de45a35093be380bf145f4e8f4bb19308",
+            "bytes": 177
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_experiment_validate",
+      "isError": true,
+      "result": {
+        "ok": false,
+        "code": "SCRIPT_OR_BACKEND_ERROR",
+        "message": "'(' was never closed (reward.py, line 1)"
+      }
+    },
+    {
+      "tool": "lab_experiment_write",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 8,
+        "updatedAt": "2026-09-08T10:52:55.318Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "e008a9578d815d0381966917a7babc62f7de3e0c9aaf80b7bdfab22d7c4e6338",
+            "bytes": 69
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "252786b80caa25e0b3da3fc743a7c1fef9aa2270df709e24480a3d38c50a6106",
+            "bytes": 197
+          },
+          {
+            "name": "training.json",
+            "sha256": "9d30a02af8f888df124c0966c379c67de45a35093be380bf145f4e8f4bb19308",
+            "bytes": 177
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_experiment_validate",
+      "isError": false,
+      "result": {
+        "syntax_valid": true,
+        "executes_scripts": false,
+        "revision": 8,
+        "robot_training_validated": false
+      }
+    },
+    {
+      "tool": "lab_backend_probe",
+      "isError": true,
+      "result": {
+        "ok": false,
+        "code": "SCRIPT_OR_BACKEND_ERROR",
+        "message": "Reward must produce finite [batch] rewards on the requested device"
+      }
+    },
+    {
+      "tool": "lab_experiment_write",
+      "isError": false,
+      "result": {
+        "id": "exp_e11caf8e-51a9-48e4-b003-6823688b6af2",
+        "name": "Coding Agent first round: script and device contract",
+        "revision": 9,
+        "updatedAt": "2026-09-08T10:52:56.404Z",
+        "artifacts": [
+          {
+            "name": "reward.py",
+            "sha256": "492ae277af27c65ffaa1d11185aad14e039dbf1290af5f9143faef3de4983517",
+            "bytes": 206
+          },
+          {
+            "name": "strategy.py",
+            "sha256": "252786b80caa25e0b3da3fc743a7c1fef9aa2270df709e24480a3d38c50a6106",
+            "bytes": 197
+          },
+          {
+            "name": "training.json",
+            "sha256": "9d30a02af8f888df124c0966c379c67de45a35093be380bf145f4e8f4bb19308",
+            "bytes": 177
+          }
+        ]
+      }
+    },
+    {
+      "tool": "lab_experiment_validate",
+      "isError": false,
+      "result": {
+        "syntax_valid": true,
+        "executes_scripts": false,
+        "revision": 9,
+        "robot_training_validated": false
+      }
+    }
+  ],
+  "cuda_status": "pending_hardware_verification",
+  "robot_training_status": "not_implemented",
+  "tools": [
+    "lab_docs_search",
+    "lab_docs_read",
+    "lab_backends_inspect",
+    "lab_experiment_create",
+    "lab_experiment_read",
+    "lab_experiment_write",
+    "lab_experiment_validate",
+    "lab_backend_probe"
+  ],
+  "ok": true
+}

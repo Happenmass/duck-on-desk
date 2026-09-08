@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-09-08T14:00:28.078Z",
+  "scope": "isolated settings + virtual laboratory",
+  "errors": [],
+  "metadata": {
+    "version": "1.0.0",
+    "repoUrl": "https://github.com/Happenmass/duck-on-desk",
+    "license": "AGPL-3.0",
+    "copyright": "© 2026 Happenmass · Upstream © 2026 Ruller_Lulu",
+    "authorName": "Happenmass",
+    "authorUrl": "https://github.com/Happenmass",
+    "upstreamAuthorName": "Ruller_Lulu / 鹿鹿",
+    "upstreamAuthorUrl": "https://github.com/rullerzhou-afk/clawd-on-desk",
+    "developerMode": false,
+    "heroSvgContent": "",
+    "pendingUpdateVersion": "",
+    "autoUpdateCheck": true,
+    "updateCheckSnapshot": {
+      "state": "idle"
+    }
+  },
+  "enabledAndPersisted": true,
+  "labReady": true,
+  "reopened": true,
+  "disabledAndDestroyed": true,
+  "upstreamVisible": true,
+  "ok": true
+}

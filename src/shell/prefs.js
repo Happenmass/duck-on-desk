@@ -427,6 +427,7 @@ const SCHEMA = {
   // runs a quiet GitHub discovery on a 12-hour cycle (packaged builds only).
   // Default on per #329.
   autoUpdateCheck: { type: "boolean", default: true },
+  developerMode: { type: "boolean", default: false },
   // Last version the scheduler discovered that is newer than the running
   // app. Empty string = none pending. Surfaced in the tray label and the
   // About version-row hint. Cleared on install or by

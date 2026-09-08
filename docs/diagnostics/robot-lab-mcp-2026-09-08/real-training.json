@@ -1,0 +1,293 @@
+{
+  "timestamp": "2026-09-08T13:06:27.761Z",
+  "transport": "MCP stdio / official SDK",
+  "calls": [
+    "lab_docs_search",
+    "lab_training_defaults",
+    "lab_experiment_create",
+    "lab_experiment_write",
+    "lab_experiment_write",
+    "lab_experiment_validate",
+    "lab_training_start",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_policy_artifact",
+    "lab_training_start",
+    "lab_training_cancel",
+    "lab_training_get",
+    "lab_training_get",
+    "lab_training_get"
+  ],
+  "cuda_status": "pending_hardware_verification",
+  "job": {
+    "id": "run_383b6541-7324-4394-8831-1dcac1aa4c6c",
+    "ownerPid": 96722,
+    "source": {
+      "experiment_id": "exp_187ecca0-605b-4209-b14e-abf2203ff6df",
+      "revision": 3
+    },
+    "createdAt": "2026-09-08T13:06:27.988Z",
+    "phase": "completed",
+    "metrics": [
+      {
+        "phase": "training",
+        "iteration": 1,
+        "iterations": 20,
+        "environment_steps": 128,
+        "mean_reward": 1.6256616115570068,
+        "policy_loss": -0.02409890666604042,
+        "value_loss": 280.99395751953125,
+        "elapsed_seconds": 0.49
+      },
+      {
+        "phase": "training",
+        "iteration": 2,
+        "iterations": 20,
+        "environment_steps": 256,
+        "mean_reward": 1.5679798126220703,
+        "policy_loss": -0.014692040160298347,
+        "value_loss": 267.03173828125,
+        "elapsed_seconds": 0.76
+      },
+      {
+        "phase": "training",
+        "iteration": 3,
+        "iterations": 20,
+        "environment_steps": 384,
+        "mean_reward": 1.571746826171875,
+        "policy_loss": -0.005360964685678482,
+        "value_loss": 268.2135009765625,
+        "elapsed_seconds": 1.05
+      },
+      {
+        "phase": "training",
+        "iteration": 4,
+        "iterations": 20,
+        "environment_steps": 512,
+        "mean_reward": 1.5691356658935547,
+        "policy_loss": -0.008297182619571686,
+        "value_loss": 267.20025634765625,
+        "elapsed_seconds": 1.35
+      },
+      {
+        "phase": "training",
+        "iteration": 5,
+        "iterations": 20,
+        "environment_steps": 640,
+        "mean_reward": 1.5703355073928833,
+        "policy_loss": -0.00739561440423131,
+        "value_loss": 267.6891784667969,
+        "elapsed_seconds": 1.64
+      },
+      {
+        "phase": "training",
+        "iteration": 6,
+        "iterations": 20,
+        "environment_steps": 768,
+        "mean_reward": 1.5680480003356934,
+        "policy_loss": -0.004717635456472635,
+        "value_loss": 266.9237365722656,
+        "elapsed_seconds": 1.94
+      },
+      {
+        "phase": "training",
+        "iteration": 7,
+        "iterations": 20,
+        "environment_steps": 896,
+        "mean_reward": 1.572357177734375,
+        "policy_loss": -0.009218280203640461,
+        "value_loss": 268.22296142578125,
+        "elapsed_seconds": 2.23
+      },
+      {
+        "phase": "training",
+        "iteration": 8,
+        "iterations": 20,
+        "environment_steps": 1024,
+        "mean_reward": 1.5684716701507568,
+        "policy_loss": -0.002020126674324274,
+        "value_loss": 266.37738037109375,
+        "elapsed_seconds": 2.5
+      },
+      {
+        "phase": "training",
+        "iteration": 9,
+        "iterations": 20,
+        "environment_steps": 1152,
+        "mean_reward": 1.5695927143096924,
+        "policy_loss": -0.012745244428515434,
+        "value_loss": 266.7464904785156,
+        "elapsed_seconds": 2.78
+      },
+      {
+        "phase": "training",
+        "iteration": 10,
+        "iterations": 20,
+        "environment_steps": 1280,
+        "mean_reward": 1.570272445678711,
+        "policy_loss": -0.00573144294321537,
+        "value_loss": 266.7522888183594,
+        "elapsed_seconds": 3.05
+      },
+      {
+        "phase": "training",
+        "iteration": 11,
+        "iterations": 20,
+        "environment_steps": 1408,
+        "mean_reward": 1.5695691108703613,
+        "policy_loss": -0.005875024478882551,
+        "value_loss": 267.0518798828125,
+        "elapsed_seconds": 3.34
+      },
+      {
+        "phase": "training",
+        "iteration": 12,
+        "iterations": 20,
+        "environment_steps": 1536,
+        "mean_reward": 1.5689983367919922,
+        "policy_loss": -0.00939895212650299,
+        "value_loss": 266.27459716796875,
+        "elapsed_seconds": 3.62
+      },
+      {
+        "phase": "training",
+        "iteration": 13,
+        "iterations": 20,
+        "environment_steps": 1664,
+        "mean_reward": 1.5710785388946533,
+        "policy_loss": -0.003732253797352314,
+        "value_loss": 266.7469177246094,
+        "elapsed_seconds": 3.9
+      },
+      {
+        "phase": "training",
+        "iteration": 14,
+        "iterations": 20,
+        "environment_steps": 1792,
+        "mean_reward": 1.5677614212036133,
+        "policy_loss": -0.005432340782135725,
+        "value_loss": 266.0640563964844,
+        "elapsed_seconds": 4.19
+      },
+      {
+        "phase": "training",
+        "iteration": 15,
+        "iterations": 20,
+        "environment_steps": 1920,
+        "mean_reward": 1.5700490474700928,
+        "policy_loss": -0.012531557120382786,
+        "value_loss": 266.88177490234375,
+        "elapsed_seconds": 4.47
+      },
+      {
+        "phase": "training",
+        "iteration": 16,
+        "iterations": 20,
+        "environment_steps": 2048,
+        "mean_reward": 1.62088942527771,
+        "policy_loss": -0.010454367846250534,
+        "value_loss": 134.74591064453125,
+        "elapsed_seconds": 4.75
+      },
+      {
+        "phase": "training",
+        "iteration": 17,
+        "iterations": 20,
+        "environment_steps": 2176,
+        "mean_reward": 1.5715316534042358,
+        "policy_loss": -0.002948393113911152,
+        "value_loss": 265.6551513671875,
+        "elapsed_seconds": 5.04
+      },
+      {
+        "phase": "training",
+        "iteration": 18,
+        "iterations": 20,
+        "environment_steps": 2304,
+        "mean_reward": 1.5702238082885742,
+        "policy_loss": -0.004347038455307484,
+        "value_loss": 266.083740234375,
+        "elapsed_seconds": 5.31
+      },
+      {
+        "phase": "training",
+        "iteration": 19,
+        "iterations": 20,
+        "environment_steps": 2432,
+        "mean_reward": 1.5698362588882446,
+        "policy_loss": -0.003056061454117298,
+        "value_loss": 265.77081298828125,
+        "elapsed_seconds": 5.59
+      },
+      {
+        "phase": "training",
+        "iteration": 20,
+        "iterations": 20,
+        "environment_steps": 2560,
+        "mean_reward": 1.5701477527618408,
+        "policy_loss": -0.007049039471894503,
+        "value_loss": 265.8468017578125,
+        "elapsed_seconds": 5.87
+      }
+    ],
+    "manifest": {
+      "contract": "duck-lab-legs-v1",
+      "model_hash": "2d45cf49a3d411fd955ae8dffe77c4cd22901a03736ef415a6e06d8e5691f529",
+      "robot": "microduck",
+      "morphology": "legs:0cm",
+      "role": "walk",
+      "training_device": "mps",
+      "inference_device": "mps",
+      "physics_backend": "mujoco_cpu",
+      "environment_steps": 2560,
+      "iterations": 20,
+      "parameter_l1_change": 28.516380488872528,
+      "base_import_max_error": 2.682209014892578e-07,
+      "onnx_export_max_error": 2.682209014892578e-07,
+      "native_evaluation_passed": true,
+      "baseline": {
+        "fall_rate": 0,
+        "velocity_mae": 0.1483495274881522,
+        "seconds": 5,
+        "environments": 3
+      },
+      "candidate": {
+        "fall_rate": 0,
+        "velocity_mae": 0.1482868497769038,
+        "seconds": 5,
+        "environments": 3
+      },
+      "policy_sha256": "361eebe433d76c678593d5c240a7e8dad24b15781a7d10adc31df96c832d4d05",
+      "reward_sha256": "501f2478a5762413db48625398e97ed614451c5629853136ce4ded48ad79fb20",
+      "strategy_sha256": "1299eb4541a5500dded5e5da8df4d46818d110593f2580877c8f6ad1302017ed"
+    },
+    "baseline": {
+      "fall_rate": 0,
+      "velocity_mae": 0.1483495274881522,
+      "seconds": 5,
+      "environments": 3
+    },
+    "progress": 1,
+    "finishedAt": "2026-09-08T13:06:36.800Z",
+    "settings": {
+      "training_device": "mps",
+      "inference_device": "mps",
+      "target_speed": 0.15,
+      "iterations": 20
+    }
+  },
+  "artifact": {
+    "path": "/Users/guhappen/.cache/huggingface/microduck-robot-lab/run_383b6541-7324-4394-8831-1dcac1aa4c6c/policy.onnx",
+    "relocated_after_test": "2026-09-08; follows project ONNX cache constraint, SHA-256 unchanged"
+  },
+  "cancelled_job": "run_2acb3415-be91-4626-a340-d379062d30ed",
+  "ok": true
+}

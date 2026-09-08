@@ -372,7 +372,7 @@ test("CLI success is concise", () => {
 test("package lifecycle and launch wiring cover install and development entry points", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.scripts["verify:electron"], "node scripts/verify-electron-install.js");
-  assert.equal(pkg.scripts.postinstall, "node scripts/verify-electron-install.js --context postinstall");
+  assert.equal(pkg.scripts.postinstall, "node scripts/verify-electron-install.js --context postinstall && npm --prefix mcp/robot-lab ci --omit=dev --ignore-scripts");
   for (const [name, command] of Object.entries(pkg.scripts)) {
     if (name.startsWith("prebuild")) {
       assert.doesNotMatch(command, /verify-electron-install/, `${name} must not gate the builder distribution`);

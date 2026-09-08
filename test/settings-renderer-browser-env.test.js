@@ -1796,6 +1796,36 @@ describe("settings renderer browser environment", () => {
     }
   });
 
+  it("persists developer mode once, patches its switch and exposes the laboratory entry", async () => {
+    const save = createDeferred();
+    const harness = loadAboutTabForTest({ snapshot: { developerMode:false }, update: () => save.promise });
+    await new Promise(resolve => setImmediate(resolve));
+    const sw = harness.content.querySelector(".about-developer-mode-switch");
+    const open = harness.content.querySelector(".about-open-lab");
+    assert.equal(sw.getAttribute("aria-checked"), "false");
+    assert.equal(open.hidden,true);
+    sw.dispatchEvent({type:"click"}); sw.dispatchEvent({type:"click"});
+    assert.deepEqual(harness.updateCalls,[{key:"developerMode",value:true}]);
+    assert.equal(sw.getAttribute("aria-disabled"),"true");
+    save.resolve({status:"ok"}); await new Promise(resolve => setImmediate(resolve));
+    harness.core.state.snapshot.developerMode=true;
+    assert.equal(harness.core.tabs.about.patchInPlace({developerMode:true}),true);
+    assert.equal(sw.getAttribute("aria-checked"),"true"); assert.equal(open.hidden,false);
+    harness.core.state.snapshot.developerMode=false;
+    harness.core.tabs.about.patchInPlace({developerMode:false});
+    assert.equal(open.hidden,true);
+  });
+
+  it("restores developer mode after a failed save", async () => {
+    const harness=loadAboutTabForTest({snapshot:{developerMode:false},update:async()=>({status:"error",message:"Cannot save"})});
+    await new Promise(resolve=>setImmediate(resolve));
+    const sw=harness.content.querySelector(".about-developer-mode-switch");
+    sw.dispatchEvent({type:"click"}); await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(sw.getAttribute("aria-checked"),"false");
+    assert.equal(harness.content.querySelector(".about-open-lab").hidden,true);
+    assert.equal(harness.toasts[0].message,"Cannot save");
+  });
+
   it("updates the About auto-update switch in place and blocks rapid duplicate saves", async () => {
     const save = createDeferred();
     const harness = loadAboutTabForTest({
@@ -10165,5 +10195,56 @@ describe("macOS platform detection (Settings shortcut labels)", () => {
     assert.strictEqual(isMac(""), false);
     assert.strictEqual(isMac(undefined), false);
     assert.strictEqual(isMac(null), false);
+  });
+});
+
+
+describe("Agent MCP controls", () => {
+  it("installs, refreshes and removes MCP without toggling the hook integration", async () => {
+    let installed = false;
+    let pythonPath = "";
+    const calls = [];
+    const harness = loadAgentsTabForTest({
+      snapshot: { agents: { codex: { integrationInstalled: true, enabled: true } } },
+      agentMetadata: [{ id: "codex", name: "Codex", capabilities: {} }],
+      settingsAPI: { getAgentMcpStatus: async () => ({ status: "ok", installed, pythonPath, supported: true }), command: async (command, payload) => {
+        calls.push({ command, payload });
+        if (command === "installAgentMcp") { installed = true; pythonPath = payload.pythonPath; }
+        if (command === "removeAgentMcp") installed = false;
+        return { status: "ok", installed, pythonPath, supported: true };
+      } },
+    });
+    harness.core.ops.showToast = () => {};
+    harness.core.ops.requestRender({ content: true });
+    await new Promise(resolve => setImmediate(resolve));
+    const input = harness.content.querySelector(".agent-mcp-python");
+    input.value = "/my python/bin/python";
+    const install = harness.content.querySelector(".agent-mcp-install");
+    install.dispatchEvent({ type: "click", bubbles: false });
+    assert.strictEqual(install.disabled, true);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.strictEqual(installed, true);
+    assert.strictEqual(pythonPath, "/my python/bin/python");
+    const remove = harness.content.querySelector(".agent-mcp-remove");
+    assert.strictEqual(remove.hidden, false);
+    remove.dispatchEvent({ type: "click", bubbles: false });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.strictEqual(installed, false);
+    assert.strictEqual(remove.hidden, true);
+    assert.deepStrictEqual(calls.map(c => c.command), ["installAgentMcp", "removeAgentMcp"]);
+    assert.strictEqual(harness.core.state.snapshot.agents.codex.enabled, true);
+  });
+
+  it("blocks conflicting MCP configuration and leaves Pi without an install button", async () => {
+    const harness = loadAgentsTabForTest({
+      snapshot: { agents: { codex: { integrationInstalled: true }, pi: { integrationInstalled: true } } },
+      agentMetadata: [{ id: "codex", name: "Codex", capabilities: {} }, { id: "pi", name: "Pi", capabilities: {} }],
+      settingsAPI: { getAgentMcpStatus: async () => ({ status: "ok", conflict: true, installed: false, supported: true }) },
+    });
+    harness.core.ops.requestRender({ content: true });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.strictEqual(harness.content.querySelectorAll(".agent-mcp-install").length, 1);
+    assert.strictEqual(harness.content.querySelector(".agent-mcp-install").disabled, true);
+    assert.strictEqual(harness.content.querySelector(".agent-mcp-remove").hidden, true);
   });
 });

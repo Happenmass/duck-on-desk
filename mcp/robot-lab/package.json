@@ -1,0 +1,9 @@
+{
+  "name": "duck-on-desk-robot-lab-mcp",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"start": "node server.mjs", "test": "node --test test/*.test.mjs", "first-round": "node first-round.mjs"},
+  "dependencies": {"@modelcontextprotocol/sdk": "1.30.0", "zod": "^3.25.76"},
+  "engines": {"node": ">=22.12.0"}
+}

@@ -122,6 +122,7 @@ contextBridge.exposeInMainWorld("settingsAPI", {
   command: (action, payload) => ipcRenderer.invoke("settings:command", { action, payload }),
   openDashboard: () => ipcRenderer.send("settings:open-dashboard"),
   listAgents: () => ipcRenderer.invoke("settings:list-agents"),
+  getAgentMcpStatus: (agentId) => ipcRenderer.invoke("settings:command", { action: "getAgentMcpStatus", payload: { agentId } }),
   pickAgentDiscoveryPath: (kind) => ipcRenderer.invoke("settings:pick-agent-discovery-path", { kind }),
   detectAgentInstallations: (opts) => ipcRenderer.invoke("settings:detect-agent-installations", opts),
   getAboutInfo: () => ipcRenderer.invoke("settings:get-about-info"),

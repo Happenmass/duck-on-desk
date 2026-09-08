@@ -1090,9 +1090,98 @@
     });
   }
 
+  function buildAgentMcpRow(agent) {
+    const row = document.createElement("div");
+    row.className = "row row-sub agent-mcp-row";
+    const text = document.createElement("div");
+    text.className = "row-text";
+    const label = document.createElement("span");
+    label.className = "row-label";
+    label.textContent = "Robot Lab MCP";
+    const desc = document.createElement("span");
+    desc.className = "row-desc";
+    text.append(label, desc);
+    row.appendChild(text);
+    if (!["claude-code", "codex", "opencode"].includes(agent.id)) {
+      desc.textContent = t("agentMcpUnsupported");
+      return row;
+    }
+    const python = document.createElement("input");
+    python.type = "text";
+    python.value = "";
+    python.className = "agent-mcp-python";
+    python.placeholder = t("agentMcpPython");
+    python.setAttribute("aria-label", t("agentMcpPython"));
+    python.spellcheck = false;
+    text.appendChild(python);
+    const controls = document.createElement("div");
+    controls.className = "row-control agent-mcp-controls";
+    const install = document.createElement("button");
+    const remove = document.createElement("button");
+    const refresh = document.createElement("button");
+    for (const button of [install, remove, refresh]) {
+      button.type = "button";
+      button.className = "soft-btn";
+      controls.appendChild(button);
+    }
+    install.classList.add("agent-mcp-install");
+    remove.classList.add("agent-mcp-remove");
+    refresh.classList.add("agent-mcp-refresh");
+    install.textContent = t("agentMcpInstall");
+    remove.textContent = t("agentMcpRemove");
+    refresh.textContent = t("agentMcpRefresh");
+    row.appendChild(controls);
+    let pending = false;
+    function busy(value) {
+      pending = value;
+      python.disabled = value;
+      for (const button of [install, remove, refresh]) button.disabled = value;
+    }
+    function show(result, populatePython) {
+      busy(false);
+      if (!result || result.status !== "ok") {
+        desc.textContent = (result && result.message) || t("agentMcpError");
+        install.disabled = true;
+        remove.disabled = true;
+        return;
+      }
+      if (populatePython) python.value = result.pythonPath || "";
+      install.disabled = result.conflict === true;
+      remove.hidden = !result.installed;
+      remove.disabled = !result.installed;
+      install.textContent = t(result.installed ? "agentMcpUpdate" : "agentMcpInstall");
+      desc.textContent = t(result.conflict ? "agentMcpConflict"
+        : result.disabled ? "agentMcpDisabled"
+        : result.installed ? "agentMcpInstalled" : "agentMcpDescription");
+    }
+    async function run(command, populatePython = false) {
+      if (pending) return;
+      busy(true);
+      desc.textContent = t("agentIntegrationWorking");
+      try {
+        const result = command === "getAgentMcpStatus"
+          ? await window.settingsAPI.getAgentMcpStatus(agent.id)
+          : await window.settingsAPI.command(command, { agentId: agent.id, pythonPath: python.value.trim() });
+        if (command !== "getAgentMcpStatus" && (!result || result.status !== "ok")) {
+          ops.showToast((result && result.message) || t("agentMcpError"), { error: true });
+          show(await window.settingsAPI.getAgentMcpStatus(agent.id), false);
+          return;
+        }
+        show(result, populatePython);
+        if (command === "installAgentMcp" && result && result.status === "ok") ops.showToast(t("agentMcpInstalled"));
+      } catch (error) { show({ status: "error", message: error.message }, false); }
+    }
+    install.addEventListener("click", event => { event.stopPropagation(); run("installAgentMcp"); });
+    remove.addEventListener("click", event => { event.stopPropagation(); run("removeAgentMcp"); });
+    refresh.addEventListener("click", event => { event.stopPropagation(); run("getAgentMcpStatus", true); });
+    run("getAgentMcpStatus", true);
+    return row;
+  }
+
   function buildAgentDetailRows(agent) {
     const rows = [];
     const caps = agent.capabilities || {};
+    if (!agent.custom) rows.push(buildAgentMcpRow(agent));
     if (agent.custom) {
       const payloadExample = JSON.stringify({
         agent_id: agent.id,

@@ -361,6 +361,12 @@ const _settingsController = createSettingsController({
   prefsPath: PREFS_PATH,
   loadResult: _initialPrefsLoad,
   injectedDeps: {
+    openRobotLab: () => robotLabRuntime.open(),
+    agentMcpManager: require("./state/agent-mcp").createAgentMcpManager({
+      labDir: app.isPackaged
+        ? path.join(process.resourcesPath, "robot-lab-mcp")
+        : path.join(__dirname, "../mcp/robot-lab"),
+    }),
     installAutoStart: _installAutoStartHook,
     uninstallAutoStart: _uninstallAutoStartHook,
     resolveTextScaleDisplayKey: () => getSettingsDisplayKey(),
@@ -618,6 +624,24 @@ function maybeDestroyIdleAnimationPreviewPosterWindow() {
 }
 
 let roamFencePickerRuntime = null;
+let labJobs = null;
+function getLabJobs() {
+  if (!labJobs) {
+    const modulePath = app.isPackaged ? path.join(process.resourcesPath, "robot-lab-mcp/jobs.cjs") : path.join(__dirname, "../mcp/robot-lab/jobs.cjs");
+    labJobs = require(modulePath).createLabJobs();
+  }
+  return labJobs;
+}
+const robotLabRuntime = require("./shell/robot-lab-window").createRobotLabWindow({
+  app, BrowserWindow, ipcMain, dialog, getJobs: getLabJobs,
+  onApply: async (url) => {
+    if (win && !win.isDestroyed()) win.webContents.send("duck-walk-policy-change", url);
+  },
+});
+_settingsController.subscribeKey("developerMode", (enabled) => {
+  if (enabled) robotLabRuntime.open();
+  else robotLabRuntime.close();
+});
 const settingsWindowRuntime = createSettingsWindowRuntime({
   app,
   BrowserWindow,
@@ -3456,6 +3480,7 @@ ipcMain.on("duck-displacement", (event, d) => {
 ipcMain.handle("pet-runtime-config", (event) => {
   if (!win || win.isDestroyed() || event.sender !== win.webContents) return null;
   return {
+    labPolicyUrl: getLabJobs().activation().current ? `pet-model://policy/${encodeURIComponent(`lab/${getLabJobs().activation().current}/policy.onnx`)}` : null,
     petRobot: _settingsController.get("petRobot"),
     reachyAutoConnect: _settingsController.get("reachyAutoConnect"),
     reachyHost: _settingsController.get("reachyHost"),
@@ -3751,7 +3776,7 @@ if (!gotTheLock) {
   }
 
   app.whenReady().then(async () => {
-    petModelProtocol.installHandler(protocol, net, pathToFileURL, {
+    petModelProtocol.installHandler(protocol, net, pathToFileURL, { resolveLabPolicy: (id) => getLabJobs().artifact(id),
       // Policies ship with the app (scripts/fetch-policies.js stages them); the
       // user's Hugging Face cache still wins when it has them.
       bundledDir: app.isPackaged ? path.join(process.resourcesPath, "policies") : path.join(__dirname, "..", "models", "bundled"),
@@ -3881,6 +3906,7 @@ if (!gotTheLock) {
   });
 
   app.on("before-quit", (event) => {
+    labJobs?.dispose();
     isQuitting = true;
     if (quitCleanupStarted) return;
     quitCleanupStarted = true;

@@ -1,8 +1,8 @@
 {
   "name": "duck-on-desk",
-  "version": "0.2.3",
+  "version": "1.0.0",
   "repository": "github:Happenmass/duck-on-desk",
-  "description": "A desktop pet that reacts to your Claude Code sessions in real-time.",
+  "description": "A 3D desktop robot for coding agents, with an interactive robot training laboratory.",
   "main": "src/main.js",
   "scripts": {
     "start": "node launch.js",
@@ -15,7 +15,7 @@
     "build:mac:arm64": "electron-builder --mac dmg:arm64 zip:arm64",
     "build:all": "electron-builder --mac --win",
     "verify:electron": "node scripts/verify-electron-install.js",
-    "postinstall": "node scripts/verify-electron-install.js --context postinstall",
+    "postinstall": "node scripts/verify-electron-install.js --context postinstall && npm --prefix mcp/robot-lab ci --omit=dev --ignore-scripts",
     "test": "node test/run-tests.js",
     "audit:assets": "node scripts/audit-repository-assets.js",
     "audit:native-package": "node scripts/audit-packaged-native.js",
@@ -39,7 +39,8 @@
     "prebuild:mac": "npm run build:renderer && npm run fetch:policies",
     "prebuild:mac:arm64": "npm run build:renderer && npm run fetch:policies",
     "prebuild:mac:x64": "npm run build:renderer && npm run fetch:policies",
-    "prebuild:win:all": "npm run build:renderer && npm run fetch:policies"
+    "prebuild:win:all": "npm run build:renderer && npm run fetch:policies",
+    "dev:lab": "node scripts/start-robot-lab.js"
   },
   "keywords": [
     "duck",
@@ -47,7 +48,7 @@
     "electron",
     "claude-code"
   ],
-  "author": "rullerzhou-afk",
+  "author": "Happenmass",
   "license": "AGPL-3.0-only",
   "type": "commonjs",
   "build": {
@@ -128,7 +129,9 @@
       "extensions/**/*",
       "agents/**/*",
       "themes/**/*",
-      "node_modules/jsonc-parser/**/*"
+      "node_modules/jsonc-parser/**/*",
+      "renderer-dist/robot/mjlab/robot_allcollisions.xml",
+      "renderer-dist/robot/mjlab/meshes/**/*"
     ],
     "extraResources": [
       {
@@ -138,6 +141,29 @@
       {
         "from": "models/bundled",
         "to": "policies"
+      },
+      {
+        "from": "mcp/robot-lab",
+        "to": "robot-lab-mcp",
+        "filter": [
+          "package.json",
+          "server.mjs",
+          "check.mjs",
+          "store.mjs",
+          "templates.mjs",
+          "worker.py",
+          "docs/**/*",
+          "jobs.cjs",
+          "training/**/*"
+        ]
+      },
+      {
+        "from": "mcp/robot-lab/node_modules",
+        "to": "robot-lab-mcp/node_modules",
+        "filter": [
+          "**/*",
+          "!.cache/**/*"
+        ]
       }
     ],
     "publish": [

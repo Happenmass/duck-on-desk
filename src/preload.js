@@ -7,6 +7,7 @@ const themeConfig = themeArg ? JSON.parse(themeArg.slice("--theme-config=".lengt
 contextBridge.exposeInMainWorld("themeConfig", themeConfig);
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  onDuckWalkPolicyChange: (cb) => ipcRenderer.on("duck-walk-policy-change", (_event, url) => cb(url)),
   getPetRuntimeConfig: () => ipcRenderer.invoke("pet-runtime-config"),
   onPetRobotChange: (cb) => ipcRenderer.on("pet-robot-change", (_, value) => cb(value)),
   getReachyStatus: () => ipcRenderer.invoke("reachy-status"),

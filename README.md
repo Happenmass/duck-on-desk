@@ -22,6 +22,12 @@ Prebuilt apps are on the [Releases](https://github.com/Happenmass/duck-on-desk/r
 
 Everything the duck needs is inside the app, including the RL policies (see `NOTICE.md` for their sources); nothing is downloaded at runtime. Launch, open the tray menu → Settings → Agents, and install the hooks for Claude Code, Codex, Pi or opencode.
 
+## Developer mode and training
+
+Enable **Settings → About → Developer mode** to open the separate 3D robot laboratory. Inspect or control 14 joints, edit rewards and policy networks, run PPO training, evaluate, export ONNX, apply a policy to the desktop pet, and roll back.
+
+The Agents page can install Robot Lab MCP for Claude Code, Codex CLI and OpenCode so coding agents can read API docs, write scripts and manage training. Training needs a configured Python environment. MPS has been tested; CUDA awaits NVIDIA hardware verification. This first version trains the standard feet on flat ground. See [Robot Lab instructions](mcp/robot-lab/README.md).
+
 ## Roller skates
 
 The tray menu's **Locomotion** entry switches the duck between its feet and the

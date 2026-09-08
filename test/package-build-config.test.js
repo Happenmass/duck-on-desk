@@ -274,10 +274,15 @@ describe("package build config", () => {
         const entries = pkg.build[platform] && pkg.build[platform].extraResources;
         assert.equal(entries, undefined, `${platform} should not package an extra sidecar`);
       }
-      // The bundled policies are the one extra resource besides the icon.
+      // MCP runs under system Node, so its scripts and dependencies must live outside asar.
       assert.deepEqual(pkg.build.extraResources, [
         { from: "assets/icon.ico", to: "icon.ico" },
         { from: "models/bundled", to: "policies" },
+        {
+          from: "mcp/robot-lab", to: "robot-lab-mcp",
+          filter: ["package.json", "server.mjs", "check.mjs", "store.mjs", "templates.mjs", "worker.py", "docs/**/*", "jobs.cjs", "training/**/*"],
+        },
+        { from: "mcp/robot-lab/node_modules", to: "robot-lab-mcp/node_modules", filter: ["**/*", "!.cache/**/*"] },
       ]);
     });
 

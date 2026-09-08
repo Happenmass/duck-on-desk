@@ -21,6 +21,8 @@
   const STRINGS = i18nApi.STRINGS;
   const CONTRIBUTORS = i18nApi.CONTRIBUTORS;
   const MAINTAINERS = i18nApi.MAINTAINERS;
+  const UPSTREAM_MAINTAINERS = i18nApi.UPSTREAM_MAINTAINERS || [];
+  const PROJECT_CONTRIBUTORS = i18nApi.PROJECT_CONTRIBUTORS || [];
   if (!STRINGS || !CONTRIBUTORS || !MAINTAINERS) {
     throw new Error("settings-i18n.js failed to load before settings-ui-core.js");
   }
@@ -2142,6 +2144,8 @@
     STRINGS,
     MAINTAINERS,
     CONTRIBUTORS,
+    UPSTREAM_MAINTAINERS,
+    PROJECT_CONTRIBUTORS,
     IS_MAC,
     IS_WIN,
     SHORTCUT_ACTIONS,

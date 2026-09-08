@@ -1,0 +1,9 @@
+{
+  "version": "duck-lab-legs-v1",
+  "joints": ["left_hip_yaw", "left_hip_roll", "left_hip_pitch", "left_knee", "left_ankle", "neck_pitch", "head_pitch", "head_yaw", "head_roll", "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle"],
+  "default_pose": [0, -0.08726646259971647, -0.457924, -0.004940, 0.452984, 0.3490658503988659, 0.3490658503988659, 0, 0, 0, 0.08726646259971647, 0.457924, 0.004940, -0.452984],
+  "timestep": 0.005, "decimation": 4, "rest_height": 0.12,
+  "observation": ["gyro:3", "projected_gravity:3", "joint_position_minus_default:14", "joint_velocity:14", "previous_action:14", "commands:13"],
+  "action": "position_target=default_pose+policy_output_radians",
+  "normalization": "baked_into_onnx", "actuator": "MJCF chosen_actuator", "morphology": "legs:0cm"
+}

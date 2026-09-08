@@ -518,6 +518,7 @@ const updateRegistry = {
 
   // ── #329 background update check (Phase 4) ──
   autoUpdateCheck: requireBoolean("autoUpdateCheck"),
+  developerMode: requireBoolean("developerMode"),
   pendingUpdateVersion: requireString("pendingUpdateVersion", { allowEmpty: true }),
   dismissedUpdateVersions(value) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -1235,6 +1236,7 @@ function setTextScaleForDisplay(payload, deps) {
 }
 
 const commandRegistry = {
+  ...require("./settings-actions-mcp"),
   addCustomApplication,
   removeTheme,
   installHooks,

@@ -22,6 +22,12 @@
 
 鸭子需要的一切都在应用里，包括强化学习策略（来源见 `NOTICE.md`），运行时不下载任何东西。启动应用，打开托盘菜单 → 设置 → Agents，安装 Claude Code、Codex、Pi 或 opencode 的 hooks。
 
+## 开发者模式与训练
+
+在「设置 → 关于」开启「打开开发者模式」，进入独立的 3D 机器人实验室。可操作 14 个关节、编辑奖励和策略网络、执行 PPO 训练、评测、导出 ONNX 并应用到桌宠，支持回退。
+
+Agent 管理页可为 Claude Code、Codex CLI、OpenCode 安装 Robot Lab MCP，让 Coding Agent 查询接口、写脚本和管理训练。训练需配置 Python 环境；MPS 已实测，CUDA 待 NVIDIA 实机验证。第一版训练对象为平地普通脚，详见 [Robot Lab 使用说明](mcp/robot-lab/README.md)。
+
 ## 轮滑
 
 托盘菜单的「移动方式」在双脚和官方轮滑形态之间切换：随官方发布的 `BEST_roller`

@@ -3435,11 +3435,13 @@ html, body {
   transition: transform 0.12s ease;
 }
 .about-crab-wrap:active { transform: scale(0.97); }
-.about-crab-wrap svg {
+.about-crab-wrap svg,
+.about-crab-wrap img {
   width: 100%;
   height: 100%;
   display: block;
   pointer-events: none;
+  object-fit: contain;
 }
 .about-title {
   font-size: 26px;
@@ -3694,3 +3696,12 @@ html, body {
 .row-desc a:hover {
   opacity: 0.8;
 }
+
+.agent-mcp-row { align-items: flex-start; }
+.agent-mcp-python { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; color: inherit; background: transparent; font: inherit; font-size: 12px; }
+.agent-mcp-controls { flex-wrap: wrap; max-width: 230px; gap: 6px; }
+
+.about-info-description { opacity: .7; font-size: 12px; line-height: 1.6; max-width: 380px; margin-top: 4px; }
+.about-preference-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.about-upstream { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border-color, #ddd3); }
+.about-upstream-trigger { cursor: pointer; margin-bottom: 12px; font-weight: 600; background: transparent; color: inherit; border: 0; padding: 0; }

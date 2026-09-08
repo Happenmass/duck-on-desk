@@ -32,6 +32,8 @@ jobs:
       - run: ${{ matrix.build }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Verify updater artifacts
+        run: node scripts/verify-updater-metadata.js --metadata dist/${{ runner.os == 'macOS' && 'latest-mac.yml' || 'latest.yml' }} --artifact-root dist --contract ${{ runner.os == 'macOS' && 'mac' || 'windows' }} --package-json package.json --output dist/updater-verification.json
       - uses: actions/upload-artifact@v4
         with:
           name: duck-on-desk-${{ runner.os }}
@@ -39,6 +41,7 @@ jobs:
             dist/*.dmg
             dist/*.zip
             dist/*.exe
+            dist/*.blockmap
             dist/latest*.yml
           if-no-files-found: error
   release:
@@ -48,10 +51,22 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      # Download platforms sequentially into separate directories. Validate bytes
+      # again after download: v0.2.3 saw a truncated Windows artifact here.
       - uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          merge-multiple: true
-      - run: gh release create "$GITHUB_REF_NAME" artifacts/* --repo "$GITHUB_REPOSITORY" --title "Duck on Desk $GITHUB_REF_NAME" --generate-notes
+          name: duck-on-desk-macOS
+          path: artifacts/macOS
+      - uses: actions/download-artifact@v4
+        with:
+          name: duck-on-desk-Windows
+          path: artifacts/Windows
+      - run: node scripts/verify-updater-metadata.js --metadata artifacts/macOS/latest-mac.yml --artifact-root artifacts/macOS --contract mac --package-json package.json
+      - run: node scripts/verify-updater-metadata.js --metadata artifacts/Windows/latest.yml --artifact-root artifacts/Windows --contract windows --package-json package.json
+      - run: gh release create "$GITHUB_REF_NAME" artifacts/macOS/* artifacts/Windows/* --draft --repo "$GITHUB_REPOSITORY" --title "Duck on Desk $GITHUB_REF_NAME" --notes-file "docs/releases/release-$GITHUB_REF_NAME.md"
         env:
           GH_TOKEN: ${{ github.token }}
