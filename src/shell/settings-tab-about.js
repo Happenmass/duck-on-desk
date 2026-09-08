@@ -285,7 +285,7 @@
 
   function buildPreferenceRow(key, controlName, initial, reopen = false) {
     const row = document.createElement("div");
-    row.className = "about-info-row";
+    row.className = "about-info-row about-preference-row";
     const label = document.createElement("div");
     label.className = "about-info-label";
     const title = document.createElement("div");

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-08T14:00:28.078Z",
+  "timestamp": "2026-09-08T14:05:38.775Z",
   "scope": "isolated settings + virtual laboratory",
   "errors": [],
   "metadata": {
@@ -21,6 +21,7 @@
   },
   "enabledAndPersisted": true,
   "labReady": true,
+  "narrowLayout": true,
   "reopened": true,
   "disabledAndDestroyed": true,
   "upstreamVisible": true,

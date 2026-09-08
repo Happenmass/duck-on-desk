@@ -3702,6 +3702,7 @@ html, body {
 .agent-mcp-controls { flex-wrap: wrap; max-width: 230px; gap: 6px; }
 
 .about-info-description { opacity: .7; font-size: 12px; line-height: 1.6; max-width: 380px; margin-top: 4px; }
+.about-preference-row .about-info-label { flex: 1; min-width: 0; }
 .about-preference-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .about-upstream { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border-color, #ddd3); }
-.about-upstream-trigger { cursor: pointer; margin-bottom: 12px; font-weight: 600; background: transparent; color: inherit; border: 0; padding: 0; }
+.about-upstream-trigger { display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 12px; font-weight: 600; background: transparent; color: inherit; border: 0; padding: 0; }

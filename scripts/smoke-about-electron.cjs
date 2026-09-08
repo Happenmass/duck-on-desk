@@ -32,7 +32,7 @@ app.whenReady().then(async () => {
     controller.applyUpdate('lang', 'zh');
     controller.subscribe(payload => win?.webContents.send('settings-changed', payload));
     controller.subscribeKey('developerMode', enabled => enabled ? lab.open() : lab.close());
-    win = new BrowserWindow({ width: 960, height: 900, show: true, webPreferences: {
+    win = new BrowserWindow({ width: 800, height: 680, show: true, webPreferences: {
       preload: path.join(root, 'src/preload-settings.js'), contextIsolation: true, sandbox: true,
     } });
     win.webContents.on('console-message', (_event, level, message) => { if (level >= 3) report.errors.push(message); });
@@ -72,6 +72,11 @@ app.whenReady().then(async () => {
     report.labReady = true;
     await wait(300);
     fs.writeFileSync(path.join(output, 'about-on.png'), (await win.webContents.capturePage()).toPNG());
+    win.setSize(640, 680);
+    await wait(300);
+    report.narrowLayout = await run('document.querySelector("#content").scrollWidth <= document.querySelector("#content").clientWidth');
+    assert.equal(report.narrowLayout, true, 'About must fit the minimum settings width');
+    fs.writeFileSync(path.join(output, 'about-narrow.png'), (await win.webContents.capturePage()).toPNG());
     fs.writeFileSync(path.join(output, 'laboratory.png'), (await first.webContents.capturePage()).toPNG());
     first.destroy();
     await run('document.querySelector(".about-open-lab").click();true');
