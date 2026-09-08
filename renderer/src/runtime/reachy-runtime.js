@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { loadReachyRig } from "./reachy-rig.js";
 import { neutralPose, createReachyMotion } from "./reachy-motion.js";
+import { FRAME_MS, FRAME_SLACK } from "./constants.js";
 
 export async function createReachyRuntime({ container, api, audio }) {
   const rig = await loadReachyRig();
@@ -31,12 +32,17 @@ export async function createReachyRuntime({ container, api, audio }) {
   if (api?.getReachyStatus) acceptStatus(await api.getReachyStatus());
   function render(now) {
     if (disposed) return;
+    frame = requestAnimationFrame(render);
+    // Same 30 fps budget as the duck: rAF runs at the panel's refresh rate and
+    // every frame is a compositor pass on a transparent always-on-top window.
+    // Skipping before dt is consumed keeps the motion integrating in real time.
+    if (now - lastTime < FRAME_MS * FRAME_SLACK) return;
     const dt = Math.min(0.05, Math.max(0, (now - lastTime) / 1000)); lastTime = now;
     if (!status.connected) {
       pose = motion.step(current, (now - started) / 1000, dt, now < glanceUntil ? glance : {});
     }
     rig.setPose(status.connected && status.pose ? status.pose : pose);
-    renderer.render(scene, camera); frame = requestAnimationFrame(render);
+    renderer.render(scene, camera);
   }
   frame = requestAnimationFrame(render);
   const runtime = {

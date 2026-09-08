@@ -60,7 +60,7 @@ Download and smoke-test the draft release assets before publishing the draft.
 If the draft is wrong, fix the issue before publishing; do not publish a known
 bad draft release.
 
-### v0.2.1 Draft Smoke Checklist
+### v0.2.2 Draft Smoke Checklist
 
 Use the draft release installer or package artifact, not `npm start`. Windows
 required items are the primary publish gate. If macOS or Linux hardware is not
@@ -73,7 +73,7 @@ Before launching:
 - On macOS, download each DMG through a browser so it carries quarantine
   metadata. Confirm it opens without a Privacy & Security override, then verify
   the copied app with `spctl` and `stapler` as documented in the signing guide.
-- Confirm the packaged app shows `0.2.1` metadata.
+- Confirm the packaged app shows `0.2.2` metadata.
 - Confirm packaged resources include `app.asar.unpacked/hooks`,
   `app.asar.unpacked/agents`, `app.asar.unpacked/extensions`,
   and `app.asar.unpacked/themes`.
@@ -82,7 +82,7 @@ Before launching:
 - Download the native-package, Koffi prune/smoke, and updater metadata manifests.
   Confirm the target has one matching `koffi.node`, no foreign native payload,
   and no unreviewed exception. Confirm each updater metadata `version` and every
-  listed artifact filename identify `0.2.1`.
+  listed artifact filename identify `0.2.2`.
 - For migration smoke, install v0.16.0 first and save a copy of the old
   `duck-prefs.json` before upgrading.
 
@@ -107,7 +107,7 @@ Required all-platform checks:
 
 - Upgrade install over v0.16.0, launch, pet appears, no error dialog. Existing
   agent installation/enabled flags and user theme/animation choices remain intact.
-- Settings -> About shows `v0.2.1`, sourced from `app.getVersion()`.
+- Settings -> About shows `v0.2.2`, sourced from `app.getVersion()`.
 - First-run tutorial opens once for a fresh profile; Finish, Skip, and OS close
   each persist `tutorialSeen=true` and do not reopen on restart.
 - Upgrade profile with no `tutorialSeen` sees the tutorial once; an already-seen

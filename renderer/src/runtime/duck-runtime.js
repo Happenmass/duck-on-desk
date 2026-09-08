@@ -8,11 +8,11 @@ import { MotionLeases } from "./motion-leases.js";
 import { normalizeStilts, STILT_BLEND, STILT_MAX_FORWARD, STILT_MAX_TURN, STILT_SERVO_GAIN, stiltFraming, stiltMassKg, stiltMeshData, stiltPolicyFile } from "./stilts.js";
 import { normalizeLocomotion, ROLLER_BRAKE, ROLLER_BRAKE_ABOVE, ROLLER_CROUCH, ROLLER_MAX_FORWARD, ROLLER_POLICY_FILES, ROLLER_HALF_CONE, ROLLER_REST_HEIGHT, ROLLER_WHEEL_FRICTIONLOSS, ROLLER_WHEEL_JOINTS, ROLLER_YAW_RATE, yawTrunk } from "./rollers.js";
 import {
-  CMD_SIZE, CTRL_DT, DECIMATION, DEFAULT_POSE, JOINT_NAMES, MAX_BACK, MAX_FORWARD,
-  MAX_TURN, NUM_JOINTS, OBS_SIZE, POLICY_FILES, TIMESTEP,
+  CMD_SIZE, CTRL_DT, DECIMATION, DEFAULT_POSE, FRAME_MS, FRAME_SLACK, JOINT_NAMES,
+  MAX_BACK, MAX_FORWARD, MAX_TURN, NUM_JOINTS, OBS_SIZE, POLICY_FILES, TIMESTEP,
 } from "./constants.js";
 import {
-  FACING_HALF_CONE, footLanding, GROUND_PICK, HEAD_ALPHA, HEAD_KEYS, HEAD_MAX, HEADING_ENGAGE, HEADING_MIN_FORWARD, headingTurn, landingImpact, pickJawOpenness,
+  cameraLiftDecay, FACING_HALF_CONE, footLanding, GROUND_PICK, HEAD_ALPHA, HEAD_KEYS, HEAD_MAX, HEADING_ENGAGE, HEADING_MIN_FORWARD, headingTurn, landingImpact, pickJawOpenness,
   quackJawOpenness, wrapAngle,
 } from "./gestures.js";
 
@@ -34,6 +34,22 @@ const GAIT_KICK = 0.9;
 const GAIT_STALL_MS = 800;
 const STRIDE_SPREAD_STEPS = 12; // control steps (240 ms) over which one stride is paid out
 const CAMERA_FOLLOW_DEADBAND = 0.02; // ignore the gait's own few-mm bob
+const SLEEP_FRAME_MS = 450; // dozing: just enough to keep the breathing visible
+
+// Radial falloff for the ground blob. CircleGeometry's UVs put the centre at
+// (0.5, 0.5) and the rim on the texture edge, so the gradient lines up 1:1.
+function blobShadowTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gradient.addColorStop(0, "rgba(0,0,0,0.34)");
+  gradient.addColorStop(0.55, "rgba(0,0,0,0.18)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(canvas);
+}
 
 export async function createDuckRuntime(options) {
   const runtime = new DuckRuntime(options);
@@ -103,7 +119,7 @@ class DuckRuntime {
   #fps = 0;
   #renderFrames = 0;
   #renderT0 = performance.now();
-  #lastSleepRender = 0;
+  #lastRenderAt = 0;
   #appearance = DEFAULT_VARIANT;
   #resizeObserver;
   #renderFrame;
@@ -204,9 +220,6 @@ class DuckRuntime {
 
     this.#rig = await buildRig(k, { materialForMesh: materialHookFor(VARIANTS[this.#appearance]) });
     this.#rig.placer.rotation.y = -Math.PI / 2;
-    this.#rig.root.traverse((object) => {
-      if (object.isMesh) object.castShadow = true;
-    });
     if (this.#stilts > 0) this.#attachStiltVisuals();
     this.#scene.add(this.#rig.placer);
     this.#trunk = this.#rig.bodies.get("trunk_base");
@@ -285,7 +298,6 @@ class DuckRuntime {
       const site = this.#stiltSites?.[side];
       if (!ankle || !site) continue;
       const mesh = new THREE.Mesh(geometry, material);
-      mesh.castShadow = true;
       mesh.position.set(site.pos[0], site.pos[1], site.pos[2]);
       mesh.quaternion.set(site.quat[1], site.quat[2], site.quat[3], site.quat[0]);
       ankle.add(mesh);
@@ -453,11 +465,11 @@ class DuckRuntime {
     this.#camera = new THREE.PerspectiveCamera(32, 1, 0.02, 20);
     this.#camera.position.set(0.36, 0.23, 0.54);
     this.#camera.lookAt(0, 0.12, 0);
-    this.#renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, premultipliedAlpha: false });
+    // low-power keeps a dual-GPU Mac on the integrated chip (no-op on Apple silicon).
+    this.#renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, premultipliedAlpha: false, powerPreference: "low-power" });
     this.#renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     this.#renderer.setClearColor(0x000000, 0);
     this.#renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.#renderer.shadowMap.enabled = true;
     this.#container.appendChild(this.#renderer.domElement);
 
     const pmrem = new THREE.PMREMGenerator(this.#renderer);
@@ -467,15 +479,19 @@ class DuckRuntime {
     this.#scene.add(new THREE.AmbientLight(0xffffff, 0.65));
     const key = new THREE.DirectionalLight(0xffffff, 1.5);
     key.position.set(2, 4, 2);
-    key.castShadow = true;
     this.#scene.add(key);
     const rim = new THREE.DirectionalLight(0xffa45b, 0.75);
     rim.position.set(-2, 2, -2);
     this.#scene.add(rim);
-    const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.13, 40), new THREE.ShadowMaterial({ opacity: 0.22 }));
+    // A painted blob instead of a shadow map: the real shadow cost a second
+    // pass over all 70 rig meshes every frame, and at pet size the two read the
+    // same. Kept at the same footprint the ShadowMaterial circle had.
+    const shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.13, 40),
+      new THREE.MeshBasicMaterial({ map: blobShadowTexture(), transparent: true, depthWrite: false }),
+    );
     shadow.rotation.x = -Math.PI / 2;
     shadow.scale.set(1.4, 0.55, 1);
-    shadow.receiveShadow = true;
     this.#scene.add(shadow);
 
     const resize = () => {
@@ -939,8 +955,12 @@ class DuckRuntime {
     const render = (now) => {
       if (this.#disposed) return;
       this.#renderFrame = requestAnimationFrame(render);
-      if (this.#sleeping && now - this.#lastSleepRender < 450) return;
-      this.#lastSleepRender = now;
+      // The slack only has to absorb half a display tick, so it applies to the
+      // 30 fps budget; the dozing budget is a plain 450 ms as it always was.
+      const budget = this.#sleeping ? SLEEP_FRAME_MS : FRAME_MS * FRAME_SLACK;
+      if (now - this.#lastRenderAt < budget) return;
+      const sinceLastRender = now - this.#lastRenderAt;
+      this.#lastRenderAt = now;
       if (this.#data && this.#trunk) {
         const qpos = this.#data.qpos;
         // Camera rig follows the trunk height exactly while the duck is carried
@@ -948,7 +968,9 @@ class DuckRuntime {
         // last centimetres back down after the landing instead of snapping.
         if (!this.#cameraBase) this.#cameraBase = this.#camera.position.clone();
         const height = Math.max(0, qpos[2] - this.#restHeight());
-        this.#cameraLift = height > CAMERA_FOLLOW_DEADBAND ? height : this.#cameraLift * 0.75;
+        this.#cameraLift = height > CAMERA_FOLLOW_DEADBAND
+          ? height
+          : cameraLiftDecay(this.#cameraLift, sinceLastRender);
         this.#camera.position.copy(this.#cameraBase);
         this.#camera.position.y += this.#cameraLift;
         this.#camera.lookAt(0, this.#lookY + this.#cameraLift, 0);

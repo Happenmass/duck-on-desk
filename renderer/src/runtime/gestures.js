@@ -82,3 +82,12 @@ export function headingTurn(facing, target, engaged) {
   const on = Math.abs(error) > (engaged ? HEADING_RELEASE : HEADING_ENGAGE);
   return { turn: on ? Math.sign(error) : 0, engaged: on };
 }
+
+// Camera-rig ease-down after a landing. This used to be a bare `lift * 0.75`
+// applied once per rendered frame, which quietly tied the settle time to the
+// display's refresh rate — and broke outright when the render loop was capped
+// to 30 fps. Decaying on elapsed time instead keeps one feel at any frame rate;
+// CAMERA_LIFT_TAU_MS is chosen so 120 Hz still behaves as it always did.
+export const CAMERA_LIFT_TAU_MS = 29;
+export const cameraLiftDecay = (lift, elapsedMs, tauMs = CAMERA_LIFT_TAU_MS) =>
+  (elapsedMs > 0 ? lift * Math.exp(-elapsedMs / tauMs) : lift);

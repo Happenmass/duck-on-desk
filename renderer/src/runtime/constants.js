@@ -26,3 +26,12 @@ export const CTRL_DT = TIMESTEP * DECIMATION;
 export const MAX_FORWARD = 0.25;
 export const MAX_BACK = -0.2;
 export const MAX_TURN = 1.0;
+
+// Desktop-pet frame budget, shared by both robot runtimes. rAF fires at the
+// display's refresh rate, which on a ProMotion panel is 120 Hz; a ~360 px pet
+// reads the same at 30 and every frame costs a full compositor pass on a
+// transparent always-on-top window (measured 2026-09-08: the GPU process alone
+// sat at ~25% of a core). The 0.9 slack lets a 60 Hz display land on 33.3 ms
+// instead of skipping a beat to 50.
+export const FRAME_MS = 1000 / 30;
+export const FRAME_SLACK = 0.9;
