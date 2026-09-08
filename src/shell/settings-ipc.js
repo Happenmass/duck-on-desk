@@ -568,7 +568,11 @@ function registerSettingsIpc(options = {}) {
     } catch {}
     return {
       version: app.getVersion(),
-      repoUrl: "https://github.com/rullerzhou-afk/duck-on-desk",
+      // This fork's own source, not the upstream project's: the About panel's
+      // repository link is where a user goes for the source of the build they
+      // are running (and it pointed at a repo that does not exist). Upstream
+      // authorship below stays as the AGPL requires.
+      repoUrl: "https://github.com/Happenmass/duck-on-desk",
       license: "AGPL-3.0",
       copyright: "\u00a9 2026 Ruller_Lulu",
       authorName: "Ruller_Lulu / \u9e7f\u9e7f",

@@ -5,7 +5,16 @@ const fs = require("fs");
 const electron = require("electron");
 const { redactSecrets } = require("./secret-redact");
 
-const RELEASES_LATEST_URL = "https://github.com/rullerzhou-afk/duck-on-desk/releases/latest";
+// Where releases are published, and so where update checks have to look. These
+// were inherited from the upstream project with its owner still hardcoded, and
+// `rullerzhou-afk/duck-on-desk` does not exist — GitHub answered 404 for every
+// check, which surfaced to users as "No releases found". Kept as literals on
+// purpose: electron-builder strips `build` out of the package.json it writes
+// into app.asar, so reading the publish target at runtime throws in the
+// packaged app. `test/updater.test.js` asserts these two match build.publish.
+const REPO_OWNER = "Happenmass";
+const REPO_NAME = "duck-on-desk";
+const RELEASES_LATEST_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest`;
 const DEPENDENCY_INSTALL_TIMEOUT_MS = 10 * 60 * 1000;
 const UPDATE_ERROR_DETAIL_MAX_LENGTH = 8 * 1024;
 
@@ -691,7 +700,7 @@ function initUpdater(ctx, deps = {}) {
     return new Promise((resolve, reject) => {
       const req = httpsGet({
         hostname: "github.com",
-        path: "/rullerzhou-afk/duck-on-desk/releases/latest",
+        path: `/${REPO_OWNER}/${REPO_NAME}/releases/latest`,
         headers: {
           "User-Agent": "Duck-on-Desk",
           Accept: "text/html,*/*",
@@ -728,7 +737,7 @@ function initUpdater(ctx, deps = {}) {
       if (lastReleaseEtag) headers["If-None-Match"] = lastReleaseEtag;
       const req = httpsGet({
         hostname: "api.github.com",
-        path: "/repos/rullerzhou-afk/duck-on-desk/releases/latest",
+        path: `/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`,
         headers,
       }, (res) => {
         // 304 Not Modified — drain and serve the cached release.
@@ -1591,6 +1600,7 @@ function initUpdater(ctx, deps = {}) {
 module.exports = initUpdater;
 module.exports.__test = {
   DEPENDENCY_INSTALL_TIMEOUT_MS,
+  RELEASES_LATEST_URL,
   compareVersions,
   findWindowsArm64InstallerAsset,
   formatVersionForMessage,
