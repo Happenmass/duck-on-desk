@@ -141,7 +141,7 @@ function createLabJobs(options = {}) {
       if(controller.signal.aborted||fs.existsSync(config.cancel_file)){if(job.phase!=='cancelled'){job.phase='cancelled';job.finishedAt=new Date().toISOString();write(job);}return;}
       Object.assign(config,result);atomic(configFile,config);job.phase='starting';write(job);
       // Python bytecode inside a signed .app invalidates its resource seal after training.
-      const child=spawn(config.pythonPath,['-B',path.join(__dirname,'training/train.py'),configFile],{stdio:['ignore','pipe','pipe'],env:{...process.env,PYTORCH_ENABLE_MPS_FALLBACK:'0'},windowsHide:true});
+      const child=spawn(config.pythonPath,['-B',path.join(__dirname,'training/train.py'),configFile],{stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8',PYTORCH_ENABLE_MPS_FALLBACK:'0'},windowsHide:true});
       children.set(id,{child,job}); let buffer='';
       let graceTimer;
       const timer=setTimeout(()=>{fs.writeFileSync(config.cancel_file,'time budget');

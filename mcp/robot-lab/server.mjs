@@ -31,7 +31,7 @@ function config(record) {
 function worker(payload) {
   return new Promise((resolve, reject) => {
     const child = spawn(jobs.python(), [path.join(here, 'worker.py')], {
-      env: { ...process.env, PYTORCH_ENABLE_MPS_FALLBACK: '0' }, stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, PYTHONUTF8:'1', PYTHONIOENCODING:'utf-8', PYTORCH_ENABLE_MPS_FALLBACK: '0' }, stdio: ['pipe', 'pipe', 'pipe'],
     });
     let stdout = '', bytes = 0, failure;
     const stop = (code, message) => { failure ||= new LabError(code, message); child.kill('SIGKILL'); };

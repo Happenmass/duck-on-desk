@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import mujoco
 
-CONTRACT = json.loads(pathlib.Path(__file__).with_name('contract.json').read_text())
+CONTRACT = json.loads(pathlib.Path(__file__).with_name('contract.json').read_text(encoding='utf-8'))
 POSE = np.array(CONTRACT['default_pose'], dtype=np.float32)
 JOINTS = CONTRACT['joints']
 DT = CONTRACT['timestep'] * CONTRACT['decimation']

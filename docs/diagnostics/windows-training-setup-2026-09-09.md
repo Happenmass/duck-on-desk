@@ -6,7 +6,8 @@
 
 1. `jobs.cjs` 在构造时选定 `basePolicy`。冷缓存时选中已从安装包移除的 `../policies/BEST_alpha_walking.onnx`；之后 renderer 下载完也不重新查找。
 2. 模型自动下载仅接到 renderer 的 `pet-model` 协议，训练入口没有准备流程。
-3. Python 安装功能此前不存在；训练默认 `python3` 且默认设备写死 MPS。开发机已有模型缓存和手动配置的虚拟环境，旧测试没有覆盖新安装场景。
+3. Windows CI 34354360850 实际冷安装成功，但训练读取中文 JSON 时触发 CP1252 `charmap` 解码错误。训练文件读取改为显式 UTF-8，训练与 MCP 子进程统一 UTF-8；旧开发机 macOS 默认编码没有暴露它。
+4. Python 安装功能此前不存在；训练默认 `python3` 且默认设备写死 MPS。开发机已有模型缓存和手动配置的虚拟环境，旧测试没有覆盖新安装场景。
 
 可重复的失败回归命令：`node --test test/robot-lab-cold-start.test.js`。修复前前三项全部失败：两次上述模型错误、Windows 默认设备 mps 与 cuda 的断言不符。
 

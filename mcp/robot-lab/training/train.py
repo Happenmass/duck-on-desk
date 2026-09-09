@@ -46,7 +46,7 @@ def evaluate(actor, asset_dir, device, target, seed, steps=250, preview=None, st
 
 
 def main():
-    config = json.loads(pathlib.Path(sys.argv[1]).read_text())
+    config = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
     preview = LivePreview(config)
     stopping = False
     def request_stop(*_):

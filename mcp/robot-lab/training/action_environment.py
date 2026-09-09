@@ -11,7 +11,7 @@ from environment import Environments, DT, JOINTS, POSE
 
 DURATION = 8.0
 STEPS = round(DURATION / DT)
-HOLD_REFERENCE = json.loads(pathlib.Path(__file__).with_name('headstand-hold.json').read_text())
+HOLD_REFERENCE = json.loads(pathlib.Path(__file__).with_name('headstand-hold.json').read_text(encoding='utf-8'))
 
 
 class ActionEnvironments(Environments):

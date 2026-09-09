@@ -22,7 +22,7 @@ class LivePreview:
         if now >= self.next_check:
             self.next_check = now + 0.5
             try:
-                self.enabled = json.loads(self.control.read_text()).get('expires_at', 0) > time.time() * 1000
+                self.enabled = json.loads(self.control.read_text(encoding='utf-8')).get('expires_at', 0) > time.time() * 1000
             except (OSError, ValueError, TypeError, AttributeError):
                 self.enabled = False
         if not self.enabled or now < self.next_frame:

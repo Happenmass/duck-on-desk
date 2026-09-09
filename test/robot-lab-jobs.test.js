@@ -106,7 +106,7 @@ test('2000-iteration jobs reach the worker config with the same two-hour timeout
  let launched=0;const deadlines=[];
  const filename=require.resolve('../mcp/robot-lab/jobs.cjs');const sandbox={module:{exports:{}},__dirname:path.dirname(filename),process,Buffer,AbortController,
   setTimeout:(_fn,ms)=>{deadlines.push(ms);return ms;},clearTimeout:()=>{},
-  require:name=>name==='node:child_process'?{spawn:()=>{launched++;const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();child.kill=()=>child.emit('close',0);return child;}}:require(name)};
+  require:name=>name==='node:child_process'?{spawn:(_file,_args,options)=>{assert.equal(options.env.PYTHONUTF8,'1','Windows training must read Chinese configuration as UTF-8');launched++;const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();child.kill=()=>child.emit('close',0);return child;}}:require(name)};
  vm.runInNewContext(fs.readFileSync(filename,'utf8'),sandbox,{filename});
  const jobs=sandbox.module.exports.createLabJobs({root,weights,basePolicy:base,assetDir:root,prepare:()=>({pythonPath:'fixture-python',base_policy:base})});
  try {
