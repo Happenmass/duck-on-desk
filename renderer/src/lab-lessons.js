@@ -81,5 +81,5 @@ export function createLessons({notice}) {
     el('reward-script-status').textContent='这是本课的奖励草稿，切换课程会保留各自的修改。';
     el('rollback').hidden=isAction;el('active-policy').hidden=isAction;
   }
-  return {go,setTask,update(job){const phase={starting:'正在准备训练环境。',evaluating_baseline:'先记录训练前的表现，稍后用来对比。',training:`正在练习：已完成 ${job.metrics.at(-1)?.iteration||0} / ${job.settings?.iterations||'—'} 轮。`,evaluating_candidate:'练习结束，正在检验候选模型。',completed:'这次练习已完成。进入第 4 步，看看结果。',failed:'练习没有完成。请查看错误说明与训练环境。',cancelled:'这次练习已停止，可以调整设置后重试。'};el('lesson-run-message').textContent=job.phase==='failed'?`练习未完成：${job.error||'请检查训练环境与脚本。'}`:phase[job.phase]||job.phase;}};
+  return {go,setTask,update(job){const phase={preparing:job.preparation||'首次训练：正在准备模型与 Python 环境。',starting:'正在准备训练环境。',evaluating_baseline:'先记录训练前的表现，稍后用来对比。',training:`正在练习：已完成 ${job.metrics.at(-1)?.iteration||0} / ${job.settings?.iterations||'—'} 轮。`,evaluating_candidate:'练习结束，正在检验候选模型。',completed:'这次练习已完成。进入第 4 步，看看结果。',failed:'练习没有完成。请查看错误说明与训练环境。',cancelled:'这次练习已停止，可以调整设置后重试。'};el('lesson-run-message').textContent=job.phase==='failed'?`练习未完成：${job.error||'请检查训练环境与脚本。'}`:phase[job.phase]||job.phase;}};
 }
