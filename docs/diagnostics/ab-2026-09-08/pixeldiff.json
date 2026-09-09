@@ -1,0 +1,236 @@
+{
+  "height": 312,
+  "pixelsPerShot": 97344,
+  "result": [
+    {
+      "changedPixels": 5340,
+      "instances": 1,
+      "maxDelta": 785,
+      "name": "sole_left.stl"
+    },
+    {
+      "changedPixels": 1977,
+      "instances": 1,
+      "maxDelta": 684,
+      "name": "foot_left.stl"
+    },
+    {
+      "changedPixels": 118,
+      "instances": 3,
+      "maxDelta": 305,
+      "name": "seeed_bearing__configuration_default.stl"
+    },
+    {
+      "changedPixels": 2199,
+      "instances": 1,
+      "maxDelta": 696,
+      "name": "ankle_left.stl"
+    },
+    {
+      "changedPixels": 1493,
+      "instances": 2,
+      "maxDelta": 752,
+      "name": "leg.stl"
+    },
+    {
+      "changedPixels": 17364,
+      "instances": 15,
+      "maxDelta": 677,
+      "name": "xl330.stl"
+    },
+    {
+      "changedPixels": 4341,
+      "instances": 1,
+      "maxDelta": 939,
+      "name": "upper_leg_left.stl"
+    },
+    {
+      "changedPixels": 946,
+      "instances": 2,
+      "maxDelta": 561,
+      "name": "upper_leg_rigidity_plate.stl"
+    },
+    {
+      "changedPixels": 2004,
+      "instances": 11,
+      "maxDelta": 693,
+      "name": "seeed_bearing__configuration__22x16x4.stl"
+    },
+    {
+      "changedPixels": 3893,
+      "instances": 2,
+      "maxDelta": 740,
+      "name": "hip_l.stl"
+    },
+    {
+      "changedPixels": 457,
+      "instances": 2,
+      "maxDelta": 671,
+      "name": "yaw2roll.stl"
+    },
+    {
+      "changedPixels": 1230,
+      "instances": 2,
+      "maxDelta": 641,
+      "name": "bearing_roll.stl"
+    },
+    {
+      "changedPixels": 483,
+      "instances": 1,
+      "maxDelta": 544,
+      "name": "lens.stl"
+    },
+    {
+      "changedPixels": 4237,
+      "instances": 1,
+      "maxDelta": 429,
+      "name": "face_part.stl"
+    },
+    {
+      "changedPixels": 83,
+      "instances": 1,
+      "maxDelta": 448,
+      "name": "motor_support.stl"
+    },
+    {
+      "changedPixels": 12368,
+      "instances": 1,
+      "maxDelta": 969,
+      "name": "top_head_shell.stl"
+    },
+    {
+      "changedPixels": 0,
+      "instances": 1,
+      "maxDelta": 0,
+      "name": "elec_rpi_robot_hat_pcb.stl"
+    },
+    {
+      "changedPixels": 33,
+      "instances": 1,
+      "maxDelta": 86,
+      "name": "soft_mouth_top.stl"
+    },
+    {
+      "changedPixels": 2016,
+      "instances": 1,
+      "maxDelta": 549,
+      "name": "noenoeil.stl"
+    },
+    {
+      "changedPixels": 4017,
+      "instances": 1,
+      "maxDelta": 724,
+      "name": "bottom_head_shell.stl"
+    },
+    {
+      "changedPixels": 0,
+      "instances": 1,
+      "maxDelta": 0,
+      "name": "m12_lens_holder.stl"
+    },
+    {
+      "changedPixels": 54,
+      "instances": 1,
+      "maxDelta": 585,
+      "name": "pcb__raspberry_pi_zero_2_w.stl"
+    },
+    {
+      "changedPixels": 0,
+      "instances": 1,
+      "maxDelta": 0,
+      "name": "speaker.stl"
+    },
+    {
+      "changedPixels": 0,
+      "instances": 1,
+      "maxDelta": 0,
+      "name": "jaw_soft.stl"
+    },
+    {
+      "changedPixels": 5108,
+      "instances": 1,
+      "maxDelta": 744,
+      "name": "jaw.stl"
+    },
+    {
+      "changedPixels": 5,
+      "instances": 1,
+      "maxDelta": 213,
+      "name": "yaw_roll_motion.stl"
+    },
+    {
+      "changedPixels": 560,
+      "instances": 1,
+      "maxDelta": 624,
+      "name": "neck_pitch.stl"
+    },
+    {
+      "changedPixels": 387,
+      "instances": 2,
+      "maxDelta": 677,
+      "name": "neck.stl"
+    },
+    {
+      "changedPixels": 1049,
+      "instances": 1,
+      "maxDelta": 725,
+      "name": "ankle_right.stl"
+    },
+    {
+      "changedPixels": 4599,
+      "instances": 1,
+      "maxDelta": 804,
+      "name": "sole_right.stl"
+    },
+    {
+      "changedPixels": 1565,
+      "instances": 1,
+      "maxDelta": 706,
+      "name": "foot_right.stl"
+    },
+    {
+      "changedPixels": 1001,
+      "instances": 1,
+      "maxDelta": 933,
+      "name": "upper_leg_right.stl"
+    },
+    {
+      "changedPixels": 2968,
+      "instances": 1,
+      "maxDelta": 935,
+      "name": "right_shell.stl"
+    },
+    {
+      "changedPixels": 8,
+      "instances": 1,
+      "maxDelta": 261,
+      "name": "banana_pcb_locker.stl"
+    },
+    {
+      "changedPixels": 618,
+      "instances": 1,
+      "maxDelta": 887,
+      "name": "trunk_base.stl"
+    },
+    {
+      "changedPixels": 1553,
+      "instances": 1,
+      "maxDelta": 681,
+      "name": "power_support.stl"
+    },
+    {
+      "changedPixels": 1217,
+      "instances": 1,
+      "maxDelta": 602,
+      "name": "np_f970.stl"
+    },
+    {
+      "changedPixels": 4647,
+      "instances": 1,
+      "maxDelta": 926,
+      "name": "left_shell.stl"
+    }
+  ],
+  "width": 312,
+  "yaws": 8
+}

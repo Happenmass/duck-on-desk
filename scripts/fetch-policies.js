@@ -2,8 +2,7 @@
 "use strict";
 // Fills the global Hugging Face cache with every policy the duck runs — the
 // official Microduck simulator policies and the community stilt policies, both
-// pinned — then stages copies in models/bundled/ for electron-builder's
-// extraResources, so the packaged app needs no download and no cache.
+// pinned. Weights stay in the user cache and are never staged in the app.
 const fs = require("node:fs");
 const path = require("node:path");
 const {
@@ -12,7 +11,6 @@ const {
 
 const SPACE_URL = `https://huggingface.co/spaces/pollen-robotics/microduck-simulator/resolve/${POLICY_COMMIT}/app/public/policies/`;
 const STILTS_URL = `https://huggingface.co/HannesVonEssen/microduck-stilts/resolve/${STILTS_COMMIT}/`;
-const STAGING = path.resolve(__dirname, "..", "models", "bundled");
 const MIN_BYTES = 100_000; // every policy is ~0.8 MB; anything smaller is an error page
 
 function plan({ homeDir } = {}) {
@@ -48,12 +46,10 @@ async function main() {
       downloaded++;
       console.log(`downloaded ${item.rel} (${(size / 1024).toFixed(0)} KB)`);
     }
-    const staged = path.join(STAGING, item.rel);
-    fs.mkdirSync(path.dirname(staged), { recursive: true });
-    fs.copyFileSync(item.cache, staged); // follows the cache's blob symlinks
+
   }
-  console.log(`Policies ready: ${cached} from cache, ${downloaded} downloaded, staged in ${STAGING}`);
+  console.log(`Policies ready: ${cached} from cache, ${downloaded} downloaded in the global cache`);
 }
 
-module.exports = { plan, STAGING };
+module.exports = { plan };
 if (require.main === module) main().catch((err) => { console.error(err.message || err); process.exit(1); });

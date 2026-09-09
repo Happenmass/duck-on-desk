@@ -53,3 +53,22 @@ test("policies fall back to the app bundle when the cache lacks them", () => {
   assert.ok(STILTS_COMMIT);
   assert.equal(resolvePolicyRequest("pet-model://policy/BEST_alpha_walking.onnx", { homeDir: "/home/u", exists: () => false, bundledDir }).status, 404);
 });
+
+test('missing pinned models download once into the user cache; failures and unknown names do not poison it', async t => {
+  const fs=require('node:fs'),os=require('node:os');
+  const {ensureCachedPolicy}=require('../src/robots/duck/pet-model-protocol');
+  const homeDir=fs.mkdtempSync(path.join(os.tmpdir(),'duck-model-cache-'));
+  t.after(()=>fs.rmSync(homeDir,{recursive:true,force:true}));
+  let calls=0;
+  const bytes=Buffer.alloc(100001,7);
+  const fetchImpl=async url=>{calls++;assert.match(url,/huggingface\.co\/spaces\/pollen-robotics\/microduck-simulator\/resolve\/183f99/);return {ok:true,arrayBuffer:async()=>bytes};};
+  const url='pet-model://policy/BEST_alpha_walking.onnx';
+  await Promise.all([ensureCachedPolicy(url,{homeDir,fetchImpl}),ensureCachedPolicy(url,{homeDir,fetchImpl})]);
+  await ensureCachedPolicy(url,{homeDir,fetchImpl});
+  assert.equal(calls,1);assert.deepEqual(fs.readFileSync(path.join(policyDirectory(homeDir),'BEST_alpha_walking.onnx')),bytes);
+  await ensureCachedPolicy('pet-model://policy/unknown.onnx',{homeDir,fetchImpl});assert.equal(calls,1);
+  const bad='pet-model://policy/BEST_alpha_stand.onnx';
+  await assert.rejects(ensureCachedPolicy(bad,{homeDir,fetchImpl:async()=>({ok:false,status:503})}),/HTTP 503/);
+  assert.equal(resolvePolicyRequest(bad,{homeDir}).status,404);
+  await ensureCachedPolicy(bad,{homeDir,fetchImpl});assert.equal(resolvePolicyRequest(bad,{homeDir}).status,200);
+});

@@ -277,10 +277,9 @@ describe("package build config", () => {
       // MCP runs under system Node, so its scripts and dependencies must live outside asar.
       assert.deepEqual(pkg.build.extraResources, [
         { from: "assets/icon.ico", to: "icon.ico" },
-        { from: "models/bundled", to: "policies" },
         {
           from: "mcp/robot-lab", to: "robot-lab-mcp",
-          filter: ["package.json", "server.mjs", "check.mjs", "store.mjs", "templates.mjs", "worker.py", "docs/**/*", "jobs.cjs", "training/**/*"],
+          filter: ["package.json", "server.mjs", "check.mjs", "store.mjs", "templates.mjs", "worker.py", "docs/**/*", "jobs.cjs", "training/**/*", "presets/stable-flat-walk/**/*", "presets/official-finetune/**/*", "!training/**/__pycache__/**/*", "!training/**/*.pyc"],
         },
         { from: "mcp/robot-lab/node_modules", to: "robot-lab-mcp/node_modules", filter: ["**/*", "!.cache/**/*"] },
       ]);

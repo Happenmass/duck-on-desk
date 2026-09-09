@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-08T16:31:41.464Z",
+  "scope": "isolated browser WASM evaluation; no desktop assists, application or hardware",
+  "trials": [
+    {
+      "id": "run_e59130f0-a284-402f-b905-ea7328b0339a",
+      "target_speed": 0.25,
+      "steps": 1500,
+      "velocity_mae": 0.13607500573029668,
+      "fall_rate": 0,
+      "nonFinite": false,
+      "baseline": {
+        "steps": 1500,
+        "velocity_mae": 0.1367935142286513,
+        "fall_rate": 0,
+        "nonFinite": false
+      },
+      "error_reduction": 0.005252504129352409
+    }
+  ],
+  "ok": true
+}

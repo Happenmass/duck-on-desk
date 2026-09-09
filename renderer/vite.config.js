@@ -23,10 +23,16 @@ function localPolicyPlugin() {
             const {action,payload={}} = JSON.parse(body); let result;
             switch(action) {
               case "bootstrap": result={defaults:jobs.defaults(),jobs:jobs.list(),active:jobs.activation()};break;
+              case "action-defaults": result=payload.task==='microduck-flat-walk'?jobs.defaults():payload.task==='microduck-headstand-hold'?jobs.holdDefaults():payload.task==='microduck-headstand'?jobs.headstandDefaults():jobs.actionDefaults();break;
+              case "actions": result=jobs.actions();break;
+              case "add-action": result=jobs.addAction(payload.id,payload.name,payload.evaluation);break;
+              case "remove-action": result=jobs.removeAction(payload.id);break;
               case "start": result=jobs.start(payload);break;
+              case "resume": result=jobs.resume(payload.id,payload);break;
               case "list": result=jobs.list();break;
               case "get": result=jobs.get(payload.id);break;
               case "cancel": result=jobs.cancel(payload.id);break;
+              case "live-preview": result=jobs.preview(payload.id,payload.enabled);break;
               case "policy": case "export": jobs.artifact(payload.id);result={url:`/policies/${encodeURIComponent(`lab/${payload.id}/policy.onnx`)}`};break;
               case "apply": result=jobs.apply(payload.id,payload.evaluation);break;
               case "rollback": result=jobs.rollback();break;

@@ -437,6 +437,7 @@ const updateRegistry = {
       ? { status: "ok" }
       : { status: "error", message: `duckStilts must be one of ${DUCK_STILTS.join(", ")}` };
   },
+  duckRandomActions: requireBoolean("duckRandomActions"),
   duckMuted: requireBoolean("duckMuted"),
   petRobot(value) {
     return ["duck", "reachy-mini"].includes(value) ? { status: "ok" } : { status: "error", message: "Unknown robot" };

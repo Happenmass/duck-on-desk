@@ -1,0 +1,8 @@
+{
+  "stopped_trials": {
+    "run_c7bed68c-1d36-46f8-a815-7d91a26302b7": "Stopped after the command sweep identified the low-speed startup threshold; prioritized a 0.25 m/s trial.",
+    "run_767b6bb9-2bf7-4a70-b96d-78e1b2253027": "Stopped because the unpenalized reward had already produced excessive turning with two seeds; prioritized heading-aware rewards."
+  },
+  "heldout_initial_conditions": "Early reports use 12 small random joint-velocity perturbations. Final native validation additionally includes one exact zero-velocity initial state. Browser evaluation uses its actual zero-velocity reset and its own WASM MuJoCo implementation.",
+  "interpretation": "Native and browser long-horizon yaw can differ. A no-regression admission pass alone does not establish straight-line walking; keep speed, fall, direction and backend results separate."
+}

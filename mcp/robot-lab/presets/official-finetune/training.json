@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "mode": "robot",
+  "task": "microduck-flat-walk",
+  "algorithm": "ppo",
+  "physics_backend": "mujoco_cpu",
+  "training_device": "mps",
+  "inference_device": "mps",
+  "target_speed": 0.25,
+  "seed": 2,
+  "max_iterations": 200,
+  "environments": 32,
+  "rollout_steps": 64,
+  "learning_rate": 0.0001,
+  "policy_initialization": "official",
+  "ppo_profile": "local-ppo-v2",
+  "reset_on_pose_loss": true,
+  "hold_episode_steps": 400
+}

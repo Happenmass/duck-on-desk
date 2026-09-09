@@ -1,0 +1,432 @@
+{
+  "meshes": [
+    {
+      "name": "<Mesh>",
+      "parent": "",
+      "tris": 40,
+      "visible": true
+    },
+    {
+      "name": "sole_left.stl",
+      "parent": "ankle_left",
+      "tris": 3946,
+      "visible": true
+    },
+    {
+      "name": "foot_left.stl",
+      "parent": "ankle_left",
+      "tris": 4979,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration_default.stl",
+      "parent": "ankle_left",
+      "tris": 5200,
+      "visible": true
+    },
+    {
+      "name": "ankle_left.stl",
+      "parent": "ankle_left",
+      "tris": 1244,
+      "visible": true
+    },
+    {
+      "name": "leg.stl",
+      "parent": "leg",
+      "tris": 3694,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "leg",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "upper_leg_left.stl",
+      "parent": "upper_leg_left",
+      "tris": 3062,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "upper_leg_left",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "upper_leg_rigidity_plate.stl",
+      "parent": "upper_leg_left",
+      "tris": 900,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "upper_leg_left",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "upper_leg_left",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "hip_l",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "hip_l.stl",
+      "parent": "hip_l",
+      "tris": 5234,
+      "visible": true
+    },
+    {
+      "name": "yaw2roll.stl",
+      "parent": "yaw2roll",
+      "tris": 3100,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "yaw2roll",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "yaw2roll",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "bearing_roll.stl",
+      "parent": "yaw2roll",
+      "tris": 604,
+      "visible": true
+    },
+    {
+      "name": "lens.stl",
+      "parent": "jaw_soft",
+      "tris": 468,
+      "visible": true
+    },
+    {
+      "name": "face_part.stl",
+      "parent": "jaw_soft",
+      "tris": 2852,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "jaw_soft",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "motor_support.stl",
+      "parent": "jaw_soft",
+      "tris": 904,
+      "visible": true
+    },
+    {
+      "name": "top_head_shell.stl",
+      "parent": "jaw_soft",
+      "tris": 4030,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "jaw_soft",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration_default.stl",
+      "parent": "jaw_soft",
+      "tris": 5200,
+      "visible": true
+    },
+    {
+      "name": "elec_rpi_robot_hat_pcb.stl",
+      "parent": "jaw_soft",
+      "tris": 4714,
+      "visible": true
+    },
+    {
+      "name": "soft_mouth_top.stl",
+      "parent": "jaw_soft",
+      "tris": 1966,
+      "visible": true
+    },
+    {
+      "name": "noenoeil.stl",
+      "parent": "jaw_soft",
+      "tris": 246,
+      "visible": true
+    },
+    {
+      "name": "bottom_head_shell.stl",
+      "parent": "jaw_soft",
+      "tris": 5240,
+      "visible": true
+    },
+    {
+      "name": "m12_lens_holder.stl",
+      "parent": "jaw_soft",
+      "tris": 2748,
+      "visible": true
+    },
+    {
+      "name": "pcb__raspberry_pi_zero_2_w.stl",
+      "parent": "jaw_soft",
+      "tris": 5242,
+      "visible": true
+    },
+    {
+      "name": "speaker.stl",
+      "parent": "jaw_soft",
+      "tris": 12,
+      "visible": true
+    },
+    {
+      "name": "jaw_soft.stl",
+      "parent": "jaw_pivot",
+      "tris": 1680,
+      "visible": true
+    },
+    {
+      "name": "jaw.stl",
+      "parent": "jaw_pivot",
+      "tris": 2478,
+      "visible": true
+    },
+    {
+      "name": "yaw_roll_motion.stl",
+      "parent": "yaw_roll_motion",
+      "tris": 1452,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "yaw_roll_motion",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "yaw_roll_motion",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "yaw_roll_motion",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "neck_pitch.stl",
+      "parent": "neck_pitch",
+      "tris": 1780,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "neck_pitch",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "neck.stl",
+      "parent": "neck",
+      "tris": 366,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "neck",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "neck",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "neck.stl",
+      "parent": "neck",
+      "tris": 366,
+      "visible": true
+    },
+    {
+      "name": "ankle_right.stl",
+      "parent": "ankle_right",
+      "tris": 1244,
+      "visible": true
+    },
+    {
+      "name": "sole_right.stl",
+      "parent": "ankle_right",
+      "tris": 3972,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration_default.stl",
+      "parent": "ankle_right",
+      "tris": 5200,
+      "visible": true
+    },
+    {
+      "name": "foot_right.stl",
+      "parent": "ankle_right",
+      "tris": 4978,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "leg_2",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "leg.stl",
+      "parent": "leg_2",
+      "tris": 3694,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "upper_leg_right",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "upper_leg_right",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "upper_leg_rigidity_plate.stl",
+      "parent": "upper_leg_right",
+      "tris": 900,
+      "visible": true
+    },
+    {
+      "name": "upper_leg_right.stl",
+      "parent": "upper_leg_right",
+      "tris": 3062,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "upper_leg_right",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "hip_l.stl",
+      "parent": "hip_l_2",
+      "tris": 5234,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "hip_l_2",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "yaw2roll.stl",
+      "parent": "bearing_roll",
+      "tris": 3100,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "bearing_roll",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "bearing_roll.stl",
+      "parent": "bearing_roll",
+      "tris": 604,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "bearing_roll",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "trunk_base",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "right_shell.stl",
+      "parent": "trunk_base",
+      "tris": 5198,
+      "visible": true
+    },
+    {
+      "name": "banana_pcb_locker.stl",
+      "parent": "trunk_base",
+      "tris": 346,
+      "visible": true
+    },
+    {
+      "name": "trunk_base.stl",
+      "parent": "trunk_base",
+      "tris": 924,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "trunk_base",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "power_support.stl",
+      "parent": "trunk_base",
+      "tris": 3208,
+      "visible": true
+    },
+    {
+      "name": "np_f970.stl",
+      "parent": "trunk_base",
+      "tris": 5201,
+      "visible": true
+    },
+    {
+      "name": "xl330.stl",
+      "parent": "trunk_base",
+      "tris": 1030,
+      "visible": true
+    },
+    {
+      "name": "left_shell.stl",
+      "parent": "trunk_base",
+      "tris": 5179,
+      "visible": true
+    },
+    {
+      "name": "seeed_bearing__configuration__22x16x4.stl",
+      "parent": "trunk_base",
+      "tris": 5201,
+      "visible": true
+    }
+  ],
+  "total": 71,
+  "tris": 198452
+}

@@ -5,6 +5,8 @@ import mujocoWasmUrl from "@mujoco/mujoco/mujoco.wasm?url";
 import ortWasmUrl from "onnxruntime-web/ort-wasm-simd-threaded.wasm?url";
 import { buildRig, geometryToBinaryStl, loadGlbGeometries, loadKinematics, MODEL_DIR, setJawOpen, setJoint } from "./duck.js";
 import { DEFAULT_VARIANT, materialHookFor, VARIANTS, applyVariant } from "./variants.js";
+import { ActionSequence } from "./action-sequence.js";
+import holdReference from '../../../mcp/robot-lab/training/headstand-hold.json';
 import { MotionLeases } from "./motion-leases.js";
 import { normalizeStilts, STILT_BLEND, STILT_MAX_FORWARD, STILT_MAX_TURN, STILT_SERVO_GAIN, stiltFraming, stiltMassKg, stiltMeshData, stiltPolicyFile } from "./stilts.js";
 import { normalizeLocomotion, ROLLER_BRAKE, ROLLER_BRAKE_ABOVE, ROLLER_CROUCH, ROLLER_MAX_FORWARD, ROLLER_POLICY_FILES, ROLLER_HALF_CONE, ROLLER_REST_HEIGHT, ROLLER_WHEEL_FRICTIONLOSS, ROLLER_WHEEL_JOINTS, ROLLER_YAW_RATE, yawTrunk } from "./rollers.js";
@@ -64,6 +66,9 @@ class DuckRuntime {
   #labCommand = new Float32Array(13);
   #labManual = null;
   #labInFlight = null;
+  #labVisuals = null;
+  #labPolicySample = false;
+  #labViewVisible = true;
   #orbit;
   #quality;
   #walkOverrideUrl = null;
@@ -108,6 +113,11 @@ class DuckRuntime {
   #headTarget = new Float32Array(4);
   #headSmooth = new Float32Array(4);
   #pick = null;
+  #actionSequence = null;
+  #actionSession = null;
+  #actionCatalog = [];
+  #actionGeneration = 0;
+  #actionLoading = false;
   #quackAt = -Infinity;
   #grabbed = false;
   #lift = null; // { z, base, target } while picked up
@@ -238,6 +248,10 @@ class DuckRuntime {
     this.#scene.add(this.#rig.placer);
     if (this.#lab) this.#rig.placer.traverse(o => { if (o.isMesh) { o.castShadow = this.#quality.shadows; o.receiveShadow = true; } });
     this.#trunk = this.#rig.bodies.get("trunk_base");
+    if (this.#lab) {
+      const { createLabVisuals } = await import('./lab-visuals.js');
+      this.#labVisuals = createLabVisuals({rig:this.#rig,scene:this.#scene,camera:this.#camera,orbit:this.#orbit});
+    }
     this.#frameCamera();
     // Camera bearing in the MJCF world frame (the trunk's parent frame): the
     // trunk is pinned at the origin, so this is constant.
@@ -324,7 +338,7 @@ class DuckRuntime {
   // Rest framing: the stock camera for the bare duck, backed off and aimed
   // higher on stilts so the whole silhouette stays in the window.
   #frameCamera() {
-    if (this.#lab) { this.#camera.position.set(0.6, 0.42, 0.8); this.#orbit.target.set(0, 0.13, 0); this.#orbit.update(); return; }
+    if (this.#lab) { this.#camera.position.set(0.36, 0.29, 0.5); this.#orbit.target.set(0, 0.13, 0); this.#orbit.update(); return; }
     const framing = stiltFraming(this.#stilts, REST_HEIGHT);
     this.#lookY = framing.lookY;
     this.#camera.position.set(0.36, 0.23, 0.54).multiplyScalar(framing.dolly);
@@ -341,6 +355,9 @@ class DuckRuntime {
         this.#wakeIfNeeded();
         this.#leases.set(source, { forward: intent.forward, turn: intent.turn, heading: intent.heading }, { ttlMs: intent.ttlMs });
         if (this.#mode === "sit") this.#stand();
+        break;
+      case "cancel-action":
+        this.#cancelAction();
         break;
       case "stop":
         if (intent.source) this.#leases.clear(source);
@@ -372,6 +389,7 @@ class DuckRuntime {
         // Picked up: no policy runs while held; whatever it was doing is over.
         this.#wakeIfNeeded(false);
         this.#leases.clearAll();
+        this.#cancelAction();
         this.#cancelPeck();
         this.#clearTimers();
         this.#mode = "walk";
@@ -428,7 +446,9 @@ class DuckRuntime {
       mode: this.#recovery ? "recovery" : this.#mode,
       sleeping: this.#sleeping,
       grabbed: this.#grabbed,
-      busy: this.#grabbed || this.#sleeping || !!this.#recovery || this.#mode !== "walk",
+      action: this.#actionSequence ? { id: this.#actionSequence.action.id, phase: this.#actionSequence.phase } : null,
+      forward: this.#leases.current().forward,
+      busy: this.#actionLoading || !!this.#actionSequence || this.#grabbed || this.#sleeping || !!this.#recovery || this.#mode !== "walk",
       ctrlHz: Math.round(this.#ctrlHz),
       fps: Math.round(this.#fps),
       appearance: this.#appearance,
@@ -464,9 +484,24 @@ class DuckRuntime {
     if (!this.#lab || !this.#data) return null;
     const velocity = this.#data.sensordata[this.#model.sensor("imu_lin_vel").adr];
     return { time: this.#data.time, paused: this.#labPaused, position: Array.from(this.#data.qpos.slice(0,3)),
+      controlMode: this.#labManual ? 'manual' : 'policy',
+      action: this.snapshot().action,
+      observationSize: OBS_SIZE, outputSize: NUM_JOINTS, controlHz: 1 / CTRL_DT,
+      policySample: this.#labPolicySample && !this.#labManual,
       velocity, upright: -this.#projectedGravityZ(),
-      joints: JOINT_NAMES.map((name, i) => ({ name, position: this.#data.qpos[this.#qposAdr[i]],
+      joints: JOINT_NAMES.map((name, i) => ({ name, outputIndex: i, position: this.#data.qpos[this.#qposAdr[i]],
+        target: this.#labManual?.[i] ?? this.#data.ctrl[i], defaultPosition: DEFAULT_POSE[i],
+        policyOutput: this.#labPolicySample && !this.#labManual ? this.#lastAction[i] : null,
         range: Array.from(this.#model.jnt(name).range) })) };
+  }
+
+  labView(action, value) {
+    if (action === 'visible') { this.#labViewVisible = Boolean(value); return; }
+    if (!this.#labVisuals) return [];
+    if (action === 'project') return this.#labVisuals.project();
+    if (action === 'select') this.#labVisuals.select(value);
+    if (action === 'hologram') this.#labVisuals.hologram(value);
+    if (action === 'camera') this.#labVisuals.view(value);
   }
 
   async labControl(action, value) {
@@ -474,16 +509,85 @@ class DuckRuntime {
     if (action === "play") { this.#labPaused = false; return; }
     this.#labPaused = true;
     await this.#labInFlight;
-    if (action === "reset") { this.#resetPhysics(); this.#labManual = null; }
+    if (action === "reset") { this.#resetPhysics(); this.#labManual = null; this.#labPolicySample = false; }
     else if (action === "step") await this.#controlStep();
     else if (action === "velocity") { this.#labCommand[0] = clamp(Number(value.forward)||0, -0.2, 0.25); this.#labCommand[2] = clamp(Number(value.turn)||0, -1, 1); }
     else if (action === "joint") {
+      this.#cancelAction();
       const index = JOINT_NAMES.indexOf(value.name); if (index < 0 || !Number.isFinite(value.position)) throw new Error("Invalid joint target");
       this.#labManual ||= JOINT_NAMES.map((_,i) => this.#data.qpos[this.#qposAdr[i]]);
       const range = this.#model.jnt(value.name).range;
       this.#labManual[index] = clamp(value.position, range[0], range[1]);
-    } else if (action === "policy") this.#labManual = null;
+      // Paused pose editing is immediate kinematics. Physics resumes only on Play/Step.
+      // This prevents a saved target from looking like a broken slider while paused.
+      for (let i = 0; i < NUM_JOINTS; i++) this.#data.qpos[this.#qposAdr[i]] = this.#labManual[i];
+      this.#data.qvel.fill(0);
+      this.#data.ctrl.set(this.#labManual);
+      this.#lastAction.set(this.#labManual.map((v,i) => v - DEFAULT_POSE[i]));
+      this.#mujoco.mj_forward(this.#model, this.#data);
+    } else if (action === "policy") { this.#cancelAction(); this.#labManual = null; this.#labPolicySample = false; }
     return this.labSnapshot();
+  }
+
+  actions() { return [{ id: 'peck', name: '啄地', duration: 2.8 }, ...this.#actionCatalog]; }
+
+  setActions(actions) {
+    this.#actionCatalog = (Array.isArray(actions) ? actions : []).filter(a => a && /^run_[a-f0-9-]{36}$/.test(a.id) && a.contract === 'duck-lab-action-v1' && a.duration === 8 && typeof a.url === 'string').map(a=>({...a,officialObservations:a.policy_observations==='official-zero-commands-v1'}));
+  }
+
+  async playAction(id) {
+    if (id === 'peck') { this.#peck(); return this.snapshot(); }
+    const action = this.#actionCatalog.find(a => a.id === id);
+    if (!action) throw new Error('动作不在已验证的动作库中');
+    if (!this.#canAct()) return this.snapshot();
+    const generation = ++this.#actionGeneration; this.#actionLoading = true; this.#emit();
+    let session;
+    try {
+      session = await this.#ort.InferenceSession.create(action.url, { executionProviders: ['wasm'] });
+      const result = await session.run({ obs: new this.#ort.Tensor('float32', new Float32Array(61), [1,61]) });
+      if (result.actions?.data.length !== 14 || !Array.from(result.actions.data).every(Number.isFinite)) throw new Error('Invalid action policy output');
+      if (this.#disposed || generation !== this.#actionGeneration) { await session.release(); return this.snapshot(); }
+      this.#actionLoading = false;
+      if (!this.#canAct()) { await session.release(); return this.snapshot(); }
+      this.#actionSession = session; this.#beginAction(action); return this.snapshot();
+    } catch (error) { await session?.release(); throw error; }
+    finally { if (generation === this.#actionGeneration) { this.#actionLoading = false; this.#emit(); } }
+  }
+
+  #canAct() { return this.#ready && !this.#disposed && !this.#rebuilding && !this.#actionLoading && !this.#actionSequence && this.#mode === 'walk' && !this.#grabbed && !this.#recovery && !this.#suspended && this.#stilts === 0 && !this.#rollers(); }
+
+  #beginAction(action) {
+    this.#actionSequence = new ActionSequence(action);
+    this.#strideRemaining = 0; this.#displacement.x = this.#displacement.y = 0;
+    this.#headTarget.fill(0); this.#headSmooth.fill(0); this.#lastAction.fill(0); this.#emit();
+  }
+
+  #cancelAction() {
+    ++this.#actionGeneration; this.#actionLoading = false;
+    if (!this.#actionSequence) return;
+    this.#actionSequence = null; this.#pick = null; this.#mode = 'walk';
+    const session = this.#actionSession; this.#actionSession = null;
+    // A user event can arrive while ONNX is in flight.
+    if (session) void Promise.resolve(this.#labInFlight).finally(() => session.release());
+    this.#emit();
+  }
+
+  #advanceAction() {
+    const sequence = this.#actionSequence; if (!sequence) return;
+    const previous = sequence.phase;
+    const standing = -this.#projectedGravityZ() > 0.85 && this.#data.qpos[2] > 0.085 && Math.hypot(this.#data.qvel[0], this.#data.qvel[1]) < 0.08;
+    const phase = sequence.advance(CTRL_DT, standing);
+    if (phase === 'playing' && sequence.action.id === 'peck') this.#pick = { phase: sequence.elapsed / GROUND_PICK.periodS };
+    else this.#pick = null;
+    if (this.#lab && sequence.action.practice && previous==='playing' && phase==='returning') {
+      this.#cancelAction(); this.#labPaused=true; return;
+    }
+    if (previous !== phase) { this.#lastAction.fill(0); this.#emit(); }
+    if (phase === 'done' || phase === 'failed') {
+      this.#cancelAction();
+      if (this.#lab) this.#labPaused = true;
+      if (phase === 'failed') this.#leases.clearAll();
+    }
   }
 
   async loadWalkPolicy(url) {
@@ -501,6 +605,89 @@ class DuckRuntime {
     while (this.#rebuilding && !this.#disposed) await delay(20);
     if (this.#disposed || this.#locomotion !== "legs" || this.#stilts !== 0) return;
     await this.loadWalkPolicy(url || this.#policyUrl(POLICY_FILES.walk));
+  }
+
+  #initializeHeadstandHold() {
+    this.#data.qpos.set(holdReference.root_position, 0);
+    this.#data.qpos.set(holdReference.root_quaternion, 3);
+    this.#data.qvel.fill(0);
+    // A small reproducible initial disturbance; no forces or pose pinning later.
+    this.#data.qvel.set([0.02, -0.02, 0.01], 3);
+    for (let i=0;i<NUM_JOINTS;i++) {
+      this.#data.qpos[this.#qposAdr[i]]=holdReference.joint_positions[i];
+      this.#data.ctrl[i]=holdReference.joint_targets[i];
+      this.#lastAction[i]=holdReference.joint_targets[i]-DEFAULT_POSE[i];
+    }
+    this.#mujoco.mj_forward(this.#model,this.#data);
+  }
+
+  async previewActionPolicy(url, id, {practice=false,nearStart=false,officialObservations=false} = {}) {
+    if (!this.#lab) throw new Error('Candidate actions can only be previewed in the laboratory');
+    await this.labControl('pause'); await this.labControl('reset'); this.#labCommand.fill(0);
+    if (id !== 'peck') this.setActions([{id,url,name:'候选动作',contract:'duck-lab-action-v1',duration:8}]);
+    await this.playAction(id); if(!this.#actionSequence)throw new Error('当前状态无法开始动作试播');
+    this.#actionSequence.action.practice=practice;
+    this.#actionSequence.action.officialObservations=officialObservations;
+    if(nearStart){this.#initializeHeadstandHold();this.#actionSequence.phase='playing';this.#actionSequence.elapsed=0;}
+    this.#labPaused = false;
+  }
+
+  async evaluateActionPolicy(url, {goal='dance',officialObservations=false} = {}) {
+    if (!['dance','headstand','headstand-hold'].includes(goal)) throw new Error('Unknown action goal');
+    const nearStart=goal==='headstand-hold',headstand=goal!=='dance';
+    if (!this.#lab) throw new Error('Action evaluation requires the laboratory');
+    await this.labControl('pause'); this.#resetPhysics(); this.#labManual = null; this.#labCommand.fill(0);
+    if(nearStart)this.#initializeHeadstandHold();
+    const session = await this.#ort.InferenceSession.create(url, {executionProviders:['wasm']});
+    const sequence = new ActionSequence({id:'candidate',duration:8,officialObservations}); sequence.phase = 'playing';
+    this.#actionSequence = sequence; this.#actionSession = session;
+    let inverted = 0, hops = 0, air = 0, stable = 0, holding=0, longest=0, completed = 0, nonFinite = false;
+    const floor = this.#model.geom('desktop_floor').id;
+    const head=headstand?this.#model.body('jaw_soft').id:null;
+    const feet=headstand?['left_foot_collision','right_foot_collision'].map(n=>this.#model.geom(n).id):[];
+    try {
+      for (let i=0;i<400;i++) {
+        await this.#controlStep(); completed++;
+        const state = this.labSnapshot();
+        if (!state.position.every(Number.isFinite) || !Number.isFinite(state.upright)) { nonFinite = true; break; }
+        const upside = state.upright < -0.7;
+        if (upside) inverted += CTRL_DT;
+        let contact = false;
+        for (let c=0;c<this.#data.ncon;c++) { const point=this.#data.contact.get(c); if (point.geom1===floor||point.geom2===floor) contact=true; }
+        if (upside && !contact) air++;
+        else { if (upside && contact && air>=2) hops++; air=0; }
+        if (headstand) {
+          let headContact=false,feetContact=false,bodyContact=false,headX=0,headY=0,headPoints=0;
+          for(let c=0;c<this.#data.ncon;c++) {
+            const point=this.#data.contact.get(c); if(point.dist>0.001)continue;
+            const g=point.geom1===floor?point.geom2:point.geom2===floor?point.geom1:-1;
+            if(g<0)continue;
+            if(this.#model.geom_bodyid[g]===head){headContact=true;headX+=point.pos[0];headY+=point.pos[1];headPoints++;}
+            else if(feet.includes(g))feetContact=true;
+            else bodyContact=true;
+          }
+          const feetHeight=Math.min(...feet.map(g=>this.#data.geom_xpos[g*3+2]));
+          const gyro=this.#data.sensordata.slice(this.#gyroAdr,this.#gyroAdr+3);
+          const com=this.#data.subtree_com;
+          const offset=headPoints?Math.hypot(com[this.#trunkId*3]-headX/headPoints,com[this.#trunkId*3+1]-headY/headPoints):Infinity;
+          const jointSpeed=Math.sqrt(this.#dofAdr.reduce((sum,adr)=>sum+this.#data.qvel[adr]**2,0)/NUM_JOINTS);
+          const margin=Math.min(...JOINT_NAMES.map((name,i)=>{
+            const limits=this.#model.jnt(name).range,position=this.#data.qpos[this.#qposAdr[i]];
+            return Math.min(position-limits[0],limits[1]-position)/(limits[1]-limits[0]);
+          }));
+          const supported=state.upright<-.8&&headContact&&!feetContact&&!bodyContact&&feetHeight>.08
+            &&feetHeight-state.position[2]>.04&&offset<.04&&margin>=-.02&&jointSpeed<2
+            &&Math.hypot(...gyro)<1&&Math.hypot(this.#data.qvel[0],this.#data.qvel[1])<.1;
+          holding=supported?holding+1:0;longest=Math.max(longest,holding);
+        }
+        stable = state.upright>0.85 && state.position[2]>0.085 && Math.hypot(this.#data.qvel[0],this.#data.qvel[1])<0.08 ? stable+1 : 0;
+        if (i%25===0) await delay(0);
+      }
+      return {goal,evaluation_version:nearStart?holdReference.version:headstand?'headstand-posture-v2':'dance-v1',initialization:nearStart?'near-headstand':'standing',hold_seconds:holding*CTRL_DT,longest_hold_seconds:longest*CTRL_DT,steps:completed,inverted_seconds:inverted,inverted_hops:hops,standing:stable>=20,nonFinite,
+        success:completed===400&&!nonFinite&&(headstand?holding>=100:inverted>=0.4&&hops>=1&&stable>=20)};
+    } finally {
+      this.#actionSession = null; this.#actionSequence = null; await session.release(); this.#resetPhysics();
+    }
   }
 
   async evaluateWalkPolicy(url, targetSpeed = 0.15, steps = 250) {
@@ -541,6 +728,7 @@ class DuckRuntime {
   }
 
   dispose() {
+    this.#cancelAction();
     this.#disposed = true;
     this.#leases.clearAll();
     for (const timer of this.#timers) clearTimeout(timer);
@@ -548,6 +736,7 @@ class DuckRuntime {
     this.#resizeObserver?.disconnect();
     cancelAnimationFrame(this.#renderFrame);
     this.#orbit?.dispose();
+    this.#labVisuals?.dispose();
     const release = async () => {
       try { await this.#labInFlight; } catch {}
       for (const session of Object.values(this.#sessions)) await session.release?.();
@@ -570,7 +759,7 @@ class DuckRuntime {
     // low-power keeps a dual-GPU Mac on the integrated chip (no-op on Apple silicon).
     this.#renderer = new THREE.WebGLRenderer({ antialias: true, alpha: !this.#lab, premultipliedAlpha: false, powerPreference: "low-power" });
     this.#renderer.setPixelRatio(Math.min(this.#quality.pixelRatio, window.devicePixelRatio || 1));
-    this.#renderer.setClearColor(this.#lab ? 0x101b29 : 0x000000, this.#lab ? 1 : 0);
+    this.#renderer.setClearColor(this.#lab ? 0x080f18 : 0x000000, this.#lab ? 1 : 0);
     this.#renderer.shadowMap.enabled = this.#quality.shadows;
     this.#renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.#container.appendChild(this.#renderer.domElement);
@@ -584,7 +773,7 @@ class DuckRuntime {
     key.position.set(2, 4, 2);
     key.castShadow = this.#quality.shadows;
     this.#scene.add(key);
-    const rim = new THREE.DirectionalLight(0xffa45b, 0.75);
+    const rim = new THREE.DirectionalLight(this.#lab ? 0x75d6e4 : 0xffa45b, 0.75);
     rim.position.set(-2, 2, -2);
     this.#scene.add(rim);
     // A painted blob instead of a shadow map: the real shadow cost a second
@@ -599,9 +788,10 @@ class DuckRuntime {
     if (!this.#lab) this.#scene.add(shadow);
     else {
       shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshStandardMaterial({ color: 0x162334, roughness: 0.9 }));
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshBasicMaterial({ color: 0x080f18, toneMapped: false }));
       floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; this.#scene.add(floor);
-      const grid = new THREE.GridHelper(10, 100, 0x38697e, 0x233b4c); grid.position.y = 0.0005; this.#scene.add(grid);
+      this.#scene.fog = new THREE.FogExp2(0x080f18, 0.7);
+      const grid = new THREE.GridHelper(10, 100, 0x244b60, 0x172f40); grid.position.y = 0.0005; this.#scene.add(grid);
       this.#orbit = new OrbitControls(this.#camera, this.#renderer.domElement);
       this.#orbit.target.set(0, 0.12, 0); this.#orbit.maxDistance = 8; this.#orbit.minDistance = 0.2;
     }
@@ -699,6 +889,7 @@ class DuckRuntime {
   }
 
   #resetPhysics() {
+    this.#cancelAction();
     if (!this.#model) return;
     this.#clearTimers();
     this.#leases.clearAll();
@@ -718,10 +909,12 @@ class DuckRuntime {
     this.#mujoco.mj_resetDataKeyframe(this.#model, this.#data, this.#standKeyId);
     this.#mujoco.mj_forward(this.#model, this.#data);
     this.#lastAction.fill(0);
+    this.#labPolicySample = false;
     this.#emit();
   }
 
   #sit() {
+    this.#cancelAction();
     if (!this.#ready || this.#mode === "sit" || this.#pick || this.#stilts > 0 || this.#rollers()) return;
     this.#leases.clearAll();
     this.#clearTimers();
@@ -750,6 +943,7 @@ class DuckRuntime {
   }
 
   #sleep() {
+    this.#cancelAction();
     if (this.#sleeping || this.#pick) return;
     this.#sit();
     this.#later(2_600, () => {
@@ -798,13 +992,20 @@ class DuckRuntime {
     for (let joint = 0; joint < NUM_JOINTS; joint++) this.#obs[index++] = qpos[this.#qposAdr[joint]] - DEFAULT_POSE[joint];
     for (let joint = 0; joint < NUM_JOINTS; joint++) this.#obs[index++] = qvel[this.#dofAdr[joint]];
     for (let joint = 0; joint < NUM_JOINTS; joint++) this.#obs[index++] = this.#lastAction[joint];
-    if (this.#lab) {
+    if (this.#lab && !this.#actionSequence) {
       for (let command = 0; command < CMD_SIZE; command++) this.#obs[index++] = this.#labCommand[command];
       return this.#obs;
     }
     this.#cmd.fill(0);
     this.#rollerTurn = 0;
-    if (this.#mode === "sit" || this.#mode === "sitting" || this.#mode === "standing") {
+    if (this.#actionSequence) {
+      const seq = this.#actionSequence;
+      if (seq.phase === 'playing' && !seq.action.officialObservations) {
+        const phase = seq.action.id === 'peck' ? seq.elapsed / GROUND_PICK.periodS : seq.elapsed / seq.action.duration;
+        this.#cmd[0] = Math.cos(2 * Math.PI * phase); this.#cmd[1] = Math.sin(2 * Math.PI * phase);
+        if (seq.action.id !== 'peck') this.#cmd[2] = phase;
+      }
+    } else if (this.#mode === "sit" || this.#mode === "sitting" || this.#mode === "standing") {
       this.#cmd[0] = this.#sitFlag;
     } else if (this.#pick) {
       // Ground pick is phase-driven: [cos, sin, 0] in the velocity slots.
@@ -859,7 +1060,7 @@ class DuckRuntime {
     // get-up and roller policies were trained against zero-padded head
     // commands (the roller env pads head and body commands with zeros), so
     // they must never see a head target.
-    const zeroHead = this.#pick || this.#recovery || this.#rollers();
+    const zeroHead = this.#actionSequence || this.#pick || this.#recovery || this.#rollers();
     for (let h = 0; h < 4; h++) {
       this.#headSmooth[h] += HEAD_ALPHA * (this.#headTarget[h] - this.#headSmooth[h]);
       this.#cmd[3 + h] = zeroHead ? 0 : this.#headSmooth[h];
@@ -894,7 +1095,9 @@ class DuckRuntime {
       this.#soundStep();
       return;
     }
-    const session = this.#recovery?.state === "recovering" ? this.#sessions.stand
+    const actionPlaying = this.#actionSequence?.phase === 'playing';
+    const session = actionPlaying ? (this.#actionSession || this.#sessions.groundpick)
+      : this.#recovery?.state === "recovering" ? this.#sessions.stand
       : this.#pick ? (this.#rollers() ? this.#sessions.crouch : this.#sessions.groundpick)
       : this.#mode === "walk" ? this.#sessions.walk
       : this.#sessions.sitstand;
@@ -904,14 +1107,17 @@ class DuckRuntime {
     } else if (this.#recovery?.state !== "fallen") {
       const output = await session.run({ obs: new this.#ort.Tensor("float32", this.#buildObs(), [1, OBS_SIZE]) });
       const action = output.actions.data;
+      if (action.length !== NUM_JOINTS || !Array.from(action).every(Number.isFinite)) { this.#cancelAction(); throw new Error('Non-finite policy output'); }
       this.#lastAction.set(action);
+      if (this.#lab) this.#labPolicySample = true;
       for (let joint = 0; joint < NUM_JOINTS; joint++) {
         this.#data.ctrl[joint] = DEFAULT_POSE[joint] + action[joint];
       }
     }
     for (let step = 0; step < DECIMATION; step++) this.#mujoco.mj_step(this.#model, this.#data);
     this.#recenter();
-    if (!this.#lab) { this.#soundStep(); this.#advancePick(); this.#updateRecovery(); }
+    if (this.#actionSequence) this.#advanceAction();
+    if (!this.#lab) { this.#soundStep(); if (!this.#actionSequence) { this.#advancePick(); this.#updateRecovery(); } }
   }
 
   // Held in the air: ease the trunk up to LIFT_HEIGHT and pin it there each
@@ -938,6 +1144,10 @@ class DuckRuntime {
 
   // One-shot ground pick: peck the ground and stand back up (~2.8 s).
   #peck() {
+    if (!this.#rollers()) {
+      if (this.#canAct()) this.#beginAction({ id: 'peck', name: '啄地', duration: GROUND_PICK.periodS * GROUND_PICK.endPhase });
+      return;
+    }
     if (!this.#ready || this.#mode !== "walk" || this.#grabbed || this.#recovery || this.#suspended) return;
     this.#leases.clearAll();
     this.#mode = "peck";
@@ -961,7 +1171,7 @@ class DuckRuntime {
       if (gain !== null) {
         this.#lastLandingAt = now;
         this.#onSound({ name: "step", gain, rate: 0.9 + Math.random() * 0.25 });
-        if (!this.#grabbed && !this.#recovery && !this.#pick && !this.#rollers()) this.#strideRemaining += STRIDE_M;
+        if (!this.#grabbed && !this.#recovery && !this.#pick && !this.#actionSequence && !this.#rollers()) this.#strideRemaining += STRIDE_M;
       }
     }
     if (this.#strideRemaining > 0) {
@@ -1078,6 +1288,7 @@ class DuckRuntime {
     const render = (now) => {
       if (this.#disposed) return;
       this.#renderFrame = requestAnimationFrame(render);
+      if (this.#lab && !this.#labViewVisible) return;
       // The slack only has to absorb half a display tick, so it applies to the
       // 30 fps budget; the dozing budget is a plain 450 ms as it always was.
       const budget = this.#sleeping ? SLEEP_FRAME_MS : (this.#lab ? 1000 / this.#quality.fps : FRAME_MS) * FRAME_SLACK;
@@ -1098,7 +1309,7 @@ class DuckRuntime {
         this.#camera.position.copy(this.#cameraBase);
         this.#camera.position.y += this.#cameraLift;
         this.#camera.lookAt(0, this.#lookY + this.#cameraLift, 0);
-        } else this.#orbit.update();
+        }
         this.#trunk.position.set(qpos[0], qpos[1], qpos[2]);
         this.#trunk.quaternion.set(qpos[4], qpos[5], qpos[6], qpos[3]);
         for (let joint = 0; joint < NUM_JOINTS; joint++) {
@@ -1106,6 +1317,7 @@ class DuckRuntime {
         }
         for (const wheel of this.#wheels) setJoint(this.#rig, wheel.name, qpos[wheel.adr]);
         setJawOpen(this.#rig, Math.min(1, pickJawOpenness(this.#pick?.phase) + quackJawOpenness(now - this.#quackAt)));
+        this.#labVisuals?.update();
       }
       this.#renderer.render(this.#scene, this.#camera);
       this.#renderFrames++;

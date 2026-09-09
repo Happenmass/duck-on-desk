@@ -1,0 +1,12 @@
+[
+  {
+    "version": "before",
+    "passed": false,
+    "output": "E\n======================================================================\nERROR: test_heading_and_yaw_rate_have_physical_units_and_batch_shape (test_environment.RewardStateTest.test_heading_and_yaw_rate_have_physical_units_and_batch_shape)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/guhappen/\u81ea\u5a92\u4f53\u8fd0\u8425/duck-on-desk/mcp/robot-lab/training/test_environment.py\", line 18, in test_heading_and_yaw_rate_have_physical_units_and_batch_shape\n    np.testing.assert_allclose(state['heading_error'], [np.pi / 4, 0], atol=1e-6)\n                               ~~~~~^^^^^^^^^^^^^^^^^\nKeyError: 'heading_error'\n\n----------------------------------------------------------------------\nRan 1 test in 0.041s\n\nFAILED (errors=1)\n"
+  },
+  {
+    "version": "after",
+    "passed": true,
+    "output": ".\n----------------------------------------------------------------------\nRan 1 test in 0.009s\n\nOK\n"
+  }
+]

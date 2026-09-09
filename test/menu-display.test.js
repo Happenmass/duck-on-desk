@@ -528,3 +528,18 @@ describe("menu new session action", () => {
     assert.strictEqual(calledWith("newSession"), "New Claude Session");
   });
 });
+
+describe('Duck actions menu',()=>{
+ it('lists built-in and learned actions, routes random preference and refreshes the library',()=>{
+  const electron={app:{dock:{},quit(){}},BrowserWindow:function(){},Menu:{buildFromTemplate:template=>({template})},screen:{getAllDisplays:()=>[]},nativeImage:{}};
+  const init=loadMenuWithElectron(electron);const state={petRobot:'duck',duckRandomActions:true,duckStilts:0,duckLocomotion:'legs'};let entries=[],played=[],opened=0;
+  const ctx=buildBaseCtx({settings:{get:key=>state[key],applyUpdate:(key,value)=>{state[key]=value;}},getDuckActions:()=>entries,playDuckAction:id=>played.push(id),openActionLab:()=>opened++});
+  const menu=init(ctx),find=()=>{menu.buildContextMenu();return ctx.contextMenu.template.find(item=>item.label==='Actions');};
+  const first=find();assert.ok(first);first.submenu.find(item=>item.label==='Peck the ground').click();assert.deepStrictEqual(played,['peck']);
+  first.submenu[0].click({checked:false});assert.strictEqual(state.duckRandomActions,false);
+  entries=[{id:'trained',name:'Learned action'}];const fresh=find();fresh.submenu.find(item=>item.label==='Learned action').click();assert.deepStrictEqual(played,['peck','trained']);
+  fresh.submenu.at(-1).click();assert.strictEqual(opened,1);
+  state.duckLocomotion='rollers';assert.strictEqual(find().submenu.find(item=>item.label==='Learned action').enabled,false);
+  state.petRobot='reachy-mini';assert.strictEqual(find(),undefined);
+ });
+});

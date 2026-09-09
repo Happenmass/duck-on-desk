@@ -26,6 +26,8 @@ try {
   await call('lab_docs_search',{query:'real PPO reward_environment',limit:5});
   const defaults=await call('lab_training_defaults');
   let draft=await call('lab_experiment_create',{name:'First real MPS robot training through MCP',mode:'robot'});
+  // Bound this protocol smoke test independently of the full walking defaults.
+  draft=await call('lab_experiment_write',{experiment_id:draft.id,expected_revision:draft.revision,artifact:'training.json',content:JSON.stringify({schema_version:1,mode:'robot',task:'microduck-flat-walk',algorithm:'ppo',physics_backend:'mujoco_cpu',training_device:'mps',inference_device:'mps',max_iterations:20,environments:4,rollout_steps:32,learning_rate:0.0003,target_speed:0.15,seed:0},null,2)});
   draft=await call('lab_experiment_write',{experiment_id:draft.id,expected_revision:draft.revision,artifact:'reward.py',content:defaults.reward.replace('0.002','0.0025')});
   draft=await call('lab_experiment_write',{experiment_id:draft.id,expected_revision:draft.revision,artifact:'strategy.py',content:defaults.strategy});
   await call('lab_experiment_validate',{experiment_id:draft.id});

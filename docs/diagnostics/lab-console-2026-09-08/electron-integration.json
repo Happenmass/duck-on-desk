@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-09-08T15:08:01.289Z",
+  "scope": "isolated virtual renderers; no app main, hardware, hooks or user profile",
+  "errors": [],
+  "lab_ready": true,
+  "preview_returns_to_controls": true,
+  "applied": "pet-model://policy/lab%2Frun_383b6541-7324-4394-8831-1dcac1aa4c6c%2Fpolicy.onnx",
+  "pet_running": {
+    "ready": true,
+    "mode": "walk",
+    "sleeping": false,
+    "grabbed": false,
+    "busy": false,
+    "ctrlHz": 50,
+    "fps": 30,
+    "appearance": "classic",
+    "motionSource": null,
+    "facing": 0.599633546291777,
+    "height": 0.11641851085254008,
+    "restHeight": 0.12,
+    "stilts": 0,
+    "locomotion": "legs"
+  },
+  "export_bytes": 813450,
+  "rollback": true,
+  "reopened": true,
+  "ok": true
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "MPS 平地行走 · 实测方案 seed 2",
+    "config_file": "mcp/robot-lab/presets/stable-flat-walk/training.json",
+    "reward_file": "mcp/robot-lab/presets/stable-flat-walk/reward.py",
+    "strategy_file": "mcp/robot-lab/presets/stable-flat-walk/strategy.py"
+  }
+]

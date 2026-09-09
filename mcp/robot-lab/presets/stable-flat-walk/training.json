@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "mode": "robot",
+  "task": "microduck-flat-walk",
+  "algorithm": "ppo",
+  "physics_backend": "mujoco_cpu",
+  "training_device": "mps",
+  "inference_device": "mps",
+  "target_speed": 0.25,
+  "seed": 2,
+  "max_iterations": 200,
+  "environments": 8,
+  "rollout_steps": 128,
+  "learning_rate": 0.001
+}

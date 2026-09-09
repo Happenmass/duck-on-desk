@@ -1,0 +1,14 @@
+[
+  {
+    "name": "2026-09-09 heading weight 5: seed 0",
+    "reward_file": "docs/diagnostics/training-parameters-2026-09-09/straight-reward-v2.py",
+    "config": {
+      "max_iterations": 200,
+      "environments": 8,
+      "rollout_steps": 128,
+      "learning_rate": 0.001,
+      "target_speed": 0.25,
+      "seed": 0
+    }
+  }
+]

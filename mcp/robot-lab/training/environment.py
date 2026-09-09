@@ -66,11 +66,15 @@ class Environments:
         self.previous[i].fill(0); self.age[i] = 0
 
     def state(self):
+        rotations = np.array([d.xmat[self.trunk].reshape(3, 3) for d in self.data])
         return {
             'forward_velocity': np.array([d.sensordata[self.model.sensor('imu_lin_vel').adr[0]] for d in self.data], dtype=np.float32),
             'height': np.array([d.qpos[2] for d in self.data], dtype=np.float32),
             'upright': np.array([d.xmat[self.trunk].reshape(3, 3)[2, 2] for d in self.data], dtype=np.float32),
             'target_speed': np.full(len(self.data), self.target, dtype=np.float32),
+            # Episodes start facing world +X; body-frame speed alone can reward walking in circles.
+            'heading_error': np.arctan2(rotations[:, 1, 0], rotations[:, 0, 0]).astype(np.float32),
+            'yaw_rate': np.array([d.sensordata[self.gyro + 2] for d in self.data], dtype=np.float32),
         }
 
     def observe(self):

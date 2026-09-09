@@ -1,0 +1,54 @@
+{
+  "recommended_seed": 2,
+  "selected_run": "run_5b6628f0-d4ec-4924-a3b6-ba603ef103df",
+  "hardware": "Apple M3 Max",
+  "backends": {
+    "training": "MPS",
+    "training_evaluation": "MPS",
+    "physics": "MuJoCo CPU",
+    "deployment_evaluation": "ONNX Web WASM + MuJoCo WASM",
+    "cuda": "not tested"
+  },
+  "validation": "3 independent training seeds. Each native candidate evaluated over 12 initial states (11 seeded small joint-velocity perturbations plus exact zero velocity), 30 seconds each. Each browser candidate evaluated from its actual zero-velocity reset for 30 seconds. No reset on timeout or fall during these long evaluations.",
+  "rows": [
+    {
+      "seed": 0,
+      "run_id": "run_cb10b8b4-8b76-4bc3-aa58-c91620abda0d",
+      "training_seconds": 191.27,
+      "native_speed_error": 0.11991639808813731,
+      "native_error_reduction": 0.12709309477664932,
+      "native_max_yaw_degrees": 10.71552723978333,
+      "native_falls": 0.0,
+      "browser_speed_error": 0.11922880386230476,
+      "browser_error_reduction": 0.128403093270833,
+      "browser_max_yaw_degrees": 34.99984695014815,
+      "browser_falls": 0
+    },
+    {
+      "seed": 1,
+      "run_id": "run_99488159-c0e6-42aa-9e22-367a59c8a859",
+      "training_seconds": 195.26,
+      "native_speed_error": 0.11446522137605482,
+      "native_error_reduction": 0.16677382126138063,
+      "native_max_yaw_degrees": 15.224424628992198,
+      "native_falls": 0.0,
+      "browser_speed_error": 0.11294753119052005,
+      "browser_error_reduction": 0.17432100617191926,
+      "browser_max_yaw_degrees": 60.34302053195015,
+      "browser_falls": 0
+    },
+    {
+      "seed": 2,
+      "run_id": "run_5b6628f0-d4ec-4924-a3b6-ba603ef103df",
+      "training_seconds": 183.3,
+      "native_speed_error": 0.12207793281972408,
+      "native_error_reduction": 0.11135864458331213,
+      "native_max_yaw_degrees": 21.263320849736683,
+      "native_falls": 0.0,
+      "browser_speed_error": 0.1219954020155248,
+      "browser_error_reduction": 0.10817846369814976,
+      "browser_max_yaw_degrees": 22.656322997664486,
+      "browser_falls": 0
+    }
+  ]
+}

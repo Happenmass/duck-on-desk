@@ -244,6 +244,7 @@ const SCHEMA = {
   // idle/thinking/working and once on notification/attention/error.
   reachyExpressions: { type: "boolean", default: true },
   reachyHost: { type: "string", default: "", validate: v => v === "" || !!require("../robots/reachy/reachy-mini-client").daemonUrl(v) },
+  duckRandomActions: { type: "boolean", default: true },
   duckMuted: { type: "boolean", default: false },
   // Per-category duck volumes (0..1): voice = chirps/quacks, steps = servo whine on steps and landings.
   duckVoiceVolume: { type: "number", default: 1, validate: (v) => Number.isFinite(v) && v >= 0 && v <= 1 },

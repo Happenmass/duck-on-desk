@@ -1,0 +1,18 @@
+{
+  "scope": "virtual-only built Electron laboratory; no training, activation, installed app or hardware",
+  "time": "2026-09-08T18:13:39.822Z",
+  "fields": {
+    "training-device": "mps",
+    "inference-device": "mps",
+    "target-speed": "0.25",
+    "iterations": "200",
+    "environments": "8",
+    "rollout-steps": "128",
+    "learning-rate": "0.001",
+    "seed": "2"
+  },
+  "preview_default": false,
+  "reward_sha256": "3f39d5a8677bdb9247ca270e288d7ae4efd1d82e08bf0729fefa375de3d422e6",
+  "builder_sha256": "38a3482385382af08958fcff339c7d32008c9745f34a2053be374e0896159a70",
+  "ok": true
+}

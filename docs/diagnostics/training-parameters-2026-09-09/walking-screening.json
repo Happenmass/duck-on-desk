@@ -1,0 +1,3 @@
+[
+  {"name":"2026-09-09 D: actual walking command, seed 0", "config":{"max_iterations":100,"environments":8,"rollout_steps":128,"learning_rate":0.0003,"target_speed":0.25,"seed":0}}
+]

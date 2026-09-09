@@ -1,0 +1,9 @@
+rep0 baseline       renderer  13.98  gpu   8.30  main   0.82  frames 1800  calls 71  tris 198452  blocked 75/0  valid true
+rep0 hide-internal  renderer  14.02  gpu   8.24  main   0.64  frames 1800  calls 28  tris  81676  blocked 0/0  valid true
+rep0 tiny-geom      renderer  13.35  gpu   7.93  main   0.57  frames 1800  calls 71  tris    852  blocked 0/0  valid false
+rep1 hide-internal  renderer  14.18  gpu   8.20  main   0.56  frames 1800  calls 28  tris  81676  blocked 0/0  valid true
+rep1 tiny-geom      renderer  15.62  gpu   9.03  main   0.44  frames 1800  calls 71  tris    852  blocked 0/0  valid true
+rep1 baseline       renderer  14.31  gpu   8.60  main   0.35  frames 1800  calls 71  tris 198452  blocked 0/0  valid true
+rep2 tiny-geom      renderer  13.46  gpu   8.15  main   0.41  frames 1800  calls 71  tris    852  blocked 0/0  valid true
+rep2 baseline       renderer  14.65  gpu   8.63  main   0.51  frames 1800  calls 71  tris 198452  blocked 21/0  valid true
+rep2 hide-internal  renderer  13.62  gpu   7.89  main   0.46  frames 1801  calls 28  tris  81676  blocked 0/0  valid true

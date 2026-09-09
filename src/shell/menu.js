@@ -229,6 +229,21 @@ module.exports = function initMenu(ctx) {
         label: t("menuReachyExpressions"), type: "checkbox", checked: settings.get("reachyExpressions") !== false,
         click: item => settings.applyUpdate("reachyExpressions", item.checked),
       }] : []),
+      ...(settings.get('petRobot') !== 'reachy-mini' ? [{
+        label: t('menuDuckActions'),
+        submenu: [
+          { label: t('menuDuckRandomActions'), type: 'checkbox', checked: settings.get('duckRandomActions') !== false,
+            click: item => settings.applyUpdate('duckRandomActions', item.checked) },
+          { type: 'separator' },
+          ...[{id:'peck', name:t('menuDuckPeck')}, ...(ctx.getDuckActions?.() || [])].map(action => ({
+            label: action.name,
+            enabled: (!ctx.getDuckActionStatus || (ctx.getDuckActionStatus().ready && !ctx.getDuckActionStatus().busy)) && Number(settings.get('duckStilts') || 0) === 0 && settings.get('duckLocomotion') !== 'rollers' && typeof ctx.playDuckAction === 'function',
+            click: () => ctx.playDuckAction?.(action.id),
+          })),
+          { type: 'separator' },
+          { label: t('menuDuckTrainAction'), enabled: typeof ctx.openActionLab === 'function', click: () => ctx.openActionLab?.() },
+        ],
+      }] : []),
       {
         label: t("menuDuckSkin"),
         enabled: settings.get("petRobot") !== "reachy-mini",
@@ -320,7 +335,10 @@ module.exports = function initMenu(ctx) {
 
   function applyDockVisibility() {
     if (!isMac) return;
-    return macDockVisibility.apply(ctx.showDock);
+    const lab = ctx.getRobotLabWindow?.();
+    // A minimized lab still needs its Dock entry. This is a runtime override,
+    // not a change to the user's desktop-pet preference.
+    return macDockVisibility.apply(ctx.showDock || (lab && !lab.isDestroyed()));
   }
 
   function buildTrayMenu() {

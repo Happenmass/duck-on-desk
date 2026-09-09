@@ -1,0 +1,13 @@
+{
+  "sample_count": 128,
+  "devices": {
+    "cpu": {
+      "max_abs_error": 0.0,
+      "finite": true
+    },
+    "mps": {
+      "max_abs_error": 0.0,
+      "finite": true
+    }
+  }
+}

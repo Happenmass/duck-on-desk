@@ -1,0 +1,388 @@
+[
+  {
+    "mode": "no-draw",
+    "seconds": 30.005,
+    "start": {
+      "time": 1788860840133,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 41.273766
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 314.764545
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.129574
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 552.507286
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.122131
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.289076
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.21416
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      }
+    },
+    "end": {
+      "time": 1788860870138,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 41.45665
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 315.417561
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.130106
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 555.760279
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.122204
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.28918
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.215629
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      }
+    },
+    "summary": {
+      "summary": {
+        "timings": {
+          "observation": {
+            "n": 1500,
+            "totalMs": 77.90000140666962,
+            "p50": 0,
+            "p95": 0.10000002384185791
+          },
+          "tensor": {
+            "n": 1500,
+            "totalMs": 4.199999988079071,
+            "p50": 0,
+            "p95": 0
+          },
+          "sessionRunWall": {
+            "n": 1500,
+            "totalMs": 329.00000137090683,
+            "p50": 0.19999998807907104,
+            "p95": 0.30000001192092896
+          },
+          "actionAndSelection": {
+            "n": 1500,
+            "totalMs": 11.100000202655792,
+            "p50": 0,
+            "p95": 0.09999996423721313
+          },
+          "physicsStep": {
+            "n": 1500,
+            "totalMs": 724.0999979972839,
+            "p50": 0.40000003576278687,
+            "p95": 0.800000011920929
+          },
+          "recenter": {
+            "n": 1500,
+            "totalMs": 147.00000059604645,
+            "p50": 0.10000002384185791,
+            "p95": 0.20000004768371582
+          },
+          "soundAndRecovery": {
+            "n": 1500,
+            "totalMs": 39.999999940395355,
+            "p50": 0,
+            "p95": 0.10000002384185791
+          },
+          "controlTotalWall": {
+            "n": 1500,
+            "totalMs": 1346.1000014543533,
+            "p50": 0.800000011920929,
+            "p95": 1.4000000357627869
+          }
+        },
+        "counts": {
+          "controlSteps": 1500,
+          "renderFrames": 900,
+          "skippedDraws": 900,
+          "displacementTicks": 750
+        }
+      },
+      "snapshot": {
+        "ready": true,
+        "mode": "walk",
+        "sleeping": false,
+        "grabbed": false,
+        "busy": false,
+        "ctrlHz": 50,
+        "fps": 30,
+        "appearance": "classic",
+        "motionSource": "local",
+        "facing": 0.0921526563802945,
+        "height": 0.11647864078793195,
+        "restHeight": 0.12,
+        "stilts": 0,
+        "locomotion": "legs"
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "percent": 0.6095117480419976
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "percent": 2.176357273787634
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "percent": 0.0017730378270288442
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "percent": 10.841503082819353
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "percent": 0.0002432927845358765
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "percent": 0.00034660889851652045
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "percent": 0.004895850691550477
+      }
+    ]
+  },
+  {
+    "mode": "no-control-no-raf",
+    "seconds": 30.003,
+    "start": {
+      "time": 1788860878159,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 41.553024
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 315.419503
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.130207
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 555.933261
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.122204
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.28918
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.215763
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      }
+    },
+    "end": {
+      "time": 1788860908162,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 41.690513
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 315.421005
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.130742
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 556.550222
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.122204
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.28918
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.21627
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      }
+    },
+    "summary": {
+      "summary": {
+        "timings": {},
+        "counts": {
+          "displacementTicks": 750
+        }
+      },
+      "snapshot": {
+        "ready": true,
+        "mode": "walk",
+        "sleeping": false,
+        "grabbed": false,
+        "busy": false,
+        "ctrlHz": 50,
+        "fps": 30,
+        "appearance": "classic",
+        "motionSource": "local",
+        "facing": 0.5880026035475674,
+        "height": 0.12,
+        "restHeight": 0.12,
+        "stilts": 0,
+        "locomotion": "legs"
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "percent": 0.4582508415825157
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "percent": 0.005006166049926608
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "percent": 0.0017831550178315759
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "percent": 2.0563310335631324
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "percent": 0
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "percent": 0
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "percent": 0.0016898310168991675
+      }
+    ]
+  }
+]

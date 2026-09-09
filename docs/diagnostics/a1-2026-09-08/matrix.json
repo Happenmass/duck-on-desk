@@ -1,0 +1,3339 @@
+[
+  {
+    "repeat": 0,
+    "motion": "stand",
+    "mode": "no-displacement",
+    "seconds": 60.008,
+    "start": {
+      "time": 1788859889480,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 35.539192
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 275.931332
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.1115
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 453.038062
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.118777
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.229827
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.179578
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 22,
+          "changed": 22
+        },
+        "3:setBounds": {
+          "calls": 1,
+          "changed": 1
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.13106828423313052,
+          "height": 0.11646407271287396,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 1,
+              "totalMs": 0.10000002384185791,
+              "p50": 0.10000002384185791,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 1,
+              "totalMs": 0,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 1,
+              "totalMs": 0.19999998807907104,
+              "p50": 0.19999998807907104,
+              "p95": 0.19999998807907104
+            },
+            "actionAndSelection": {
+              "n": 1,
+              "totalMs": 0,
+              "p50": 0,
+              "p95": 0
+            },
+            "physicsStep": {
+              "n": 1,
+              "totalMs": 0.30000001192092896,
+              "p50": 0.30000001192092896,
+              "p95": 0.30000001192092896
+            },
+            "recenter": {
+              "n": 1,
+              "totalMs": 0.09999996423721313,
+              "p50": 0.09999996423721313,
+              "p95": 0.09999996423721313
+            },
+            "soundAndRecovery": {
+              "n": 1,
+              "totalMs": 0,
+              "p50": 0,
+              "p95": 0
+            },
+            "controlTotalWall": {
+              "n": 1,
+              "totalMs": 0.7999999523162842,
+              "p50": 0.7999999523162842,
+              "p95": 0.7999999523162842
+            }
+          },
+          "counts": {
+            "controlSteps": 1,
+            "displacementTicks": 1
+          }
+        }
+      }
+    },
+    "end": {
+      "time": 1788859949488,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 35.879517
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 280.598198
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.113143
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 461.220411
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.118887
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.232391
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.18238
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 22,
+          "changed": 22
+        },
+        "3:setBounds": {
+          "calls": 1,
+          "changed": 1
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.1897703492334597,
+          "height": 0.11651180099372214,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3001,
+              "totalMs": 213.79999893903732,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "tensor": {
+              "n": 3001,
+              "totalMs": 13.499999821186066,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3001,
+              "totalMs": 662.0000035762787,
+              "p50": 0.19999998807907104,
+              "p95": 0.30000001192092896
+            },
+            "actionAndSelection": {
+              "n": 3001,
+              "totalMs": 24.200000166893005,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "physicsStep": {
+              "n": 3001,
+              "totalMs": 1136.1999989748,
+              "p50": 0.3999999761581421,
+              "p95": 0.6000000238418579
+            },
+            "recenter": {
+              "n": 3001,
+              "totalMs": 210.0999999642372,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3001,
+              "totalMs": 89.50000047683716,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3001,
+              "totalMs": 2375.7000020742416,
+              "p50": 0.7999999523162842,
+              "p95": 1.199999988079071
+            }
+          },
+          "counts": {
+            "controlSteps": 3001,
+            "displacementTicks": 1501,
+            "renderFrames": 1800
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 35.879517,
+        "percent": 0.5671327156379149
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 280.598198,
+        "percent": 7.777073056925788
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.113143,
+        "percent": 0.0027379682708971995
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 461.220411,
+        "percent": 13.635430275963184
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.118887,
+        "percent": 0.00018330889214773508
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.232391,
+        "percent": 0.004272763631515816
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.18238,
+        "percent": 0.004669377416345179
+      }
+    ],
+    "hashBefore": null,
+    "hashAfter": null,
+    "valid": true
+  },
+  {
+    "repeat": 0,
+    "motion": "stand",
+    "mode": "no-raf",
+    "seconds": 60.005,
+    "start": {
+      "time": 1788859957554,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 35.929556
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 280.629696
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.113243
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 461.717606
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.118887
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.232391
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.182999
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 22,
+          "changed": 22
+        },
+        "3:setBounds": {
+          "calls": 1,
+          "changed": 1
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.13174179335397762,
+          "height": 0.11649491035682842,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788860017559,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 36.181813
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 280.637284
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.114792
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 465.49591
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.119659
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.232569
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.186036
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 22,
+          "changed": 22
+        },
+        "3:setBounds": {
+          "calls": 1,
+          "changed": 1
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.19065586310826846,
+          "height": 0.1164961174287123,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3000,
+              "totalMs": 188.1000000834465,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3000,
+              "totalMs": 9.599999785423279,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3000,
+              "totalMs": 647.1999992132187,
+              "p50": 0.19999998807907104,
+              "p95": 0.30000001192092896
+            },
+            "actionAndSelection": {
+              "n": 3000,
+              "totalMs": 20.299999594688416,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "physicsStep": {
+              "n": 3000,
+              "totalMs": 1091.2000004649162,
+              "p50": 0.3999999761581421,
+              "p95": 0.5
+            },
+            "recenter": {
+              "n": 3000,
+              "totalMs": 206.9999995827675,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3000,
+              "totalMs": 91.90000051259995,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3000,
+              "totalMs": 2278.199998676777,
+              "p50": 0.7000000476837158,
+              "p95": 1
+            }
+          },
+          "counts": {
+            "controlSteps": 3000,
+            "displacementTicks": 1500
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 36.181813,
+        "percent": 0.4203933005582871
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 280.637284,
+        "percent": 0.012645612865591823
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.114792,
+        "percent": 0.002581451545704539
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 465.49591,
+        "percent": 6.296648612615601
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.119659,
+        "percent": 0.0012865594533788766
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.232569,
+        "percent": 0.0002966419465044771
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.186036,
+        "percent": 0.005061244896258572
+      }
+    ],
+    "hashBefore": "de6bb67ef35526da07fc05df65ff4063fde3c0b7f88588f4c0b2527233b60cac",
+    "hashAfter": "de6bb67ef35526da07fc05df65ff4063fde3c0b7f88588f4c0b2527233b60cac",
+    "valid": true
+  },
+  {
+    "repeat": 0,
+    "motion": "walk",
+    "mode": "normal",
+    "seconds": 60.008,
+    "start": {
+      "time": 1788860134216,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 36.953156
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 284.619949
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.117021
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 477.285422
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.120783
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.259028
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.190087
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 41,
+          "changed": 41
+        },
+        "3:setBounds": {
+          "calls": 2,
+          "changed": 2
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.24181877181514,
+          "height": 0.11862314981147662,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788860194224,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 37.23258
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 289.482096
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.118488
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 485.642402
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.120857
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.259568
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.191529
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 41,
+          "changed": 41
+        },
+        "3:setBounds": {
+          "calls": 2,
+          "changed": 2
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.12889914181887602,
+          "height": 0.1185959226620081,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3001,
+              "totalMs": 172.8999987244606,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3001,
+              "totalMs": 8.300000369548798,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3001,
+              "totalMs": 686.2000015974045,
+              "p50": 0.19999998807907104,
+              "p95": 0.30000001192092896
+            },
+            "actionAndSelection": {
+              "n": 3001,
+              "totalMs": 20.000000059604645,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "physicsStep": {
+              "n": 3001,
+              "totalMs": 1238.4999976754189,
+              "p50": 0.3999999761581421,
+              "p95": 0.699999988079071
+            },
+            "recenter": {
+              "n": 3001,
+              "totalMs": 232.00000154972076,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3001,
+              "totalMs": 85.49999976158142,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3001,
+              "totalMs": 2465.1999995708466,
+              "p50": 0.800000011920929,
+              "p95": 1.2000000476837158
+            }
+          },
+          "counts": {
+            "controlSteps": 3001,
+            "renderFrames": 1800,
+            "displacementTicks": 1500
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 37.23258,
+        "percent": 0.46564458072256826
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 289.482096,
+        "percent": 8.10249800026662
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.118488,
+        "percent": 0.002444674043460865
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 485.642402,
+        "percent": 13.92644314091458
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.120857,
+        "percent": 0.00012331689108119686
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.259568,
+        "percent": 0.0008998800159978418
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.191529,
+        "percent": 0.0024030129316090242
+      }
+    ],
+    "hashBefore": null,
+    "hashAfter": null,
+    "valid": true
+  },
+  {
+    "repeat": 1,
+    "motion": "walk",
+    "mode": "no-raf",
+    "seconds": 60.004,
+    "start": {
+      "time": 1788860270325,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 37.703891
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 289.544927
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.119756
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 490.681628
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121226
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.285263
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.194518
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.25108433824012144,
+          "height": 0.11994931513667612,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788860330329,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 37.991554
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 289.550758
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.120711
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 494.569712
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121312
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.285422
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.196706
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.13785094888439575,
+          "height": 0.1199289242366436,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3001,
+              "totalMs": 172.70000219345093,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3001,
+              "totalMs": 8.099999785423279,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3001,
+              "totalMs": 618.1999989748001,
+              "p50": 0.19999998807907104,
+              "p95": 0.30000001192092896
+            },
+            "actionAndSelection": {
+              "n": 3001,
+              "totalMs": 20.600000083446503,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "physicsStep": {
+              "n": 3001,
+              "totalMs": 1134.0000007748604,
+              "p50": 0.30000001192092896,
+              "p95": 0.699999988079071
+            },
+            "recenter": {
+              "n": 3001,
+              "totalMs": 216.49999845027924,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3001,
+              "totalMs": 75.79999995231628,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3001,
+              "totalMs": 2266.9999998807907,
+              "p50": 0.699999988079071,
+              "p95": 1.199999988079071
+            }
+          },
+          "counts": {
+            "controlSteps": 3001,
+            "displacementTicks": 1500
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 37.991554,
+        "percent": 0.4794063729084761
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 289.550758,
+        "percent": 0.009717685487635134
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.120711,
+        "percent": 0.0015915605626291539
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 494.569712,
+        "percent": 6.479708019465356
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.121312,
+        "percent": 0.00014332377841477691
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.285422,
+        "percent": 0.00026498233451106634
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.196706,
+        "percent": 0.003646423571761644
+      }
+    ],
+    "hashBefore": "181820503e54871275e9bc66cb5b468dd873c5d42e74252191b1a2abf25d2f5b",
+    "hashAfter": "181820503e54871275e9bc66cb5b468dd873c5d42e74252191b1a2abf25d2f5b",
+    "valid": true
+  },
+  {
+    "repeat": 1,
+    "motion": "walk",
+    "mode": "normal",
+    "seconds": 60.006,
+    "start": {
+      "time": 1788860338362,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 38.03168
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 290.223763
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.120813
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 495.693656
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121312
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.285422
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.196901
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.24181877181514,
+          "height": 0.11862314981147662,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788860398368,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 38.320764
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 295.197672
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.121802
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 504.171227
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121433
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.285613
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.198372
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.11292065093378689,
+          "height": 0.11683880405191871,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3000,
+              "totalMs": 170.10000175237656,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3000,
+              "totalMs": 8.999999821186066,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3000,
+              "totalMs": 657.0999965071678,
+              "p50": 0.19999998807907104,
+              "p95": 0.30000001192092896
+            },
+            "actionAndSelection": {
+              "n": 3000,
+              "totalMs": 25.90000057220459,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "physicsStep": {
+              "n": 3000,
+              "totalMs": 1275.800003170967,
+              "p50": 0.3999999761581421,
+              "p95": 0.699999988079071
+            },
+            "recenter": {
+              "n": 3000,
+              "totalMs": 245.39999771118164,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3000,
+              "totalMs": 76.09999960660934,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3000,
+              "totalMs": 2480.999999523163,
+              "p50": 0.7999999523162842,
+              "p95": 1.2000000476837158
+            }
+          },
+          "counts": {
+            "controlSteps": 3000,
+            "displacementTicks": 1500,
+            "renderFrames": 1800
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 38.320764,
+        "percent": 0.4817584908175773
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 295.197672,
+        "percent": 8.28901943139018
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.121802,
+        "percent": 0.0016481685164816684
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 504.171227,
+        "percent": 14.127872212778742
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.121433,
+        "percent": 0.00020164650201645853
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.285613,
+        "percent": 0.000318301503182732
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.198372,
+        "percent": 0.0024514215245142155
+      }
+    ],
+    "hashBefore": null,
+    "hashAfter": null,
+    "valid": true
+  },
+  {
+    "repeat": 1,
+    "motion": "stand",
+    "mode": "no-raf",
+    "seconds": 60.004,
+    "start": {
+      "time": 1788860406434,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 38.357889
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 295.215735
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.121951
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 504.704034
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121433
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.285613
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.198532
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.06146735073632647,
+          "height": 0.1164584841643448,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788860466438,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 38.894608
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 295.223256
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.123031
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 508.945049
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121503
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.285899
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.201665
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.12381039652228082,
+          "height": 0.1165112531257852,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3000,
+              "totalMs": 170.2000002861023,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3000,
+              "totalMs": 8.499999821186066,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3000,
+              "totalMs": 668.3999997377396,
+              "p50": 0.19999998807907104,
+              "p95": 0.30000001192092896
+            },
+            "actionAndSelection": {
+              "n": 3000,
+              "totalMs": 24.900000512599945,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "physicsStep": {
+              "n": 3000,
+              "totalMs": 1495.6999985575676,
+              "p50": 0.5,
+              "p95": 0.800000011920929
+            },
+            "recenter": {
+              "n": 3000,
+              "totalMs": 298.6000015735626,
+              "p50": 0.10000002384185791,
+              "p95": 0.20000004768371582
+            },
+            "soundAndRecovery": {
+              "n": 3000,
+              "totalMs": 78.60000020265579,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3000,
+              "totalMs": 2766.900000810623,
+              "p50": 0.8999999761581421,
+              "p95": 1.399999976158142
+            }
+          },
+          "counts": {
+            "controlSteps": 3000,
+            "displacementTicks": 1500
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 38.894608,
+        "percent": 0.8944720351976501
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 295.223256,
+        "percent": 0.012534164389035735
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.123031,
+        "percent": 0.0017998800079994629
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 508.945049,
+        "percent": 7.067887140857284
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.121503,
+        "percent": 0.00011665888940737387
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.285899,
+        "percent": 0.0004766348910072803
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.201665,
+        "percent": 0.005221318578761503
+      }
+    ],
+    "hashBefore": "181820503e54871275e9bc66cb5b468dd873c5d42e74252191b1a2abf25d2f5b",
+    "hashAfter": "181820503e54871275e9bc66cb5b468dd873c5d42e74252191b1a2abf25d2f5b",
+    "valid": true
+  },
+  {
+    "repeat": 1,
+    "motion": "stand",
+    "mode": "normal",
+    "seconds": 60.006,
+    "start": {
+      "time": 1788860474470,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 38.971028
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 295.92529
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.123215
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 510.111984
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121503
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.285899
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.201809
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.13106828423313052,
+          "height": 0.11646407271287396,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 1,
+              "totalMs": 0,
+              "p50": 0,
+              "p95": 0
+            },
+            "tensor": {
+              "n": 1,
+              "totalMs": 0,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 1,
+              "totalMs": 0.19999998807907104,
+              "p50": 0.19999998807907104,
+              "p95": 0.19999998807907104
+            },
+            "actionAndSelection": {
+              "n": 1,
+              "totalMs": 0,
+              "p50": 0,
+              "p95": 0
+            },
+            "physicsStep": {
+              "n": 1,
+              "totalMs": 0.30000001192092896,
+              "p50": 0.30000001192092896,
+              "p95": 0.30000001192092896
+            },
+            "recenter": {
+              "n": 1,
+              "totalMs": 0,
+              "p50": 0,
+              "p95": 0
+            },
+            "soundAndRecovery": {
+              "n": 1,
+              "totalMs": 0.09999996423721313,
+              "p50": 0.09999996423721313,
+              "p95": 0.09999996423721313
+            },
+            "controlTotalWall": {
+              "n": 1,
+              "totalMs": 0.5999999642372131,
+              "p50": 0.5999999642372131,
+              "p95": 0.5999999642372131
+            }
+          },
+          "counts": {
+            "controlSteps": 1
+          }
+        }
+      }
+    },
+    "end": {
+      "time": 1788860534476,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 39.417491
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 301.00559
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.124218
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 518.937752
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121572
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.286167
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.204774
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.1897703492334597,
+          "height": 0.11651180099372214,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3001,
+              "totalMs": 175.99999910593033,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3001,
+              "totalMs": 8.300000190734863,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3001,
+              "totalMs": 666.6999988555908,
+              "p50": 0.19999998807907104,
+              "p95": 0.30000001192092896
+            },
+            "actionAndSelection": {
+              "n": 3001,
+              "totalMs": 24.399999976158142,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "physicsStep": {
+              "n": 3001,
+              "totalMs": 1484.8000022768974,
+              "p50": 0.5,
+              "p95": 0.800000011920929
+            },
+            "recenter": {
+              "n": 3001,
+              "totalMs": 301.49999862909317,
+              "p50": 0.10000002384185791,
+              "p95": 0.20000004768371582
+            },
+            "soundAndRecovery": {
+              "n": 3001,
+              "totalMs": 75.6000007390976,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3001,
+              "totalMs": 2758.5999997258186,
+              "p50": 0.8999999761581421,
+              "p95": 1.4000000357627869
+            }
+          },
+          "counts": {
+            "controlSteps": 3001,
+            "displacementTicks": 1500,
+            "renderFrames": 1800
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 39.417491,
+        "percent": 0.7440305969403083
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 301.00559,
+        "percent": 8.466320034663143
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.124218,
+        "percent": 0.0016714995167149784
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 518.937752,
+        "percent": 14.708142519081491
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.121572,
+        "percent": 0.00011498850114988437
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.286167,
+        "percent": 0.0004466220044664817
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.204774,
+        "percent": 0.004941172549411903
+      }
+    ],
+    "hashBefore": null,
+    "hashAfter": null,
+    "valid": true
+  },
+  {
+    "repeat": 2,
+    "motion": "stand",
+    "mode": "normal",
+    "seconds": 60.005,
+    "start": {
+      "time": 1788860542489,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 39.458609
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 301.675584
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.124336
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 520.107017
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121572
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.286298
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.205107
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.12997628125838642,
+          "height": 0.11647966819109966,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788860602494,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 39.763839
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 306.731194
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.125311
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 528.902153
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.12165
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.28638
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.207706
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.1897703492334597,
+          "height": 0.11651180099372214,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3001,
+              "totalMs": 172.80000042915344,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3001,
+              "totalMs": 9.500000298023224,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3001,
+              "totalMs": 680.9000001549721,
+              "p50": 0.19999998807907104,
+              "p95": 0.30000001192092896
+            },
+            "actionAndSelection": {
+              "n": 3001,
+              "totalMs": 24.000000178813934,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "physicsStep": {
+              "n": 3001,
+              "totalMs": 1480.7000007629395,
+              "p50": 0.5,
+              "p95": 0.800000011920929
+            },
+            "recenter": {
+              "n": 3001,
+              "totalMs": 290.2999986410141,
+              "p50": 0.10000002384185791,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3001,
+              "totalMs": 79.70000070333481,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3001,
+              "totalMs": 2755.3000009059906,
+              "p50": 0.8999999761581421,
+              "p95": 1.399999976158142
+            }
+          },
+          "counts": {
+            "controlSteps": 3001,
+            "displacementTicks": 1500,
+            "renderFrames": 1800
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 39.763839,
+        "percent": 0.5086742771435623
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 306.731194,
+        "percent": 8.425314557120242
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.125311,
+        "percent": 0.0016248645946171213
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 528.902153,
+        "percent": 14.657338555120335
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.12165,
+        "percent": 0.00012998916756936044
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.28638,
+        "percent": 0.00013665527872700194
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.207706,
+        "percent": 0.0043313057245229864
+      }
+    ],
+    "hashBefore": null,
+    "hashAfter": null,
+    "valid": true
+  },
+  {
+    "repeat": 2,
+    "motion": "stand",
+    "mode": "no-raf",
+    "seconds": 59.995,
+    "start": {
+      "time": 1788860610539,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 39.801935
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 306.754419
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.125453
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 529.504836
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.12165
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.28638
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.207878
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.13174179335397762,
+          "height": 0.11649491035682842,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788860670534,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 40.175035
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 306.760912
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.126621
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 533.777585
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121733
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.286874
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.209608
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.19065586310826846,
+          "height": 0.1164961174287123,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3000,
+              "totalMs": 169.10000175237656,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3000,
+              "totalMs": 7.700000464916229,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3000,
+              "totalMs": 683.2999965548515,
+              "p50": 0.19999998807907104,
+              "p95": 0.3999999761581421
+            },
+            "actionAndSelection": {
+              "n": 3000,
+              "totalMs": 25.90000021457672,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "physicsStep": {
+              "n": 3000,
+              "totalMs": 1527.6000002026558,
+              "p50": 0.5,
+              "p95": 0.800000011920929
+            },
+            "recenter": {
+              "n": 3000,
+              "totalMs": 309.59999936819077,
+              "p50": 0.10000002384185791,
+              "p95": 0.20000004768371582
+            },
+            "soundAndRecovery": {
+              "n": 3000,
+              "totalMs": 71.70000052452087,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3000,
+              "totalMs": 2816.199998497963,
+              "p50": 0.8999999761581421,
+              "p95": 1.399999976158142
+            }
+          },
+          "counts": {
+            "controlSteps": 3000,
+            "displacementTicks": 1500
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 40.175035,
+        "percent": 0.6218851570964262
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 306.760912,
+        "percent": 0.010822568547436451
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.126621,
+        "percent": 0.0019468289024085381
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 533.777585,
+        "percent": 7.121841820151829
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.121733,
+        "percent": 0.0001383448620718389
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.286874,
+        "percent": 0.0008234019501625043
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.209608,
+        "percent": 0.0028835736311355734
+      }
+    ],
+    "hashBefore": "62a5d1be12f943e25f5eb2fd676a62d69d52d70ad68ffb8a604f1a2c7558b756",
+    "hashAfter": "62a5d1be12f943e25f5eb2fd676a62d69d52d70ad68ffb8a604f1a2c7558b756",
+    "valid": true
+  },
+  {
+    "repeat": 2,
+    "motion": "walk",
+    "mode": "normal",
+    "seconds": 59.992,
+    "start": {
+      "time": 1788860678557,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 40.233004
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 307.394079
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.12676
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 534.850711
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121733
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.288538
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.209861
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.08441779518088699,
+          "height": 0.12069382467019325,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788860738549,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 40.560545
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 312.307916
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.127642
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 543.331363
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121892
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.288814
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.211193
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.20651054157169518,
+          "height": 0.11690677947743851,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3001,
+              "totalMs": 171.40000224113464,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3001,
+              "totalMs": 7.399999916553497,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3001,
+              "totalMs": 665.4000014066696,
+              "p50": 0.19999998807907104,
+              "p95": 0.3999999761581421
+            },
+            "actionAndSelection": {
+              "n": 3001,
+              "totalMs": 23.099999725818634,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "physicsStep": {
+              "n": 3001,
+              "totalMs": 1256.0999994874,
+              "p50": 0.3999999761581421,
+              "p95": 0.699999988079071
+            },
+            "recenter": {
+              "n": 3001,
+              "totalMs": 240.99999868869781,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3001,
+              "totalMs": 77.59999948740005,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3001,
+              "totalMs": 2462.000001311302,
+              "p50": 0.800000011920929,
+              "p95": 1.2000000476837158
+            }
+          },
+          "counts": {
+            "controlSteps": 3001,
+            "displacementTicks": 1501,
+            "renderFrames": 1800
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 40.560545,
+        "percent": 0.5459744632617625
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 312.307916,
+        "percent": 8.190820442725698
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.127642,
+        "percent": 0.0014701960261368082
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 543.331363,
+        "percent": 14.136304840645359
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.121892,
+        "percent": 0.0002650353380450833
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.288814,
+        "percent": 0.00046006134151210657
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.211193,
+        "percent": 0.0022202960394721145
+      }
+    ],
+    "hashBefore": null,
+    "hashAfter": null,
+    "valid": true
+  },
+  {
+    "repeat": 2,
+    "motion": "walk",
+    "mode": "no-raf",
+    "seconds": 60.003,
+    "start": {
+      "time": 1788860746586,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 40.62614
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 312.329675
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.127912
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 543.878556
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.121997
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.288913
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.211661
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.25108433824012144,
+          "height": 0.11994931513667612,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788860806589,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 41.081771
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 312.336002
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.128996
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 547.882765
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.122131
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.289076
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.213498
+        }
+      ],
+      "ipc": 0,
+      "bounds": {
+        "1:setBounds": {
+          "calls": 66,
+          "changed": 66
+        },
+        "3:setBounds": {
+          "calls": 4,
+          "changed": 4
+        }
+      },
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.13785094888439575,
+          "height": 0.1199289242366436,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3001,
+              "totalMs": 165.7999970316887,
+              "p50": 0.09999996423721313,
+              "p95": 0.10000002384185791
+            },
+            "tensor": {
+              "n": 3001,
+              "totalMs": 7.599999964237213,
+              "p50": 0,
+              "p95": 0
+            },
+            "sessionRunWall": {
+              "n": 3001,
+              "totalMs": 644.5000017285347,
+              "p50": 0.19999998807907104,
+              "p95": 0.30000001192092896
+            },
+            "actionAndSelection": {
+              "n": 3001,
+              "totalMs": 25.29999965429306,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "physicsStep": {
+              "n": 3001,
+              "totalMs": 1228.6000018715858,
+              "p50": 0.3999999761581421,
+              "p95": 0.699999988079071
+            },
+            "recenter": {
+              "n": 3001,
+              "totalMs": 235.19999784231186,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3001,
+              "totalMs": 77.4000004529953,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3001,
+              "totalMs": 2406.3999989032745,
+              "p50": 0.699999988079071,
+              "p95": 1.2000000476837158
+            }
+          },
+          "counts": {
+            "controlSteps": 3001,
+            "displacementTicks": 1501
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 41.081771,
+        "percent": 0.7593470326483741
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 312.336002,
+        "percent": 0.010544472776359285
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.128996,
+        "percent": 0.0018065763378497769
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 547.882765,
+        "percent": 6.673347999266614
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.122131,
+        "percent": 0.00022332216722498728
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.289076,
+        "percent": 0.00027165308401269145
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.213498,
+        "percent": 0.003061513590987265
+      }
+    ],
+    "hashBefore": "d082a28ff92be79705caf8b1d7c9c53ca9995a2eca423115f8a0f7c6c446978d",
+    "hashAfter": "d082a28ff92be79705caf8b1d7c9c53ca9995a2eca423115f8a0f7c6c446978d",
+    "valid": true
+  },
+  {
+    "repeat": 0,
+    "motion": "stand",
+    "mode": "normal",
+    "seconds": 60.008,
+    "start": {
+      "time": 1788861117094,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 43.260259
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 332.844571
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.135729
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 589.846834
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.123468
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.290463
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.47068
+        }
+      ],
+      "ipc": 0,
+      "bounds": {},
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.062492776374835746,
+          "height": 0.11648976023456263,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788861177102,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 43.662492
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 337.802098
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.136819
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 598.60918
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.123566
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.290878
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.543769
+        }
+      ],
+      "ipc": 0,
+      "bounds": {},
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.12414903834421448,
+          "height": 0.11650301298593675,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3001,
+              "totalMs": 227.7000008225441,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "tensor": {
+              "n": 3001,
+              "totalMs": 21.700000643730164,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "sessionRunWall": {
+              "n": 3001,
+              "totalMs": 717.3999992012978,
+              "p50": 0.20000004768371582,
+              "p95": 0.3999999761581421
+            },
+            "actionAndSelection": {
+              "n": 3001,
+              "totalMs": 28.59999918937683,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "physicsStep": {
+              "n": 3001,
+              "totalMs": 1343.7000002264977,
+              "p50": 0.3999999761581421,
+              "p95": 0.800000011920929
+            },
+            "recenter": {
+              "n": 3001,
+              "totalMs": 267.1999982595444,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3001,
+              "totalMs": 91.60000157356262,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3001,
+              "totalMs": 2733.4999998807907,
+              "p50": 0.800000011920929,
+              "p95": 1.399999976158142
+            }
+          },
+          "counts": {
+            "controlSteps": 3001,
+            "displacementTicks": 1501,
+            "renderFrames": 1800
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 43.662492,
+        "percent": 0.6702989601386523
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 337.802098,
+        "percent": 8.261443474203485
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.136819,
+        "percent": 0.0018164244767364477
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 598.60918,
+        "percent": 14.601963071590609
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.123566,
+        "percent": 0.0001633115584588736
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.290878,
+        "percent": 0.0006915744567391917
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.543769,
+        "percent": 0.12179876016531122
+      }
+    ],
+    "hashBefore": null,
+    "hashAfter": null,
+    "valid": true
+  },
+  {
+    "repeat": 0,
+    "motion": "walk",
+    "mode": "no-raf",
+    "seconds": 60.012,
+    "start": {
+      "time": 1788861185140,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 43.726758
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 337.824926
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.1369
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 599.235572
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.123566
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.290878
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.54397
+        }
+      ],
+      "ipc": 0,
+      "bounds": {},
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.07136034142162118,
+          "height": 0.11999101228859933,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {},
+          "counts": {}
+        }
+      }
+    },
+    "end": {
+      "time": 1788861245152,
+      "metrics": [
+        {
+          "pid": 79931,
+          "type": "Browser",
+          "cpuSeconds": 44.190183
+        },
+        {
+          "pid": 79937,
+          "type": "GPU",
+          "cpuSeconds": 337.830944
+        },
+        {
+          "pid": 79938,
+          "type": "Utility",
+          "cpuSeconds": 0.137919
+        },
+        {
+          "pid": 79939,
+          "type": "Tab",
+          "cpuSeconds": 603.503246
+        },
+        {
+          "pid": 79940,
+          "type": "Tab",
+          "cpuSeconds": 0.123656
+        },
+        {
+          "pid": 79942,
+          "type": "Tab",
+          "cpuSeconds": 1.291005
+        },
+        {
+          "pid": 79995,
+          "type": "Utility",
+          "cpuSeconds": 2.545522
+        }
+      ],
+      "ipc": 0,
+      "bounds": {},
+      "renderer": {
+        "snapshot": {
+          "ready": true,
+          "mode": "walk",
+          "sleeping": false,
+          "grabbed": false,
+          "busy": false,
+          "ctrlHz": 50,
+          "fps": 30,
+          "appearance": "classic",
+          "motionSource": "local",
+          "facing": 0.19118851602354087,
+          "height": 0.11858585061543314,
+          "restHeight": 0.12,
+          "stilts": 0,
+          "locomotion": "legs"
+        },
+        "summary": {
+          "timings": {
+            "observation": {
+              "n": 3000,
+              "totalMs": 218.10000163316727,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "tensor": {
+              "n": 3000,
+              "totalMs": 23.399999856948853,
+              "p50": 0,
+              "p95": 0.09999996423721313
+            },
+            "sessionRunWall": {
+              "n": 3000,
+              "totalMs": 736.3999997377396,
+              "p50": 0.20000004768371582,
+              "p95": 0.3999999761581421
+            },
+            "actionAndSelection": {
+              "n": 3000,
+              "totalMs": 32.000000953674316,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "physicsStep": {
+              "n": 3000,
+              "totalMs": 1168.2999994754791,
+              "p50": 0.30000001192092896,
+              "p95": 0.699999988079071
+            },
+            "recenter": {
+              "n": 3000,
+              "totalMs": 220.2999997138977,
+              "p50": 0.09999996423721313,
+              "p95": 0.19999998807907104
+            },
+            "soundAndRecovery": {
+              "n": 3000,
+              "totalMs": 99.29999989271164,
+              "p50": 0,
+              "p95": 0.10000002384185791
+            },
+            "controlTotalWall": {
+              "n": 3000,
+              "totalMs": 2528.600000977516,
+              "p50": 0.800000011920929,
+              "p95": 1.300000011920929
+            }
+          },
+          "counts": {
+            "controlSteps": 3000,
+            "displacementTicks": 1500
+          }
+        }
+      }
+    },
+    "cpu": [
+      {
+        "pid": 79931,
+        "type": "Browser",
+        "cpuSeconds": 44.190183,
+        "percent": 0.7722205558888237
+      },
+      {
+        "pid": 79937,
+        "type": "GPU",
+        "cpuSeconds": 337.830944,
+        "percent": 0.010027994401091787
+      },
+      {
+        "pid": 79938,
+        "type": "Utility",
+        "cpuSeconds": 0.137919,
+        "percent": 0.0016979937345864492
+      },
+      {
+        "pid": 79939,
+        "type": "Tab",
+        "cpuSeconds": 603.503246,
+        "percent": 7.111367726454613
+      },
+      {
+        "pid": 79940,
+        "type": "Tab",
+        "cpuSeconds": 0.123656,
+        "percent": 0.00014997000599881148
+      },
+      {
+        "pid": 79942,
+        "type": "Tab",
+        "cpuSeconds": 1.291005,
+        "percent": 0.0002116243417982874
+      },
+      {
+        "pid": 79995,
+        "type": "Utility",
+        "cpuSeconds": 2.545522,
+        "percent": 0.0025861494367796774
+      }
+    ],
+    "hashBefore": "1b07cca4ec9ef8d4b8bae8996bc08fb4f7230b24f1fafcd8b780045da759e61a",
+    "hashAfter": "1b07cca4ec9ef8d4b8bae8996bc08fb4f7230b24f1fafcd8b780045da759e61a",
+    "valid": true
+  }
+]

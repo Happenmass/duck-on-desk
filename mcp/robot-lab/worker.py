@@ -23,7 +23,7 @@ def inspect():
             "model_devices": {"mps": torch.backends.mps.is_available(), "cuda": torch.cuda.is_available(), "cpu": True},
             "physics": {"current_desktop": "mujoco_wasm_cpu", "mps_gpu_physics": "not_supported_by_warp",
                         "mps_training": "cpu_physics_plus_mps_model", "cuda_training": "cpu_physics_plus_cuda_model_pending_hardware_verification"},
-            "full_robot_training": "mujoco_cpu_residual_ppo_onnx_export"}
+            "full_robot_training": "mujoco_cpu_official_full_finetune_ppo_onnx_export"}
 
 
 def probe(payload):

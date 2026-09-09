@@ -50,6 +50,7 @@ export function createBehaviours({ runtime, autonomy, clock = globalThis }) {
 
   function apply(file) {
     stopTimer();
+    if (current !== file) cmd({ type: "cancel-action" });
     current = file;
     const plan = planForVisual(file);
     if (plan.kind === "idle") {

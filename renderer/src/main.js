@@ -1,5 +1,6 @@
 import "./styles.css";
 import { createDuckRuntime } from "./runtime/duck-runtime.js";
+import { createDuckActions } from "./adapters/duck-actions.js";
 import { AutonomyAdapter } from "./adapters/autonomy-adapter.js";
 import { createAudio } from "./adapters/audio.js";
 import { createBehaviours } from "./agent-visual-adapter.js";
@@ -35,6 +36,14 @@ try {
     locomotion: themeConfig.duckLocomotion || "legs",
   });
   if (!reachy) {
+    let lastStatus = '';
+    runtime.subscribe(snapshot => {
+      const status = {ready:snapshot.ready,busy:snapshot.busy}, key=JSON.stringify(status);
+      if (key!==lastStatus) { lastStatus=key;api?.reportDuckActionStatus?.(status); }
+    });
+    runtime.setActions(themeConfig.duckActions);
+    api?.onDuckActionsChange?.(actions => runtime.setActions(actions));
+    api?.onDuckPlayAction?.(id => { void runtime.playAction(id).catch(console.error); });
     const applyLab = url => runtime.setLabPolicy(url);
     if (themeConfig.labPolicyUrl) await applyLab(themeConfig.labPolicyUrl).catch(error => console.error("Lab policy rejected", error));
     api?.onDuckWalkPolicyChange?.(url => applyLab(url).catch(error => console.error("Lab policy rejected", error)));
@@ -48,11 +57,13 @@ try {
     eye: (dx, dy) => runtime.eye(dx, dy),
     current: () => reachyVisual, dispose() {},
   } : createBehaviours({ runtime, autonomy });
+  const actions = reachy ? null : createDuckActions({ runtime, enabled: themeConfig.duckRandomActions !== false });
+  api?.onDuckRandomActionsChange?.(value => actions?.setEnabled(value));
   window.__duckRuntime = runtime;
   window.__duckAudio = audio;
   const bridge = api ? connectPetBridge({ api, runtime, behaviours, audio }) : null;
   if (reachy) api?.onReachyLocalSound?.((name) => { void audio.play(name); });
-  window.addEventListener("beforeunload", () => { bridge?.dispose(); behaviours.dispose(); autonomy.dispose(); runtime.dispose(); audio.dispose?.(); }, { once: true });
+  window.addEventListener("beforeunload", () => { bridge?.dispose(); actions?.dispose(); behaviours.dispose(); autonomy.dispose(); runtime.dispose(); audio.dispose?.(); }, { once: true });
 } catch (error) {
   console.error("Duck on Desk renderer failed to start", error);
 }

@@ -47,7 +47,7 @@ DUCK_LAB_PYTHON=/absolute/path/to/python npm --prefix mcp/robot-lab start
 | lab_experiment_write | 写 reward.py、strategy.py、training.json，校验 expected_revision |
 | lab_experiment_validate | 配置、Python 语法与函数签名检查，不执行脚本 |
 | lab_backend_probe | 显式执行指定版本，在指定设备做 3 次合成梯度更新和推理 |
-| lab_training_defaults / start / list / get / cancel | 真实 PPO 模板、启动、进度与取消 |
+| lab_training_defaults / start / resume / list / get / cancel | 真实 PPO 模板、启动、进度与取消 |
 | lab_policy_artifact | 核验并返回 ONNX／检查点／元数据路径 |
 
 资源：`lab://docs/overview`、`lab://docs/scripts`、`lab://docs/backends`。
@@ -70,7 +70,7 @@ DUCK_LAB_PYTHON=/absolute/path/to/python npm --prefix mcp/robot-lab test
 
 从「设置 → 关于 → 打开开发者模式」进入；开关保存后，关闭窗口仍可从同页再次打开。窗口不透明、可缩放、不置顶；关闭后销毁 3D 实例，已启动的训练继续，退出其所属 App 或 MCP 进程会停止任务。开发时可独立运行 `npm run dev:lab`，只启动虚拟实验室，不启动桌宠或实体适配器。
 
-选用已安装 torch、mujoco、onnx、onnxruntime 的 Python 环境；第一版是平地普通脚、基于基础行走策略的 PPO 动作修正。可编辑物理奖励和网络结构、设置训练参数、暂停／单步仿真、旋转相机、手动控制 14 个关节。训练后先在实验室预览及评测，再应用或导出；可恢复上一策略。检查点保留 actor、critic、optimizer，但尚未接入断点续训或其他 RL 算法。
+选用已安装 torch、mujoco、onnx、onnxruntime 的 Python 环境；两课共用同一网络结构，行走默认加载官方权重，倒立保持默认随机起步，也可切换作对照；结构固定为 61→512→256→128→14 / ELU。可编辑物理奖励、设置训练参数、暂停／单步仿真、旋转相机、手动控制 14 个关节。训练后先在实验室预览及评测，再应用或导出；可恢复上一策略。检查点保留 actor、critic、optimizer；实验室和 MCP 均可接着检查点追加训练，其他 RL 算法尚未接入。
 
 Agent 创建 `mode="robot"` 草稿，经版本化写入和校验后调用 `lab_training_start`；通过 `lab_training_get/list/cancel` 管理任务，`lab_policy_artifact` 读取产物。`lab_training_defaults` 返回真实模板。详细字段、单位、动作契约和准入门槛见 [脚本文档](docs/scripts.md)。
 
@@ -81,3 +81,24 @@ DUCK_LAB_PYTHON=/absolute/path/to/python node mcp/robot-lab/training-round.mjs
 这项集成测试会通过真实 MCP 写入奖励／策略，执行 20 轮 MPS 训练和推理，核对 2,560 个真实环境步、参数更新、ONNX 数值一致性，并实测取消。产物保存到用户模型缓存，方便在实验室选择同一任务继续评测。2026-09-08 已通过；[实测记录](../../docs/diagnostics/robot-lab-mcp-2026-09-08/real-training.json)。短训通过不退步检查，不代表已学会更好的步态。
 
 MPS／CUDA 负责 Python 模型训练与推理，物理为 CPU MuJoCo；桌宠和实验室预览仍用 Web WASM。CUDA 待 NVIDIA 实机验证，未接入 HF Jobs 或其他付费执行器。
+
+## 默认平地行走参数（2026-09-09 开发版）
+
+新工作台和 MCP 的 `mode=robot` 新实验使用[官方全量微调设置](presets/official-finetune/README.md)：200 轮、8 环境、128 步、lr=.0001、seed=2、MPS；行走目标 0.25 m/s。行走默认官方原权重与标准化；倒立保持默认随机权重与固定 mean=0／scale=1，所有策略层可训练。续训恢复所选记录，不重新初始化。旧[修正网络参数包](presets/stable-flat-walk/README.md)及其[实测报告](../../docs/diagnostics/training-parameters-2026-09-09/README.md)保留作历史依据，不能把其稳定性结论套用到新的全量微调。
+
+已有工作台继续使用用户保存的配置；`lab_training_defaults` 返回实际生效值。上面的 20 轮集成测试显式使用短测配置，不会随着默认轮数增加而延长。
+
+## 第二课与桌宠动作库（本地 1.1.0）
+
+- Duck 右键「动作」：啄地、行走时随机播放开关、训练／管理入口。只在普通脚态播放这些站立动作；播放前后都先站稳，遇到睡眠、拖拽或状态变化会取消。
+- 实验室第二课为「倒立保持」（microduck-headstand-hold）：从环境提供的近头撑姿态开始，先练抗小扰动保持，保留自定义 Reward、曲线和可选 3D。后续再练从站立翻转进入、恢复正立；街舞入口已移除，待完整动作跑通后再做。基础模型只供练习，不加入动作库。
+- MCP 现有 15 个工具，create/defaults 支持 task 参数，新增 lab_actions_list；动作的观测相位与评测接口见 [scripts](docs/scripts.md)。
+- 历史站立起步倒立实验（microduck-headstand）的 MPS 200／CPU 500／MPS 1,000 轮均未学会稳定倒立；旧街舞实验及其权重保留，可通过 MCP 查询。默认参数仍为探索起点；CUDA 待实机。
+
+
+### 本机 PPO 新版参数（2026-09-09）
+
+新草稿采用 local-ppo-v2：32×64 样本，5 遍／4 小批 PPO，KL 自适应学习率、价值裁剪、较大 critic 与可学习探索噪声。行走 lr 上限 .0001，倒立保持 .0003；初始化及身体角度奖励维持当前课程要求。旧记录续训原样，旧无 ppo_profile 的 MCP 草稿仍用 legacy-v1。高级参数中点击“使用本机推荐参数”可更新已有表单。短测不等于学会倒立；[核验与对照](../../docs/diagnostics/ppo-parameters-2026-09-09.md)。
+
+
+第二课新训练允许倾斜／碰地后用脚蹬地恢复，不再提前重置，默认奖励取消脚触地单独扣分。训练跨轮连续运行，默认每30秒模拟时间重置；界面可配置0～1000秒，0关闭定时重置；独立评测仍为8秒，严格倒立保持单独计时。旧记录续训保留旧规则。说明见[实验室指南](../../docs/guides/robot-lab-console.md#2026-09-09允许蹬地恢复)。

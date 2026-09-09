@@ -17,7 +17,7 @@ const {
 } = require("./pet-accessory-state");
 
 const MENU_AFFECTING_KEYS = new Set([
-  "petRobot", "reachyAutoConnect", "reachyExpressions", "duckMuted", "duckAppearance", "duckLocomotion", "duckStilts",
+  "petRobot", "reachyAutoConnect", "reachyExpressions", "duckMuted", "duckRandomActions", "duckAppearance", "duckLocomotion", "duckStilts",
   "lang",
   "soundMuted",
   "bubbleFollowPet",
@@ -185,6 +185,7 @@ function createSettingsEffectRouter(options = {}) {
       sendToRenderer("duck-appearance-change", changes.duckAppearance);
     }
     if ("petRobot" in changes) sendToRenderer("pet-robot-change", changes.petRobot);
+    if ("duckRandomActions" in changes) sendToRenderer("duck-random-actions-change", changes.duckRandomActions === true);
     if ("duckMuted" in changes) {
       sendToRenderer("duck-muted-change", changes.duckMuted === true);
     }

@@ -1,0 +1,13 @@
+{
+  "preset_matches_tested_config_and_script_hashes": true,
+  "renderer_build": "passed",
+  "node_tests": {
+    "passed": 5842,
+    "skipped": 15,
+    "failed": 0
+  },
+  "python_tests": 4,
+  "mcp_protocol_test": "passed with configured Python",
+  "selected_real_browser_ui": "passed; preview target 0.25 m/s",
+  "weights_applied_to_installed_pet": false
+}

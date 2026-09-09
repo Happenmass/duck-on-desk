@@ -1,7 +1,6 @@
 "use strict";
-// pet-model:// serves the duck's ONNX policies: from the user's Hugging Face cache when
-// present, otherwise from the copies bundled with the app (resources/policies, staged
-// by scripts/fetch-policies.js).
+// Policies live in the user's global cache. Missing pinned policies are fetched
+// on first use; old bundled installations remain readable for compatibility.
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -58,12 +57,40 @@ function registerScheme(protocol) {
   } }]);
 }
 
+const pendingDownloads = new Map();
+async function ensureCachedPolicy(url, { homeDir = os.homedir(), fetchImpl = fetch } = {}) {
+  const target = resolvePolicyRequest(url, { homeDir, exists: () => true });
+  if (target.status !== 200 || fs.existsSync(target.file)) return;
+  if (pendingDownloads.has(target.file)) return pendingDownloads.get(target.file);
+  const name = decodeURIComponent(new URL(url).pathname.split('/').pop());
+  const source = name.startsWith('stilts/')
+    ? `https://huggingface.co/HannesVonEssen/microduck-stilts/resolve/${STILTS_COMMIT}/${name.slice(7)}`
+    : `https://huggingface.co/spaces/pollen-robotics/microduck-simulator/resolve/${POLICY_COMMIT}/app/public/policies/${name}`;
+  const operation = (async () => {
+    const response = await fetchImpl(source, { signal: AbortSignal.timeout(120000) });
+    if (!response.ok) throw new Error(`Model download failed: HTTP ${response.status}`);
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length < 100000 || bytes.length > 50000000) throw new Error('Invalid model download size');
+    fs.mkdirSync(path.dirname(target.file), { recursive: true });
+    const temporary = `${target.file}.${process.pid}.part`;
+    try { fs.writeFileSync(temporary, bytes); fs.renameSync(temporary, target.file); }
+    finally { fs.rmSync(temporary, { force: true }); }
+  })();
+  pendingDownloads.set(target.file, operation);
+  try { await operation; } finally { pendingDownloads.delete(target.file); }
+}
+
 function installHandler(protocol, net, pathToFileURL, { bundledDir = null, resolveLabPolicy = null } = {}) {
-  protocol.handle(SCHEME, (request) => {
-    const resolved = resolvePolicyRequest(request.url, { bundledDir, resolveLabPolicy });
+  protocol.handle(SCHEME, async (request) => {
+    let resolved = resolvePolicyRequest(request.url, { bundledDir, resolveLabPolicy });
+    if (resolved.status !== 200) {
+      try { await ensureCachedPolicy(request.url); }
+      catch { return new Response('模型下载失败，请检查网络后重新打开窗口。', { status: 502 }); }
+      resolved = resolvePolicyRequest(request.url, { bundledDir, resolveLabPolicy });
+    }
     if (resolved.status !== 200) return new Response(resolved.reason || "not found", { status: 404 });
     return net.fetch(pathToFileURL(resolved.file).toString());
   });
 }
 
-module.exports = { SCHEME, POLICY_COMMIT, POLICY_NAMES, STILTS_COMMIT, STILT_HEIGHTS_CM, policyDirectory, stiltsDirectory, resolvePolicyRequest, registerScheme, installHandler };
+module.exports = { SCHEME, POLICY_COMMIT, POLICY_NAMES, STILTS_COMMIT, STILT_HEIGHTS_CM, policyDirectory, stiltsDirectory, resolvePolicyRequest, ensureCachedPolicy, registerScheme, installHandler };

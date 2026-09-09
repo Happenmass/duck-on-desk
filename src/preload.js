@@ -7,6 +7,10 @@ const themeConfig = themeArg ? JSON.parse(themeArg.slice("--theme-config=".lengt
 contextBridge.exposeInMainWorld("themeConfig", themeConfig);
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  reportDuckActionStatus: status => ipcRenderer.send('duck-action-status', status),
+  onDuckActionsChange: cb => ipcRenderer.on('duck-actions-change', (_, actions) => cb(actions)),
+  onDuckPlayAction: cb => ipcRenderer.on('duck-play-action', (_, id) => cb(id)),
+  onDuckRandomActionsChange: cb => ipcRenderer.on('duck-random-actions-change', (_, enabled) => cb(enabled === true)),
   onDuckWalkPolicyChange: (cb) => ipcRenderer.on("duck-walk-policy-change", (_event, url) => cb(url)),
   getPetRuntimeConfig: () => ipcRenderer.invoke("pet-runtime-config"),
   onPetRobotChange: (cb) => ipcRenderer.on("pet-robot-change", (_, value) => cb(value)),

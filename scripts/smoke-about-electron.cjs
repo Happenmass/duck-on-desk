@@ -6,12 +6,14 @@ const os = require('node:os');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { pathToFileURL } = require('node:url');
-const root = path.join(__dirname, '..');
+const root = process.env.DUCK_SMOKE_APP_ROOT || path.join(__dirname, '..');
+const labRoot = process.env.DUCK_SMOKE_LAB_ROOT || path.join(root, 'mcp/robot-lab');
+const expectedVersion = require(path.join(root, 'package.json')).version;
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'duck-about-smoke-'));
-const output = path.resolve(process.env.DUCK_SMOKE_OUTPUT || path.join(os.tmpdir(), 'duck-about-1.0.0'));
+const output = path.resolve(process.env.DUCK_SMOKE_OUTPUT || path.join(os.tmpdir(), `duck-about-${expectedVersion}`));
 fs.mkdirSync(output, { recursive: true });
 app.setPath('userData', path.join(tmp, 'profile'));
-const policies = require('../src/robots/duck/pet-model-protocol');
+const policies = require(path.join(root, 'src/robots/duck/pet-model-protocol'));
 policies.registerScheme(protocol);
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function until(fn) {
@@ -20,13 +22,15 @@ async function until(fn) {
   throw new Error('Timed out waiting for settings/lab');
 }
 const report = { timestamp: new Date().toISOString(), scope: 'isolated settings + virtual laboratory', errors: [] };
-let win, lab, controller, jobs, settingsIpc;
+let win, lab, controller, jobs, settingsIpc, dockMenu;
 app.whenReady().then(async () => {
   try {
     policies.installHandler(protocol, net, pathToFileURL);
-    jobs = require('../mcp/robot-lab/jobs.cjs').createLabJobs({ root: path.join(tmp, 'jobs') });
-    lab = require('../src/shell/robot-lab-window').createRobotLabWindow({ app, BrowserWindow, ipcMain, dialog: {}, getJobs: () => jobs });
-    controller = require('../src/shell/settings-controller').createSettingsController({
+    jobs = require(path.join(labRoot, 'jobs.cjs')).createLabJobs({ root: path.join(tmp, 'jobs') });
+    lab = require(path.join(root, 'src/shell/robot-lab-window')).createRobotLabWindow({ app, BrowserWindow, ipcMain, dialog: {}, getJobs: () => jobs, onWindowChanged: () => dockMenu.applyDockVisibility() });
+    dockMenu = require(path.join(root, 'src/shell/menu'))({ showDock: false, getRobotLabWindow: () => lab.getWindow(), getSettingsWindow: () => win, reapplyMacVisibility() {} });
+    await dockMenu.applyDockVisibility();
+    controller = require(path.join(root, 'src/shell/settings-controller')).createSettingsController({
       prefsPath: path.join(tmp, 'prefs.json'), injectedDeps: { openRobotLab: () => lab.open() },
     });
     controller.applyUpdate('lang', 'zh');
@@ -36,8 +40,8 @@ app.whenReady().then(async () => {
       preload: path.join(root, 'src/preload-settings.js'), contextIsolation: true, sandbox: true,
     } });
     win.webContents.on('console-message', (_event, level, message) => { if (level >= 3) report.errors.push(message); });
-    settingsIpc = require('../src/shell/settings-ipc').registerSettingsIpc({
-      ipcMain, settingsController: controller, app: { getVersion: () => require('../package.json').version }, BrowserWindow,
+    settingsIpc = require(path.join(root, 'src/shell/settings-ipc')).registerSettingsIpc({
+      ipcMain, settingsController: controller, app: { getVersion: () => expectedVersion }, BrowserWindow,
       themeLoader: { listThemesWithMetadata: () => [], getPreviewSoundUrl: () => null },
       codexPetMain: { decorateThemeMetadata: theme => theme }, dialog: {}, shell: {},
       roamFenceSettings: { getStatus: () => ({ status: 'ok', active: false, fence: null }) },
@@ -54,7 +58,7 @@ app.whenReady().then(async () => {
     await until(() => run('Boolean(document.querySelector(".about-developer-mode-switch"))'));
     await until(() => run('document.querySelector(".about-crab-wrap img")?.naturalWidth > 0'));
     report.metadata = await run('window.settingsAPI.getAboutInfo()');
-    assert.equal(report.metadata.version, '1.0.0');
+    assert.equal(report.metadata.version, expectedVersion);
     assert.equal(report.metadata.authorName, 'Happenmass');
     assert.equal(report.metadata.developerMode, false);
     assert.equal(lab.getWindow(), null);
@@ -70,6 +74,7 @@ app.whenReady().then(async () => {
     assert.equal(JSON.parse(fs.readFileSync(path.join(tmp, 'prefs.json'), 'utf8')).developerMode, true);
     report.enabledAndPersisted = true;
     report.labReady = true;
+    if (process.platform === 'darwin') { report.labDockVisible = app.dock.isVisible(); assert.equal(report.labDockVisible, true); }
     await wait(300);
     fs.writeFileSync(path.join(output, 'about-on.png'), (await win.webContents.capturePage()).toPNG());
     win.setSize(640, 680);
@@ -86,6 +91,8 @@ app.whenReady().then(async () => {
     await run('document.querySelector(".about-developer-mode-switch").click();true');
     await until(() => lab.getWindow() === null && controller.get('developerMode') === false);
     report.disabledAndDestroyed = true;
+    await dockMenu.applyDockVisibility();
+    if (process.platform === 'darwin') { report.labDockHiddenAfterDisable = !app.dock.isVisible(); assert.equal(report.labDockHiddenAfterDisable, true); }
     await run('document.querySelector(".about-upstream-trigger").click();true');
     await wait(300);
     report.upstreamVisible = await run('document.querySelector(".about-upstream-trigger").getAttribute("aria-expanded") === "true"');

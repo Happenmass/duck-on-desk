@@ -625,6 +625,7 @@ function maybeDestroyIdleAnimationPreviewPosterWindow() {
 
 let roamFencePickerRuntime = null;
 let labJobs = null;
+let duckActionStatus = { ready:false, busy:true };
 function getLabJobs() {
   if (!labJobs) {
     const modulePath = app.isPackaged ? path.join(process.resourcesPath, "robot-lab-mcp/jobs.cjs") : path.join(__dirname, "../mcp/robot-lab/jobs.cjs");
@@ -632,8 +633,13 @@ function getLabJobs() {
   }
   return labJobs;
 }
+function duckActionCatalog() {
+  return getLabJobs().actions().map(action => ({ ...action, url: `pet-model://policy/${encodeURIComponent(`lab/${action.id}/policy.onnx`)}` }));
+}
 const robotLabRuntime = require("./shell/robot-lab-window").createRobotLabWindow({
   app, BrowserWindow, ipcMain, dialog, getJobs: getLabJobs,
+  onWindowChanged: () => applyDockVisibility(),
+  onActionsChange: () => { sendToRenderer('duck-actions-change', duckActionCatalog()); rebuildAllMenus(); },
   onApply: async (url) => {
     if (win && !win.isDestroyed()) win.webContents.send("duck-walk-policy-change", url);
   },
@@ -2708,6 +2714,13 @@ const _menuCtx = {
   // setters above route through it; resize/sendToDisplay use
   // flushRuntimeStateToPrefs to capture window bounds after movement.
   flushRuntimeStateToPrefs,
+  getDuckActionStatus: () => duckActionStatus,
+  getDuckActions: () => duckActionCatalog(),
+  playDuckAction: id => {
+    if (_settingsController.get('petRobot') !== 'duck') return;
+    if (id === 'peck' || duckActionCatalog().some(action => action.id === id)) sendToRenderer('duck-play-action', id);
+  },
+  openActionLab: () => { robotLabRuntime.open({lesson:'actions'}); _settingsController.applyUpdate('developerMode', true); },
   settings: _settingsController,
   syncHitWin,
   getPetWindowBounds,
@@ -2722,6 +2735,7 @@ const _menuCtx = {
   getNearestWorkArea,
   reapplyMacVisibility,
   getSettingsWindow,
+  getRobotLabWindow: () => robotLabRuntime.getWindow(),
   getSystemVersion: () => process.getSystemVersion(),
   discoverThemes: () => themeLoader.discoverThemes(),
   getActiveThemeId: () => themeRuntime.getActiveThemeId("duck"),
@@ -3461,6 +3475,11 @@ const { enterMiniMode, exitMiniMode, enterMiniViaMenu, miniPeekIn, miniPeekOut,
 // relative to its forward axis; > 0 means the beak points to the viewer's left)
 // so free roam walks toward the side the duck already leans to.
 let duckFacing = 0;
+ipcMain.on('duck-action-status', (event, status) => {
+  if (!win || win.isDestroyed() || event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) return;
+  duckActionStatus = {ready:status?.ready===true,busy:status?.busy!==false};
+  rebuildAllMenus();
+});
 ipcMain.on("duck-facing", (event, value) => {
   if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
   duckFacing = Number.isFinite(value) ? value : 0;
@@ -3480,6 +3499,8 @@ ipcMain.on("duck-displacement", (event, d) => {
 ipcMain.handle("pet-runtime-config", (event) => {
   if (!win || win.isDestroyed() || event.sender !== win.webContents) return null;
   return {
+    duckActions: duckActionCatalog(),
+    duckRandomActions: _settingsController.get('duckRandomActions'),
     labPolicyUrl: getLabJobs().activation().current ? `pet-model://policy/${encodeURIComponent(`lab/${getLabJobs().activation().current}/policy.onnx`)}` : null,
     petRobot: _settingsController.get("petRobot"),
     reachyAutoConnect: _settingsController.get("reachyAutoConnect"),
@@ -3689,9 +3710,10 @@ if (!gotTheLock) {
     reapplyMacVisibility();
   });
 
-  // macOS: hide dock icon early if user previously disabled it
+  // Before app readiness, keep a tray-only launch out of Dock. Once a lab
+  // exists, the shared coordinator owns the visibility override.
   if (isMac && app.dock) {
-    if (_settingsController.get("showDock") === false) {
+    if (_settingsController.get("showDock") === false && !robotLabRuntime.getWindow()) {
       app.dock.hide();
     }
   }

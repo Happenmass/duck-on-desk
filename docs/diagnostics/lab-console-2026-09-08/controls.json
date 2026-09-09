@@ -1,0 +1,189 @@
+{
+  "time": "2026-09-08T15:01:41.112Z",
+  "scope": "virtual-only, no main application or hardware",
+  "errors": [],
+  "before": {
+    "angle": 0,
+    "mode": "policy",
+    "title": "头部左右转",
+    "selected": "head_yaw",
+    "policyOutput": "尚未运行"
+  },
+  "after": {
+    "angle": 0.6108652381980031,
+    "mode": "manual",
+    "title": "头部左右转",
+    "selected": "head_yaw",
+    "policyOutput": "手动模式，未经过模型"
+  },
+  "mapping": [
+    {
+      "name": "left_hip_yaw",
+      "index": 0,
+      "label": "01左腿 · 髋部转向0°"
+    },
+    {
+      "name": "left_hip_roll",
+      "index": 1,
+      "label": "02左腿 · 髋部侧摆-5°"
+    },
+    {
+      "name": "left_hip_pitch",
+      "index": 2,
+      "label": "03左腿 · 髋部前后摆-26°"
+    },
+    {
+      "name": "left_knee",
+      "index": 3,
+      "label": "04左腿 · 膝盖弯曲-0°"
+    },
+    {
+      "name": "left_ankle",
+      "index": 4,
+      "label": "05左腿 · 脚踝俯仰26°"
+    },
+    {
+      "name": "neck_pitch",
+      "index": 5,
+      "label": "06颈部前后倾20°"
+    },
+    {
+      "name": "head_pitch",
+      "index": 6,
+      "label": "07头部上下点20°"
+    },
+    {
+      "name": "head_yaw",
+      "index": 7,
+      "label": "08头部左右转35°"
+    },
+    {
+      "name": "head_roll",
+      "index": 8,
+      "label": "09头部左右歪0°"
+    },
+    {
+      "name": "right_hip_yaw",
+      "index": 9,
+      "label": "10右腿 · 髋部转向0°"
+    },
+    {
+      "name": "right_hip_roll",
+      "index": 10,
+      "label": "11右腿 · 髋部侧摆5°"
+    },
+    {
+      "name": "right_hip_pitch",
+      "index": 11,
+      "label": "12右腿 · 髋部前后摆26°"
+    },
+    {
+      "name": "right_knee",
+      "index": 12,
+      "label": "13右腿 · 膝盖弯曲0°"
+    },
+    {
+      "name": "right_ankle",
+      "index": 13,
+      "label": "14右腿 · 脚踝俯仰-26°"
+    }
+  ],
+  "pointer": {
+    "before": 0.6108652381980031,
+    "after": 1.3962634015954514
+  },
+  "layout1280": {
+    "height": 800,
+    "bar": 792,
+    "overflow": false
+  },
+  "controls": [
+    {
+      "name": "left_hip_yaw",
+      "before": 0,
+      "after": 0.08726646259971647
+    },
+    {
+      "name": "left_hip_roll",
+      "before": -0.0872664600610733,
+      "after": 0
+    },
+    {
+      "name": "left_hip_pitch",
+      "before": -0.4579240083694458,
+      "after": -0.36651914291891735
+    },
+    {
+      "name": "left_knee",
+      "before": -0.004939999897032976,
+      "after": 0.07853981633962946
+    },
+    {
+      "name": "left_ankle",
+      "before": 0.4529840052127838,
+      "after": 0.5410520681182369
+    },
+    {
+      "name": "neck_pitch",
+      "before": 0.3490658402442932,
+      "after": 0.4363323129985824
+    },
+    {
+      "name": "head_pitch",
+      "before": 0.3490658402442932,
+      "after": 0.43633231299858066
+    },
+    {
+      "name": "head_roll",
+      "before": 0,
+      "after": 0.08726646259970762
+    },
+    {
+      "name": "right_hip_yaw",
+      "before": 0,
+      "after": 0.08726646259971656
+    },
+    {
+      "name": "right_hip_roll",
+      "before": 0.0872664600610733,
+      "after": 0.17453292519943295
+    },
+    {
+      "name": "right_hip_pitch",
+      "before": 0.4579240083694458,
+      "after": 0.5410520681182125
+    },
+    {
+      "name": "right_knee",
+      "before": 0.004939999897032976,
+      "after": 0.09599310885965269
+    },
+    {
+      "name": "right_ankle",
+      "before": -0.4529840052127838,
+      "after": -0.3665191429188179
+    }
+  ],
+  "policy": [
+    "-0.058457642793655396",
+    "-0.08644707500934601",
+    "0.12625859677791595",
+    "-0.06152902543544769",
+    "-0.03714035451412201",
+    "-0.1081320270895958",
+    "-0.04281426966190338",
+    "0.006242863833904266",
+    "-0.02992895245552063",
+    "0.04982965812087059",
+    "0.048637017607688904",
+    "-0.12836049497127533",
+    "0.16649481654167175",
+    "-0.03816566988825798"
+  ],
+  "layout1000": {
+    "width": 1000,
+    "overflow": false,
+    "slider": 941
+  },
+  "ok": true
+}

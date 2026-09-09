@@ -13,9 +13,18 @@ CI verifies the actual files against updater metadata before uploading artifacts
 
 ## Draft Release
 
-### v1.0.0 Draft Smoke Checklist
+1.1.1 defaults the hold lesson to 30 simulated seconds per reset, with a visible 0–1000 second input. Validate the 1500-step boundary, zero disabling resets, per-lesson drafts, and unchanged historical resume settings. Packages contain no ONNX weights; pinned models download on demand to the user cache.
 
-- Confirm the packaged app shows `1.0.0` metadata and Settings -> About shows `v1.0.0`, sourced from app.getVersion().
+### Historical v1.1.0 Local Test Checklist
+
+- v1.1.0 was local-only. The user authorized publication of the subsequent 1.1.1 release on 2026-09-09. Pass `--publish never` during local verification.
+- For this machine, use `.release-reviews/v1.1.0/local-build.cjs` to write `dist/local-1.1.0` and omit copied weights; resolve policies from the existing global Hugging Face cache.
+- Verify the packaged Robot Lab tutorial, joint controls, charts, optional preview, MPS recipe and direction-aware reward. Validate the external packaged MCP server, then replace the local installed bundle.
+- Keep the verified 1.0.0 ZIP for rollback. Test packaged modules using a virtual-only harness; do not load `src/main.js` or hardware adapters for smoke checks.
+
+### v1.1.1 Draft Smoke Checklist
+
+- Confirm the packaged app shows `1.1.1` metadata and Settings -> About shows `v1.1.1`, sourced from app.getVersion().
 - Inspect actual package resources: Robot Lab page, preload, external MCP scripts/dependencies and native MuJoCo MJCF/meshes must be present.
 - On an isolated virtual profile, verify About's developer mode defaults off, saves on/off, opens and closes the lab, and offers re-entry after window close. Author/maintainer/contributor are Happenmass; upstream credits remain available.
 - Verify script authoring, real MPS training, candidate evaluation, ONNX export, actual pet renderer activation and rollback using a virtual-only test process. Do not load hardware adapters merely to validate the release UI.

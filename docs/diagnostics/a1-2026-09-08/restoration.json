@@ -1,0 +1,25 @@
+{
+  "pid": 79931,
+  "debuggerAttached": false,
+  "displacementListeners": 1,
+  "renderer": {
+    "snapshot": {
+      "ready": true,
+      "mode": "walk",
+      "sleeping": false,
+      "grabbed": false,
+      "busy": false,
+      "ctrlHz": 50,
+      "fps": 30,
+      "appearance": "classic",
+      "motionSource": "system",
+      "facing": -0.28909905432752836,
+      "height": 0.12058692423554697,
+      "restHeight": 0.12,
+      "stilts": 0,
+      "locomotion": "legs"
+    },
+    "temporaryProbeGone": true,
+    "url": "file:///Users/guhappen/%E8%87%AA%E5%AA%92%E4%BD%93%E8%BF%90%E8%90%A5/duck-on-desk/dist/mac-arm64/Duck%20on%20Desk.app/Contents/Resources/app.asar/renderer-dist/index.html"
+  }
+}

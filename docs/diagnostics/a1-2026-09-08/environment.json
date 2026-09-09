@@ -1,0 +1,23 @@
+{
+  "appVersion": "0.2.2",
+  "versions": {
+    "electron": "41.10.4",
+    "chrome": "146.0.7680.216",
+    "node": "24.18.0"
+  },
+  "cpu": "Apple M3 Max",
+  "logicalCPUs": 14,
+  "os": "25.6.0",
+  "displays": [
+    {
+      "size": {
+        "width": 1728,
+        "height": 1117
+      },
+      "scaleFactor": 2,
+      "displayFrequency": 120
+    }
+  ],
+  "originalBundle": "index-W_bWmYfZ.js",
+  "originalBundleSha256": "f6b0708d958bee987fcb9ea4cb8639caa9040a343ad7136ab89d5bd3588b9ce5"
+}

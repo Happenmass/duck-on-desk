@@ -1,0 +1,5 @@
+[
+  {"name":"2026-09-09 A: 100 rounds, longer rollout", "config":{"max_iterations":100,"environments":8,"rollout_steps":128,"learning_rate":0.0003}},
+  {"name":"2026-09-09 B: 200 rounds, smaller learning rate", "config":{"max_iterations":200,"environments":8,"rollout_steps":128,"learning_rate":0.0001}},
+  {"name":"2026-09-09 C: 200 rounds, default learning rate", "config":{"max_iterations":200,"environments":8,"rollout_steps":128,"learning_rate":0.0003}}
+]

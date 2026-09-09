@@ -1,0 +1,4 @@
+[
+  {"name":"2026-09-09 replicate: walking, seed 1", "config":{"max_iterations":200,"environments":8,"rollout_steps":128,"learning_rate":0.001,"target_speed":0.25,"seed":1}},
+  {"name":"2026-09-09 replicate: walking, seed 2", "config":{"max_iterations":200,"environments":8,"rollout_steps":128,"learning_rate":0.001,"target_speed":0.25,"seed":2}}
+]
