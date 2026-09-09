@@ -9,7 +9,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
  if(packaged){
   const asar=require('@electron/asar'),vm=require('node:vm');
   const archive=path.join(lab,'../app.asar');
-  const source=asar.extractFile(archive,'src/robots/duck/pet-model-protocol.js').toString();
+  const source=asar.extractFile(archive,path.join('src','robots','duck','pet-model-protocol.js')).toString();
   const sandbox={require,module:{exports:{}},__dirname:path.join(archive,'src/robots/duck')};
   vm.runInNewContext(source,sandbox);assert.equal(sandbox.module.exports.SCHEME,'pet-model');
  }
