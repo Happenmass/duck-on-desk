@@ -102,3 +102,7 @@ MPS／CUDA 负责 Python 模型训练与推理，物理为 CPU MuJoCo；桌宠�
 
 
 第二课新训练允许倾斜／碰地后用脚蹬地恢复，不再提前重置，默认奖励取消脚触地单独扣分。训练跨轮连续运行，默认每30秒模拟时间重置；界面可配置0～1000秒，0关闭定时重置；独立评测仍为8秒，严格倒立保持单独计时。旧记录续训保留旧规则。说明见[实验室指南](../../docs/guides/robot-lab-console.md#2026-09-09允许蹬地恢复)。
+
+### 首次训练环境（1.1.2）
+
+训练页面 Python 路径留空时自动安装独立环境。也可先调用 `lab_environment_setup`，再用 `lab_environment_status` 查询进度。`lab_training_start` 返回的 `preparing` 状态包含 `preparation` 文案，完成准备后自动开始训练；`lab_training_cancel` 可停止准备。Windows x64 默认 CUDA，Apple Silicon 默认 MPS，GPU 不可用时不会退回 CPU。已有自定义 Python 只做检查。详见 [后端说明](docs/backends.md)。

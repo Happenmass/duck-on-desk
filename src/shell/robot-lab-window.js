@@ -27,6 +27,8 @@ function createRobotLabWindow({app, BrowserWindow, ipcMain, dialog, getJobs, onA
         case 'actions': return jobs().actions();
         case 'add-action': { const result=jobs().addAction(payload.id,payload.name,payload.evaluation);await onActionsChange();return result; }
         case 'remove-action': { const result=jobs().removeAction(payload.id);await onActionsChange();return result; }
+        case 'setup': return jobs().setup(payload);
+        case 'environment': return jobs().environment();
         case 'start': return jobs().start(payload);
         case 'resume': return jobs().resume(payload.id,payload);
         case 'list': return jobs().list();

@@ -23,7 +23,7 @@ async function call(name, args = {}, expectedError) {
 try {
   await client.connect(transport);
   const tools = await client.listTools();
-  assert.equal(tools.tools.length, 16);
+  assert.equal(tools.tools.length, 18);
   report.tools = tools.tools.map(t => t.name);
   const resources = await client.listResources();
   assert.equal(resources.resources.length, 3);

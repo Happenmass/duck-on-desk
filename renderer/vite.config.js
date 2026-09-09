@@ -27,6 +27,8 @@ function localPolicyPlugin() {
               case "actions": result=jobs.actions();break;
               case "add-action": result=jobs.addAction(payload.id,payload.name,payload.evaluation);break;
               case "remove-action": result=jobs.removeAction(payload.id);break;
+              case "setup": result=jobs.setup(payload);break;
+              case "environment": result=jobs.environment();break;
               case "start": result=jobs.start(payload);break;
               case "resume": result=jobs.resume(payload.id,payload);break;
               case "list": result=jobs.list();break;

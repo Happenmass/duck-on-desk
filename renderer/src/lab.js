@@ -60,14 +60,14 @@ function actionResult(result){
   return `倒立 ${result.inverted_seconds.toFixed(2)} 秒 · 倒立跳动 ${result.inverted_hops} 次 · 结尾${result.standing?'站稳':'未站稳'}。${result.success?'通过动作检查；仍请目视确认动作，再添加到桌宠。':'尚未完成目标动作，不能加入随机播放。'}`;
 }
 const terminal=phase=>['completed','failed','cancelled'].includes(phase);
-let noticeTimer;
+let noticeTimer, checkingEnvironment=false,showEnvironmentSetup=false;
 function notice(message,error=false){el('notice').hidden=false;el('notice').textContent=message;el('notice').classList.toggle('error',error);clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>el('notice').hidden=true,6500);}
 function action(id,fn){el(id).addEventListener('click',async()=>{try{await fn();}catch(error){notice(error.message,true);}});}
 function displayActive(active){el('active-policy').textContent=active?.current?`桌宠当前策略：${active.current.slice(0,16)} · 可恢复上一策略`:'桌宠当前策略：内置基础策略';}
 function showJob(job){
   currentJob=job;livePreview.setJob(job);lessons.update(job);
   el('policy-run-note').textContent=job.settings?.resume_run_id?`本次模型：接着第 ${job.settings.resume_iteration} 轮继续训练 · 原记录保留`:job.settings?.policy_initialization==='random'?'本次模型：官方网络结构 · 随机权重起步 · 197,774 个策略参数':(job.settings?.training_method||job.manifest?.training_method)==='official-full-finetune-v1'?'本次模型：官方原始权重 → 全量微调 · 197,774 个策略参数':'历史模型：使用旧训练方法，原始结果保留。';
-  const labels={starting:'正在启动',evaluating_baseline:'评测基础策略',training:'训练中',evaluating_candidate:'评测候选策略',completed:'训练完成',failed:'任务失败',cancelled:'已停止'};
+  const labels={preparing:'正在准备模型与训练环境',starting:'正在启动',evaluating_baseline:'评测基础策略',training:'训练中',evaluating_candidate:'评测候选策略',completed:'训练完成',failed:'任务失败',cancelled:'已停止'};
   const unfinishedAction=job.phase==='completed'&&isActionJob(job)&&!job.manifest.native_evaluation_passed;
   el('run-status').textContent=unfinishedAction?'训练结束 · 目标未完成':labels[job.phase]||job.phase;el('run-status').classList.toggle('unfinished',unfinishedAction);
   el('training-task').disabled=busy;
@@ -86,13 +86,17 @@ function showJob(job){
   el('resume').disabled=!job.resume?.available||busy;
   el('resume-status').textContent=job.resume?.available?`已保存到第 ${job.resume.iteration} 轮 · 累计 ${(job.resume.environment_steps||0).toLocaleString()} 步。${job.resume.legacy?'旧检查点恢复模型与优化器，仿真从新的初态开始。':'恢复模型、优化器、仿真及随机状态。'}`:(job.resume?.reason||'这条历史记录没有可用的续训信息。');
   if(isHoldJob(job)){const steps=job.settings.hold_episode_steps??400;el('resume-status').textContent+=` 本记录${steps>0?`每 ${steps/50} 秒模拟时间重置`:'不按时间重置'}；${job.settings.reset_on_pose_loss?'失稳时也重置':'失稳时允许蹬地恢复'}。续训沿用这条记录的规则。`;}
+  if(!showEnvironmentSetup){
+    el('environment-status').textContent=job.error&&!job.metrics.length?job.error:job.phase==='preparing'?(job.preparation||'正在准备训练环境…'):job.preparation||'首次训练会自动安装独立环境。';
+  }
   if(job.error)el('evaluation').textContent=job.error;
   else if(done&&!evaluation){const m=job.manifest;el('evaluation').textContent=actionJob?`训练端三段测试：${actionResult(m.candidate)}`:`训练前 → 训练后：平均速度误差 ${(m.baseline.velocity_mae*100).toFixed(2)} → ${(m.candidate.velocity_mae*100).toFixed(2)} 厘米 / 秒（越小越好），跌倒比例 ${(m.baseline.fall_rate*100).toFixed(0)}% → ${(m.candidate.fall_rate*100).toFixed(0)}%。${m.native_evaluation_passed?'已通过训练端初检；点击“对比训练前后”，再检查桌宠使用的仿真环境。':'未通过不退步检查，暂不能应用。可以调整奖励后重试。'}`;}
   else if(!done&&!busy)el('evaluation').textContent=job.phase==='cancelled'?(job.resume?.available?'已停止并保存进度。点击“继续这次训练”接着练；完成后再导出或检查动作。':'已停止，尚无可恢复的完整训练轮。请新建训练。'):'这次练习还在进行，完成后会显示训练前后的对比结果。';
 }
 async function refresh(){
   if(closed)return;
-  try{const list=(await request('list')).filter(job=>(job.settings?.task||'microduck-flat-walk')===trainingTask);
+  try{if(checkingEnvironment){const state=await request('environment');el('environment-status').textContent=state.message;checkingEnvironment=state.phase==='preparing';el('setup-environment').disabled=checkingEnvironment;}
+    const list=(await request('list')).filter(job=>(job.settings?.task||'microduck-flat-walk')===trainingTask);
     const ids=Array.from(el('runs').options).map(o=>o.value).filter(Boolean).join(',');
     if(ids!==list.map(j=>j.id).join(',')){el('runs').replaceChildren(...list.map(j=>new Option(`${new Date(j.createdAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})} · ${isHoldJob(j)?'倒立保持':isHeadstandJob(j)?'历史翻转练习':isActionJob(j)?'倒立跳街舞':'行走'} · ${j.settings?.iterations??'—'} 轮 · ${(j.settings?.training_device||'未知设备').toUpperCase()}`,j.id)));}
     if(!selected&&list.length)selected=list[0].id;
@@ -107,10 +111,11 @@ async function refresh(){
   }catch(error){notice(error.message,true);}
 }
 el('runs').addEventListener('change',()=>{selected=el('runs').value;evaluation=null;refresh();});
+action('setup-environment',async()=>{showEnvironmentSetup=true;el('setup-environment').disabled=true;try{const state=await request('setup',{pythonPath:el('python').value.trim(),training_device:el('training-device').value,inference_device:el('inference-device').value});checkingEnvironment=state.phase==='preparing';el('environment-status').textContent=state.message;}finally{el('setup-environment').disabled=checkingEnvironment;}});
 action('recommended-training',async()=>{el('environments').value=32;el('rollout-steps').value=64;el('learning-rate').value=trainingTask==='microduck-headstand-hold'?0.0003:0.0001;el('ppo-profile').value='local-ppo-v2';updateSamplingSummary();notice('已填入本机新版参数；奖励脚本、起始权重和历史训练保留。');});
-action('train',async()=>{if(trainingTask==='microduck-headstand-hold'&&(!el('reset-seconds').value.trim()||!el('reset-seconds').reportValidity())){notice('重置时间请输入 0～1000 的整数秒。',true);return;}el('train').disabled=true;try{const job=await request('start',{task:trainingTask,...(trainingTask==='microduck-headstand-hold'?{hold_episode_steps:Number(el('reset-seconds').value)*50}:{}),ppo_profile:el('ppo-profile').value,policy_initialization:el('policy-initialization').value,...(trainingTask==='microduck-headstand-dance'?{action_name:el('action-name').value}:{}),pythonPath:el('python').value.trim(),training_device:el('training-device').value,inference_device:el('inference-device').value,
+action('train',async()=>{showEnvironmentSetup=false;if(trainingTask==='microduck-headstand-hold'&&(!el('reset-seconds').value.trim()||!el('reset-seconds').reportValidity())){notice('重置时间请输入 0～1000 的整数秒。',true);return;}el('train').disabled=true;try{const job=await request('start',{task:trainingTask,...(trainingTask==='microduck-headstand-hold'?{hold_episode_steps:Number(el('reset-seconds').value)*50}:{}),ppo_profile:el('ppo-profile').value,policy_initialization:el('policy-initialization').value,...(trainingTask==='microduck-headstand-dance'?{action_name:el('action-name').value}:{}),pythonPath:el('python').value.trim(),training_device:el('training-device').value,inference_device:el('inference-device').value,
   iterations:Number(el('iterations').value),environments:Number(el('environments').value),rollout_steps:Number(el('rollout-steps').value),target_speed:Number(el('target-speed').value),learning_rate:Number(el('learning-rate').value),seed:Number(el('seed').value),reward:el('reward').value,strategy:el('strategy').value});selected=job.id;evaluation=null;lessons.go(2);await refresh();}catch(error){el('train').disabled=false;throw error;}});
-action('resume',async()=>{
+action('resume',async()=>{showEnvironmentSetup=false;
   if(!currentJob?.resume?.available||busy)return;
   el('resume').disabled=true;
   try{const job=await request('resume',{id:selected,additional_iterations:Number(el('resume-iterations').value),pythonPath:el('python').value.trim()});

@@ -23,7 +23,7 @@ test('fresh workbench uses the complete MPS walking recipe, including both scrip
   const {jobs}=setup(t),d=jobs.defaults();
   const preset=path.join(__dirname,'../mcp/robot-lab/presets/official-finetune');
   const config=JSON.parse(fs.readFileSync(path.join(preset,'training.json'),'utf8'));
-  for(const key of ['training_device','inference_device','target_speed','seed','environments','rollout_steps','learning_rate','ppo_profile'])assert.equal(d[key],config[key],key);
+  for(const key of ['training_device','inference_device','target_speed','seed','environments','rollout_steps','learning_rate','ppo_profile'])assert.equal(d[key],['training_device','inference_device'].includes(key)?require('../mcp/robot-lab/setup.cjs').defaultDevice():config[key],key);
   assert.equal(d.iterations,config.max_iterations);
   assert.equal(d.reward,fs.readFileSync(path.join(preset,'reward.py'),'utf8'));
   assert.equal(d.strategy,fs.readFileSync(path.join(preset,'strategy.py'),'utf8'));
@@ -104,11 +104,11 @@ test('2000-iteration jobs reach the worker config with the same two-hour timeout
  const base=path.join(root,'base.fixture');fs.writeFileSync(base,'test file, not model weights');
  fs.writeFileSync(path.join(root,'robot_allcollisions.xml'),'<fixture/>');
  let launched=0;const deadlines=[];
- const filename=require.resolve('../mcp/robot-lab/jobs.cjs');const sandbox={module:{exports:{}},__dirname:path.dirname(filename),process,Buffer,
+ const filename=require.resolve('../mcp/robot-lab/jobs.cjs');const sandbox={module:{exports:{}},__dirname:path.dirname(filename),process,Buffer,AbortController,
   setTimeout:(_fn,ms)=>{deadlines.push(ms);return ms;},clearTimeout:()=>{},
   require:name=>name==='node:child_process'?{spawn:()=>{launched++;const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();child.kill=()=>child.emit('close',0);return child;}}:require(name)};
  vm.runInNewContext(fs.readFileSync(filename,'utf8'),sandbox,{filename});
- const jobs=sandbox.module.exports.createLabJobs({root,weights,basePolicy:base,assetDir:root});
+ const jobs=sandbox.module.exports.createLabJobs({root,weights,basePolicy:base,assetDir:root,prepare:()=>({pythonPath:'fixture-python',base_policy:base})});
  try {
   assert.equal(jobs.defaults().iterations,200);assert.equal(jobs.actionDefaults().iterations,200);
   for(const task of ['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance']){
@@ -144,10 +144,10 @@ test('resume branches from a saved official checkpoint, preserves its recipe and
  const {root,weights}=setup(t);fs.mkdirSync(root,{recursive:true});
  const base=path.join(root,'base.fixture');fs.writeFileSync(base,'fixture, not weights');fs.writeFileSync(path.join(root,'robot_allcollisions.xml'),'<fixture/>');
  const filename=require.resolve('../mcp/robot-lab/jobs.cjs');const children=[];
- const sandbox={module:{exports:{}},__dirname:path.dirname(filename),process,Buffer,setTimeout:()=>0,clearTimeout:()=>{},
+ const sandbox={module:{exports:{}},__dirname:path.dirname(filename),process,Buffer,AbortController,setTimeout:()=>0,clearTimeout:()=>{},
   require:name=>name==='node:child_process'?{spawn:()=>{const c=new EventEmitter();c.stdout=new EventEmitter();c.stderr=new EventEmitter();c.kill=()=>c.emit('close',0);children.push(c);return c;}}:require(name)};
  vm.runInNewContext(fs.readFileSync(filename,'utf8'),sandbox,{filename});
- const jobs=sandbox.module.exports.createLabJobs({root,weights,basePolicy:base,assetDir:root});
+ const jobs=sandbox.module.exports.createLabJobs({root,weights,basePolicy:base,assetDir:root,prepare:()=>({pythonPath:'fixture-python',base_policy:base})});
  try{
   const parent=jobs.start({task:'microduck-headstand-hold',iterations:2000,source:{test:true}});
   assert.throws(()=>jobs.resume(parent.id,{additional_iterations:3}),/停止/);

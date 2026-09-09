@@ -57,6 +57,14 @@ app.whenReady().then(async()=>{
   await run(`document.querySelector('[data-lesson="2"]').click();document.getElementById('training-environment').open=true;document.getElementById('training-environment').scrollIntoView({block:'start'});true`);
   assert.equal(await run("document.querySelector('[data-lesson-page=\"2\"]').hidden"),false);
   await new Promise(resolve=>setTimeout(resolve,400));
+  if(process.env.DUCK_SMOKE_TEST_ENVIRONMENT){
+   const count=jobs.list().length;
+   await run(`document.getElementById('python').value='definitely-missing-duck-python';document.getElementById('setup-environment').click();true`);
+   await until(()=>run(`!document.getElementById('setup-environment').disabled && document.getElementById('environment-status').textContent.includes('自定义 Python 环境检查失败')`));
+   await run(`document.getElementById('python').value='';document.getElementById('setup-environment').click();true`);
+   await until(()=>run(`!document.getElementById('setup-environment').disabled && document.getElementById('environment-status').textContent.includes('训练环境与模型已就绪')`));
+   assert.equal(jobs.list().length,count);report.environmentRetry=true;
+  }
   report.summary=await run("document.getElementById('sampling-summary').textContent");
   fs.writeFileSync(path.join(output,'parameters.png'),(await wc.capturePage()).toPNG());
   if(process.env.DUCK_SMOKE_RUN_ID){

@@ -22,8 +22,23 @@ function createLabJobs(options = {}) {
   const assetDir = options.assetDir || process.env.DUCK_LAB_ASSET_DIR || (fs.existsSync(path.resolve(__dirname, '../app.asar'))
     ? path.resolve(__dirname, '../app.asar.unpacked/renderer-dist/robot/mjlab') : path.resolve(__dirname, '../../renderer/public/robot/mjlab'));
   const cachedBase = path.join(home, '.cache/huggingface/microduck-simulator', COMMIT, 'policies/BEST_alpha_walking.onnx');
-  const basePolicy = options.basePolicy || (fs.existsSync(cachedBase) ? cachedBase : path.resolve(__dirname,'../policies/BEST_alpha_walking.onnx'));
-  const children = new Map();
+  const setupModule = require(path.join(__dirname,'setup.cjs'));
+  const setupRuntime = setupModule.createTrainingSetup({home,platform:options.platform,arch:options.arch});
+  const prepare = options.prepare || setupRuntime.prepare;
+  const children = new Map(), preparing = new Map();
+  let environmentState={phase:'idle',message:'首次训练会自动安装独立环境，也可以先检查并安装。'}, environmentController=null;
+  const currentBase = () => options.basePolicy || cachedBase;
+  function setup(input={}) {
+    if(environmentController)return {...environmentState};
+    const controller=new AbortController();environmentController=controller;
+    environmentState={phase:'preparing',message:'正在检查训练环境'};
+    const config={...defaults(),...input,asset_dir:assetDir,base_policy:currentBase()};
+    Promise.resolve().then(()=>prepare(config,message=>{environmentState={phase:'preparing',message};},controller.signal))
+      .then(result=>{environmentState={phase:'ready',message:'训练环境与模型已就绪',...result};})
+      .catch(error=>{environmentState={phase:'failed',message:error.message};})
+      .finally(()=>{environmentController=null;});
+    return {...environmentState};
+  }
   const file = id => path.join(root, 'jobs', `${jobId(id)}.json`);
   function read(id) {
     const job = JSON.parse(fs.readFileSync(file(id), 'utf8'));
@@ -65,7 +80,7 @@ function createLabJobs(options = {}) {
   }
   function defaults() {
     // Full official-network fine-tuning. Historical residual presets stay unchanged.
-    const initial={reward:fs.readFileSync(path.join(__dirname,'training/default-reward.py'),'utf8'),strategy:fs.readFileSync(path.join(__dirname,'training/default-strategy.py'),'utf8'),pythonPath:process.env.DUCK_LAB_PYTHON||'',training_device:'mps',inference_device:'mps',hold_episode_steps:400,reset_on_pose_loss:true,policy_initialization:'official',ppo_profile:'local-ppo-v2',iterations:200,environments:32,rollout_steps:64,learning_rate:0.0001,target_speed:0.25,seed:2};
+    const initial={reward:fs.readFileSync(path.join(__dirname,'training/default-reward.py'),'utf8'),strategy:fs.readFileSync(path.join(__dirname,'training/default-strategy.py'),'utf8'),pythonPath:process.env.DUCK_LAB_PYTHON||'',training_device:setupModule.defaultDevice(options.platform,options.arch),inference_device:setupModule.defaultDevice(options.platform,options.arch),hold_episode_steps:400,reset_on_pose_loss:true,policy_initialization:'official',ppo_profile:'local-ppo-v2',iterations:200,environments:32,rollout_steps:64,learning_rate:0.0001,target_speed:0.25,seed:2};
     try {
       const saved=JSON.parse(fs.readFileSync(path.join(root,'workbench.json'),'utf8'));
       for(const key of Object.keys(initial))if(key!=='strategy'&&saved[key]!==undefined)initial[key]=saved[key];
@@ -100,57 +115,74 @@ function createLabJobs(options = {}) {
     if(!['official','random'].includes(c.policy_initialization))throw new Error('Unsupported policy initialization');
     if (!['cpu','mps','cuda'].includes(c.training_device)||!['cpu','mps','cuda'].includes(c.inference_device)) throw new Error('Unsupported model device');
     for (const k of ['reward','strategy']) if(typeof c[k]!=='string'||Buffer.byteLength(c[k])>65536) throw new Error(`Invalid ${k} script`);
-    if (!fs.existsSync(basePolicy)||!fs.existsSync(path.join(assetDir,'robot_allcollisions.xml'))) throw new Error('Microduck model / base policy unavailable; install model assets first');
-    const python=String(c.pythonPath || process.env.DUCK_LAB_PYTHON || 'python3');
+    const python=String(c.pythonPath || process.env.DUCK_LAB_PYTHON || '');
     if (/[\0\r\n]/.test(python)) throw new Error('Invalid Python executable');
     const id=`run_${randomUUID()}`;
     const config={task,hold_episode_steps:number(c,'hold_episode_steps',0,50000,true),reset_on_pose_loss:c.reset_on_pose_loss,ppo_profile:c.ppo_profile,training_method:c.policy_initialization==='random'?'random-actor-ppo-v1':'official-full-finetune-v1',policy_initialization:c.policy_initialization,action_name:String(c.action_name||'倒立跳街舞').slice(0,40),training_device:c.training_device,inference_device:c.inference_device,reward:c.reward,strategy:c.strategy,
       iterations:number(c,'iterations',1,MAX_ITERATIONS,true),environments:number(c,'environments',1,32,true),rollout_steps:number(c,'rollout_steps',8,256,true),
       learning_rate:number(c,'learning_rate',0.000001,0.01),target_speed:number(c,'target_speed',0,0.25),seed:number(c,'seed',0,2147483647,true),
-      asset_dir:assetDir,base_policy:basePolicy,output_dir:path.join(weights,id),cancel_file:path.join(root,'jobs',`${id}.cancel`),max_seconds:TRAINING_TIMEOUT_SECONDS,
+      asset_dir:assetDir,base_policy:currentBase(),output_dir:path.join(weights,id),cancel_file:path.join(root,'jobs',`${id}.cancel`),max_seconds:TRAINING_TIMEOUT_SECONDS,
       preview_control_file:path.join(root,'jobs',`${id}.preview-watch.json`),preview_file:path.join(root,'jobs',`${id}.live.json`),pythonPath:python,...resumed};
     if(!c.source && task==='microduck-flat-walk')atomic(path.join(root,'workbench.json'),Object.fromEntries(Object.keys(defaults()).map(key=>[key,c[key]])));
-    const job={id,ownerPid:process.pid,source:c.source||null,createdAt:new Date().toISOString(),phase:'starting',config,metrics:[],manifest:null};
+    const job={id,ownerPid:process.pid,source:c.source||null,createdAt:new Date().toISOString(),phase:'preparing',config,metrics:[],manifest:null};
     write(job);
     const configFile=path.join(root,'jobs',`${id}.input.json`); atomic(configFile,config);
-    // Python bytecode inside a signed .app invalidates its resource seal after training.
-    const child=spawn(python,['-B',path.join(__dirname,'training/train.py'),configFile],{stdio:['ignore','pipe','pipe'],env:{...process.env,PYTORCH_ENABLE_MPS_FALLBACK:'0'},windowsHide:true});
-    children.set(id,{child,job}); let buffer='';
-    let graceTimer;
-    const timer=setTimeout(()=>{fs.writeFileSync(config.cancel_file,'time budget');
-      graceTimer=setTimeout(()=>{child.kill('SIGKILL');job.phase='failed';job.error='Training stop timed out; resume from the last saved checkpoint.';write(job);},30000);
-    },config.max_seconds*1000);
-    child.stdout.on('data',chunk=>{
-      buffer+=chunk;
-      if(buffer.length>1024*1024) {child.kill();return;}
-      let end;
-      while((end=buffer.indexOf('\n'))>=0) {
-        const line=buffer.slice(0,end);buffer=buffer.slice(end+1);
-        try {
-          const event=JSON.parse(line);
-          if(job.phase === 'cancelled' || job.phase === 'failed') continue;
-          if(typeof event.phase==='string') job.phase=event.phase;
-          if(event.iteration) {job.metrics.push(event);job.progress=(event.session_iteration??event.iteration)/config.iterations;}
-          if(event.checkpoint) job.checkpoint=event.checkpoint;
-          if(event.restored_simulation!==undefined)job.restored_simulation=event.restored_simulation;
-          if(event.baseline) job.baseline=event.baseline;
-          if(event.manifest) job.manifest=event.manifest;
-          if(event.error) job.error=event.error;
-          write(job);
-        } catch {}
-      }
-    });
-    child.stderr.on('data',()=>{}); // User script output never enters the MCP transport.
-    child.on('error',()=>{job.phase='failed';job.error='Unable to launch Python; select a Python environment with torch, mujoco, onnx and onnxruntime.';write(job);});
-    child.on('close',code=>{
-      clearTimeout(timer);clearTimeout(graceTimer);children.delete(id);
-      if(!['completed','cancelled','failed'].includes(job.phase)) {job.phase='failed';job.error='Training process exited before completion. Check Python dependencies and scripts.';}
-      if(code!==0&&job.phase==='completed') {job.phase='failed';job.error='Training process exited unsuccessfully';}
-      job.finishedAt=new Date().toISOString(); write(job);
-    });
+    const controller=new AbortController();preparing.set(id,{controller,job});
+    const failed=error=>{
+      preparing.delete(id);
+      if(job.phase==='cancelled')return;
+      if(fs.existsSync(config.cancel_file)){job.phase='cancelled';job.finishedAt=new Date().toISOString();write(job);return;}
+      job.phase='failed';job.error=error.message;job.finishedAt=new Date().toISOString();write(job);
+    };
+    // Return the queued job immediately, keeping UI/MCP polling and cancellation
+    // available while first-run downloads finish. The training budget starts later.
+    function launch(result) {
+      preparing.delete(id);
+      if(controller.signal.aborted||fs.existsSync(config.cancel_file)){if(job.phase!=='cancelled'){job.phase='cancelled';job.finishedAt=new Date().toISOString();write(job);}return;}
+      Object.assign(config,result);atomic(configFile,config);job.phase='starting';write(job);
+      // Python bytecode inside a signed .app invalidates its resource seal after training.
+      const child=spawn(config.pythonPath,['-B',path.join(__dirname,'training/train.py'),configFile],{stdio:['ignore','pipe','pipe'],env:{...process.env,PYTORCH_ENABLE_MPS_FALLBACK:'0'},windowsHide:true});
+      children.set(id,{child,job}); let buffer='';
+      let graceTimer;
+      const timer=setTimeout(()=>{fs.writeFileSync(config.cancel_file,'time budget');
+        graceTimer=setTimeout(()=>{child.kill('SIGKILL');job.phase='failed';job.error='Training stop timed out; resume from the last saved checkpoint.';write(job);},30000);
+      },config.max_seconds*1000);
+      child.stdout.on('data',chunk=>{
+        buffer+=chunk;
+        if(buffer.length>1024*1024) {child.kill();return;}
+        let end;
+        while((end=buffer.indexOf('\n'))>=0) {
+          const line=buffer.slice(0,end);buffer=buffer.slice(end+1);
+          try {
+            const event=JSON.parse(line);
+            if(job.phase === 'cancelled' || job.phase === 'failed') continue;
+            if(typeof event.phase==='string') job.phase=event.phase;
+            if(event.iteration) {job.metrics.push(event);job.progress=(event.session_iteration??event.iteration)/config.iterations;}
+            if(event.checkpoint) job.checkpoint=event.checkpoint;
+            if(event.restored_simulation!==undefined)job.restored_simulation=event.restored_simulation;
+            if(event.baseline) job.baseline=event.baseline;
+            if(event.manifest) job.manifest=event.manifest;
+            if(event.error) job.error=event.error;
+            write(job);
+          } catch {}
+        }
+      });
+      child.stderr.on('data',()=>{}); // User script output never enters the MCP transport.
+      child.on('error',()=>{job.phase='failed';job.error='Unable to launch Python; select a Python environment with torch, mujoco, onnx and onnxruntime.';write(job);});
+      child.on('close',code=>{
+        clearTimeout(timer);clearTimeout(graceTimer);children.delete(id);
+        if(!['completed','cancelled','failed'].includes(job.phase)) {job.phase='failed';job.error='Training process exited before completion. Check Python dependencies and scripts.';}
+        if(code!==0&&job.phase==='completed') {job.phase='failed';job.error='Training process exited unsuccessfully';}
+        job.finishedAt=new Date().toISOString(); write(job);
+      });
+    }
+    try{
+      const result=prepare(config,message=>{if(fs.existsSync(config.cancel_file)){cancel(id);return;}if(!controller.signal.aborted){job.preparation=message;write(job);}},controller.signal);
+      if(result?.then)result.then(launch).catch(failed);else launch(result);
+    }catch(error){failed(error);}
     return summary(job);
   }
-  function cancel(id) { const job=read(id); if(!['completed','failed','cancelled'].includes(job.phase)) fs.writeFileSync(job.config.cancel_file,'cancel'); return summary(job); }
+  function cancel(id) { const pending=preparing.get(id);if(pending){pending.controller.abort();pending.job.phase='cancelled';pending.job.finishedAt=new Date().toISOString();write(pending.job);preparing.delete(id);return summary(pending.job);} const job=read(id); if(!['completed','failed','cancelled'].includes(job.phase)){fs.writeFileSync(job.config.cancel_file,'cancel');if(job.phase==='preparing'){job.phase='cancelled';job.finishedAt=new Date().toISOString();write(job);}} return summary(job); }
   function artifact(id,kind='policy.onnx') {
     if(!['policy.onnx','manifest.json','preview.json','checkpoint.pt'].includes(kind)) throw new Error('Unknown artifact');
     const job=read(id); if(kind==='checkpoint.pt') {if(!resumeStatus(job).available)throw new Error('No resumable checkpoint');}
@@ -198,7 +230,7 @@ function createLabJobs(options = {}) {
     atomic(path.join(root,'active-policy.json'),next);return next;
   }
   function rollback() {const old=activation();if(old.previous)artifact(old.previous);const next={current:old.previous||null,previous:null,updatedAt:new Date().toISOString()};atomic(path.join(root,'active-policy.json'),next);return next;}
-  function dispose() {for(const {child,job} of children.values()) {fs.writeFileSync(job.config.cancel_file,'shutdown');child.kill();}children.clear();}
-  return {defaults,actionDefaults,headstandDefaults,holdDefaults,start,resume,list,get:id=>summary(read(id)),cancel,artifact,preview,actions,addAction,removeAction,activation,apply,rollback,dispose};
+  function dispose() {environmentController?.abort();for(const id of preparing.keys())cancel(id);for(const {child,job} of children.values()) {fs.writeFileSync(job.config.cancel_file,'shutdown');child.kill();}children.clear();}
+  return {python:()=>process.env.DUCK_LAB_PYTHON||defaults().pythonPath||environmentState.pythonPath||setupRuntime.managedPython(setupModule.defaultDevice(options.platform,options.arch)),setup,environment:()=>({...environmentState}),defaults,actionDefaults,headstandDefaults,holdDefaults,start,resume,list,get:id=>summary(read(id)),cancel,artifact,preview,actions,addAction,removeAction,activation,apply,rollback,dispose};
 }
 module.exports={createLabJobs};

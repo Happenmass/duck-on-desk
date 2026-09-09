@@ -25,7 +25,7 @@ test('fresh MCP robot drafts inherit the official full-finetuning settings and b
     for(const artifact of ['training.json','reward.py','strategy.py']) {
       const saved=await call('lab_experiment_read',{experiment_id:draft.id,artifact});
       const expected=fs.readFileSync(path.join(here,'presets/official-finetune',artifact),'utf8');
-      if(artifact==='training.json')assert.deepEqual(JSON.parse(saved.content),JSON.parse(expected));
+      if(artifact==='training.json'){const e=JSON.parse(expected);e.training_device=d.training_device;e.inference_device=d.inference_device;assert.deepEqual(JSON.parse(saved.content),e);}
       else {assert.equal(saved.content,expected);assert.equal(saved.content,d[artifact==='reward.py'?'reward':'strategy']);}
     }
     assert.equal((await call('lab_training_list')).jobs.length,0,'Reading defaults and creating a draft do not start training');
@@ -42,7 +42,7 @@ test('MCP protocol: docs, versioned writes, invalid drafts, CPU and available GP
   const { stdout } = await promisify(execFile)(process.execPath, [fileURLToPath(new URL('../first-round.mjs', import.meta.url))], { env: process.env, timeout: 170000, maxBuffer: 1024 * 1024 });
   const report = JSON.parse(stdout);
   assert.equal(report.ok, true);
-  assert.equal(report.tool_count, 16);
+  assert.equal(report.tool_count, 18);
   assert.ok(report.call_count >= 20);
 });
 
@@ -64,5 +64,22 @@ test('MCP validates 2000-iteration drafts for all lesson tasks and rejects 2001 
    const rejected=await client.callTool({name:'lab_experiment_validate',arguments:{experiment_id:draft.id}});assert.equal(rejected.isError,true);assert.equal(rejected.structuredContent.code,'INVALID_CONFIG');
   }
   assert.equal((await call('lab_training_list')).jobs.length,0);
+ }finally{await client.close();fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('MCP environment setup returns progress and completes before backend inspection without starting a job', {timeout:150000}, async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'duck-setup-protocol-'));
+ const client=new Client({name:'environment-regression',version:'1.0.0'});
+ const here=fileURLToPath(new URL('../',import.meta.url));
+ const transport=new StdioClientTransport({command:process.execPath,args:[path.join(here,'server.mjs')],env:{...process.env,DUCK_LAB_HOME:root},stderr:'pipe'});
+ const call=async(name,args={})=>{const r=await client.callTool({name,arguments:args});assert.ok(!r.isError,JSON.stringify(r));return r.structuredContent;};
+ try{
+  await client.connect(transport);
+  const initial=await call('lab_environment_setup',{training_device:'cpu',inference_device:'cpu',...(process.env.DUCK_LAB_PYTHON?{pythonPath:process.env.DUCK_LAB_PYTHON}:{})});
+  assert.equal(initial.phase,'preparing');
+  let state=initial;
+  for(let i=0;i<120&&state.phase==='preparing';i++){await new Promise(r=>setTimeout(r,1000));state=await call('lab_environment_status');}
+  assert.equal(state.phase,'ready',state.message);assert.ok(state.pythonPath);
+  await call('lab_backends_inspect');assert.equal((await call('lab_training_list')).jobs.length,0);
  }finally{await client.close();fs.rmSync(root,{recursive:true,force:true});}
 });

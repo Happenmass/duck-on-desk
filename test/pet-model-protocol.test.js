@@ -72,3 +72,13 @@ test('missing pinned models download once into the user cache; failures and unkn
   assert.equal(resolvePolicyRequest(bad,{homeDir}).status,404);
   await ensureCachedPolicy(bad,{homeDir,fetchImpl});assert.equal(resolvePolicyRequest(bad,{homeDir}).status,200);
 });
+
+test('packaged protocol resolves shared cache beside app.asar without relying on host Electron resourcesPath',t=>{
+ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),vm=require('node:vm');
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'duck-packaged-policy-'));t.after(()=>fs.rmSync(tmp,{recursive:true,force:true}));
+ const directory=path.join(tmp,'resources/app.asar/src/robots/duck');fs.mkdirSync(directory,{recursive:true});
+ const cache=path.join(tmp,'resources/robot-lab-mcp/policy-cache.cjs');fs.mkdirSync(path.dirname(cache));fs.writeFileSync(cache,'module.exports={SCHEME:"pet-model",fixture:true};');
+ const source=fs.readFileSync(path.join(__dirname,'../src/robots/duck/pet-model-protocol.js'),'utf8');
+ const sandbox={__dirname:directory,require,module:{exports:{}}};vm.runInNewContext(source,sandbox);
+ assert.equal(sandbox.module.exports.fixture,true);
+});

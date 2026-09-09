@@ -30,7 +30,7 @@ function config(record) {
 }
 function worker(payload) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.env.DUCK_LAB_PYTHON || 'python3', [path.join(here, 'worker.py')], {
+    const child = spawn(jobs.python(), [path.join(here, 'worker.py')], {
       env: { ...process.env, PYTORCH_ENABLE_MPS_FALLBACK: '0' }, stdio: ['pipe', 'pipe', 'pipe'],
     });
     let stdout = '', bytes = 0, failure;
@@ -43,7 +43,7 @@ function worker(payload) {
     });
     child.stderr.on('data', chunk => { bytes += chunk.length; if (bytes > 1024 * 1024) stop('OUTPUT_LIMIT', 'Worker output exceeded 1 MiB.'); });
     child.stdin.on('error', () => {});
-    child.once('error', () => { clearTimeout(timer); reject(new LabError('PYTHON_UNAVAILABLE', 'Set DUCK_LAB_PYTHON to a Python interpreter with PyTorch installed.')); });
+    child.once('error', () => { clearTimeout(timer); reject(new LabError('PYTHON_UNAVAILABLE', 'Run lab_environment_setup first, or set DUCK_LAB_PYTHON to a Python interpreter with training dependencies installed.')); });
     child.once('close', code => {
       clearTimeout(timer);
       if (failure) return reject(failure);
@@ -83,6 +83,8 @@ register('lab_docs_read', 'Read API documentation by ID with line pagination.', 
 for (const [id, text] of Object.entries(docs)) {
   server.registerResource(id, `lab://docs/${id}`, { mimeType: 'text/markdown', description: `Robot Lab ${id}` }, async uri => ({ contents: [{ uri: uri.href, mimeType: 'text/markdown', text }] }));
 }
+register('lab_environment_setup', 'Download pinned model assets and install an isolated Python/PyTorch environment for selected devices. Returns immediately; poll lab_environment_status. Does not start training or modify system/custom Python. Downloads from Hugging Face, GitHub, PyPI and PyTorch.', {training_device:device,inference_device:device,pythonPath:z.string().max(4096).optional()}, input=>jobs.setup(input), false, true);
+register('lab_environment_status', 'Read environment setup progress, readiness or retryable failure.', {}, ()=>jobs.environment());
 register('lab_backends_inspect', 'Inspect actual local PyTorch devices. This does not run user scripts or start robot training.', {}, () => worker({ operation: 'inspect' }));
 register('lab_experiment_create', 'Create a versioned draft. mode=robot uses real MuJoCo PPO reward/network templates; probe is a synthetic device check. Does not execute code.', { name: z.string().min(1).max(120), mode: z.enum(['probe','robot']).default('probe'), task:z.enum(['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance']).default('microduck-flat-walk') }, ({ name, mode, task }) => {
   if (mode === 'probe') { if(task!=='microduck-flat-walk')throw new LabError('WRONG_MODE','Action training requires mode=robot.');return store.create(name, templates); }
@@ -117,7 +119,6 @@ register('lab_training_start', 'EXECUTES this exact saved robot draft with local
   if (record.revision !== expected_revision) throw new LabError('REVISION_CONFLICT', 'Reread the draft before running a changed revision.');
   const settings = config(record);
   if (settings.mode !== 'robot' || settings.physics_backend !== 'mujoco_cpu') throw new LabError('WRONG_MODE', 'Real training requires mode=robot and physics_backend=mujoco_cpu.');
-  await worker({operation:'validate', files:record.files, robot:true});
   const {max_iterations, mode, schema_version, task, algorithm, physics_backend, ...options} = settings;
   const job = jobs.start({...options,hold_episode_steps:options.hold_episode_steps??400,reset_on_pose_loss:options.reset_on_pose_loss??true,ppo_profile:options.ppo_profile||'legacy-v1',policy_initialization:options.policy_initialization||'official',task,iterations:max_iterations,reward:record.files['reward.py'],strategy:record.files['strategy.py'],source:{experiment_id,revision:record.revision}});
   return {...job,experiment_id,revision:record.revision};
