@@ -511,7 +511,11 @@ class DuckRuntime {
     await this.#labInFlight;
     if (action === "reset") { this.#resetPhysics(); this.#labManual = null; this.#labPolicySample = false; }
     else if (action === "step") await this.#controlStep();
-    else if (action === "velocity") { this.#labCommand[0] = clamp(Number(value.forward)||0, -0.2, 0.25); this.#labCommand[2] = clamp(Number(value.turn)||0, -1, 1); }
+    else if (action === "velocity") {
+      const forward=Number(value.forward), turn=Number(value.turn);
+      if (!Number.isFinite(forward)||!Number.isFinite(turn)) throw new Error("Invalid velocity command");
+      this.#labCommand[0] = forward; this.#labCommand[2] = turn;
+    }
     else if (action === "joint") {
       this.#cancelAction();
       const index = JOINT_NAMES.indexOf(value.name); if (index < 0 || !Number.isFinite(value.position)) throw new Error("Invalid joint target");

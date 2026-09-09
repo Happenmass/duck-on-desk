@@ -18,15 +18,16 @@ export function createLessons({notice}) {
   for(const button of document.querySelectorAll('[data-concept]'))button.addEventListener('click',()=>{for(const item of document.querySelectorAll('[data-concept]'))item.classList.toggle('active',item===button);el('concept-detail').textContent=describe(button.dataset.concept);});
   for(const button of document.querySelectorAll('[data-quiz]'))button.addEventListener('click',()=>{el('quiz-feedback').hidden=false;el('quiz-feedback').textContent=button.dataset.quiz==='no'?'对。原地站着也能得分，所以还要奖励接近目标速度。':'不一定。站稳和向前走是两件事；只奖励站稳，原地不动也可能拿到高分。';});
   el('target-speed').addEventListener('input',()=>{const speed=Number(el('target-speed').value);el('target-speed-help').textContent=Number.isFinite(speed)?`${speed} 米 / 秒，也就是每秒前进约 ${(speed*100).toFixed(0)} 厘米。`:'';});
-  for(const key of ['speed','upright','effort'])el(`reward-${key}`).addEventListener('input',()=>{el(`reward-${key}-value`).textContent=Number(el(`reward-${key}`).value).toFixed(key==='effort'?3:1);el('reward-builder-status').textContent='评分草稿已调整，点击按钮后才写入训练脚本。';});
+  for(const key of ['speed','upright','effort'])el(`reward-${key}`).addEventListener('input',()=>{el(`reward-${key}-value`).textContent=String(Number(el(`reward-${key}`).value));el('reward-builder-status').textContent='评分草稿已调整，点击按钮后才写入训练脚本。';});
   el('use-reward').addEventListener('click',()=>{
     const speed=Number(el('reward-speed').value),upright=Number(el('reward-upright').value),effort=Number(el('reward-effort').value);
+    if (![speed,upright,effort].every(Number.isFinite)) {notice('奖励权重需要填写有效数字。',true);return;}
     el('reward').value=`def reward_environment(state, action, next_state):\n    """Lesson reward: track speed, stay upright and retain the initial heading."""\n    import torch\n    error = next_state['forward_velocity'] - next_state['target_speed']\n    tracking = torch.exp(-error.square() / 0.04)\n    upright = next_state['upright'].clamp(0, 1)\n    alive = (next_state['height'] > 0.06).float()\n    heading = next_state['heading_error']\n    turning = next_state['yaw_rate']\n    return (${speed} * tracking + ${upright} * upright + 0.5 * alive\n            - ${effort} * action.square().sum(-1)\n            - 5.0 * heading.square() - 0.02 * turning.square())\n`;
-    el('reward-script-status').textContent='已从滑块生成奖励草稿，下一次训练会使用下方脚本。';
+    el('reward-script-status').textContent='已从评分参数生成奖励草稿，下一次训练会使用下方脚本。';
     el('reward-builder-status').textContent='已写入下方脚本，下一次训练会使用它。';notice('评分规则已写入奖励脚本，下一次训练生效。');
   });
   el('reward').addEventListener('input',()=>{
-    el('reward-builder-status').textContent='你正在使用手写脚本；上方滑块不会自动覆盖它。';
+    el('reward-builder-status').textContent='你正在使用手写脚本；上方评分参数不会自动覆盖它。';
     el('reward-script-status').textContent='奖励草稿已修改。下一次开始训练时使用；正在运行的任务不受影响。';
   });
   el('edit-reward').addEventListener('click',()=>{

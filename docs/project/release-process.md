@@ -13,6 +13,8 @@ CI verifies the actual files against updater metadata before uploading artifacts
 
 ## Draft Release
 
+1.1.3 removes application-imposed training parameter caps and the two-hour cutoff. Validate large iteration/environment/rollout settings through UI, IPC and MCP; new and resumed runs must preserve requested values. Run `smoke-lab-training-limit.cjs` on the actual packaged app and `test_parameter_freedom.py` for real short training/export. Keep necessary numeric validation and model/algorithm constraints.
+
 1.1.2 fixes cold-cache training and adds managed Python setup. CI must run `smoke-training-setup.cjs` before model prefetch and again with `--packaged`; both execute real CPU training and ONNX export on the host platform. Check the UI preparation state and automatic/custom Python paths. CUDA hardware remains a separate validation gate.
 
 1.1.1 defaults the hold lesson to 30 simulated seconds per reset, with a visible 0–1000 second input. Validate the 1500-step boundary, zero disabling resets, per-lesson drafts, and unchanged historical resume settings. Packages contain no ONNX weights; pinned models download on demand to the user cache.
@@ -24,9 +26,9 @@ CI verifies the actual files against updater metadata before uploading artifacts
 - Verify the packaged Robot Lab tutorial, joint controls, charts, optional preview, MPS recipe and direction-aware reward. Validate the external packaged MCP server, then replace the local installed bundle.
 - Keep the verified 1.0.0 ZIP for rollback. Test packaged modules using a virtual-only harness; do not load `src/main.js` or hardware adapters for smoke checks.
 
-### v1.1.2 Draft Smoke Checklist
+### v1.1.3 Draft Smoke Checklist
 
-- Confirm the packaged app shows `1.1.2` metadata and Settings -> About shows `v1.1.2`, sourced from app.getVersion().
+- Confirm the packaged app shows `1.1.3` metadata and Settings -> About shows `v1.1.3`, sourced from app.getVersion().
 - Inspect actual package resources: Robot Lab page, preload, external MCP scripts/dependencies and native MuJoCo MJCF/meshes must be present.
 - On an isolated virtual profile, verify About's developer mode defaults off, saves on/off, opens and closes the lab, and offers re-entry after window close. Author/maintainer/contributor are Happenmass; upstream credits remain available.
 - Verify script authoring, real MPS training, candidate evaluation, ONNX export, actual pet renderer activation and rollback using a virtual-only test process. Do not load hardware adapters merely to validate the release UI.

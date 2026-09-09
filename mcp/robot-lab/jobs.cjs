@@ -7,8 +7,6 @@ const { spawn } = require('node:child_process');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const COMMIT = '183f99a40bd7308da3e848de961ed32bb02624a5';
 const CONTRACT = 'duck-lab-legs-v1';
-const MAX_ITERATIONS = 2000;
-const TRAINING_TIMEOUT_SECONDS = 2 * 60 * 60;
 const jobId = id => { if (!/^run_[a-f0-9-]{36}$/.test(id || '')) throw new Error('Invalid training run ID'); return id; };
 function atomic(file, data) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -70,7 +68,7 @@ function createLabJobs(options = {}) {
   function resume(id, input={}) {
     const parent=read(id),status=resumeStatus(parent);
     if(!status.available)throw new Error(status.reason);
-    const iterations=number(input,'additional_iterations',1,MAX_ITERATIONS,true);
+    const iterations=number(input,'additional_iterations',1,true);
     const checkpoint=path.join(weights,jobId(id),'checkpoint.pt');
     const sha=hash(fs.readFileSync(checkpoint));
     if(parent.checkpoint?.sha256&&sha!==parent.checkpoint.sha256)throw new Error('Checkpoint hash mismatch');
@@ -102,8 +100,10 @@ function createLabJobs(options = {}) {
     return {...actionDefaults(),task:'microduck-headstand-hold',action_name:'倒立保持',hold_episode_steps:1500,reset_on_pose_loss:false,policy_initialization:'random',learning_rate:0.0003,
       reward:fs.readFileSync(path.join(__dirname,'training/headstand-hold-reward.py'),'utf8')};
   }
-  function number(config,key,min,max,integer=false) {
-    const value=Number(config[key]); if (!Number.isFinite(value)||value<min||value>max||(integer&&!Number.isInteger(value))) throw new Error(`Invalid ${key}: ${min}..${max}`); return value;
+  function number(config,key,min,integer=false) {
+    const value=Number(config[key]);
+    if (!Number.isFinite(value)||value<min||(integer&&!Number.isInteger(value))) throw new Error(`Invalid ${key}: finite ${integer?'integer':'number'}${Number.isFinite(min)?` >= ${min}`:''}`);
+    return value;
   }
   function start(input={}, resumed=null) {
     const c={...(input.task==='microduck-headstand-hold'?holdDefaults():input.task==='microduck-headstand'?headstandDefaults():input.task==='microduck-headstand-dance'?actionDefaults():defaults()),...input};
@@ -118,10 +118,10 @@ function createLabJobs(options = {}) {
     const python=String(c.pythonPath || process.env.DUCK_LAB_PYTHON || '');
     if (/[\0\r\n]/.test(python)) throw new Error('Invalid Python executable');
     const id=`run_${randomUUID()}`;
-    const config={task,hold_episode_steps:number(c,'hold_episode_steps',0,50000,true),reset_on_pose_loss:c.reset_on_pose_loss,ppo_profile:c.ppo_profile,training_method:c.policy_initialization==='random'?'random-actor-ppo-v1':'official-full-finetune-v1',policy_initialization:c.policy_initialization,action_name:String(c.action_name||'倒立跳街舞').slice(0,40),training_device:c.training_device,inference_device:c.inference_device,reward:c.reward,strategy:c.strategy,
-      iterations:number(c,'iterations',1,MAX_ITERATIONS,true),environments:number(c,'environments',1,32,true),rollout_steps:number(c,'rollout_steps',8,256,true),
-      learning_rate:number(c,'learning_rate',0.000001,0.01),target_speed:number(c,'target_speed',0,0.25),seed:number(c,'seed',0,2147483647,true),
-      asset_dir:assetDir,base_policy:currentBase(),output_dir:path.join(weights,id),cancel_file:path.join(root,'jobs',`${id}.cancel`),max_seconds:TRAINING_TIMEOUT_SECONDS,
+    const config={task,hold_episode_steps:number(c,'hold_episode_steps',0,true),reset_on_pose_loss:c.reset_on_pose_loss,ppo_profile:c.ppo_profile,training_method:c.policy_initialization==='random'?'random-actor-ppo-v1':'official-full-finetune-v1',policy_initialization:c.policy_initialization,action_name:String(c.action_name||'倒立跳街舞').slice(0,40),training_device:c.training_device,inference_device:c.inference_device,reward:c.reward,strategy:c.strategy,
+      iterations:number(c,'iterations',1,true),environments:number(c,'environments',1,true),rollout_steps:number(c,'rollout_steps',1,true),
+      learning_rate:number(c,'learning_rate',0),target_speed:number(c,'target_speed',-Infinity),seed:number(c,'seed',0,true),
+      asset_dir:assetDir,base_policy:currentBase(),output_dir:path.join(weights,id),cancel_file:path.join(root,'jobs',`${id}.cancel`),
       preview_control_file:path.join(root,'jobs',`${id}.preview-watch.json`),preview_file:path.join(root,'jobs',`${id}.live.json`),pythonPath:python,...resumed};
     if(!c.source && task==='microduck-flat-walk')atomic(path.join(root,'workbench.json'),Object.fromEntries(Object.keys(defaults()).map(key=>[key,c[key]])));
     const job={id,ownerPid:process.pid,source:c.source||null,createdAt:new Date().toISOString(),phase:'preparing',config,metrics:[],manifest:null};
@@ -135,7 +135,7 @@ function createLabJobs(options = {}) {
       job.phase='failed';job.error=error.message;job.finishedAt=new Date().toISOString();write(job);
     };
     // Return the queued job immediately, keeping UI/MCP polling and cancellation
-    // available while first-run downloads finish. The training budget starts later.
+    // available while first-run downloads finish.
     function launch(result) {
       preparing.delete(id);
       if(controller.signal.aborted||fs.existsSync(config.cancel_file)){if(job.phase!=='cancelled'){job.phase='cancelled';job.finishedAt=new Date().toISOString();write(job);}return;}
@@ -143,10 +143,6 @@ function createLabJobs(options = {}) {
       // Python bytecode inside a signed .app invalidates its resource seal after training.
       const child=spawn(config.pythonPath,['-B',path.join(__dirname,'training/train.py'),configFile],{stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8',PYTORCH_ENABLE_MPS_FALLBACK:'0'},windowsHide:true});
       children.set(id,{child,job}); let buffer='';
-      let graceTimer;
-      const timer=setTimeout(()=>{fs.writeFileSync(config.cancel_file,'time budget');
-        graceTimer=setTimeout(()=>{child.kill('SIGKILL');job.phase='failed';job.error='Training stop timed out; resume from the last saved checkpoint.';write(job);},30000);
-      },config.max_seconds*1000);
       child.stdout.on('data',chunk=>{
         buffer+=chunk;
         if(buffer.length>1024*1024) {child.kill();return;}
@@ -170,7 +166,7 @@ function createLabJobs(options = {}) {
       child.stderr.on('data',()=>{}); // User script output never enters the MCP transport.
       child.on('error',()=>{job.phase='failed';job.error='Unable to launch Python; select a Python environment with torch, mujoco, onnx and onnxruntime.';write(job);});
       child.on('close',code=>{
-        clearTimeout(timer);clearTimeout(graceTimer);children.delete(id);
+        children.delete(id);
         if(!['completed','cancelled','failed'].includes(job.phase)) {job.phase='failed';job.error='Training process exited before completion. Check Python dependencies and scripts.';}
         if(code!==0&&job.phase==='completed') {job.phase='failed';job.error='Training process exited unsuccessfully';}
         job.finishedAt=new Date().toISOString(); write(job);

@@ -46,7 +46,7 @@ test('MCP protocol: docs, versioned writes, invalid drafts, CPU and available GP
   assert.ok(report.call_count >= 20);
 });
 
-test('MCP validates 2000-iteration drafts for all lesson tasks and rejects 2001 before execution', {timeout:20000}, async()=>{
+test('MCP validates unrestricted training parameters for all lessons and rejects invalid numeric inputs', {timeout:20000}, async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'duck-iteration-protocol-'));
  const here=fileURLToPath(new URL('../',import.meta.url));const client=new Client({name:'iteration-limit-check',version:'1.0.0'});
  const transport=new StdioClientTransport({command:process.execPath,args:[path.join(here,'server.mjs')],env:{...process.env,DUCK_LAB_HOME:root},stderr:'pipe'});
@@ -54,12 +54,19 @@ test('MCP validates 2000-iteration drafts for all lesson tasks and rejects 2001 
  try{
   await client.connect(transport);
   for(const task of ['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance']){
-   let draft=await call('lab_experiment_create',{name:'2000 iteration validation',mode:'robot',task});
+   let draft=await call('lab_experiment_create',{name:'Unrestricted parameter validation',mode:'robot',task});
    const config=JSON.parse((await call('lab_experiment_read',{experiment_id:draft.id,artifact:'training.json'})).content);assert.equal(config.max_iterations,200);
-   config.max_iterations=2000;
+   Object.assign(config,{max_iterations:100000,environments:4096,rollout_steps:1024,hold_episode_steps:100000,learning_rate:.1,target_speed:1.5,seed:4294967296});
    draft=await call('lab_experiment_write',{experiment_id:draft.id,expected_revision:draft.revision,artifact:'training.json',content:JSON.stringify(config)});
    await call('lab_experiment_validate',{experiment_id:draft.id});
-   config.max_iterations=2001;
+   for(const environments of [0,-1,1.5]){
+    config.environments=environments;
+    draft=await call('lab_experiment_write',{experiment_id:draft.id,expected_revision:draft.revision,artifact:'training.json',content:JSON.stringify(config)});
+    const invalid=await client.callTool({name:'lab_experiment_validate',arguments:{experiment_id:draft.id}});
+    assert.equal(invalid.isError,true);assert.equal(invalid.structuredContent.code,'INVALID_CONFIG');
+   }
+   config.environments=4096;
+   config.max_iterations=0;
    await call('lab_experiment_write',{experiment_id:draft.id,expected_revision:draft.revision,artifact:'training.json',content:JSON.stringify(config)});
    const rejected=await client.callTool({name:'lab_experiment_validate',arguments:{experiment_id:draft.id}});assert.equal(rejected.isError,true);assert.equal(rejected.structuredContent.code,'INVALID_CONFIG');
   }

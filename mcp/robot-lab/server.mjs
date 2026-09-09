@@ -18,11 +18,11 @@ const device = z.enum(['cpu', 'mps', 'cuda']);
 const configSchema = z.object({
   schema_version: z.literal(1), mode: z.enum(['probe', 'robot']).optional(), task: z.enum(['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance']), algorithm: z.literal('ppo'),
   training_device: device, inference_device: device, policy_initialization:z.enum(['official','random']).optional(), ppo_profile:z.enum(['legacy-v1','local-ppo-v2']).optional(),
-  reset_on_pose_loss:z.boolean().optional(), hold_episode_steps:z.number().int().min(0).max(50000).optional(),
+  reset_on_pose_loss:z.boolean().optional(), hold_episode_steps:z.number().int().min(0).optional(),
   physics_backend: z.enum(['mujoco_cpu', 'mujoco_warp_cuda']),
-  seed: z.number().int().min(0).max(2147483647), max_iterations: z.number().int().min(1).max(2000),
-  environments: z.number().int().min(1).max(32).optional(), rollout_steps: z.number().int().min(8).max(256).optional(),
-  learning_rate: z.number().min(0.000001).max(0.01).optional(), target_speed: z.number().min(0).max(0.25).optional(),
+  seed: z.number().int().min(0), max_iterations: z.number().int().min(1),
+  environments: z.number().int().min(1).optional(), rollout_steps: z.number().int().min(1).optional(),
+  learning_rate: z.number().finite().min(0).optional(), target_speed: z.number().finite().optional(),
 }).strict();
 function config(record) {
   try { return configSchema.parse(JSON.parse(record.files['training.json'])); }
@@ -112,7 +112,7 @@ register('lab_backend_probe', 'EXECUTES the saved Python scripts with local user
   return { ...await worker({ operation: 'probe', files: record.files, device, seed: settings.seed }), experiment_id, revision: record.revision, artifacts: store.summary(record).artifacts };
 }, false, true);
 register('lab_training_defaults', 'Read real robot PPO settings and editable reward/network templates.', {task:z.enum(['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance']).default('microduck-flat-walk')}, ({task}) => task==='microduck-headstand-hold'?jobs.holdDefaults():task==='microduck-headstand'?jobs.headstandDefaults():task==='microduck-headstand-dance'?jobs.actionDefaults():jobs.defaults());
-register('lab_training_start', 'EXECUTES this exact saved robot draft with local user privileges, not a sandbox. Starts bounded real MuJoCo CPU rollouts with PyTorch MPS/CUDA/CPU training and evaluation, checkpoint and ONNX export. No cloud jobs or device fallback.', {
+register('lab_training_start', 'EXECUTES this exact saved robot draft with local user privileges, not a sandbox. Starts real MuJoCo CPU rollouts with PyTorch MPS/CUDA/CPU training and evaluation, checkpoint and ONNX export. No cloud jobs or device fallback.', {
   experiment_id: z.string(), expected_revision: z.number().int().positive(),
 }, async ({experiment_id, expected_revision}) => {
   const record = store.read(experiment_id);
@@ -124,7 +124,7 @@ register('lab_training_start', 'EXECUTES this exact saved robot draft with local
   return {...job,experiment_id,revision:record.revision};
 }, false, true);
 register('lab_training_resume', 'Continue a stopped/completed compatible-network run from its saved PPO checkpoint in a new run. Restores actor, critic and optimizer; preserves the original reward, settings and exploration schedule. additional_iterations adds to saved progress. Executes the original trusted scripts locally.', {
-  run_id:z.string(), additional_iterations:z.number().int().min(1).max(2000),
+  run_id:z.string(), additional_iterations:z.number().int().min(1),
 }, ({run_id,additional_iterations}) => jobs.resume(run_id,{additional_iterations}), false, true);
 register('lab_training_list', 'List recent real training jobs shared with the Robot Lab window.', {}, () => ({jobs:jobs.list()}));
 register('lab_training_get', 'Read real rollout progress, evaluation, export manifest and failures.', {run_id:z.string()}, ({run_id}) => jobs.get(run_id));

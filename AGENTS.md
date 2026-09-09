@@ -24,6 +24,7 @@ npm start · npm test · npm run build:mac · npm run build:win:all · npm run i
 - 设置 store 是唯一真相，controller 是唯一写入者
 - `~/.claude/settings.json` 的所有进程内 mutation 必须经 `src/state/claude-hook-operations.js` 串行队列
 - 不得把 ONNX 权重复制进仓库或安装包；只从用户级 Hugging Face 缓存读取
+- 实验室可调训练参数不添加未经用户要求的人为上限；推荐值只作默认值。训练轮数（含续训累计）、并行数量、采样步数与训练时长不设产品上限，只保留数据类型、算法和模型的必要约束。
 
 ## Testing
 

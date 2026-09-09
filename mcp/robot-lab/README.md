@@ -84,7 +84,7 @@ MPS／CUDA 负责 Python 模型训练与推理，物理为 CPU MuJoCo；桌宠�
 
 ## 默认平地行走参数（2026-09-09 开发版）
 
-新工作台和 MCP 的 `mode=robot` 新实验使用[官方全量微调设置](presets/official-finetune/README.md)：200 轮、8 环境、128 步、lr=.0001、seed=2、MPS；行走目标 0.25 m/s。行走默认官方原权重与标准化；倒立保持默认随机权重与固定 mean=0／scale=1，所有策略层可训练。续训恢复所选记录，不重新初始化。旧[修正网络参数包](presets/stable-flat-walk/README.md)及其[实测报告](../../docs/diagnostics/training-parameters-2026-09-09/README.md)保留作历史依据，不能把其稳定性结论套用到新的全量微调。
+以上数值仅为默认值，不限制可调参数上限；新建与续训均不设轮数或两小时时限。新工作台和 MCP 的 `mode=robot` 新实验使用[官方全量微调设置](presets/official-finetune/README.md)：200 轮、32 环境、64 步、lr=.0001、seed=2；设备按平台选择；行走目标 0.25 m/s。行走默认官方原权重与标准化；倒立保持默认随机权重与固定 mean=0／scale=1，所有策略层可训练。续训恢复所选记录，不重新初始化。旧[修正网络参数包](presets/stable-flat-walk/README.md)及其[实测报告](../../docs/diagnostics/training-parameters-2026-09-09/README.md)保留作历史依据，不能把其稳定性结论套用到新的全量微调。
 
 已有工作台继续使用用户保存的配置；`lab_training_defaults` 返回实际生效值。上面的 20 轮集成测试显式使用短测配置，不会随着默认轮数增加而延长。
 

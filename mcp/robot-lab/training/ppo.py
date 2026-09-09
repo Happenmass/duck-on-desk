@@ -60,7 +60,7 @@ def update(actor, critic, exploration, optimizer, observations, actions, old_log
                 kl = float(kl_divergence(old, distribution).sum(-1).mean().cpu())
                 if not math.isfinite(kl): raise ValueError('Non-finite PPO KL')
                 lr = optimizer.param_groups[0]['lr']
-                if kl > 2*cfg['desired_kl']: lr = max(1e-6, lr/1.5)
+                if kl > 2*cfg['desired_kl']: lr = lr/1.5
                 elif 0 < kl < .5*cfg['desired_kl']: lr = min(config['learning_rate'], lr*1.5)
                 for group in optimizer.param_groups: group['lr'] = lr
             ratio = (distribution.log_prob(actions[indices]).sum(-1)-old_logprob[indices]).exp()

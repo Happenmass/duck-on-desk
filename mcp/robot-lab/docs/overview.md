@@ -16,7 +16,7 @@ Coding Agent workflow:
 
 Each draft write increments revision; stale writes and starts return REVISION_CONFLICT. Jobs snapshot the scripts, settings and source revision. Draft history retains ten prior snapshots. DUCK_LAB_HOME defaults to ~/.duck-on-desk/robot-lab; training weights live in ~/.cache/huggingface/microduck-robot-lab/<run_id>.
 
-Python scripts execute with local user privileges, not in a sandbox. Only execute trusted project code. Probe timeout is 45 seconds; real jobs are bounded to 2 hours and 2,000 iterations. The timeout does not guarantee termination of descendants created by user code. The MCP uses stdio, launches no Electron app or hardware adapter, and submits no paid jobs.
+Python scripts execute with local user privileges, not in a sandbox. Only execute trusted project code. Probe timeout is 45 seconds; real training jobs run for the requested iteration count without an application-imposed wall-clock or iteration ceiling. The timeout does not guarantee termination of descendants created by user code. The MCP uses stdio, launches no Electron app or hardware adapter, and submits no paid jobs.
 
 Closing the laboratory window destroys its 3D renderer; jobs continue in their owning App/MCP process. Quitting that process stops its running jobs. Checkpoints are real PyTorch actor/critic/optimizer snapshots; Use lab_training_resume to continue a stopped/completed official-network run. Arbitrary RL algorithm plugins are not implemented.
 

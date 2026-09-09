@@ -21,6 +21,13 @@ app.whenReady().then(async()=>{
   await run(`document.getElementById('training-tab').click();document.querySelector('[data-lesson="2"]').click();document.getElementById('training-environment').open=true;true`);
   assert.equal(await run("document.getElementById('ppo-profile').value"),'local-ppo-v2');
   assert.equal(await run("document.getElementById('environments').value"),String(jobs.defaults().environments));
+  for(const [id,value] of Object.entries({iterations:100000,'resume-iterations':100000,'rollout-steps':1024,'reset-seconds':3600,'learning-rate':.1,'target-speed':1.5,forward:-1,turn:3,'reward-speed':20,'reward-upright':-2,'reward-effort':.2,seed:4294967296})){
+   assert.equal(await run(`document.getElementById('${id}').value=${value};document.getElementById('${id}').checkValidity()`),true,id);
+  }
+  for(const count of [33,64,4096]){
+   assert.equal(await run(`document.getElementById('environments').value=${count};document.getElementById('environments').checkValidity()`),true);
+  }
+  assert.equal(await run("document.getElementById('environments').value=1.5;document.getElementById('environments').checkValidity()"),false);
   await run(`document.getElementById('training-task').value='microduck-headstand-hold';document.getElementById('training-task').dispatchEvent(new Event('change'));true`);
   await until(()=>run("!document.getElementById('training-task').disabled"));
   assert.equal(await run("document.getElementById('policy-initialization').value"),'random');

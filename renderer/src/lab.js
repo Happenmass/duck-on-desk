@@ -22,7 +22,7 @@ const isActionJob=job=>isHeadstandJob(job)||job?.settings?.task==='microduck-hea
 const formFields={'reset-seconds':'hold_episode_steps','ppo-profile':'ppo_profile','policy-initialization':'policy_initialization','training-device':'training_device','inference-device':'inference_device',iterations:'iterations',environments:'environments','rollout-steps':'rollout_steps','target-speed':'target_speed','learning-rate':'learning_rate',seed:'seed',reward:'reward',strategy:'strategy',python:'pythonPath'};
 function updateSamplingSummary(){
   const n=Number(el('environments').value), steps=Number(el('rollout-steps').value);
-  el('sampling-summary').textContent=`每轮收集 ${n} × ${steps} = ${(n*steps).toLocaleString()} 条样本。每只机器人累计模拟 ${(steps*.02).toFixed(2)} 秒，再更新模型；${trainingTask==='microduck-headstand-hold'?(Number(el('reset-seconds').value)>0?`每 ${Number(el('reset-seconds').value)} 秒模拟时间重置到近倒立初态，失稳时继续尝试恢复`:'不按时间重置，失稳时继续尝试恢复'):'行走回合跨轮继续，到达时限或失稳时重置'}。官方 4096 × 24 = 98,304 条，本机使用较小批量。`;
+  el('sampling-summary').textContent=`每轮收集 ${n} × ${steps} = ${(n*steps).toLocaleString()} 条样本。每只机器人累计模拟 ${(steps*.02).toFixed(2)} 秒，再更新模型；${trainingTask==='microduck-headstand-hold'?(Number(el('reset-seconds').value)>0?`每 ${Number(el('reset-seconds').value)} 秒模拟时间重置到近倒立初态，失稳时继续尝试恢复`:'不按时间重置，失稳时继续尝试恢复'):'行走回合跨轮继续，到达时限或失稳时重置'}。官方 4096 × 24 = 98,304 条，可按设备调整环境数和采样步数。`;
 }
 for(const id of ['environments','rollout-steps','reset-seconds'])el(id).addEventListener('input',updateSamplingSummary);
 const taskDrafts={};

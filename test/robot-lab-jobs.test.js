@@ -60,6 +60,25 @@ test('job settings reject unbounded runs before spawning',t=>{
   assert.throws(()=>jobs.start({training_device:'metal'}),/Unsupported/);
   assert.throws(()=>jobs.start({reward:'x'.repeat(65537)}),/Invalid reward/);
 });
+test('environment counts above 32 reach training unchanged, while invalid counts are rejected',t=>{
+  const {root,weights}=setup(t),received=[];
+  const jobs=createLabJobs({root,weights,prepare:config=>{received.push(config.environments);return new Promise(()=>{});}});
+  try {
+    for(const task of ['microduck-flat-walk','microduck-headstand-hold']) {
+      for(const environments of [33,64,4096]) {
+        const job=jobs.start({task,environments});
+        assert.equal(job.settings.environments,environments);
+        const config=JSON.parse(fs.readFileSync(path.join(root,'jobs',job.id+'.input.json'),'utf8'));
+        assert.equal(config.environments,environments);
+        assert.equal(received.at(-1),environments);
+        jobs.cancel(job.id);
+      }
+    }
+    for(const environments of [0,-1,1.5,NaN,Infinity])assert.throws(()=>jobs.start({environments}),/Invalid environments/);
+    assert.equal(received.length,6,'invalid counts never reach environment preparation');
+    assert.equal(jobs.defaults().environments,4096,'saved user values are not clamped to the default');
+  } finally {jobs.dispose();}
+});
 test('live preview is leased only on request and returns the latest pose independently of metrics',t=>{
   const {jobs,completed,root}=setup(t);const id=completed();
   const file=path.join(root,'jobs',id+'.json'),control=path.join(root,'jobs',id+'.preview-watch.json'),live=path.join(root,'jobs',id+'.live.json');
@@ -98,7 +117,7 @@ test('action library admission is separate from the walking policy and requires 
  const walk=completed();assert.throws(()=>jobs.addAction(walk,'误用',{...good,runId:walk}));
 });
 
-test('2000-iteration jobs reach the worker config with the same two-hour timeout enforced by the parent',t=>{
+test('large training requests reach the worker unchanged without a wall-clock deadline',t=>{
  const vm=require('node:vm');const {EventEmitter}=require('node:events');
  const {root,weights}=setup(t);fs.mkdirSync(root,{recursive:true});
  const base=path.join(root,'base.fixture');fs.writeFileSync(base,'test file, not model weights');
@@ -112,12 +131,14 @@ test('2000-iteration jobs reach the worker config with the same two-hour timeout
  try {
   assert.equal(jobs.defaults().iterations,200);assert.equal(jobs.actionDefaults().iterations,200);
   for(const task of ['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance']){
-   const job=jobs.start({task,iterations:2000,source:{test:true}});
+   const job=jobs.start({task,iterations:100000,environments:64,rollout_steps:1024,hold_episode_steps:100000,learning_rate:.1,target_speed:1.5,seed:4294967296,source:{test:true}});
    const input=JSON.parse(fs.readFileSync(path.join(root,'jobs',job.id+'.input.json'),'utf8'));
-   assert.equal(job.settings.iterations,2000);assert.equal(input.iterations,2000);assert.equal(input.max_seconds,7200);
-   assert.throws(()=>jobs.start({task,iterations:2001}),/Invalid iterations/);
+   assert.equal(job.settings.iterations,100000);assert.equal(input.iterations,100000);assert.equal(input.max_seconds,undefined);
+   for(const [key,value] of Object.entries({environments:64,rollout_steps:1024,hold_episode_steps:100000,learning_rate:.1,seed:4294967296}))assert.equal(input[key],value);
+   assert.equal(input.target_speed,task==='microduck-flat-walk'?1.5:0);
+   assert.throws(()=>jobs.start({task,iterations:0}),/Invalid iterations/);
   }
-  assert.equal(launched,4);assert.deepEqual(deadlines,[7200000,7200000,7200000,7200000]);
+  assert.equal(launched,4);assert.deepEqual(deadlines,[]);
  }finally{jobs.dispose();}
 });
 
@@ -158,15 +179,15 @@ test('resume branches from a saved official checkpoint, preserves its recipe and
   assert.equal(jobs.get(parent.id).resume.available,true);
   assert.equal(jobs.artifact(parent.id,'checkpoint.pt'),path.join(dir,'checkpoint.pt'));
   assert.throws(()=>jobs.artifact(parent.id),/not completed/);
-  for(const n of [0,2001,1.5])assert.throws(()=>jobs.resume(parent.id,{additional_iterations:n}),/additional_iterations/);
-  const child=jobs.resume(parent.id,{additional_iterations:2000,reward:'must not replace source'});
+  for(const n of [0,-1,1.5])assert.throws(()=>jobs.resume(parent.id,{additional_iterations:n}),/additional_iterations/);
+  const child=jobs.resume(parent.id,{additional_iterations:100000,reward:'must not replace source'});
   const config=JSON.parse(fs.readFileSync(path.join(root,'jobs',child.id+'.input.json'),'utf8'));
-  assert.notEqual(child.id,parent.id);assert.equal(config.resume_iteration,1200);assert.equal(config.iterations,2000);
+  assert.notEqual(child.id,parent.id);assert.equal(config.resume_iteration,1200);assert.equal(config.iterations,100000);
   assert.equal(config.reward,jobs.holdDefaults().reward);assert.equal(config.resume_checkpoint_sha256,checkpoint.sha256);
   assert.equal(config.resume_run_id,parent.id);assert.equal(config.output_dir,path.join(weights,child.id));
   assert.equal(fs.readFileSync(path.join(root,'jobs',parent.id+'.json'),'utf8'),before);
   children[1].stdout.emit('data',JSON.stringify({phase:'training',iteration:1201,session_iteration:1})+'\n');
-  assert.equal(jobs.get(child.id).progress,1/2000);
+  assert.equal(jobs.get(child.id).progress,1/100000);
   fs.appendFileSync(path.join(dir,'checkpoint.pt'),'changed');assert.throws(()=>jobs.resume(parent.id,{additional_iterations:2}),/hash mismatch/);
   fs.unlinkSync(path.join(dir,'checkpoint.pt'));assert.equal(jobs.get(parent.id).resume.available,false);
   assert.throws(()=>jobs.resume('../outside',{additional_iterations:1}),/Invalid/);

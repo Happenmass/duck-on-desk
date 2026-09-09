@@ -1,4 +1,4 @@
-"""Bounded PPO training on real MuJoCo rollouts. Emits structured progress JSONL."""
+"""PPO training on real MuJoCo rollouts. Emits structured progress JSONL."""
 import sys
 import json
 import pathlib
@@ -55,7 +55,7 @@ def main():
     signal.signal(signal.SIGTERM, request_stop)
     signal.signal(signal.SIGINT, request_stop)
     random.seed(config['seed'])
-    torch.set_num_threads(1); torch.manual_seed(config['seed']); np.random.seed(config['seed'])
+    torch.set_num_threads(1); torch.manual_seed(config['seed']); np.random.seed(config['seed'] if config['seed'] <= 0xffffffff else np.random.SeedSequence(config['seed']).generate_state(1))
     for device in {config['training_device'], config['inference_device']}:
         if device == 'mps' and not torch.backends.mps.is_available(): raise ValueError('MPS unavailable; no CPU fallback')
         if device == 'cuda' and not torch.cuda.is_available(): raise ValueError('CUDA unavailable; no CPU fallback')
@@ -116,7 +116,7 @@ def main():
         emit({'checkpoint': info})
     started = time.monotonic()
     def stop_requested():
-        return stopping or pathlib.Path(config['cancel_file']).exists() or time.monotonic()-started > config['max_seconds']
+        return stopping or pathlib.Path(config['cancel_file']).exists()
     for iteration in range(start_iteration, target_iteration):
         if stop_requested():
             if completed_iteration: save_checkpoint()
@@ -171,7 +171,7 @@ def main():
             advantages.insert(0,gae); next_value=values[i]
         advantage = torch.stack(advantages).flatten().detach()
         returns = (torch.stack(advantages)+torch.stack(values)).flatten().detach()
-        advantage = (advantage-advantage.mean())/(advantage.std()+1e-6)
+        advantage = (advantage-advantage.mean())/(advantage.std(unbiased=advantage.numel()>1)+1e-6)
         observations=torch.cat(obs_list); actions=torch.cat(acts); old_logprob=torch.cat(probs)
         update_metrics = {}
         if modern:
@@ -209,7 +209,7 @@ def main():
         emit({'phase':'cancelled'}); return
     layer_changes={name:float((p-original[name]).abs().sum().detach().cpu()) for name,p in actor.named_parameters()}
     delta=sum(layer_changes.values())
-    if not np.isfinite(delta) or delta<=0: raise ValueError('Training made no finite parameter update')
+    if not np.isfinite(delta): raise ValueError('Training produced non-finite parameter updates')
     actor.to(inference)
     emit({'phase':'evaluating_candidate'})
     candidate=evaluate_run(actor,config['asset_dir'],inference,config['target_speed'],1001,preview=preview,stage='candidate',iteration=target_iteration)

@@ -12,6 +12,20 @@ from action_environment import HeadstandHoldEnvironments
 
 
 class PpoTest(unittest.TestCase):
+    def test_adaptive_learning_rate_does_not_raise_a_small_user_value_to_a_hidden_floor(self):
+        torch.manual_seed(2)
+        actor=nn.Linear(61,14);critic=nn.Linear(61,1);noise=ppo.Exploration(.15)
+        config={'ppo_profile':ppo.CURRENT,'learning_rate':1e-8}
+        optimizer=torch.optim.Adam(list(actor.parameters())+list(critic.parameters())+list(noise.parameters()),lr=config['learning_rate'])
+        obs=torch.zeros(4,61)
+        with torch.no_grad():
+            old_means=actor(obs)+1;std=noise().detach().clone()
+            old=Normal(old_means,std);actions=old.sample()
+            old_logprob=old.log_prob(actions).sum(-1);values=critic(obs).squeeze(-1)
+        metrics=ppo.update(actor,critic,noise,optimizer,obs,actions,old_logprob,values,
+                           torch.ones(4),torch.ones(4),old_means,std,config)
+        self.assertLess(metrics['learning_rate'],config['learning_rate'])
+
     def test_value_clipping_resists_large_change_and_noise_is_trainable(self):
         # An excessive perfect fit is still penalized relative to rollout values.
         self.assertAlmostEqual(ppo.clipped_value_loss(torch.tensor([2.]), torch.tensor([0.]), torch.tensor([2.])).item(), 3.24, places=5)
