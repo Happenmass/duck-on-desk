@@ -35,7 +35,7 @@ CI verifies the actual files against updater metadata before uploading artifacts
 - Start a short lesson-2 run in the packaged app and confirm the evaluation reports `head_down_percent`, `lying_percent`, `recoveries` and `longest_head_down_seconds`, and that `evaluation_version` is `headstand-cycle-v1`.
 - Judge learning only from the no-reset evaluation, never from the training `goal` component: reference state initialization inflates it. A folded duck and the target pose are both near `upright` -0.9; only trunk height separates them (0.04 vs 0.078).
 - Confirm resuming a pre-1.1.4 hold run keeps its original reward, reset rules and episode length, and that changed reward or new fields are rejected rather than silently applied.
-- Record honestly that lesson 2 is not trained to success on any hardware, and that CUDA remains unvalidated.
+- Lesson 2 reproduced the behaviour on MPS in 2 of 3 seeds (~0.6-1.2M steps); the third parks in the head-and-feet tripod. Do not describe training as reliable. Recovery is verified only from a natural collapse; the large-impulse test drove the simulator unstable and its numbers are not evidence. CUDA remains unvalidated.
 
 ### v1.1.3 Draft Smoke Checklist
 

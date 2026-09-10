@@ -1,0 +1,107 @@
+--- a/renderer/src/main.js
++++ b/renderer/src/main.js
+@@ -7,6 +7,12 @@
+ import { createReachyRuntime } from "./runtime/reachy-runtime.js";
+ import { createReachyAudio } from "./adapters/reachy-audio.js";
+ 
++window.__a1Perf = { enabled: false, stats: {}, counts: {}, noDisplacement: false,
++  count(k) { this.counts[k] = (this.counts[k] || 0) + 1; },
++  add(k, start) { if (this.enabled) (this.stats[k] ||= []).push(performance.now() - start); },
++  reset() { this.stats = {}; this.counts = {}; },
++  summary() { const result = {}; for (const [k, values] of Object.entries(this.stats)) {const a=[...values].sort((a,b)=>a-b);result[k]={n:a.length,totalMs:a.reduce((x,y)=>x+y,0),p50:a[Math.floor(a.length*.5)],p95:a[Math.floor(a.length*.95)]};}return {timings:result,counts:this.counts}; }
++};
+ const stage = document.getElementById("stage");
+ // additionalArguments are a launch-time snapshot; query current prefs on every
+ // reload so switching robots (and switching back) never restores stale values.
+@@ -44,6 +50,13 @@
+     current: () => reachyVisual, dispose() {},
+   } : createBehaviours({ runtime, autonomy });
+   window.__duckRuntime = runtime;
++  window.__a1Perf.pin = (motion) => {
++    behaviours.dispose(); autonomy.pause(); behaviours.apply = () => {}; behaviours.eye = () => {}; behaviours.setRoamHeading = () => {};
++    runtime.command({type:'reset'});
++    behaviours.current = () => motion === 'roam' ? 'duck-roam' : 'duck-working';
++    runtime.command({type:'move',source:'local',forward:motion === 'stand' ? 0 : .6,heading:motion === 'roam' ? .8 : 0,ttlMs:3600000});
++  };
++  window.__a1Perf.environment = {dpr:devicePixelRatio, width:innerWidth,height:innerHeight};
+   window.__duckAudio = audio;
+   const bridge = api ? connectPetBridge({ api, runtime, behaviours, audio }) : null;
+   if (reachy) api?.onReachyLocalSound?.((name) => { void audio.play(name); });
+--- a/renderer/src/pet-bridge.js
++++ b/renderer/src/pet-bridge.js
+@@ -32,8 +32,12 @@
+   // original 12.5 Hz cadence showed as visible steps) so gait and window agree.
+   const stepTimer = typeof api.reportDuckDisplacement === "function" && typeof runtime.takeDisplacement === "function"
+     ? setInterval(() => {
++      window.__a1Perf.count('displacementTicks');
+       const d = runtime.takeDisplacement();
+-      if (behaviours.current() === "duck-roam" && (d.dx !== 0 || d.dy !== 0)) api.reportDuckDisplacement(d);
++      if (behaviours.current() === "duck-roam" && (d.dx !== 0 || d.dy !== 0)) {
++        window.__a1Perf.count('displacementEligible');
++        if (!window.__a1Perf.noDisplacement) { window.__a1Perf.count('displacementSent'); api.reportDuckDisplacement(d); }
++      }
+     }, 40)
+     : null;
+   api.onDndChange(() => {});
+--- a/renderer/src/runtime/duck-runtime.js
++++ b/renderer/src/runtime/duck-runtime.js
+@@ -766,7 +766,17 @@
+     return this.#gravityV.set(0, 0, -1).applyQuaternion(this.#gravityQ).z;
+   }
+ 
++  a1Configure({render = true, control = true}) {
++    cancelAnimationFrame(this.#renderFrame);
++    if (render) this.#renderLoop();
++    this.#suspended = !control;
++  }
++
+   async #controlStep() {
++    const probe = window.__a1Perf;
++    const totalStart = performance.now();
++    let mark = totalStart;
++    probe.count('controlSteps');
+     if (this.#grabbed && this.#lift) {
+       this.#holdLifted();
+       this.#recenter();
+@@ -778,18 +788,31 @@
+       : this.#mode === "walk" ? this.#sessions.walk
+       : this.#sessions.sitstand;
+     if (this.#recovery?.state !== "fallen") {
+-      const output = await session.run({ obs: new this.#ort.Tensor("float32", this.#buildObs(), [1, OBS_SIZE]) });
++      mark = performance.now();
++      const obs = this.#buildObs(); probe.add('observation', mark);
++      mark = performance.now();
++      const tensor = new this.#ort.Tensor("float32", obs, [1, OBS_SIZE]); probe.add('tensor', mark);
++      mark = performance.now();
++      const output = await session.run({ obs: tensor }); probe.add('sessionRunWall', mark);
++      mark = performance.now();
+       const action = output.actions.data;
+       this.#lastAction.set(action);
+       for (let joint = 0; joint < NUM_JOINTS; joint++) {
+         this.#data.ctrl[joint] = DEFAULT_POSE[joint] + action[joint];
+       }
+     }
++    probe.add('actionAndSelection', mark);
++    mark = performance.now();
+     for (let step = 0; step < DECIMATION; step++) this.#mujoco.mj_step(this.#model, this.#data);
+-    this.#recenter();
++    probe.add('physicsStep', mark);
++    mark = performance.now();
++    this.#recenter(); probe.add('recenter', mark);
++    mark = performance.now();
+     this.#soundStep();
+     this.#advancePick();
+     this.#updateRecovery();
++    probe.add('soundAndRecovery', mark);
++    probe.add('controlTotalWall', totalStart);
+   }
+ 
+   // Held in the air: ease the trunk up to LIFT_HEIGHT and pin it there each
+@@ -982,6 +1005,7 @@
+         for (const wheel of this.#wheels) setJoint(this.#rig, wheel.name, qpos[wheel.adr]);
+         setJawOpen(this.#rig, Math.min(1, pickJawOpenness(this.#pick?.phase) + quackJawOpenness(now - this.#quackAt)));
+       }
++      window.__a1Perf.count('renderFrames');
+       this.#renderer.render(this.#scene, this.#camera);
+       this.#renderFrames++;
+       if (now - this.#renderT0 >= 1_000) {
