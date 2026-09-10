@@ -13,6 +13,8 @@ CI verifies the actual files against updater metadata before uploading artifacts
 
 ## Draft Release
 
+1.1.4 changes the hold lesson from a static two-second headstand to a tip-over/recover cycle. Its reward, reference state initialization, exploration noise hold and acceptance metric all changed together; the old `supported_headstand` criterion cannot register the new behaviour and now serves lesson 3 only. The reward is verified by a CEM-MPC planner from both a balanced and a collapsed start, and is NOT verified by training: no local MPS run produced the behaviour. Do not describe this lesson as trained or working. Historical runs keep their own reward and reset rules on resume.
+
 1.1.3 removes application-imposed training parameter caps and the two-hour cutoff. Validate large iteration/environment/rollout settings through UI, IPC and MCP; new and resumed runs must preserve requested values. Run `smoke-lab-training-limit.cjs` on the actual packaged app and `test_parameter_freedom.py` for real short training/export. Keep necessary numeric validation and model/algorithm constraints.
 
 1.1.2 fixes cold-cache training and adds managed Python setup. CI must run `smoke-training-setup.cjs` before model prefetch and again with `--packaged`; both execute real CPU training and ONNX export on the host platform. Check the UI preparation state and automatic/custom Python paths. CUDA hardware remains a separate validation gate.
@@ -25,6 +27,15 @@ CI verifies the actual files against updater metadata before uploading artifacts
 - For this machine, use `.release-reviews/v1.1.0/local-build.cjs` to write `dist/local-1.1.0` and omit copied weights; resolve policies from the existing global Hugging Face cache.
 - Verify the packaged Robot Lab tutorial, joint controls, charts, optional preview, MPS recipe and direction-aware reward. Validate the external packaged MCP server, then replace the local installed bundle.
 - Keep the verified 1.0.0 ZIP for rollback. Test packaged modules using a virtual-only harness; do not load `src/main.js` or hardware adapters for smoke checks.
+
+### v1.1.4 Draft Smoke Checklist
+
+- Confirm the packaged app shows `1.1.4` metadata and Settings -> About shows `v1.1.4`, sourced from app.getVersion().
+- Verify lesson 2 copy describes the cycle, not a two-second hold, and that its defaults read `hold_episode_steps` 120, random start on, exploration hold 4.
+- Start a short lesson-2 run in the packaged app and confirm the evaluation reports `head_down_percent`, `lying_percent`, `recoveries` and `longest_head_down_seconds`, and that `evaluation_version` is `headstand-cycle-v1`.
+- Judge learning only from the no-reset evaluation, never from the training `goal` component: reference state initialization inflates it. A folded duck and the target pose are both near `upright` -0.9; only trunk height separates them (0.04 vs 0.078).
+- Confirm resuming a pre-1.1.4 hold run keeps its original reward, reset rules and episode length, and that changed reward or new fields are rejected rather than silently applied.
+- Record honestly that lesson 2 is not trained to success on any hardware, and that CUDA remains unvalidated.
 
 ### v1.1.3 Draft Smoke Checklist
 
