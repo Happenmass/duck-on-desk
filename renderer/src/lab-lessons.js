@@ -8,7 +8,7 @@ const concepts={
 export function createLessons({notice}) {
   const el=id=>document.getElementById(id);
   let currentTask='microduck-flat-walk';
-  const describe=key=>currentTask==='microduck-headstand-hold'&&key==='environment'?'这一课由环境提供接近头撑的初始姿态，并加入轻微速度扰动。之后由模型控制关节保持平衡，没有持续托举。':currentTask==='microduck-headstand-hold'&&key==='learning'?'先学会从接近倒立的位置保持平衡；后续再练从站立翻过去。初始化成倒立不算学会翻转。':currentTask==='microduck-flat-walk'?concepts[key]:key==='reward'?(['microduck-headstand','microduck-headstand-hold'].includes(currentTask)?'奖励检查头部支撑、全身姿态和实际关节运动；连续稳住才有保持奖励。此阶段不要求跳动或起身。':'奖励按 8 秒时间表鼓励翻转、倒立腾空和回到站立。分数高不等于动作已经完成。'):key==='learning'?'模型根据真实尝试和评分调整关节策略。倒立基础练习先学进入与保持，完整动作还需要后续训练。':concepts[key];
+  const describe=key=>currentTask==='microduck-headstand-hold'&&key==='environment'?'这一课由环境提供接近头撑的初始姿态，并从翻倒过程的随机时刻起步。之后由模型控制关节，倒下也不重置，没有持续托举。':currentTask==='microduck-headstand-hold'&&key==='learning'?'先学会掉下去之后用脚蹬回来，让头部中心重新贴地；后续再练从站立翻过去。初始化成倒立不算学会翻转。':currentTask==='microduck-headstand-hold'&&key==='reward'?'奖励身体转到头朝下、头部中心贴地，朝这个方向转动的过程也加分。脚触地不扣分，没有保持计时器。':currentTask==='microduck-flat-walk'?concepts[key]:key==='reward'?(['microduck-headstand','microduck-headstand-hold'].includes(currentTask)?'奖励检查头部支撑、全身姿态和实际关节运动；连续稳住才有保持奖励。此阶段不要求跳动或起身。':'奖励按 8 秒时间表鼓励翻转、倒立腾空和回到站立。分数高不等于动作已经完成。'):key==='learning'?'模型根据真实尝试和评分调整关节策略。倒立基础练习先学进入与保持，完整动作还需要后续训练。':concepts[key];
   function go(step){
     for(const button of document.querySelectorAll('[data-lesson]')){const active=Number(button.dataset.lesson)===step;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current');}
     for(const page of document.querySelectorAll('[data-lesson-page]'))page.hidden=Number(page.dataset.lessonPage)!==step;
@@ -56,14 +56,14 @@ export function createLessons({notice}) {
     '每次从站立出发，结尾连续 2 秒头部支撑、双脚在身体上方、躯干不躺地，重心与关节稳定。原生 3 段与桌宠仿真各自检查。此阶段不要求跳动或站回原位。',
   ];
   const holdCopy=[
-    '先练保持：已经接近倒立，怎样稳住？',
-    '环境先把小鸭放到接近头撑的姿态，加入轻微扰动，再让模型接手。倾斜、身体碰地时允许用脚蹬地找回平衡，不因失稳重置。默认每 30 秒模拟时间回到近倒立初态重新练习；第 3 步可调整时间，填 0 可关闭定时重置。',
-    '让每一次接近平衡，都有反馈。',
-    '奖励身体接近竖直倒置、重心靠近支撑点与双脚离地；允许脚触地恢复，不单独扣脚触地分，连续稳住另外加分。不要求各关节摆成固定姿势。观察各项贡献与保持时间，而不只看总分。自定义奖励脚本仍可修改。',
-    '观察它能保持多久，而不是翻得多高。',
-    '使用与官方相同的网络结构，默认随机权重起步，让关节自行寻找平衡；也可切换官方步态权重作对照。参数尚未证明训练成功。MPS 已支持，CUDA 待实机验证。',
-    '近倒立起步，结尾稳住 2 秒。',
-    '原生仿真用 3 组小扰动，桌宠仿真再检查一段；每段 8 秒，中途不重置、不托举。结尾连续 2 秒满足头撑、腿抬高、重心和关节稳定才通过。通过保持课不代表学会翻转。',
+    '先练循环：倒下去，再用脚蹬回来。',
+    '环境先把小鸭放到接近头撑的姿态，再让模型接手。倒下不重置，允许用脚蹬地把身体转回来、让头部中心重新贴地。默认每 2.4 秒回到起始姿态重练，并从翻倒过程的随机时刻起步；第 3 步可调整这个时间。',
+    '奖励身体转到头朝下，而不是奖励一动不动。',
+    '按身体倒置程度的三次方计分，头部中心贴地再加权；朝倒立方向转动的过程本身就加分。脚触地不扣分——脚正是用来蹬回去的。身体躺地扣分。不设保持计时器，也不惩罚角速度。自定义奖励脚本仍可修改。',
+    '看它掉下去之后回不回得来。',
+    '使用与官方相同的网络结构，默认随机权重起步。探索噪声按 4 个控制步保持不变，便于出现连贯的蹬地动作。参数尚未证明训练成功。MPS 已支持，CUDA 待实机验证。',
+    '头部贴地时间够长，而且掉下去能回来。',
+    '原生仿真 3 段、桌宠仿真 1 段，每段 8 秒，中途不重置、不托举。统计头朝下贴地的时间占比、躺地占比和回到头部贴地的次数。当前阈值参照规划器可达的 88% 头下时间设为暂定值，尚未由训练验证。',
   ];
   const guideNodes=[...document.querySelectorAll('.result-instructions b, .result-instructions span, [data-lesson-page="3"] .lesson-kicker, [data-lesson-page="3"] .lesson-question p')];
   const walkGuide=guideNodes.map(node=>node.textContent);
@@ -78,7 +78,7 @@ export function createLessons({notice}) {
     for(const node of document.querySelectorAll('[data-hold-only]'))node.hidden=!isHold;
     for(const node of document.querySelectorAll('[data-entry-only]'))node.hidden=task!=='microduck-headstand';
     copyNodes.forEach((node,i)=>node.textContent=(isHold?holdCopy:isHeadstand?headstandCopy:isAction?actionCopy:walkCopy)[i]);
-    guideNodes.forEach((node,i)=>node.textContent=(isHold?['第 4 步 / 验收近倒立起步的保持能力','看保持','由环境提供近倒立初态，模型接手后试播 8 秒。','查平衡','结尾连续保持 2 秒；预置姿态不能算学会翻转。','下一阶段','保持通过后再练从站立进入，随后练恢复正立，最后才是街舞。','它是头部支撑还是身体躺地？保持时间有没有增加？先检查各项姿态，再决定如何调整。']:isHeadstand?['第 4 步 / 只验收倒立保持','看尝试','从站立开始试播，8 秒结束后停在当前姿态。','查支撑','排除倒地、短暂翻滚和腾空，检查连续保持 2 秒。','下一阶段','通过后再练恢复正立、站稳收尾；街舞后置。当前只保留为练习模型。','如果只学会趴下或倾斜，先调整进入倒立的探索方式；奖励升高不代表已经倒立。']:isAction?actionGuide:walkGuide)[i]);
+    guideNodes.forEach((node,i)=>node.textContent=(isHold?['第 4 步 / 验收倒立循环','看循环','由环境提供近倒立初态，模型接手后试播 8 秒。','查恢复','看头部贴地的时间占比，以及掉下去之后回来的次数。','下一阶段','循环稳定后再练从站立进入，随后练恢复正立，最后才是街舞。','它是掉下去就躺着不动，还是能用脚蹬回来？先看躺地占比，再看恢复次数。']:isHeadstand?['第 4 步 / 只验收倒立保持','看尝试','从站立开始试播，8 秒结束后停在当前姿态。','查支撑','排除倒地、短暂翻滚和腾空，检查连续保持 2 秒。','下一阶段','通过后再练恢复正立、站稳收尾；街舞后置。当前只保留为练习模型。','如果只学会趴下或倾斜，先调整进入倒立的探索方式；奖励升高不代表已经倒立。']:isAction?actionGuide:walkGuide)[i]);
     el('reward-script-status').textContent='这是本课的奖励草稿，切换课程会保留各自的修改。';
     el('rollback').hidden=isAction;el('active-policy').hidden=isAction;
   }

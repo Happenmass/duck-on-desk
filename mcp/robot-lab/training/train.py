@@ -72,7 +72,7 @@ def main():
     is_action = is_headstand or config.get('task') == 'microduck-headstand-dance'
     env_type = HeadstandHoldEnvironments if is_hold else HeadstandEnvironments if is_headstand else ActionEnvironments if is_action else Environments
     env = env_type(config['asset_dir'], config['environments'], config['seed'], config['target_speed'], **({'official_observations':True} if is_action else {}),
-                   **({'reset_on_pose_loss':config.get('reset_on_pose_loss',True),'episode_steps':config.get('hold_episode_steps',400)} if is_hold else {}))
+                   **({'reset_on_pose_loss':config.get('reset_on_pose_loss',True),'episode_steps':config.get('hold_episode_steps',400),'random_start':config.get('hold_random_start',False)} if is_hold else {}))
     evaluate_run = evaluate_headstand_hold if is_hold else evaluate_headstand if is_headstand else evaluate_action if is_action else evaluate
     if is_action:
         evaluate_run = partial(evaluate_run, official_observations=True)
@@ -127,12 +127,23 @@ def main():
         obs_list=[]; means=[]; acts=[]; probs=[]; rewards=[]; learning_rewards=[]; values=[]; dones=[]
         reward_states=[]; reward_next_states=[]; script_rewards=[]; penalties=[]
         valid_postures=0; max_hold=0.; timeout_resets=0; failure_resets=0
+        hold_steps = int(config.get('exploration_hold_steps', 1)); epsilon = None
         for step in range(config['rollout_steps']):
             obs = torch.tensor(env.observe(),device=device)
             state = {k:torch.tensor(v,device=device) for k,v in env.state().items()}
             with torch.no_grad():
                 mean = actor(obs); distribution = Normal(mean, noise_std, validate_args=False)
-                action = distribution.sample(); logprob = distribution.log_prob(action).sum(-1)
+                if hold_steps > 1:
+                    # Hold each exploration draw for several control steps. Independent
+                    # per-step noise cancels over a multi-step push by sqrt(k), so a
+                    # coordinated kick is never sampled. Each action is still marginally
+                    # Normal(mean, std), so the PPO ratio and log-probabilities stand.
+                    if step % hold_steps == 0 or epsilon is None or epsilon.shape != mean.shape:
+                        epsilon = torch.randn_like(mean)
+                    action = mean + noise_std*epsilon
+                else:
+                    action = distribution.sample()
+                logprob = distribution.log_prob(action).sum(-1)
                 value = critic(obs).squeeze(-1)
             next_state, done, fallen = env.step(action.cpu().numpy())
             timeout_resets += int((done & ~fallen).sum()); failure_resets += int(fallen.sum())
@@ -235,6 +246,8 @@ def main():
               'batch_size':config['environments']*config['rollout_steps'],
               'reset_on_pose_loss':config.get('reset_on_pose_loss',True) if is_hold else None,
               'hold_episode_steps':config.get('hold_episode_steps',400) if is_hold else None,
+              'hold_random_start':config.get('hold_random_start',False) if is_hold else None,
+              'exploration_hold_steps':int(config.get('exploration_hold_steps',1)),
               'final_learning_rate':optimizer.param_groups[0]['lr'],
               'trainable_policy_parameters':sum(p.numel() for p in actor.parameters()),
               'initial_policy_sha256':checkpoints.digest(config['base_policy']) if initialization=='official' else None,

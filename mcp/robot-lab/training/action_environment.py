@@ -7,7 +7,7 @@ import torch
 import json
 import pathlib
 import mujoco
-from environment import Environments, DT, JOINTS, POSE
+from environment import Environments, CONTRACT, DT, JOINTS, POSE
 
 DURATION = 8.0
 STEPS = round(DURATION / DT)
@@ -99,6 +99,16 @@ class HeadstandEnvironments(ActionEnvironments):
         return state, done, invalid
 
 
+def head_down(state):
+    """Lesson 2 target: trunk rotated head-down with the head centre on the floor.
+
+    Deliberately weaker than supported_headstand: the feet may touch, because the
+    feet are what rights the body, and there is no angular-speed ceiling, because
+    balancing on a single head contact point requires continuous correction.
+    """
+    return (state['upright'] < -0.7) & (state['head_contact'] > 0)
+
+
 def supported_headstand(state):
     return ((state['upright'] < -0.8) & (state['head_contact'] > 0)
             & (state['feet_contact'] == 0) & (state['feet_height'] > 0.08)
@@ -111,13 +121,18 @@ class HeadstandHoldEnvironments(HeadstandEnvironments):
     """Balance practice starts supported. Reset is not credited as learned entry."""
     reference = np.asarray(HOLD_REFERENCE['joint_targets'], dtype=np.float32)
 
-    def __init__(self, *args, reset_on_pose_loss=False, episode_steps=1500, **kwargs):
+    def __init__(self, *args, reset_on_pose_loss=False, episode_steps=1500, random_start=False, **kwargs):
         self.reset_on_pose_loss = reset_on_pose_loss
         self.episode_steps = episode_steps
+        self.random_start = random_start
+        count = args[1] if len(args) > 1 else kwargs['count']
+        self.armed = np.zeros(count, dtype=bool)
+        self.recovered = np.zeros(count, dtype=np.float32)
         super().__init__(*args, **kwargs)
 
     def reset(self, i):
         super().reset(i)
+        self.armed[i] = False; self.recovered[i] = 0
         d = self.data[i]
         d.qpos[:3] = HOLD_REFERENCE['root_position']
         d.qpos[3:7] = HOLD_REFERENCE['root_quaternion']
@@ -128,14 +143,33 @@ class HeadstandHoldEnvironments(HeadstandEnvironments):
         d.ctrl[:] = self.reference
         self.previous[i] = self.reference - POSE
         mujoco.mj_forward(self.model, d)
+        if self.random_start:
+            # Reference state initialization. Without it the only two states ever
+            # sampled are "balanced at the top" and "flat on the floor", and the
+            # small corrections in between -- the easy part of the recovery -- are
+            # never practised. Evaluation keeps the fixed start so runs compare.
+            d.qvel[3:6] = self.rng.normal(0, 0.6, 3)
+            for _ in range(int(self.rng.integers(0, 46))):
+                for _ in range(CONTRACT['decimation']): mujoco.mj_step(self.model, d)
+            mujoco.mj_forward(self.model, d)
 
     def state(self):
         state = super().state()
         state['reference_joint_error'] = np.mean((state['joint_positions']-self.reference)**2, axis=-1)
+        state['recovered'] = self.recovered.copy()
         return state
 
     def step(self, actions):
         state, done, invalid = super().step(actions)
+        # One pulse on the step the duck arrives back at head-down support after
+        # having been clearly down. A pose reward alone always has a cheap static
+        # solution; this is the only term a duck that folds up and freezes cannot
+        # collect. The wide hysteresis band means it must genuinely fall and
+        # genuinely come back -- a wobble across one threshold is not a recovery.
+        back = head_down(state) & (state['height'] > 0.06)
+        self.recovered = (back & self.armed).astype(np.float32)
+        self.armed = (self.armed | (state['upright'] > -0.2)) & ~back
+        state['recovered'] = self.recovered.copy()
         # Old checkpoints retain their original early termination. New training
         # can push off the floor and recover without teleporting to the start.
         lost = self.reset_on_pose_loss & (self.age >= 25) & ((state['upright'] > -0.6) | (state['body_contact'] > 0))
@@ -148,6 +182,9 @@ def evaluate_action(actor, asset_dir, device, target, seed, steps=STEPS, preview
     inverted = np.zeros(3); hops = np.zeros(3, dtype=int); air = np.zeros(3, dtype=int)
     holding = np.zeros(3, dtype=int); longest = np.zeros(3, dtype=int)
     standing = np.zeros(3, dtype=int); finite = np.ones(3, dtype=bool); frames = []
+    down = np.zeros(3, dtype=int); lying = np.zeros(3, dtype=int)
+    recoveries = np.zeros(3, dtype=int); armed = np.zeros(3, dtype=bool)
+    bout = np.zeros(3, dtype=int); longest_bout = np.zeros(3, dtype=int)
     actor.eval()
     for step in range(STEPS):
         with torch.inference_mode(): action = actor(torch.tensor(env.observe(), device=device)).cpu().numpy()
@@ -156,6 +193,14 @@ def evaluate_action(actor, asset_dir, device, target, seed, steps=STEPS, preview
         if hold_only:
             holding = np.where(supported_headstand(state), holding + 1, 0)
             longest = np.maximum(longest, holding)
+        if near_start:
+            # Cycle scoring: time spent head-down, and how often it comes back.
+            # The hysteresis band means a wobble across the line is not a recovery.
+            here = head_down(state)
+            recoveries += here & armed
+            armed = (armed | (state['upright'] > -0.2)) & ~here
+            down += here; lying += state['body_contact'] > 0
+            bout = np.where(here, bout + 1, 0); longest_bout = np.maximum(longest_bout, bout)
         upside = state['upright'] < -0.7
         inverted += upside * DT
         for i in range(3):
@@ -168,11 +213,20 @@ def evaluate_action(actor, asset_dir, device, target, seed, steps=STEPS, preview
             standing[i] = standing[i] + 1 if stable else 0
         if preview: preview.publish(env, iteration, stage)
         if step % 5 == 0: frames.append(env.data[0].qpos.tolist())
-    success = finite & (holding >= 100) if hold_only else finite & (inverted >= 0.4) & (hops >= 1) & (standing >= 20)
-    return {'goal':'headstand-hold' if near_start else 'headstand' if hold_only else 'dance', 'evaluation_version':HOLD_REFERENCE['version'] if near_start else 'headstand-posture-v2' if hold_only else 'dance-v1', 'initialization':'near-headstand' if near_start else 'standing', 'hold_seconds':float(holding.min() * DT),
+    if near_start:
+        # Provisional thresholds, calibrated against a CEM-MPC planner that reaches
+        # 88% head-down time and 0% lying on this model. Not a validated RL result.
+        success = finite & (down >= .30*STEPS) & (lying <= .60*STEPS)
+    elif hold_only:
+        success = finite & (holding >= 100)
+    else:
+        success = finite & (inverted >= 0.4) & (hops >= 1) & (standing >= 20)
+    return {'goal':'headstand-hold' if near_start else 'headstand' if hold_only else 'dance', 'evaluation_version':'headstand-cycle-v1' if near_start else 'headstand-posture-v2' if hold_only else 'dance-v1', 'initialization':'near-headstand' if near_start else 'standing', 'hold_seconds':float(holding.min() * DT),
             'longest_hold_seconds':float(longest.min() * DT), 'steps':STEPS, 'seconds':DURATION, 'environments':3, 'success':bool(success.all()),
             'success_rate':float(success.mean()), 'inverted_seconds':float(inverted.min()),
             'inverted_hops':int(hops.min()), 'standing':bool((standing >= 20).all()),
+            'head_down_percent':float(100*down.min()/STEPS), 'lying_percent':float(100*lying.max()/STEPS),
+            'recoveries':int(recoveries.min()), 'longest_head_down_seconds':float(longest_bout.min()*DT),
             'nonFinite':not bool(finite.all()), 'frames':frames}
 
 

@@ -154,7 +154,7 @@ test('headstand practice stays separate from walking defaults and cannot enter t
  test('near-headstand hold defaults and admission do not alter legacy entry runs',t=>{
  const {jobs,completed}=setup(t),d=jobs.holdDefaults();
  assert.equal(d.task,'microduck-headstand-hold');assert.equal(d.target_speed,0);assert.equal(d.policy_initialization,'random');assert.equal(jobs.defaults().policy_initialization,'official');
- assert.match(d.reward,/torch.acos/);assert.doesNotMatch(d.reward,/reference_joint_error/);assert.doesNotMatch(jobs.headstandDefaults().reward,/reference_joint_error/);
+ assert.match(d.reward,/inverted\.pow\(3\)/);assert.doesNotMatch(d.reward,/reference_joint_error/);assert.doesNotMatch(jobs.headstandDefaults().reward,/reference_joint_error/);
  const id=completed({role:'practice',contract:'duck-lab-action-v1',task:d.task,duration:8});
  assert.throws(()=>jobs.addAction(id,'保持',{runId:id,success:true,steps:400,nonFinite:false,inverted_seconds:8,inverted_hops:1,standing:true}));
  assert.throws(()=>jobs.apply(id,evaluation(id)));assert.equal(jobs.actions().length,0);
@@ -197,8 +197,16 @@ test('resume branches from a saved official checkpoint, preserves its recipe and
 test('new hold drafts allow recovery, while normal walking keeps its own termination rules',t=>{
  const {jobs}=setup(t);
  assert.equal(jobs.holdDefaults().reset_on_pose_loss,false);
- assert.equal(jobs.holdDefaults().hold_episode_steps,1500);
+ // Short episodes plus reference state initialization keep the batch near the
+ // target; a 1500-step episode spends ~96% of its samples collapsed on the floor.
+ assert.equal(jobs.holdDefaults().hold_episode_steps,120);
+ assert.equal(jobs.holdDefaults().hold_random_start,true);
+ assert.equal(jobs.holdDefaults().exploration_hold_steps,4);
  assert.doesNotMatch(jobs.holdDefaults().reward,/0\.25 \* s\['feet_contact'\]/);
+ // The cycle reward must not reintroduce a hold timer or an angular-speed tax.
+ assert.doesNotMatch(jobs.holdDefaults().reward,/hold_seconds/);
+ assert.doesNotMatch(jobs.holdDefaults().reward,/angular_speed/);
+ assert.equal(jobs.start({task:'microduck-headstand-hold'}).id.startsWith('run_'),true);
  assert.equal(jobs.defaults().reset_on_pose_loss,true);
  assert.throws(()=>jobs.start({task:'microduck-headstand-hold',reset_on_pose_loss:'false'}),/Invalid reset_on_pose_loss/);
 });

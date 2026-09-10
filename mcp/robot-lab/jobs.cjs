@@ -64,7 +64,7 @@ function createLabJobs(options = {}) {
       legacy:!job.checkpoint?.version};
   }
   function summary(job) { const { config, ...rest } = job; return { ...rest, resume:resumeStatus(job),
-    settings: config && { hold_episode_steps:config.hold_episode_steps??400,reset_on_pose_loss:config.reset_on_pose_loss??true,ppo_profile:config.ppo_profile||'legacy-v1',environments:config.environments,rollout_steps:config.rollout_steps,learning_rate:config.learning_rate,policy_initialization:config.policy_initialization||'official',training_method:config.training_method||job.manifest?.training_method,task:config.task||'microduck-flat-walk',action_name:config.action_name,training_device:config.training_device,inference_device:config.inference_device,target_speed:config.target_speed,iterations:config.iterations,resume_run_id:config.resume_run_id,resume_iteration:config.resume_iteration||0 } }; }
+    settings: config && { hold_episode_steps:config.hold_episode_steps??400,hold_random_start:config.hold_random_start===true,exploration_hold_steps:config.exploration_hold_steps??1,reset_on_pose_loss:config.reset_on_pose_loss??true,ppo_profile:config.ppo_profile||'legacy-v1',environments:config.environments,rollout_steps:config.rollout_steps,learning_rate:config.learning_rate,policy_initialization:config.policy_initialization||'official',training_method:config.training_method||job.manifest?.training_method,task:config.task||'microduck-flat-walk',action_name:config.action_name,training_device:config.training_device,inference_device:config.inference_device,target_speed:config.target_speed,iterations:config.iterations,resume_run_id:config.resume_run_id,resume_iteration:config.resume_iteration||0 } }; }
   function resume(id, input={}) {
     const parent=read(id),status=resumeStatus(parent);
     if(!status.available)throw new Error(status.reason);
@@ -72,7 +72,7 @@ function createLabJobs(options = {}) {
     const checkpoint=path.join(weights,jobId(id),'checkpoint.pt');
     const sha=hash(fs.readFileSync(checkpoint));
     if(parent.checkpoint?.sha256&&sha!==parent.checkpoint.sha256)throw new Error('Checkpoint hash mismatch');
-    return start({...parent.config,hold_episode_steps:parent.config.hold_episode_steps??400,reset_on_pose_loss:parent.config.reset_on_pose_loss??true,ppo_profile:parent.config.ppo_profile||'legacy-v1',policy_initialization:parent.config.policy_initialization||'official',pythonPath:input.pythonPath||parent.config.pythonPath||defaults().pythonPath,
+    return start({...parent.config,hold_episode_steps:parent.config.hold_episode_steps??400,hold_random_start:parent.config.hold_random_start===true,exploration_hold_steps:parent.config.exploration_hold_steps??1,reset_on_pose_loss:parent.config.reset_on_pose_loss??true,ppo_profile:parent.config.ppo_profile||'legacy-v1',policy_initialization:parent.config.policy_initialization||'official',pythonPath:input.pythonPath||parent.config.pythonPath||defaults().pythonPath,
       iterations,source:{resume_run_id:id}}, {resume_run_id:id,resume_iteration:status.iteration,
       resume_checkpoint:checkpoint,resume_checkpoint_sha256:sha});
   }
@@ -97,7 +97,7 @@ function createLabJobs(options = {}) {
       reward:fs.readFileSync(path.join(__dirname,'training/headstand-reward.py'),'utf8'),learning_rate:0.0001};
   }
   function holdDefaults() {
-    return {...actionDefaults(),task:'microduck-headstand-hold',action_name:'倒立保持',hold_episode_steps:1500,reset_on_pose_loss:false,policy_initialization:'random',learning_rate:0.0003,
+    return {...actionDefaults(),task:'microduck-headstand-hold',action_name:'倒立循环',hold_episode_steps:120,hold_random_start:true,exploration_hold_steps:4,reset_on_pose_loss:false,policy_initialization:'random',learning_rate:0.0003,
       reward:fs.readFileSync(path.join(__dirname,'training/headstand-hold-reward.py'),'utf8')};
   }
   function number(config,key,min,integer=false) {
@@ -118,7 +118,7 @@ function createLabJobs(options = {}) {
     const python=String(c.pythonPath || process.env.DUCK_LAB_PYTHON || '');
     if (/[\0\r\n]/.test(python)) throw new Error('Invalid Python executable');
     const id=`run_${randomUUID()}`;
-    const config={task,hold_episode_steps:number(c,'hold_episode_steps',0,true),reset_on_pose_loss:c.reset_on_pose_loss,ppo_profile:c.ppo_profile,training_method:c.policy_initialization==='random'?'random-actor-ppo-v1':'official-full-finetune-v1',policy_initialization:c.policy_initialization,action_name:String(c.action_name||'倒立跳街舞').slice(0,40),training_device:c.training_device,inference_device:c.inference_device,reward:c.reward,strategy:c.strategy,
+    const config={task,hold_episode_steps:number(c,'hold_episode_steps',0,true),hold_random_start:c.hold_random_start===true,exploration_hold_steps:number({...c,exploration_hold_steps:c.exploration_hold_steps??1},'exploration_hold_steps',1,true),reset_on_pose_loss:c.reset_on_pose_loss,ppo_profile:c.ppo_profile,training_method:c.policy_initialization==='random'?'random-actor-ppo-v1':'official-full-finetune-v1',policy_initialization:c.policy_initialization,action_name:String(c.action_name||'倒立跳街舞').slice(0,40),training_device:c.training_device,inference_device:c.inference_device,reward:c.reward,strategy:c.strategy,
       iterations:number(c,'iterations',1,true),environments:number(c,'environments',1,true),rollout_steps:number(c,'rollout_steps',1,true),
       learning_rate:number(c,'learning_rate',0),target_speed:number(c,'target_speed',-Infinity),seed:number(c,'seed',0,true),
       asset_dir:assetDir,base_policy:currentBase(),output_dir:path.join(weights,id),cancel_file:path.join(root,'jobs',`${id}.cancel`),

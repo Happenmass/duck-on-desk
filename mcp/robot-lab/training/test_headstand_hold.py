@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import torch
 from environment import POSE
-from action_environment import HeadstandHoldEnvironments, HeadstandEnvironments, supported_headstand
+from action_environment import HeadstandHoldEnvironments, HeadstandEnvironments, supported_headstand, HOLD_REFERENCE
 
 ASSETS = pathlib.Path(__file__).resolve().parents[3] / 'renderer/public/robot/mjlab'
 
@@ -29,12 +29,25 @@ class HeadstandHoldTest(unittest.TestCase):
         state = {k:torch.tensor(v) for k,v in env.state().items()}
         action = torch.tensor(env.previous.copy())
         good = ns['reward_environment'](state, action, state)
-        self.assertGreater(good.item(), 1)
-        tilted = {**state,'upright':torch.tensor([-.65]),'head_contact':torch.zeros(1)}
-        self.assertGreater(ns['reward_components'](state, action, tilted)['posture'].item(), 0)
-        self.assertLess(ns['reward_environment'](state, action, tilted).item(), good.item())
-        lying = {**state,'upright':torch.zeros(1),'body_contact':torch.ones(1)}
+        self.assertGreater(good.item(), .5)
+        # The head-and-feet tripod is the pose the policy parks in when the reward
+        # has a dead zone there; it must score far below a real head-down trunk.
+        tripod = {**state,'upright':torch.tensor([-.34]),'feet_contact':torch.ones(1),'height':torch.tensor([.069])}
+        self.assertGreater(ns['reward_components'](state, action, tripod)['goal'].item(), 0)
+        self.assertLess(ns['reward_environment'](state, action, tripod).item(), good.item()/5)
+        lying = {**state,'upright':torch.zeros(1),'body_contact':torch.ones(1),'height':torch.tensor([.045])}
+        # A duck folded onto its head is more inverted than the target pose and
+        # touches only head and feet; trunk height is all that separates them.
+        folded = {**state,'upright':torch.tensor([-.92]),'feet_contact':torch.ones(1),'height':torch.tensor([.040])}
+        self.assertLess(ns['reward_environment'](state, action, folded).item(), 0)
         self.assertLess(ns['reward_environment'](state, action, lying).item(), 0)
+        # The feet are the recovery actuator: planting them costs nothing on its own.
+        planted = {**state,'feet_contact':torch.ones(1)}
+        torch.testing.assert_close(ns['reward_environment'](state, action, planted), good)
+        # Rotating back towards head-down pays while it happens, so a kick that has
+        # not finished yet is still reinforced instead of only its end state.
+        rising = ns['reward_environment']({**state,'upright':torch.tensor([-.34]),'height':torch.tensor([.05])}, action, tripod)
+        self.assertGreater(rising.item(), ns['reward_environment'](state, action, tripod).item())
         for device in ['cpu']+(['mps'] if torch.backends.mps.is_available() else []):
             actual = ns['reward_environment']({k:v.to(device) for k,v in state.items()},action.to(device),{k:v.to(device) for k,v in state.items()})
             torch.testing.assert_close(actual.cpu(), good)
@@ -118,5 +131,53 @@ class HeadstandHoldTest(unittest.TestCase):
         legacy = HeadstandHoldEnvironments(ASSETS, 1)
         self.assertEqual(legacy.observe()[0,48],1)
 
+class HeadstandCycleTest(unittest.TestCase):
+    def test_random_start_spreads_along_the_fall_and_evaluation_does_not(self):
+        from action_environment import head_down
+        fixed = HeadstandHoldEnvironments(ASSETS, 16, 3)
+        spread = HeadstandHoldEnvironments(ASSETS, 16, 3, random_start=True)
+        self.assertTrue(supported_headstand(fixed.state()).all())
+        upright = spread.state()['upright']
+        # Reference state initialization must cover the tipping range, not just the
+        # balanced top, and must not start the duck already collapsed on its trunk.
+        self.assertGreater(upright.max()-upright.min(), .15)
+        self.assertTrue((upright < -.2).all())
+        self.assertEqual(spread.state()['body_contact'].sum(), 0)
+        self.assertTrue((spread.age == 0).all())
+        # The cycle target admits foot contact; the old static criterion does not.
+        touching = {'upright': np.float32([-.85]), 'head_contact': np.float32([1]),
+                    'feet_contact': np.float32([1]), 'feet_height': np.float32([.02]),
+                    'body_contact': np.float32([0]), 'feet_above_base': np.float32([.05]),
+                    'support_offset': np.float32([.01]), 'joint_limit_margin': np.float32([.1]),
+                    'angular_speed': np.float32([2.5]), 'horizontal_speed': np.float32([.02]),
+                    'joint_speed': np.float32([1.])}
+        self.assertTrue(head_down(touching).all())
+        self.assertFalse(supported_headstand(touching).any())
 
-if __name__ == '__main__': unittest.main()
+
+if __name__ == '__main__':
+    unittest.main()
+
+
+class RecoveryPulseTest(unittest.TestCase):
+    def test_pulse_fires_only_on_a_genuine_return_and_never_while_parked(self):
+        env = HeadstandHoldEnvironments(ASSETS, 1, 2)
+        self.assertEqual(env.state()['recovered'][0], 0)
+        # Parked at the start pose: already head-down, never went down, no pulse.
+        for _ in range(5):
+            state, _, _ = env.step(env.previous.copy())
+            self.assertEqual(state['recovered'][0], 0)
+        # Arm by going clearly down, then return: exactly one pulse on arrival.
+        env.armed[:] = True
+        env.data[0].qpos[2] = .12
+        env.data[0].qpos[3:7] = HOLD_REFERENCE['root_quaternion']
+        state, _, _ = env.step(env.previous.copy())
+        fired = state['recovered'][0]
+        self.assertEqual(fired, 1)
+        self.assertFalse(env.armed[0])
+        # Staying there does not keep paying; the pulse is per arrival, not per step.
+        state, _, _ = env.step(env.previous.copy())
+        self.assertEqual(state['recovered'][0], 0)
+        # A reset clears the latch so a fresh episode cannot inherit a pending pulse.
+        env.armed[:] = True; env.reset(0)
+        self.assertFalse(env.armed[0]); self.assertEqual(env.recovered[0], 0)

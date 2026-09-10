@@ -12,7 +12,8 @@ METHOD = 'official-full-finetune-v1'
 RANDOM_METHOD = 'random-actor-ppo-v1'
 COMPATIBLE_FIELDS = ('task', 'training_method', 'strategy', 'reward', 'environments',
                      'rollout_steps', 'target_speed', 'learning_rate', 'seed',
-                     'training_device', 'inference_device', 'policy_initialization', 'ppo_profile', 'reset_on_pose_loss', 'hold_episode_steps')
+                     'training_device', 'inference_device', 'policy_initialization', 'ppo_profile', 'reset_on_pose_loss', 'hold_episode_steps',
+                     'hold_random_start', 'exploration_hold_steps')
 
 
 def digest(file):
