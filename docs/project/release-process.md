@@ -35,7 +35,9 @@ CI verifies the actual files against updater metadata before uploading artifacts
 - Start a short lesson-2 run in the packaged app and confirm the evaluation reports `head_down_percent`, `lying_percent`, `recoveries` and `longest_head_down_seconds`, and that `evaluation_version` is `headstand-cycle-v1`.
 - Judge learning only from the no-reset evaluation, never from the training `goal` component: reference state initialization inflates it. A folded duck and the target pose are both near `upright` -0.9; only trunk height separates them (0.04 vs 0.078).
 - Confirm resuming a pre-1.1.4 hold run keeps its original reward, reset rules and episode length, and that changed reward or new fields are rejected rather than silently applied.
-- Lesson 2 reproduced the behaviour on MPS in 2 of 3 seeds (~0.6-1.2M steps); the third parks in the head-and-feet tripod. Do not describe training as reliable. Recovery is verified only from a natural collapse; the large-impulse test drove the simulator unstable and its numbers are not evidence. CUDA remains unvalidated.
+- Lesson 2 reproduced the behaviour on MPS in only 1 of 3 seeds (~1.4M steps); the other two fold onto their own head at 0.050-0.054 trunk height and never get back up. Do not describe training as reliable.
+- When evaluating a checkpoint outside the trainer, load the whole actor state dict. Randomly initialised runs use identity input normalisation, and rebuilding the actor from the walking ONNX silently keeps the walking mean/scale, which inverts which policy looks good.
+- Judge lesson 2 only by `success` from the knock-down evaluation, never by `head_down_percent` alone: a folded duck reaches upright -0.86 with the head down and scores 52% on time-in-pose while being unable to recover at all.
 
 ### v1.1.3 Draft Smoke Checklist
 

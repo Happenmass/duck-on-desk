@@ -12,6 +12,8 @@ from environment import Environments, CONTRACT, DT, JOINTS, POSE
 DURATION = 8.0
 STEPS = round(DURATION / DT)
 HOLD_REFERENCE = json.loads(pathlib.Path(__file__).with_name('headstand-hold.json').read_text(encoding='utf-8'))
+# Lesson 2 knock-down: cut the controller a quarter in, for 0.9 s.
+CUT_AT, CUT_FOR = STEPS // 4, 45
 
 
 class ActionEnvironments(Environments):
@@ -100,13 +102,19 @@ class HeadstandEnvironments(ActionEnvironments):
 
 
 def head_down(state):
-    """Lesson 2 target: trunk rotated head-down with the head centre on the floor.
+    """Lesson 2 target: trunk rotated head-down and stacked above the head.
 
     Deliberately weaker than supported_headstand: the feet may touch, because the
     feet are what rights the body, and there is no angular-speed ceiling, because
     balancing on a single head contact point requires continuous correction.
+
+    The trunk height term is not optional. A duck folded onto its own head reaches
+    upright -0.86 with the head down and only intermittent trunk contact, so angle
+    and contact alone score it as a success; it sits at 0.050-0.054 while the pose
+    a controller actually sustains sits at 0.074-0.080.
     """
-    return (state['upright'] < -0.7) & (state['head_contact'] > 0)
+    return ((state['upright'] < -0.7) & (state['head_contact'] > 0)
+            & (state['height'] > 0.065))
 
 
 def supported_headstand(state):
@@ -166,7 +174,7 @@ class HeadstandHoldEnvironments(HeadstandEnvironments):
         # solution; this is the only term a duck that folds up and freezes cannot
         # collect. The wide hysteresis band means it must genuinely fall and
         # genuinely come back -- a wobble across one threshold is not a recovery.
-        back = head_down(state) & (state['height'] > 0.06)
+        back = head_down(state)
         self.recovered = (back & self.armed).astype(np.float32)
         self.armed = (self.armed | (state['upright'] > -0.2)) & ~back
         state['recovered'] = self.recovered.copy()
@@ -185,9 +193,18 @@ def evaluate_action(actor, asset_dir, device, target, seed, steps=STEPS, preview
     down = np.zeros(3, dtype=int); lying = np.zeros(3, dtype=int)
     recoveries = np.zeros(3, dtype=int); armed = np.zeros(3, dtype=bool)
     bout = np.zeros(3, dtype=int); longest_bout = np.zeros(3, dtype=int)
+    held = np.ones(3, dtype=bool); knocked = np.full(3, -1.0)
     actor.eval()
     for step in range(STEPS):
-        with torch.inference_mode(): action = actor(torch.tensor(env.observe(), device=device)).cpu().numpy()
+        # Lesson 2 is scored on getting back up, so the episode contains a real
+        # knock-down: the controller is cut for 0.9 s a quarter of the way in and
+        # the duck falls under gravity. Holding a pose it never lost proves
+        # nothing, and time-in-pose alone passes a duck folded onto its own head.
+        cut = near_start and CUT_AT <= step < CUT_AT + CUT_FOR
+        if cut:
+            action = np.zeros((3, len(JOINTS)), dtype=np.float32)
+        else:
+            with torch.inference_mode(): action = actor(torch.tensor(env.observe(), device=device)).cpu().numpy()
         state, _, _ = env.step(action)
         finite &= np.asarray([np.isfinite(d.qpos).all() and np.isfinite(d.qvel).all() for d in env.data])
         if hold_only:
@@ -197,6 +214,8 @@ def evaluate_action(actor, asset_dir, device, target, seed, steps=STEPS, preview
             # Cycle scoring: time spent head-down, and how often it comes back.
             # The hysteresis band means a wobble across the line is not a recovery.
             here = head_down(state)
+            if step >= CUT_AT: knocked = np.maximum(knocked, state['upright'])
+            if step >= STEPS - 25: held &= here
             recoveries += here & armed
             armed = (armed | (state['upright'] > -0.2)) & ~here
             down += here; lying += state['body_contact'] > 0
@@ -214,9 +233,8 @@ def evaluate_action(actor, asset_dir, device, target, seed, steps=STEPS, preview
         if preview: preview.publish(env, iteration, stage)
         if step % 5 == 0: frames.append(env.data[0].qpos.tolist())
     if near_start:
-        # Provisional thresholds, calibrated against a CEM-MPC planner that reaches
-        # 88% head-down time and 0% lying on this model. Not a validated RL result.
-        success = finite & (down >= .30*STEPS) & (lying <= .60*STEPS)
+        # Must actually have gone down, and must be back on its head at the end.
+        success = finite & held & (knocked > -0.2)
     elif hold_only:
         success = finite & (holding >= 100)
     else:
@@ -227,6 +245,7 @@ def evaluate_action(actor, asset_dir, device, target, seed, steps=STEPS, preview
             'inverted_hops':int(hops.min()), 'standing':bool((standing >= 20).all()),
             'head_down_percent':float(100*down.min()/STEPS), 'lying_percent':float(100*lying.max()/STEPS),
             'recoveries':int(recoveries.min()), 'longest_head_down_seconds':float(longest_bout.min()*DT),
+            'knocked_down_to':float(knocked.max()), 'recovered_and_held':bool(held.all()),
             'nonFinite':not bool(finite.all()), 'frames':frames}
 
 

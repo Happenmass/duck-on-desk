@@ -145,7 +145,7 @@ class HeadstandCycleTest(unittest.TestCase):
         self.assertEqual(spread.state()['body_contact'].sum(), 0)
         self.assertTrue((spread.age == 0).all())
         # The cycle target admits foot contact; the old static criterion does not.
-        touching = {'upright': np.float32([-.85]), 'head_contact': np.float32([1]),
+        touching = {'upright': np.float32([-.85]), 'head_contact': np.float32([1]), 'height': np.float32([.075]),
                     'feet_contact': np.float32([1]), 'feet_height': np.float32([.02]),
                     'body_contact': np.float32([0]), 'feet_above_base': np.float32([.05]),
                     'support_offset': np.float32([.01]), 'joint_limit_margin': np.float32([.1]),
@@ -153,6 +153,10 @@ class HeadstandCycleTest(unittest.TestCase):
                     'joint_speed': np.float32([1.])}
         self.assertTrue(head_down(touching).all())
         self.assertFalse(supported_headstand(touching).any())
+        # A duck folded onto its own head clears the angle and contact tests but
+        # sits far too low; without the height term it scores as a success.
+        folded = {**touching, 'upright': np.float32([-.86]), 'height': np.float32([.052])}
+        self.assertFalse(head_down(folded).any())
 
 
 if __name__ == '__main__':
