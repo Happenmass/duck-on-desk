@@ -13,6 +13,8 @@ CI verifies the actual files against updater metadata before uploading artifacts
 
 ## Draft Release
 
+1.2.0 replaces the walking lesson's CPU-MuJoCo PPO with the official mjlab / microduck_rl `Mjlab-Velocity-Flat-MicroDuck` task embedded in the app (`training/train_mjlab.py`, environment cloned at commit 53b8971 and installed with `uv sync --frozen`; Git is required). Mac runs Warp CPU physics with the network on MPS; CUDA is wired as in the official script but has NOT been verified on hardware. Headstand lessons keep the CPU MuJoCo path inside the same venv.
+
 1.1.4 changes the hold lesson from a static two-second headstand to a tip-over/recover cycle. Its reward, reference state initialization, exploration noise hold and acceptance metric all changed together; the old `supported_headstand` criterion cannot register the new behaviour and now serves lesson 3 only. The reward is verified by a CEM-MPC planner from both a balanced and a collapsed start, and is NOT verified by training: no local MPS run produced the behaviour. Do not describe this lesson as trained or working. Historical runs keep their own reward and reset rules on resume.
 
 1.1.3 removes application-imposed training parameter caps and the two-hour cutoff. Validate large iteration/environment/rollout settings through UI, IPC and MCP; new and resumed runs must preserve requested values. Run `smoke-lab-training-limit.cjs` on the actual packaged app and `test_parameter_freedom.py` for real short training/export. Keep necessary numeric validation and model/algorithm constraints.
@@ -27,6 +29,15 @@ CI verifies the actual files against updater metadata before uploading artifacts
 - For this machine, use `.release-reviews/v1.1.0/local-build.cjs` to write `dist/local-1.1.0` and omit copied weights; resolve policies from the existing global Hugging Face cache.
 - Verify the packaged Robot Lab tutorial, joint controls, charts, optional preview, MPS recipe and direction-aware reward. Validate the external packaged MCP server, then replace the local installed bundle.
 - Keep the verified 1.0.0 ZIP for rollback. Test packaged modules using a virtual-only harness; do not load `src/main.js` or hardware adapters for smoke checks.
+
+### v1.2.0 Draft Smoke Checklist
+
+- Confirm the packaged app shows `1.2.0` metadata and Settings -> About shows `v1.2.0`, sourced from app.getVersion().
+- Confirm the package contains `robot-lab-mcp/training/train_mjlab.py`, `training/mjlab-velocity-reward.py` and `presets/mjlab-velocity/`.
+- With an empty Python path, start a short lesson-1 run: preparation must clone `microduck_rl`, run `uv sync --frozen` into `training-runtime/py312-mjlab-<backend>`, then train through `train_mjlab.py`; the run's manifest must carry `training_method: mjlab-official-v1`, `mjlab_version: 1.3.0` and `microduck_rl_commit: 53b8971…`.
+- Lesson 1 must hide the initialization and PPO-profile selectors and show the `reward_weights` template; lesson 2/3 must still show them and run `train.py`.
+- Windows: verify Git is found from the app, that CUDA torch is `2.9.1+cu128` after preparation, and record whether `warp.dll` loads (Smart App Control blocks it on unmodified Windows 11 installs). Do not describe CUDA as verified until a real run completes.
+- Resume a lesson-1 run and confirm iteration and environment_steps continue from the checkpoint.
 
 ### v1.1.4 Draft Smoke Checklist
 

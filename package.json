@@ -1,6 +1,6 @@
 {
   "name": "duck-on-desk",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "repository": "github:Happenmass/duck-on-desk",
   "description": "A 3D desktop robot for coding agents, with an interactive robot training laboratory.",
   "main": "src/main.js",
@@ -153,6 +153,7 @@
           "training/**/*",
           "presets/stable-flat-walk/**/*",
           "presets/official-finetune/**/*",
+          "presets/mjlab-velocity/**/*",
           "!training/**/__pycache__/**/*",
           "!training/**/*.pyc",
           "setup.cjs"

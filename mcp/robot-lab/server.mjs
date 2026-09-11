@@ -17,9 +17,9 @@ const docs = Object.fromEntries(['overview', 'scripts', 'backends'].map(id => [i
 const device = z.enum(['cpu', 'mps', 'cuda']);
 const configSchema = z.object({
   schema_version: z.literal(1), mode: z.enum(['probe', 'robot']).optional(), task: z.enum(['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance']), algorithm: z.literal('ppo'),
-  training_device: device, inference_device: device, policy_initialization:z.enum(['official','random']).optional(), ppo_profile:z.enum(['legacy-v1','local-ppo-v2']).optional(),
+  training_device: device, inference_device: device, policy_initialization:z.enum(['official','random']).optional(), ppo_profile:z.enum(['legacy-v1','local-ppo-v2','mjlab-official']).optional(),
   reset_on_pose_loss:z.boolean().optional(), hold_episode_steps:z.number().int().min(0).optional(),
-  physics_backend: z.enum(['mujoco_cpu', 'mujoco_warp_cuda']),
+  physics_backend: z.enum(['mujoco_cpu', 'mjlab', 'mujoco_warp_cuda']),
   seed: z.number().int().min(0), max_iterations: z.number().int().min(1),
   environments: z.number().int().min(1).optional(), rollout_steps: z.number().int().min(1).optional(),
   learning_rate: z.number().finite().min(0).optional(), target_speed: z.number().finite().optional(),
@@ -89,7 +89,7 @@ register('lab_backends_inspect', 'Inspect actual local PyTorch devices. This doe
 register('lab_experiment_create', 'Create a versioned draft. mode=robot uses real MuJoCo PPO reward/network templates; probe is a synthetic device check. Does not execute code.', { name: z.string().min(1).max(120), mode: z.enum(['probe','robot']).default('probe'), task:z.enum(['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance']).default('microduck-flat-walk') }, ({ name, mode, task }) => {
   if (mode === 'probe') { if(task!=='microduck-flat-walk')throw new LabError('WRONG_MODE','Action training requires mode=robot.');return store.create(name, templates); }
   const d = task==='microduck-headstand-hold'?jobs.holdDefaults():task==='microduck-headstand'?jobs.headstandDefaults():task==='microduck-headstand-dance'?jobs.actionDefaults():jobs.defaults();
-  return store.create(name, {'reward.py':d.reward,'strategy.py':d.strategy,'training.json':JSON.stringify({schema_version:1,mode:'robot',task,algorithm:'ppo',physics_backend:'mujoco_cpu',training_device:d.training_device,inference_device:d.inference_device,policy_initialization:d.policy_initialization,ppo_profile:d.ppo_profile,reset_on_pose_loss:d.reset_on_pose_loss,hold_episode_steps:d.hold_episode_steps,max_iterations:d.iterations,environments:d.environments,rollout_steps:d.rollout_steps,learning_rate:d.learning_rate,target_speed:d.target_speed,seed:d.seed},null,2)});
+  return store.create(name, {'reward.py':d.reward,'strategy.py':d.strategy,'training.json':JSON.stringify({schema_version:1,mode:'robot',task,algorithm:'ppo',physics_backend:task==='microduck-flat-walk'?'mjlab':'mujoco_cpu',training_device:d.training_device,inference_device:d.inference_device,policy_initialization:d.policy_initialization,ppo_profile:d.ppo_profile,reset_on_pose_loss:d.reset_on_pose_loss,hold_episode_steps:d.hold_episode_steps,max_iterations:d.iterations,environments:d.environments,rollout_steps:d.rollout_steps,learning_rate:d.learning_rate,target_speed:d.target_speed,seed:d.seed},null,2)});
 }, false);
 register('lab_experiment_read', 'Read the current experiment revision and optionally one artifact.', { experiment_id: z.string(), artifact: z.enum(ARTIFACTS).optional() }, ({ experiment_id, artifact }) => {
   const record = store.read(experiment_id);
@@ -112,13 +112,13 @@ register('lab_backend_probe', 'EXECUTES the saved Python scripts with local user
   return { ...await worker({ operation: 'probe', files: record.files, device, seed: settings.seed }), experiment_id, revision: record.revision, artifacts: store.summary(record).artifacts };
 }, false, true);
 register('lab_training_defaults', 'Read real robot PPO settings and editable reward/network templates.', {task:z.enum(['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance']).default('microduck-flat-walk')}, ({task}) => task==='microduck-headstand-hold'?jobs.holdDefaults():task==='microduck-headstand'?jobs.headstandDefaults():task==='microduck-headstand-dance'?jobs.actionDefaults():jobs.defaults());
-register('lab_training_start', 'EXECUTES this exact saved robot draft with local user privileges, not a sandbox. Starts real MuJoCo CPU rollouts with PyTorch MPS/CUDA/CPU training and evaluation, checkpoint and ONNX export. No cloud jobs or device fallback.', {
+register('lab_training_start', 'EXECUTES this exact saved robot draft with local user privileges, not a sandbox. Walking runs the official mjlab Velocity task (MuJoCo Warp physics: CUDA on NVIDIA, CPU on Apple Silicon with the network on MPS); headstand lessons run CPU MuJoCo rollouts. Checkpoint and ONNX export. No cloud jobs or device fallback.', {
   experiment_id: z.string(), expected_revision: z.number().int().positive(),
 }, async ({experiment_id, expected_revision}) => {
   const record = store.read(experiment_id);
   if (record.revision !== expected_revision) throw new LabError('REVISION_CONFLICT', 'Reread the draft before running a changed revision.');
   const settings = config(record);
-  if (settings.mode !== 'robot' || settings.physics_backend !== 'mujoco_cpu') throw new LabError('WRONG_MODE', 'Real training requires mode=robot and physics_backend=mujoco_cpu.');
+  if (settings.mode !== 'robot' || !['mujoco_cpu','mjlab'].includes(settings.physics_backend)) throw new LabError('WRONG_MODE', 'Real training requires mode=robot and physics_backend=mjlab (walk) or mujoco_cpu (headstand lessons).');
   const {max_iterations, mode, schema_version, task, algorithm, physics_backend, ...options} = settings;
   const job = jobs.start({...options,hold_episode_steps:options.hold_episode_steps??400,reset_on_pose_loss:options.reset_on_pose_loss??true,ppo_profile:options.ppo_profile||'legacy-v1',policy_initialization:options.policy_initialization||'official',task,iterations:max_iterations,reward:record.files['reward.py'],strategy:record.files['strategy.py'],source:{experiment_id,revision:record.revision}});
   return {...job,experiment_id,revision:record.revision};

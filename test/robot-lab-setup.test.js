@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {createTrainingSetup,UV_VERSION}=require('../mcp/robot-lab/setup.cjs');
+const {createTrainingSetup,UV_VERSION,MJLAB_COMMIT}=require('../mcp/robot-lab/setup.cjs');
 const {policyDirectory}=require('../src/robots/duck/policy-cache');
 function fixture(t,{cached=true,...options}={}){
  const home=fs.mkdtempSync(path.join(os.tmpdir(),'duck-setup-test-'));t.after(()=>fs.rmSync(home,{recursive:true,force:true}));
@@ -9,10 +9,10 @@ function fixture(t,{cached=true,...options}={}){
  const base_policy=path.join(policyDirectory(home),'BEST_alpha_walking.onnx');
  if(cached){fs.mkdirSync(path.dirname(base_policy),{recursive:true});fs.writeFileSync(base_policy,'synthetic fixture');}
  const calls=[];let failInstall=false;
- const runCommand=async(file,args)=>{
-  calls.push({file,args});
-  if(args[0]==='venv'){const p=path.join(args.at(-1),'Scripts/python.exe');fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,'fixture interpreter');}
-  if(failInstall&&args[0]==='pip')throw Error('fixture network error');
+ const runCommand=async(file,args,{env}={})=>{
+  calls.push({file,args,env});
+  if(failInstall&&args[0]==='sync')throw Error('fixture network error');
+  if(args[0]==='sync'){const p=path.join(env.UV_PROJECT_ENVIRONMENT,'Scripts/python.exe');fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,'fixture interpreter');}
   return args.includes('-c')?JSON.stringify({python:file,torch:'2.9.1+cu128',devices:JSON.parse(args.at(-1))}):'';
  };
  const setup=createTrainingSetup({home,platform:'win32',arch:'x64',runCommand,...options});
@@ -20,11 +20,13 @@ function fixture(t,{cached=true,...options}={}){
  fs.mkdirSync(path.dirname(binary),{recursive:true});fs.writeFileSync(binary,'fixture uv');
  return {home,setup,calls,binary,failInstall:v=>{failInstall=v;},config:{asset_dir,base_policy,pythonPath:'',training_device:'cuda',inference_device:'cuda'}};
 }
-test('Windows managed install uses Scripts/python.exe, CUDA wheels and verifies actual computation before readiness',async t=>{
+test('Windows managed install clones the pinned official repo, syncs its lock, swaps in CUDA torch and verifies actual computation before readiness',async t=>{
  const {setup,calls,config}=fixture(t);const messages=[];const result=await setup.prepare(config,m=>messages.push(m));
- assert.match(result.pythonPath,/Scripts[/\\]python.exe$/);
- assert.ok(calls.some(c=>c.args.includes('https://download.pytorch.org/whl/cu128')));
- assert.ok(calls.some(c=>c.args.includes('mujoco==3.10.0')));
+ assert.match(result.pythonPath,/py312-mjlab-cuda[/\\]Scripts[/\\]python.exe$/);
+ assert.ok(calls.some(c=>c.file==='git'&&c.args[0]==='clone'&&c.args.includes('https://github.com/pollen-robotics/microduck_rl.git')));
+ assert.ok(calls.some(c=>c.file==='git'&&c.args.includes('checkout')&&c.args.includes(MJLAB_COMMIT)));
+ const sync=calls.find(c=>c.args[0]==='sync');assert.ok(sync.args.includes('--frozen'));assert.match(sync.env.UV_PROJECT_ENVIRONMENT,/py312-mjlab-cuda$/);
+ const cuda=calls.find(c=>c.args.includes('https://download.pytorch.org/whl/cu128'));assert.ok(cuda.args.includes('torch==2.9.1+cu128')&&cuda.args.includes('--reinstall-package'),'Windows PyPI torch is CPU-only');
  assert.ok(calls.at(-1).args[2].includes('x*x'));
  const n=calls.length;await setup.prepare(config);assert.equal(calls.length,n+1,'ready environments are probed, not reinstalled');
  assert.equal(messages.at(-1),'训练环境与模型已就绪');

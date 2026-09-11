@@ -1,6 +1,6 @@
 # Robot Lab MCP 0.2
 
-Robot Lab provides a full 3D Microduck window and PPO fine-tuning of the full original official actor using native CPU MuJoCo physics. Model training and evaluation run on the requested PyTorch CPU/MPS/CUDA device. CUDA awaits hardware verification. The desktop renderer continues using ONNX Runtime Web WASM.
+Robot Lab provides a full 3D Microduck window. Lesson 1 (walking) embeds the official mjlab / microduck_rl `Mjlab-Velocity-Flat-MicroDuck` training unchanged (MuJoCo Warp physics: CUDA on NVIDIA, CPU on Apple Silicon with the network on MPS). Headstand lessons run the app's CPU MuJoCo PPO on the requested PyTorch device. CUDA awaits hardware verification. The desktop renderer continues using ONNX Runtime Web WASM.
 
 Coding Agent workflow:
 1. lab_docs_search / lab_docs_read, or resources/read lab://docs/scripts.

@@ -26,7 +26,7 @@ Everything the duck needs is inside the app, including the RL policies (see `NOT
 
 Enable **Settings → About → Developer mode** to open the separate 3D robot laboratory. Inspect or control 14 joints, edit rewards and policy networks, run PPO training, evaluate, export ONNX, apply a policy to the desktop pet, and roll back.
 
-The Agents page can install Robot Lab MCP for Claude Code, Codex CLI and OpenCode so coding agents can read API docs, write scripts and manage training. Training needs a configured Python environment. MPS has been tested; CUDA awaits NVIDIA hardware verification. This first version trains the standard feet on flat ground. See [Robot Lab instructions](mcp/robot-lab/README.md).
+The Agents page can install Robot Lab MCP for Claude Code, Codex CLI and OpenCode so coding agents can read API docs, write scripts and manage training. Walking training embeds the official mjlab / microduck_rl environment unchanged (the app clones the pinned commit and runs `uv sync`, so Git is required); on Apple Silicon physics runs on the CPU with the network on MPS, on NVIDIA it uses CUDA. MPS has been tested; CUDA awaits NVIDIA hardware verification. This first version trains the standard feet on flat ground. See [Robot Lab instructions](mcp/robot-lab/README.md).
 
 ## Roller skates
 

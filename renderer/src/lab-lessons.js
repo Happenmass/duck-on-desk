@@ -1,9 +1,9 @@
 const concepts={
-  environment:'环境是它练习的地方：模拟地板、重力和身体。跌倒可以重来，不会操作实体机器人。',
+  environment:'环境是它练习的地方：模拟地板、重力和身体。行走课使用官方 mjlab（MuJoCo Warp）环境，含域随机化；跌倒可以重来，不会操作实体机器人。',
   observation:'观察是模型收到的身体信息，例如速度、身体倾斜和关节角度。这些信息帮助它判断下一步。',
   action:'动作是模型发给关节的指令。这里有 14 路目标角度，合在一起形成站立、迈步和转向。',
   reward:'奖励是动作发生后得到的评分。接近目标速度、保持直立可以加分，跌倒、偏离方向和大动作可以扣分。',
-  learning:'学习发生在收集一批经验之后：PPO 根据试跑和评分调整策略，再开始下一轮。这里会在基础行走策略上继续训练。',
+  learning:'学习发生在收集一批经验之后：PPO 根据试跑和评分调整策略，再开始下一轮。行走课直接运行官方 mjlab 训练环境和 PPO 配方，从随机权重开始复现官方步态。',
 };
 export function createLessons({notice}) {
   const el=id=>document.getElementById(id);
@@ -17,12 +17,12 @@ export function createLessons({notice}) {
   for(const button of document.querySelectorAll('[data-lesson],[data-next]'))button.addEventListener('click',()=>go(Number(button.dataset.lesson??button.dataset.next)));
   for(const button of document.querySelectorAll('[data-concept]'))button.addEventListener('click',()=>{for(const item of document.querySelectorAll('[data-concept]'))item.classList.toggle('active',item===button);el('concept-detail').textContent=describe(button.dataset.concept);});
   for(const button of document.querySelectorAll('[data-quiz]'))button.addEventListener('click',()=>{el('quiz-feedback').hidden=false;el('quiz-feedback').textContent=button.dataset.quiz==='no'?'对。原地站着也能得分，所以还要奖励接近目标速度。':'不一定。站稳和向前走是两件事；只奖励站稳，原地不动也可能拿到高分。';});
-  el('target-speed').addEventListener('input',()=>{const speed=Number(el('target-speed').value);el('target-speed-help').textContent=Number.isFinite(speed)?`${speed} 米 / 秒，也就是每秒前进约 ${(speed*100).toFixed(0)} 厘米。`:'';});
+  el('target-speed').addEventListener('input',()=>{const speed=Number(el('target-speed').value);el('target-speed-help').textContent=Number.isFinite(speed)?`${speed} 米 / 秒，也就是每秒前进约 ${(speed*100).toFixed(0)} 厘米。官方训练随机采样 −0.4～0.4 米/秒的速度指令，这个值只用于训练前后的对比测试。`:'';});
   for(const key of ['speed','upright','effort'])el(`reward-${key}`).addEventListener('input',()=>{el(`reward-${key}-value`).textContent=String(Number(el(`reward-${key}`).value));el('reward-builder-status').textContent='评分草稿已调整，点击按钮后才写入训练脚本。';});
   el('use-reward').addEventListener('click',()=>{
     const speed=Number(el('reward-speed').value),upright=Number(el('reward-upright').value),effort=Number(el('reward-effort').value);
     if (![speed,upright,effort].every(Number.isFinite)) {notice('奖励权重需要填写有效数字。',true);return;}
-    el('reward').value=`def reward_environment(state, action, next_state):\n    """Lesson reward: track speed, stay upright and retain the initial heading."""\n    import torch\n    error = next_state['forward_velocity'] - next_state['target_speed']\n    tracking = torch.exp(-error.square() / 0.04)\n    upright = next_state['upright'].clamp(0, 1)\n    alive = (next_state['height'] > 0.06).float()\n    heading = next_state['heading_error']\n    turning = next_state['yaw_rate']\n    return (${speed} * tracking + ${upright} * upright + 0.5 * alive\n            - ${effort} * action.square().sum(-1)\n            - 5.0 * heading.square() - 0.02 * turning.square())\n`;
+    el('reward').value=`# 官方 mjlab 奖励权重：只列出要修改的项，其余沿用官方默认。\nreward_weights = {\n    'track_linear_velocity': ${speed},\n    'upright': ${upright},\n    'action_rate_l2': ${-effort},   # 写出后不再按官方课程表自动加大\n}\n`;
     el('reward-script-status').textContent='已从评分参数生成奖励草稿，下一次训练会使用下方脚本。';
     el('reward-builder-status').textContent='已写入下方脚本，下一次训练会使用它。';notice('评分规则已写入奖励脚本，下一次训练生效。');
   });

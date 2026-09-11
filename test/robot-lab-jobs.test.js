@@ -19,22 +19,27 @@ function setup(t) {
 }
 const metrics={steps:250,nonFinite:false,fall_rate:0,velocity_mae:.14};
 const evaluation=id=>({...metrics,runId:id,baseline:{...metrics,velocity_mae:.15}});
-test('fresh workbench uses the complete MPS walking recipe, including both scripts',t=>{
+test('fresh workbench uses the official mjlab walking recipe, including both scripts',t=>{
   const {jobs}=setup(t),d=jobs.defaults();
-  const preset=path.join(__dirname,'../mcp/robot-lab/presets/official-finetune');
+  const preset=path.join(__dirname,'../mcp/robot-lab/presets/mjlab-velocity');
   const config=JSON.parse(fs.readFileSync(path.join(preset,'training.json'),'utf8'));
   for(const key of ['training_device','inference_device','target_speed','seed','environments','rollout_steps','learning_rate','ppo_profile'])assert.equal(d[key],['training_device','inference_device'].includes(key)?require('../mcp/robot-lab/setup.cjs').defaultDevice():config[key],key);
   assert.equal(d.iterations,config.max_iterations);
   assert.equal(d.reward,fs.readFileSync(path.join(preset,'reward.py'),'utf8'));
   assert.equal(d.strategy,fs.readFileSync(path.join(preset,'strategy.py'),'utf8'));
+  assert.equal(d.policy_initialization,'random');assert.match(d.reward,/reward_weights/);
 });
 test('saved custom workbench settings remain editable and override factory defaults',t=>{
   const {jobs,root}=setup(t);
   const custom={pythonPath:'/custom/python',iterations:37,target_speed:.2,seed:17,reward:'custom reward',strategy:'custom network'};
   fs.mkdirSync(root,{recursive:true});fs.writeFileSync(path.join(root,'workbench.json'),JSON.stringify(custom));
+  // A workbench saved by the retired CPU-MuJoCo recipe carries a reward_environment script the mjlab driver cannot use.
+  assert.equal(jobs.defaults().iterations,200);assert.match(jobs.defaults().reward,/reward_weights/);
+  fs.writeFileSync(path.join(root,'workbench.json'),JSON.stringify({...custom,recipe:'mjlab-official',policy_initialization:'official',ppo_profile:'legacy-v1'}));
   const d=jobs.defaults();for(const [key,value] of Object.entries(custom))if(key!=='strategy')assert.equal(d[key],value);
   assert.match(d.strategy,/512/);assert.doesNotMatch(d.strategy,/custom network/);
-  assert.equal(d.environments,32);assert.equal(d.learning_rate,.0001);
+  assert.equal(d.policy_initialization,'random');assert.equal(d.ppo_profile,'mjlab-official');
+  assert.equal(d.environments,256);assert.equal(d.learning_rate,.001);
 });
 test('policy activation requires finite real-evaluation fields and native compatibility',t=>{
   const {jobs,completed}=setup(t);const id=completed();
@@ -145,7 +150,7 @@ test('large training requests reach the worker unchanged without a wall-clock de
 test('headstand practice stays separate from walking defaults and cannot enter the desktop action library',t=>{
  const {jobs,completed}=setup(t),headstand=jobs.headstandDefaults();
  assert.equal(headstand.task,'microduck-headstand');assert.match(headstand.reward,/head_contact/);assert.doesNotMatch(headstand.reward,/phase/);
- assert.match(jobs.actionDefaults().reward,/phase/);assert.match(jobs.defaults().reward,/heading_error/);
+ assert.match(jobs.actionDefaults().reward,/phase/);assert.match(jobs.defaults().reward,/track_linear_velocity/);
  const id=completed({role:'practice',contract:'duck-lab-action-v1',task:'microduck-headstand',duration:8});
  assert.throws(()=>jobs.addAction(id,'倒立',{runId:id,success:true,steps:400,nonFinite:false,inverted_seconds:4,inverted_hops:1,standing:true}));
  assert.throws(()=>jobs.apply(id,evaluation(id)));assert.equal(jobs.actions().length,0);
@@ -153,7 +158,7 @@ test('headstand practice stays separate from walking defaults and cannot enter t
 
  test('near-headstand hold defaults and admission do not alter legacy entry runs',t=>{
  const {jobs,completed}=setup(t),d=jobs.holdDefaults();
- assert.equal(d.task,'microduck-headstand-hold');assert.equal(d.target_speed,0);assert.equal(d.policy_initialization,'random');assert.equal(jobs.defaults().policy_initialization,'official');
+ assert.equal(d.task,'microduck-headstand-hold');assert.equal(d.target_speed,0);assert.equal(d.policy_initialization,'random');assert.equal(jobs.actionDefaults().policy_initialization,'official');assert.equal(jobs.defaults().ppo_profile,'mjlab-official');
  assert.match(d.reward,/inverted\.pow\(3\)/);assert.doesNotMatch(d.reward,/reference_joint_error/);assert.doesNotMatch(jobs.headstandDefaults().reward,/reference_joint_error/);
  const id=completed({role:'practice',contract:'duck-lab-action-v1',task:d.task,duration:8});
  assert.throws(()=>jobs.addAction(id,'保持',{runId:id,success:true,steps:400,nonFinite:false,inverted_seconds:8,inverted_hops:1,standing:true}));
@@ -209,4 +214,29 @@ test('new hold drafts allow recovery, while normal walking keeps its own termina
  assert.equal(jobs.start({task:'microduck-headstand-hold'}).id.startsWith('run_'),true);
  assert.equal(jobs.defaults().reset_on_pose_loss,true);
  assert.throws(()=>jobs.start({task:'microduck-headstand-hold',reset_on_pose_loss:'false'}),/Invalid reset_on_pose_loss/);
+});
+
+test('walking always runs the official mjlab driver with the fixed official recipe, and its checkpoints resume',t=>{
+ const {root,weights}=setup(t);fs.mkdirSync(root,{recursive:true});
+ const base=path.join(root,'base.fixture');fs.writeFileSync(base,'fixture, not weights');fs.writeFileSync(path.join(root,'robot_allcollisions.xml'),'<fixture/>');
+ const vm=require('node:vm');const {EventEmitter}=require('node:events');const filename=require.resolve('../mcp/robot-lab/jobs.cjs');const spawned=[];const children=[];
+ const sandbox={module:{exports:{}},__dirname:path.dirname(filename),process,Buffer,AbortController,setTimeout:()=>0,clearTimeout:()=>{},
+  require:name=>name==='node:child_process'?{spawn:(_file,args)=>{spawned.push(args[1]);const c=new EventEmitter();c.stdout=new EventEmitter();c.stderr=new EventEmitter();c.kill=()=>c.emit('close',0);children.push(c);return c;}}:require(name)};
+ vm.runInNewContext(fs.readFileSync(filename,'utf8'),sandbox,{filename});
+ const jobs=sandbox.module.exports.createLabJobs({root,weights,basePolicy:base,assetDir:root,prepare:()=>({pythonPath:'fixture-python',base_policy:base})});
+ try{
+  const walk=jobs.start({task:'microduck-flat-walk',policy_initialization:'official',ppo_profile:'legacy-v1',iterations:3,source:{test:true}});
+  const config=JSON.parse(fs.readFileSync(path.join(root,'jobs',walk.id+'.input.json'),'utf8'));
+  assert.equal(config.training_method,'mjlab-official-v1');assert.equal(config.policy_initialization,'random');assert.equal(config.ppo_profile,'mjlab-official');
+  assert.equal(config.mjlab_commit,require('../mcp/robot-lab/setup.cjs').MJLAB_COMMIT);assert.equal(config.target_speed,.25);
+  assert.match(spawned[0],/train_mjlab\.py$/);
+  const hold=jobs.start({task:'microduck-headstand-hold',iterations:3,source:{test:true}});
+  assert.match(spawned[1],/[/\\]train\.py$/);assert.equal(JSON.parse(fs.readFileSync(path.join(root,'jobs',hold.id+'.input.json'),'utf8')).mjlab_commit,undefined);
+  const dir=path.join(weights,walk.id);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'checkpoint.pt'),'rsl_rl checkpoint fixture');
+  children[0].stdout.emit('data',JSON.stringify({checkpoint:{version:'mjlab-rsl-rl-v1',iteration:3,environment_steps:18432,sha256:createHash('sha256').update('rsl_rl checkpoint fixture').digest('hex')}})+'\n'+JSON.stringify({phase:'cancelled'})+'\n');children[0].emit('close',0);
+  assert.equal(jobs.get(walk.id).resume.available,true);
+  const child=jobs.resume(walk.id,{additional_iterations:2});
+  const resumed=JSON.parse(fs.readFileSync(path.join(root,'jobs',child.id+'.input.json'),'utf8'));
+  assert.equal(resumed.training_method,'mjlab-official-v1');assert.equal(resumed.resume_iteration,3);assert.match(spawned[2],/train_mjlab\.py$/);
+ }finally{jobs.dispose();}
 });

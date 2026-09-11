@@ -12,15 +12,20 @@ const UV_ASSETS={
  'win32-x64':['x86_64-pc-windows-msvc.zip','5049375aa2a5162f132b2c1cb992e25d42d47d934cab8c174dbe6f60973dcc12'],
  'linux-x64':['x86_64-unknown-linux-gnu.tar.gz','741ff1f5742c5a4a25d2f829e8395355e43f7a5ae2ebc6368e9ae2df0efb69cf'],
 };
-const DEPENDENCIES=['numpy==2.4.1','mujoco==3.10.0','onnx==1.22.0','onnxruntime==1.24.4'];
-const PROBE=`import json, sys, torch, mujoco, onnx, onnxruntime, numpy
+// Official Microduck training stack (mjlab 1.3.0 + microduck_rl), installed from that commit's own uv.lock.
+const MJLAB_REPO='https://github.com/pollen-robotics/microduck_rl.git';
+const MJLAB_COMMIT='53b8971b61baf5b7f3c16d135dd7cac37623de4b';
+const PROBE=`import json, sys, contextlib
+from importlib.metadata import version
+with contextlib.redirect_stdout(sys.stderr):
+    import torch, mujoco, onnx, onnxruntime, numpy, warp, mjlab
 requested=json.loads(sys.argv[1])
 for device in requested:
     if device == 'cuda' and not torch.cuda.is_available(): raise RuntimeError('CUDA 不可用：请更新 NVIDIA 驱动，并确认使用 CUDA 版 PyTorch；未切换到 CPU。')
     if device == 'mps' and not torch.backends.mps.is_available(): raise RuntimeError('MPS 不可用：需要受支持的 Apple Silicon 和 macOS；未切换到 CPU。')
     x=torch.ones((2,2),device=device,requires_grad=True); (x*x).sum().backward()
     if not torch.isfinite(x.grad).all(): raise RuntimeError('设备计算验证失败')
-print(json.dumps({'python':sys.executable,'torch':torch.__version__,'devices':requested}))`;
+print(json.dumps({'python':sys.executable,'torch':torch.__version__,'mjlab':version('mjlab'),'microduck_rl':version('mjlab-microduck'),'devices':requested}))`;
 function run(executable,args,{env=process.env,signal,onOutput=()=>{},timeout=20*60*1000}={}) {
  return new Promise((resolve,reject)=>{
   const child=spawn(executable,args,{env,windowsHide:true,stdio:['ignore','pipe','pipe'],signal});
@@ -36,7 +41,7 @@ function defaultDevice(platform=process.platform,arch=process.arch){return platf
 function createTrainingSetup({home=os.homedir(),platform=process.platform,arch=process.arch,fetchImpl=fetch,runCommand=run}={}) {
  const runtime=path.join(home,'.duck-on-desk','training-runtime');
  const download=async(url,signal)=>{const r=await fetchImpl(url,{signal:signal?AbortSignal.any([signal,AbortSignal.timeout(120000)]):AbortSignal.timeout(120000)});if(!r.ok)throw Error(`下载失败 HTTP ${r.status}；检查网络后重试。`);return Buffer.from(await r.arrayBuffer());};
- const managedPython=backend=>path.join(runtime,`py312-torch291-${backend}`,platform==='win32'?'Scripts/python.exe':'bin/python');
+ const managedPython=backend=>path.join(runtime,`py312-mjlab-${backend}`,platform==='win32'?'Scripts/python.exe':'bin/python');
  const isManaged=python=>python&&path.relative(runtime,path.resolve(python)).split(path.sep)[0]!== '..'&&!path.isAbsolute(path.relative(runtime,path.resolve(python)));
  async function ensureUv(signal,onProgress){
   const asset=UV_ASSETS[`${platform}-${arch}`];
@@ -54,6 +59,15 @@ function createTrainingSetup({home=os.homedir(),platform=process.platform,arch=p
    fs.mkdirSync(path.dirname(binary),{recursive:true});fs.copyFileSync(unpacked,binary);if(platform!=='win32')fs.chmodSync(binary,0o755);
    return binary;
   }finally{fs.rmSync(temporary,{recursive:true,force:true});}
+ }
+ async function ensureSource(env,signal,onProgress){
+  const dir=path.join(runtime,'microduck_rl');
+  try{await runCommand('git',['--version'],{env,signal,timeout:60000});}
+  catch{throw Error('需要 Git 才能获取官方训练环境：macOS 请安装 Xcode 命令行工具（终端运行 xcode-select --install），Windows 请安装 Git for Windows。');}
+  if(!fs.existsSync(path.join(dir,'.git'))){onProgress('下载官方 Microduck 训练环境 microduck_rl');fs.rmSync(dir,{recursive:true,force:true});await runCommand('git',['clone','--quiet',MJLAB_REPO,dir],{env,signal});}
+  const checkout=()=>runCommand('git',['-C',dir,'checkout','--quiet','--detach',MJLAB_COMMIT],{env,signal});
+  try{await checkout();}catch{await runCommand('git',['-C',dir,'fetch','--quiet','origin',MJLAB_COMMIT],{env,signal});await checkout();}
+  return dir;
  }
  async function lock(signal,onProgress){
   fs.mkdirSync(runtime,{recursive:true});const file=path.join(runtime,'setup.lock');
@@ -97,13 +111,12 @@ function createTrainingSetup({home=os.homedir(),platform=process.platform,arch=p
      await probe(python);
     }else{
      const uv=await ensureUv(signal,onProgress);
-     onProgress('安装 Python 3.12 并创建独立训练环境');
-     if(!fs.existsSync(python))await runCommand(uv,['venv','--python','3.12','--managed-python',path.dirname(path.dirname(python))],{env,signal});
-     onProgress(`安装 PyTorch 2.9.1 · ${backend.toUpperCase()}（CUDA 下载较大，请保持网络连接）`);
-     const index=platform==='darwin'?'https://pypi.org/simple':`https://download.pytorch.org/whl/${backend==='cuda'?'cu128':'cpu'}`;
-     await runCommand(uv,['pip','install','--python',python,'torch==2.9.1','--index-url',index],{env,signal});
-     onProgress('安装 MuJoCo、ONNX 和训练依赖');
-     await runCommand(uv,['pip','install','--python',python,...DEPENDENCIES,'--index-url','https://pypi.org/simple'],{env,signal});
+     const source=await ensureSource(env,signal,onProgress);
+     onProgress(`安装 Python 3.12 与官方 mjlab 训练环境 · ${backend.toUpperCase()}（首次下载较大，请保持网络连接）`);
+     // The pinned commit's uv.lock decides every version; the venv lives beside the other managed runtimes.
+     await runCommand(uv,['sync','--frozen','--project',source,'--python','3.12','--managed-python'],{env:{...env,UV_PROJECT_ENVIRONMENT:path.dirname(path.dirname(python))},signal});
+     // PyPI ships CPU-only torch for Windows; same 2.9.1, only the wheel source changes.
+     if(platform==='win32'&&backend==='cuda'){onProgress('安装 CUDA 版 PyTorch 2.9.1');await runCommand(uv,['pip','install','--python',python,'--reinstall-package','torch','torch==2.9.1+cu128','--index-url','https://download.pytorch.org/whl/cu128'],{env,signal});}
      const result=await probe(python);fs.writeFileSync(marker,JSON.stringify(result));
     }
    }finally{release();}
@@ -113,4 +126,4 @@ function createTrainingSetup({home=os.homedir(),platform=process.platform,arch=p
  }
  return {prepare,managedPython};
 }
-module.exports={createTrainingSetup,defaultDevice,UV_VERSION,UV_ASSETS,DEPENDENCIES};
+module.exports={createTrainingSetup,defaultDevice,UV_VERSION,UV_ASSETS,MJLAB_REPO,MJLAB_COMMIT};

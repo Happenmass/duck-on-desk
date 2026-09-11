@@ -2,19 +2,25 @@
 
 ## Walking training: mode="robot", task="microduck-flat-walk"
 
-reward.py defines reward_environment(state, action, next_state). State dictionaries contain float32 [batch] tensors on the training device: forward_velocity (body-frame m/s), height (metres), upright (cosine, -1..1), target_speed (m/s), heading_error (radians in [-pi,pi], relative to the initial world +X heading), and yaw_rate (body/IMU angular velocity around Z, rad/s). The two heading fields were added in the 2026-09-09 development build; installed 1.0.0 does not expose them. action is float32 [batch,14], the policy's joint offsets in radians. Return finite [batch] rewards. Falling adds a fixed penalty of -2 in the runner. Body-frame forward speed alone can reward walking in circles; a straight-walking reward should also penalize heading error and turning.
+Lesson 1 runs the official `Mjlab-Velocity-Flat-MicroDuck` task from `pollen-robotics/microduck_rl` (commit 53b8971) on mjlab 1.3.0 / rsl_rl 5.0.1, unmodified: 16 reward terms, domain randomization, privileged critic (76-dim), online observation normalization, adaptive-KL PPO (lr 1e-3, 5 epochs × 4 mini-batches, entropy 0.01, init_std 1.0) and the official curricula. Physics is MuJoCo Warp: CUDA on NVIDIA, CPU on Apple Silicon (the network then runs on MPS). The policy starts from random weights, as upstream does; policy_initialization and ppo_profile are fixed for this task. Driver: training/train_mjlab.py.
 
-strategy.py declares build_policy(observation_dim, action_dim), returning the official torch.nn.Sequential architecture: Linear(61,512), ELU, Linear(512,256), ELU, Linear(256,128), ELU, Linear(128,14). All 197,774 actor parameters are trainable. policy_initialization selects original walking weights/normalization or random weights/identity normalization; new walking drafts default to official, new hold drafts default to random. There is no residual network, output zeroing, command mask inside the actor, or reference-angle correction clamp. Incompatible old network drafts fail explicitly before optimization; saved history is not rewritten. The UI displays the fixed architecture read-only; reward scripts and PPO settings remain editable. Algorithm plugins are not supported.
+reward.py declares `reward_weights = {term: weight}` over the official term names: track_linear_velocity, track_angular_velocity, upright, pose, body_ang_vel, angular_momentum, dof_pos_limits, action_rate_l2, air_time, foot_clearance, foot_swing_height, foot_slip, self_collisions, head_pose_tracking, body_pose_tracking, head_pose_bias. Omitted terms keep the official weight. action_rate_l2 and head_pose_bias are curriculum-scheduled upstream; declaring either fixes it and removes that curriculum (recorded in the manifest as curricula_disabled). strategy.py is not used by this task: the 61→512→256→128→14 ELU actor comes from the official config.
 
 training.json keys:
 - schema_version: 1; mode: "robot"; task: "microduck-flat-walk"; algorithm: "ppo"
-- training_device and inference_device: "cpu" | "mps" | "cuda", default "mps" for both
-- physics_backend: "mujoco_cpu" (Warp is not implemented)
-- max_iterations: positive integer, default 200; seed: nonnegative integer, default 2
-- environments: positive integer, no application-imposed upper limit; default 32
-- rollout_steps: positive integer, default 64
-- learning_rate: finite nonnegative number; new walk default 0.0001, hold default 0.0003; initial value and ceiling for local-ppo-v2
-- target_speed: finite number in m/s, default 0.25; negative values request backward motion
+- training_device and inference_device: "cpu" | "mps" | "cuda", default "mps" for both; "cuda" also moves physics to the GPU
+- physics_backend: "mjlab" (walk) or "mujoco_cpu" (headstand lessons)
+- max_iterations: positive integer, default 200 (official 50000); seed: nonnegative integer, default 42
+- environments: positive integer, default 256 for Mac CPU physics (official 4096)
+- rollout_steps: positive integer, default 24 (official)
+- learning_rate: finite nonnegative number, default 0.001 (official; adaptive-KL schedule adjusts it)
+- target_speed: finite number in m/s, default 0.25; only used by the before/after evaluation, the official task samples commands in −0.4..0.4 m/s
+
+Progress events add mean_episode_seconds, completed_episodes, learning_rate, action_std, losses (value/surrogate/entropy) and reward_components (per-term episode means, verified). Checkpoints (rsl_rl format plus environment_steps and common_step_counter) save every 10 iterations, at the end and on stop; resume continues the iteration count and curricula. The official runner exports ONNX with the observation normalizer baked in (Sub/Div → Gemm/ELU ×3 → Gemm, input `obs`, output `actions`), which the desktop runtime loads unchanged.
+
+Native evaluation runs in the app's own CPU MuJoCo environment (ordinary-feet MJCF, contract duck-lab-legs-v1: gyro 3, projected gravity 3, joint position minus default pose 14, joint velocity 14, previous action 14, commands 13; control period 0.02 s): base and candidate over 3 seeded environments, 250 steps each. Admission requires no extra falls and velocity MAE <= base+0.03 m/s. Browser evaluation compares both in WASM, 250 steps each; admission requires no extra falls and MAE <= base+0.05. These short non-regression gates do not establish long-term locomotion quality; a few hundred iterations at reduced scale will not walk.
+
+Headstand lessons below keep the app's CPU MuJoCo PPO: reward.py defines reward_environment(state, action, next_state) over float32 [batch] tensors (forward_velocity, height, upright, target_speed, heading_error, yaw_rate, plus the lesson fields listed there); strategy.py declares build_policy(observation_dim, action_dim) returning the official torch.nn.Sequential architecture. Falling adds a fixed penalty of -2 in that runner.
 
 Real jobs run for the requested iteration count, with no application-imposed iteration, sampling-count or wall-clock ceiling. Stop/cancel saves the latest complete iteration. Numeric counts must remain valid integers; hardware capacity determines which batch sizes can actually run.
 

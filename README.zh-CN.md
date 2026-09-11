@@ -26,7 +26,7 @@
 
 在「设置 → 关于」开启「打开开发者模式」，进入独立的 3D 机器人实验室。可操作 14 个关节、编辑奖励和策略网络、执行 PPO 训练、评测、导出 ONNX 并应用到桌宠，支持回退。
 
-Agent 管理页可为 Claude Code、Codex CLI、OpenCode 安装 Robot Lab MCP，让 Coding Agent 查询接口、写脚本和管理训练。训练需配置 Python 环境；MPS 已实测，CUDA 待 NVIDIA 实机验证。第一版训练对象为平地普通脚，详见 [Robot Lab 使用说明](mcp/robot-lab/README.md)。
+Agent 管理页可为 Claude Code、Codex CLI、OpenCode 安装 Robot Lab MCP，让 Coding Agent 查询接口、写脚本和管理训练。行走训练原样嵌入官方 mjlab / microduck_rl 环境（应用会克隆钉死的 commit 并执行 `uv sync`，因此需要 Git）；Apple Silicon 上物理在 CPU、网络在 MPS，NVIDIA 上走 CUDA。MPS 已实测，CUDA 待 NVIDIA 实机验证。第一版训练对象为平地普通脚，详见 [Robot Lab 使用说明](mcp/robot-lab/README.md)。
 
 ## 轮滑
 

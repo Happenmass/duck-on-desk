@@ -279,7 +279,7 @@ describe("package build config", () => {
         { from: "assets/icon.ico", to: "icon.ico" },
         {
           from: "mcp/robot-lab", to: "robot-lab-mcp",
-          filter: ["package.json", "server.mjs", "check.mjs", "store.mjs", "templates.mjs", "worker.py", "docs/**/*", "jobs.cjs", "training/**/*", "presets/stable-flat-walk/**/*", "presets/official-finetune/**/*", "!training/**/__pycache__/**/*", "!training/**/*.pyc", "setup.cjs"],
+          filter: ["package.json", "server.mjs", "check.mjs", "store.mjs", "templates.mjs", "worker.py", "docs/**/*", "jobs.cjs", "training/**/*", "presets/stable-flat-walk/**/*", "presets/official-finetune/**/*", "presets/mjlab-velocity/**/*", "!training/**/__pycache__/**/*", "!training/**/*.pyc", "setup.cjs"],
         },
         { from: "mcp/robot-lab/node_modules", to: "robot-lab-mcp/node_modules", filter: ["**/*", "!.cache/**/*"] },
         { from: "src/robots/duck/policy-cache.js", to: "robot-lab-mcp/policy-cache.cjs" },

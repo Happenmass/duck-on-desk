@@ -11,6 +11,8 @@ def validate(payload):
     files = payload["files"]
     for name, function_name, argc in (("reward.py", "reward_environment" if payload.get("robot") else "reward", 3), ("strategy.py", "build_policy", 2)):
         tree = ast.parse(files[name], filename=name)
+        if name == "reward.py" and any(isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "reward_weights" for t in node.targets) for node in tree.body):
+            continue  # lesson 1 declares weights over the official mjlab reward terms instead of a reward function
         defs = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == function_name]
         if len(defs) != 1 or len(defs[0].args.posonlyargs) + len(defs[0].args.args) != argc:
             raise ValueError(f"{name} must define {function_name} with {argc} positional arguments")

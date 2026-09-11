@@ -7,6 +7,7 @@ const { spawn } = require('node:child_process');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const COMMIT = '183f99a40bd7308da3e848de961ed32bb02624a5';
 const CONTRACT = 'duck-lab-legs-v1';
+const WALK_RECIPE = 'mjlab-official'; // lesson 1 = official mjlab Velocity task, not the CPU-MuJoCo PPO
 const jobId = id => { if (!/^run_[a-f0-9-]{36}$/.test(id || '')) throw new Error('Invalid training run ID'); return id; };
 function atomic(file, data) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -56,7 +57,7 @@ function createLabJobs(options = {}) {
   }
   function resumeStatus(job) {
     if(!['completed','cancelled','failed'].includes(job.phase))return {available:false,reason:'请先停止当前训练，等待进度保存完成。'};
-    if(!['official-full-finetune-v1','random-actor-ppo-v1'].includes(job.config?.training_method||job.manifest?.training_method))return {available:false,reason:'旧修正网络与当前官方网络不兼容，请新建训练。'};
+    if(!['mjlab-official-v1','official-full-finetune-v1','random-actor-ppo-v1'].includes(job.config?.training_method||job.manifest?.training_method))return {available:false,reason:'旧修正网络与当前官方网络不兼容，请新建训练。'};
     if(!fs.existsSync(path.join(weights,job.id,'checkpoint.pt')))return {available:false,reason:'没有保存的检查点，无法接着这条记录训练。'};
     const iteration=job.checkpoint?.iteration??job.manifest?.iterations;
     if(!Number.isInteger(iteration)||iteration<1)return {available:false,reason:'检查点进度不可用，请新建训练。'};
@@ -77,18 +78,17 @@ function createLabJobs(options = {}) {
       resume_checkpoint:checkpoint,resume_checkpoint_sha256:sha});
   }
   function defaults() {
-    // Full official-network fine-tuning. Historical residual presets stay unchanged.
-    const initial={reward:fs.readFileSync(path.join(__dirname,'training/default-reward.py'),'utf8'),strategy:fs.readFileSync(path.join(__dirname,'training/default-strategy.py'),'utf8'),pythonPath:process.env.DUCK_LAB_PYTHON||'',training_device:setupModule.defaultDevice(options.platform,options.arch),inference_device:setupModule.defaultDevice(options.platform,options.arch),hold_episode_steps:400,reset_on_pose_loss:true,policy_initialization:'official',ppo_profile:'local-ppo-v2',iterations:200,environments:32,rollout_steps:64,learning_rate:0.0001,target_speed:0.25,seed:2};
+    // Lesson 1 runs the official mjlab Velocity recipe (presets/mjlab-velocity); only the scale is reduced for Mac CPU physics.
+    const initial={reward:fs.readFileSync(path.join(__dirname,'training/mjlab-velocity-reward.py'),'utf8'),strategy:fs.readFileSync(path.join(__dirname,'training/default-strategy.py'),'utf8'),pythonPath:process.env.DUCK_LAB_PYTHON||'',training_device:setupModule.defaultDevice(options.platform,options.arch),inference_device:setupModule.defaultDevice(options.platform,options.arch),hold_episode_steps:400,reset_on_pose_loss:true,policy_initialization:'random',ppo_profile:WALK_RECIPE,iterations:200,environments:256,rollout_steps:24,learning_rate:0.001,target_speed:0.25,seed:42};
     try {
       const saved=JSON.parse(fs.readFileSync(path.join(root,'workbench.json'),'utf8'));
-      for(const key of Object.keys(initial))if(key!=='strategy'&&saved[key]!==undefined)initial[key]=saved[key];
-      const legacy=fs.readFileSync(path.join(__dirname,'presets/stable-flat-walk/strategy.py'),'utf8');
-      if(saved.strategy?.trim()===legacy.trim()&&saved.learning_rate===0.001)initial.learning_rate=0.0001;
+      // Workbenches saved by the earlier CPU-MuJoCo recipe carry an incompatible reward script and scale; they are ignored.
+      if(saved.recipe===WALK_RECIPE)for(const key of Object.keys(initial))if(!['strategy','policy_initialization','ppo_profile'].includes(key)&&saved[key]!==undefined)initial[key]=saved[key];
     }catch{}
     return initial;
   }
   function actionDefaults() {
-    const d=defaults();return {...d,task:'microduck-headstand-dance',action_name:'倒立跳街舞',target_speed:0,
+    const d=defaults();return {...d,task:'microduck-headstand-dance',action_name:'倒立跳街舞',target_speed:0,policy_initialization:'official',
       reward:fs.readFileSync(path.join(__dirname,'training/action-reward.py'),'utf8'),strategy:fs.readFileSync(path.join(__dirname,'training/default-strategy.py'),'utf8'),
       ppo_profile:'local-ppo-v2',iterations:200,environments:32,rollout_steps:64,learning_rate:0.0001,seed:2};
   }
@@ -109,21 +109,22 @@ function createLabJobs(options = {}) {
     const c={...(input.task==='microduck-headstand-hold'?holdDefaults():input.task==='microduck-headstand'?headstandDefaults():input.task==='microduck-headstand-dance'?actionDefaults():defaults()),...input};
     const task=c.task||'microduck-flat-walk';
     if(!['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance'].includes(task))throw new Error('Unsupported training task');
-    if(task!=='microduck-flat-walk')c.target_speed=0;
+    const mjlab=task==='microduck-flat-walk';
+    if(mjlab){c.policy_initialization='random';c.ppo_profile=WALK_RECIPE;}else c.target_speed=0;
     if(typeof c.reset_on_pose_loss!=='boolean')throw new Error('Invalid reset_on_pose_loss');
-    if(!['legacy-v1','local-ppo-v2'].includes(c.ppo_profile))throw new Error('Unsupported PPO profile');
+    if(!['legacy-v1','local-ppo-v2',WALK_RECIPE].includes(c.ppo_profile))throw new Error('Unsupported PPO profile');
     if(!['official','random'].includes(c.policy_initialization))throw new Error('Unsupported policy initialization');
     if (!['cpu','mps','cuda'].includes(c.training_device)||!['cpu','mps','cuda'].includes(c.inference_device)) throw new Error('Unsupported model device');
     for (const k of ['reward','strategy']) if(typeof c[k]!=='string'||Buffer.byteLength(c[k])>65536) throw new Error(`Invalid ${k} script`);
     const python=String(c.pythonPath || process.env.DUCK_LAB_PYTHON || '');
     if (/[\0\r\n]/.test(python)) throw new Error('Invalid Python executable');
     const id=`run_${randomUUID()}`;
-    const config={task,hold_episode_steps:number(c,'hold_episode_steps',0,true),hold_random_start:c.hold_random_start===true,exploration_hold_steps:number({...c,exploration_hold_steps:c.exploration_hold_steps??1},'exploration_hold_steps',1,true),reset_on_pose_loss:c.reset_on_pose_loss,ppo_profile:c.ppo_profile,training_method:c.policy_initialization==='random'?'random-actor-ppo-v1':'official-full-finetune-v1',policy_initialization:c.policy_initialization,action_name:String(c.action_name||'倒立跳街舞').slice(0,40),training_device:c.training_device,inference_device:c.inference_device,reward:c.reward,strategy:c.strategy,
+    const config={task,hold_episode_steps:number(c,'hold_episode_steps',0,true),hold_random_start:c.hold_random_start===true,exploration_hold_steps:number({...c,exploration_hold_steps:c.exploration_hold_steps??1},'exploration_hold_steps',1,true),reset_on_pose_loss:c.reset_on_pose_loss,ppo_profile:c.ppo_profile,training_method:mjlab?'mjlab-official-v1':c.policy_initialization==='random'?'random-actor-ppo-v1':'official-full-finetune-v1',...(mjlab?{mjlab_commit:setupModule.MJLAB_COMMIT}:{}),policy_initialization:c.policy_initialization,action_name:String(c.action_name||'倒立跳街舞').slice(0,40),training_device:c.training_device,inference_device:c.inference_device,reward:c.reward,strategy:c.strategy,
       iterations:number(c,'iterations',1,true),environments:number(c,'environments',1,true),rollout_steps:number(c,'rollout_steps',1,true),
       learning_rate:number(c,'learning_rate',0),target_speed:number(c,'target_speed',-Infinity),seed:number(c,'seed',0,true),
       asset_dir:assetDir,base_policy:currentBase(),output_dir:path.join(weights,id),cancel_file:path.join(root,'jobs',`${id}.cancel`),
       preview_control_file:path.join(root,'jobs',`${id}.preview-watch.json`),preview_file:path.join(root,'jobs',`${id}.live.json`),pythonPath:python,...resumed};
-    if(!c.source && task==='microduck-flat-walk')atomic(path.join(root,'workbench.json'),Object.fromEntries(Object.keys(defaults()).map(key=>[key,c[key]])));
+    if(!c.source && mjlab)atomic(path.join(root,'workbench.json'),{...Object.fromEntries(Object.keys(defaults()).map(key=>[key,c[key]])),recipe:WALK_RECIPE});
     const job={id,ownerPid:process.pid,source:c.source||null,createdAt:new Date().toISOString(),phase:'preparing',config,metrics:[],manifest:null};
     write(job);
     const configFile=path.join(root,'jobs',`${id}.input.json`); atomic(configFile,config);
@@ -141,7 +142,7 @@ function createLabJobs(options = {}) {
       if(controller.signal.aborted||fs.existsSync(config.cancel_file)){if(job.phase!=='cancelled'){job.phase='cancelled';job.finishedAt=new Date().toISOString();write(job);}return;}
       Object.assign(config,result);atomic(configFile,config);job.phase='starting';write(job);
       // Python bytecode inside a signed .app invalidates its resource seal after training.
-      const child=spawn(config.pythonPath,['-B',path.join(__dirname,'training/train.py'),configFile],{stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8',PYTORCH_ENABLE_MPS_FALLBACK:'0'},windowsHide:true});
+      const child=spawn(config.pythonPath,['-B',path.join(__dirname,config.training_method==='mjlab-official-v1'?'training/train_mjlab.py':'training/train.py'),configFile],{stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8',PYTORCH_ENABLE_MPS_FALLBACK:'0'},windowsHide:true});
       children.set(id,{child,job}); let buffer='';
       child.stdout.on('data',chunk=>{
         buffer+=chunk;

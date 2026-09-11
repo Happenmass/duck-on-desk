@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "mode": "robot",
+  "task": "microduck-flat-walk",
+  "algorithm": "ppo",
+  "physics_backend": "mjlab",
+  "training_device": "mps",
+  "inference_device": "mps",
+  "target_speed": 0.25,
+  "seed": 42,
+  "max_iterations": 200,
+  "environments": 256,
+  "rollout_steps": 24,
+  "learning_rate": 0.001,
+  "policy_initialization": "random",
+  "ppo_profile": "mjlab-official",
+  "reset_on_pose_loss": true,
+  "hold_episode_steps": 400
+}
