@@ -9,6 +9,17 @@ const COMMIT = '183f99a40bd7308da3e848de961ed32bb02624a5';
 const CONTRACT = 'duck-lab-legs-v1';
 const WALK_RECIPE = 'mjlab-official'; // lesson 1 = official mjlab Velocity task, not the CPU-MuJoCo PPO
 const jobId = id => { if (!/^run_[a-f0-9-]{36}$/.test(id || '')) throw new Error('Invalid training run ID'); return id; };
+// Windows editors and some JSON writers prepend a UTF-8 BOM, and an interrupted
+// write can leave a file truncated or NUL-padded. JSON.parse rejects all three,
+// and one unreadable state file must never stop the laboratory from opening.
+// Only syntax damage falls back; permission and I/O errors still surface.
+function readState(file, fallback) {
+  let text;
+  try { text = fs.readFileSync(file, 'utf8'); }
+  catch (error) { if (error.code === 'ENOENT') return fallback; throw error; }
+  try { return JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text); }
+  catch (error) { if (error instanceof SyntaxError) return fallback; throw error; }
+}
 function atomic(file, data) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.${randomUUID()}.tmp`;
@@ -40,7 +51,10 @@ function createLabJobs(options = {}) {
   }
   const file = id => path.join(root, 'jobs', `${jobId(id)}.json`);
   function read(id) {
-    const job = JSON.parse(fs.readFileSync(file(id), 'utf8'));
+    const job = readState(file(id), null);
+    if (!job || typeof job !== 'object' || Array.isArray(job) || typeof job.createdAt !== 'string') {
+      throw new Error(`训练记录已损坏，无法读取：${file(id)}`);
+    }
     if (!['completed','cancelled','failed'].includes(job.phase) && job.ownerPid) {
       try { process.kill(job.ownerPid, 0); } catch (error) {
         if (error.code === 'ESRCH') { job.phase='failed'; job.error='The process that owned this training job has exited.'; write(job); }
@@ -52,7 +66,9 @@ function createLabJobs(options = {}) {
   function list() {
     const dir = path.join(root, 'jobs');
     if (!fs.existsSync(dir)) return [];
-    return fs.readdirSync(dir).filter(n => /^run_[a-f0-9-]{36}\.json$/.test(n)).map(n => read(n.slice(0,-5)))
+    // A damaged record hides only itself; the remaining history stays listed.
+    return fs.readdirSync(dir).filter(n => /^run_[a-f0-9-]{36}\.json$/.test(n))
+      .flatMap(n => { try { return [read(n.slice(0,-5))]; } catch { return []; } })
       .sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,30).map(summary);
   }
   function resumeStatus(job) {
@@ -81,7 +97,7 @@ function createLabJobs(options = {}) {
     // Lesson 1 runs the official mjlab Velocity recipe (presets/mjlab-velocity); only the scale is reduced for Mac CPU physics.
     const initial={reward:fs.readFileSync(path.join(__dirname,'training/mjlab-velocity-reward.py'),'utf8'),strategy:fs.readFileSync(path.join(__dirname,'training/default-strategy.py'),'utf8'),pythonPath:process.env.DUCK_LAB_PYTHON||'',training_device:setupModule.defaultDevice(options.platform,options.arch),inference_device:setupModule.defaultDevice(options.platform,options.arch),hold_episode_steps:400,reset_on_pose_loss:true,policy_initialization:'random',ppo_profile:WALK_RECIPE,iterations:200,environments:256,rollout_steps:24,learning_rate:0.001,target_speed:0.25,seed:42};
     try {
-      const saved=JSON.parse(fs.readFileSync(path.join(root,'workbench.json'),'utf8'));
+      const saved=readState(path.join(root,'workbench.json'),{});
       // Workbenches saved by the earlier CPU-MuJoCo recipe carry an incompatible reward script and scale; they are ignored.
       if(saved.recipe===WALK_RECIPE)for(const key of Object.keys(initial))if(!['strategy','policy_initialization','ppo_profile'].includes(key)&&saved[key]!==undefined)initial[key]=saved[key];
     }catch{}
@@ -203,7 +219,8 @@ function createLabJobs(options = {}) {
     return {phase:job.phase,frame,supported:true};
   }
   function actions() {
-    let entries; try { entries=JSON.parse(fs.readFileSync(path.join(root,'actions.json'),'utf8')); } catch(error) { if(error.code==='ENOENT')return [];throw error; }
+    const entries=readState(path.join(root,'actions.json'),[]);
+    if(!Array.isArray(entries))return [];
     return entries.filter(entry=>{try {const job=read(entry.id);artifact(entry.id);return job.manifest.role==='action'&&job.manifest.contract==='duck-lab-action-v1'&&job.manifest.duration===8&&job.manifest.native_evaluation_passed;}catch{return false;}});
   }
   function addAction(id, name, evaluation) {
@@ -216,7 +233,10 @@ function createLabJobs(options = {}) {
     atomic(path.join(root,'actions.json'),entries);return entries;
   }
   function removeAction(id) {jobId(id);const entries=actions().filter(entry=>entry.id!==id);atomic(path.join(root,'actions.json'),entries);return entries;}
-  function activation() { try {return JSON.parse(fs.readFileSync(path.join(root,'active-policy.json'),'utf8'));} catch(error) {if(error.code==='ENOENT')return{current:null,previous:null};throw error;} }
+  function activation() {
+    const state=readState(path.join(root,'active-policy.json'),null);
+    return state && typeof state==='object' && !Array.isArray(state) ? state : {current:null,previous:null};
+  }
   function apply(id, evaluation) {
     const job=read(id);artifact(id);
     if(job.manifest.role==='action'||job.manifest.contract!==CONTRACT||!job.manifest.native_evaluation_passed) throw new Error('Native evaluation or compatibility check did not pass');

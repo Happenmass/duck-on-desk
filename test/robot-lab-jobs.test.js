@@ -240,3 +240,34 @@ test('walking always runs the official mjlab driver with the fixed official reci
   assert.equal(resumed.training_method,'mjlab-official-v1');assert.equal(resumed.resume_iteration,3);assert.match(spawned[2],/train_mjlab\.py$/);
  }finally{jobs.dispose();}
 });
+
+test('a BOM-prefixed or damaged state file never stops the laboratory from opening',t=>{
+ const {jobs,completed,root}=setup(t);
+ const BOM='\ufeff';
+ // Windows writers prepend a UTF-8 BOM. A BOM-prefixed file is still valid
+ // content, so it must be read, not discarded.
+ const good=completed();
+ const file=path.join(root,'jobs',good+'.json');
+ fs.writeFileSync(file,BOM+fs.readFileSync(file,'utf8'));
+ fs.writeFileSync(path.join(root,'workbench.json'),BOM+JSON.stringify({recipe:'mjlab-official',iterations:37}));
+ assert.equal(jobs.defaults().iterations,37,'a BOM must not discard saved workbench settings');
+ assert.equal(jobs.list().some(job=>job.id===good),true,'a BOM must not hide a training record');
+ assert.equal(jobs.get(good).id,good);
+ // Damage beyond a BOM hides only that record; the rest of the history stays.
+ const broken='run_'+randomUUID();
+ for(const bytes of ['',BOM+'{"id":','\0'.repeat(64),'{}']) {
+  fs.writeFileSync(path.join(root,'jobs',broken+'.json'),bytes);
+  assert.deepEqual(jobs.list().map(job=>job.id),[good],`damaged record (${bytes.length} bytes) must not break the list`);
+  assert.throws(()=>jobs.get(broken),/已损坏/,'a directly requested damaged record fails loudly, never silently empty');
+ }
+ fs.rmSync(path.join(root,'jobs',broken+'.json'));
+ // The activation and action-library files degrade to their empty state.
+ fs.writeFileSync(path.join(root,'active-policy.json'),BOM+JSON.stringify({current:good,previous:null}));
+ assert.equal(jobs.activation().current,good,'a BOM must not drop the active policy');
+ for(const bytes of ['','not json','[]']) {
+  fs.writeFileSync(path.join(root,'active-policy.json'),bytes);
+  assert.deepEqual(jobs.activation(),{current:null,previous:null});
+  fs.writeFileSync(path.join(root,'actions.json'),bytes);
+  assert.deepEqual(jobs.actions(),[]);
+ }
+});
