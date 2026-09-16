@@ -77,7 +77,8 @@ export function createTrainingCharts(container) {
     chart.empty.textContent=!job?'开始训练后，这里会显示曲线。':rows.length?`此记录暂无${chart.title}数据。`:'等待第一轮训练数据…';
     svg.setAttribute('aria-label',`${chart.title}，${points.length} 轮有记录。左右方向键查看各轮数值。`);
     if(!points.length){chart.geometry=null;return;}
-    const values=points.map(row=>row[key]),low=Math.min(...values),high=Math.max(...values);
+    let low=Infinity,high=-Infinity;
+    for(const row of points){low=Math.min(low,row[key]);high=Math.max(high,row[key]);}
     const padding=high>low?(high-low)*0.12:Math.max(Math.abs(low)*0.1,0.01);
     const minY=chart.min??(low-padding),maxY=chart.max??Math.max(chart.maxFloor??-Infinity,high+padding);
     const first=rows[0].iteration,last=rows.at(-1).iteration;
@@ -94,13 +95,17 @@ export function createTrainingCharts(container) {
     for(const tick of ticks)svg.append(svgNode('text',{x:x(tick),y:h-10,'text-anchor':'middle',class:'curve-tick'},tick));
     svg.append(svgNode('text',{x:w-right,y:h-10,'text-anchor':'end',class:'curve-axis'},'轮'));
     let path='',gap=true;
-    for(const row of rows) {
+    // At most four ordered extrema per pixel bucket; keep gaps and exact rows for inspection.
+    const plotted=[];let bucket=[],bucketIndex=null;
+    function flush(){if(!bucket.length)return;let min=bucket[0],max=min;for(const row of bucket){if(row[key]<min[key])min=row;if(row[key]>max[key])max=row;}plotted.push(...[...new Set([bucket[0],min,max,bucket.at(-1)])].sort((a,b)=>a.iteration-b.iteration));bucket=[];}
+    for(const row of rows){if(!finite(row[key])){flush();plotted.push(row);bucketIndex=null;continue;}const index=Math.floor(x(row.iteration));if(index!==bucketIndex){flush();bucketIndex=index;}bucket.push(row);}flush();
+    for(const row of plotted) {
       if(!finite(row[key])){gap=true;continue;}
       path+=`${gap?'M':'L'}${x(row.iteration).toFixed(2)},${y(row[key]).toFixed(2)} `;gap=false;
     }
     svg.append(svgNode('path',{d:path.trim(),class:'curve-line',stroke:chart.color}));
     // Dots also make the first point and isolated values visible.
-    for(const point of points)svg.append(svgNode('circle',{cx:x(point.iteration),cy:y(point[key]),r:points.length===1?3.5:1.8,fill:chart.color,class:'curve-point'}));
+    if(points.length<=Math.ceil(plotWidth))for(const point of points)svg.append(svgNode('circle',{cx:x(point.iteration),cy:y(point[key]),r:points.length===1?3.5:1.8,fill:chart.color,class:'curve-point'}));
     chart.cursor=svgNode('g',{class:'curve-cursor'});svg.append(chart.cursor);
   }
   function inspect() {
@@ -137,7 +142,7 @@ export function createTrainingCharts(container) {
   const resize=new ResizeObserver(()=>{const next=container.clientWidth;if(next&&next!==width){width=next;render();}});
   resize.observe(container);
   function update(next) {
-    const key=JSON.stringify([next?.id,next?.settings?.task,next?.phase,next?.metrics]);
+    const key=JSON.stringify([next?.id,next?.settings?.task,next?.phase,next?.revision??next?.metrics]);
     if(key===fingerprint)return;
     if(next?.id!==job?.id)hover=null;
     fingerprint=key;job=next;

@@ -13,6 +13,8 @@ CI verifies the actual files against updater metadata before uploading artifacts
 
 ## Draft Release
 
+1.3.0 adds the action market: a settings-menu window that lists community Microduck policies from the Hugging Face `microduck-policy` tag, downloads one after verifying it against the Hub's own LFS digest (an LFS oid is the file's sha256), and lets the laboratory try it. Downloading is not admission -- a policy reaches the pet only after the user watches it run here and accepts it, and only the episodic zero-command kind is playable at all, because every other kind uses the 13 command slots for meanings this app cannot supply. Velocity gaits can be loaded as the laboratory's walking policy but cannot yet replace the pet's. Weights live in the user Hugging Face cache; none are packaged. 1.3.0 also moves lesson 2 onto the official Roulade recipe: it calls the registered `load_env_cfg` / `load_rl_cfg` / `load_runner_cls` for `Mjlab-Roulade-Flat-MicroDuck` at `microduck_rl` commit 53b8971 without rewriting the reward, collision model or curricula, lists all 20 reward weights from one file, and saves a 10-second pose replay every 200 iterations. Its 20-environment standing acceptance is an app-defined read-only evaluation, not an official success rate, and admission to the pet is explicit user confirmation that never overwrites `native_evaluation_passed`.
+
 1.2.0 replaces the walking lesson's CPU-MuJoCo PPO with the official mjlab / microduck_rl `Mjlab-Velocity-Flat-MicroDuck` task embedded in the app (`training/train_mjlab.py`, environment cloned at commit 53b8971 and installed with `uv sync --frozen`; Git is required). Mac runs Warp CPU physics with the network on MPS; CUDA is wired as in the official script but has NOT been verified on hardware. Headstand lessons keep the CPU MuJoCo path inside the same venv.
 
 1.1.4 changes the hold lesson from a static two-second headstand to a tip-over/recover cycle. Its reward, reference state initialization, exploration noise hold and acceptance metric all changed together; the old `supported_headstand` criterion cannot register the new behaviour and now serves lesson 3 only. The reward is verified by a CEM-MPC planner from both a balanced and a collapsed start, and is NOT verified by training: no local MPS run produced the behaviour. Do not describe this lesson as trained or working. Historical runs keep their own reward and reset rules on resume.
@@ -29,6 +31,20 @@ CI verifies the actual files against updater metadata before uploading artifacts
 - For this machine, use `.release-reviews/v1.1.0/local-build.cjs` to write `dist/local-1.1.0` and omit copied weights; resolve policies from the existing global Hugging Face cache.
 - Verify the packaged Robot Lab tutorial, joint controls, charts, optional preview, MPS recipe and direction-aware reward. Validate the external packaged MCP server, then replace the local installed bundle.
 - Keep the verified 1.0.0 ZIP for rollback. Test packaged modules using a virtual-only harness; do not load `src/main.js` or hardware adapters for smoke checks.
+
+### v1.3.0 Draft Smoke Checklist
+
+- Confirm the packaged app shows `1.3.0` metadata and Settings -> About shows `v1.3.0`, sourced from app.getVersion().
+- Confirm the package contains `src/market/`, `src/preload-market.js`, `src/shell/market-window.js`, `src/shell/privileged-schemes.js` and `renderer-dist/market.html`.
+- Open Actions -> Action market. The listing must load from the Hub and sort usable entries first; with the network down it must serve the cache and say it is stale rather than present it as current.
+- Confirm exactly one registerSchemesAsPrivileged call exists. A second one keeps the standard list but replaces secure/fetch/cors, stripping them from `pet-model`, and the pet then silently never appears. `test/privileged-schemes.test.js` guards this.
+- Download an episodic action (joanfox/microduck-happy-hop is the reference). Size and sha256 must match the Hub tree entry; a mismatch must leave nothing on disk.
+- The downloaded action must NOT appear in the pet menu until it has been played to completion in the laboratory and accepted. Confirm a hand-edited `installed.json` entry is rejected rather than trusted.
+- Download a velocity gait (HannesVonEssen/microduck-running). It must offer the walking-policy trial, must not offer admission to the pet, and must never show a null duration.
+- Lesson 2 must run the official Roulade task: the manifest must carry `task: microduck-roulade`, `roulade_recipe: official-v1` and the mjlab/microduck_rl versions, and the reward table must be generated from `training/roulade-official-reward.py` rather than from live weights.
+- Confirm a Roulade run saves a 10-second pose replay every 200 iterations and at the end, and that the replay is viewable in the lab.
+- Confirm adding the roulade action to the pet requires explicit confirmation and leaves `native_evaluation_passed` at its real value; a confirmation must never be reported as an automatic pass.
+- Windows: packages remain unsigned, so Smart App Control blocks the installed executable where it is on -- the same gate that already blocks `warp.dll` in lesson 1. Running from source is unaffected because the Electron binary itself is recognised. Do not describe this as fixed without a code signing certificate.
 
 ### v1.2.0 Draft Smoke Checklist
 

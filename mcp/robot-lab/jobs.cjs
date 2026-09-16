@@ -63,13 +63,24 @@ function createLabJobs(options = {}) {
     return job;
   }
   function write(job) { atomic(file(job.id), job); }
-  function list() {
+  const catalogCache = new Map();
+  function catalogEntry(id) {
+    const stat = fs.statSync(file(id));
+    const revision = `${stat.mtimeMs}:${stat.ctimeMs}:${stat.size}`;
+    const cached = catalogCache.get(id);
+    if (cached?.revision === revision && ['completed','cancelled','failed'].includes(cached.phase)) return cached;
+    const value = summary(read(id));
+    const compact = {...value,metrics:value.metrics?.slice(-1)||[],revision};
+    catalogCache.set(id,compact);
+    return compact;
+  }
+  function list({compact=false} = {}) {
     const dir = path.join(root, 'jobs');
     if (!fs.existsSync(dir)) return [];
     // A damaged record hides only itself; the remaining history stays listed.
     return fs.readdirSync(dir).filter(n => /^run_[a-f0-9-]{36}\.json$/.test(n))
-      .flatMap(n => { try { return [read(n.slice(0,-5))]; } catch { return []; } })
-      .sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,30).map(summary);
+      .flatMap(n => { try { return [compact?catalogEntry(n.slice(0,-5)):read(n.slice(0,-5))]; } catch { return []; } })
+      .sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,30).map(value=>compact?value:summary(value));
   }
   function resumeStatus(job) {
     if(!['completed','cancelled','failed'].includes(job.phase))return {available:false,reason:'请先停止当前训练，等待进度保存完成。'};
@@ -80,7 +91,7 @@ function createLabJobs(options = {}) {
     return {available:true,iteration,environment_steps:job.checkpoint?.environment_steps??job.manifest?.environment_steps,
       legacy:!job.checkpoint?.version};
   }
-  function summary(job) { const { config, ...rest } = job; return { ...rest, resume:resumeStatus(job),
+  function summary(job) { const { config, ...rest } = job; return { ...rest, roulade_recipe:config?.roulade_recipe||'experimental-v1', resume:resumeStatus(job),
     settings: config && { hold_episode_steps:config.hold_episode_steps??400,hold_random_start:config.hold_random_start===true,exploration_hold_steps:config.exploration_hold_steps??1,reset_on_pose_loss:config.reset_on_pose_loss??true,ppo_profile:config.ppo_profile||'legacy-v1',environments:config.environments,rollout_steps:config.rollout_steps,learning_rate:config.learning_rate,policy_initialization:config.policy_initialization||'official',training_method:config.training_method||job.manifest?.training_method,task:config.task||'microduck-flat-walk',action_name:config.action_name,training_device:config.training_device,inference_device:config.inference_device,target_speed:config.target_speed,iterations:config.iterations,resume_run_id:config.resume_run_id,resume_iteration:config.resume_iteration||0 } }; }
   function resume(id, input={}) {
     const parent=read(id),status=resumeStatus(parent);
@@ -122,11 +133,13 @@ function createLabJobs(options = {}) {
     return value;
   }
   function start(input={}, resumed=null) {
+    if(input.task==='microduck-roulade')input={...rouladeDefaults(),...input};
     const c={...(input.task==='microduck-headstand-hold'?holdDefaults():input.task==='microduck-headstand'?headstandDefaults():input.task==='microduck-headstand-dance'?actionDefaults():defaults()),...input};
     const task=c.task||'microduck-flat-walk';
-    if(!['microduck-flat-walk','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance'].includes(task))throw new Error('Unsupported training task');
-    const mjlab=task==='microduck-flat-walk';
-    if(mjlab){c.policy_initialization='random';c.ppo_profile=WALK_RECIPE;}else c.target_speed=0;
+    if(!['microduck-flat-walk','microduck-roulade','microduck-headstand-hold','microduck-headstand','microduck-headstand-dance'].includes(task))throw new Error('Unsupported training task');
+    const mjlab=task==='microduck-flat-walk'||task==='microduck-roulade';
+    if(mjlab){c.policy_initialization=task==='microduck-roulade'&&resumed?(input.policy_initialization||'official'):'random';c.ppo_profile=WALK_RECIPE;}
+    if(task!=='microduck-flat-walk')c.target_speed=0;
     if(typeof c.reset_on_pose_loss!=='boolean')throw new Error('Invalid reset_on_pose_loss');
     if(!['legacy-v1','local-ppo-v2',WALK_RECIPE].includes(c.ppo_profile))throw new Error('Unsupported PPO profile');
     if(!['official','random'].includes(c.policy_initialization))throw new Error('Unsupported policy initialization');
@@ -140,7 +153,8 @@ function createLabJobs(options = {}) {
       learning_rate:number(c,'learning_rate',0),target_speed:number(c,'target_speed',-Infinity),seed:number(c,'seed',0,true),
       asset_dir:assetDir,base_policy:currentBase(),output_dir:path.join(weights,id),cancel_file:path.join(root,'jobs',`${id}.cancel`),
       preview_control_file:path.join(root,'jobs',`${id}.preview-watch.json`),preview_file:path.join(root,'jobs',`${id}.live.json`),pythonPath:python,...resumed};
-    if(!c.source && mjlab)atomic(path.join(root,'workbench.json'),{...Object.fromEntries(Object.keys(defaults()).map(key=>[key,c[key]])),recipe:WALK_RECIPE});
+    if(task==='microduck-roulade')config.roulade_recipe=resumed?(input.roulade_recipe||'experimental-v1'):'official-v1';
+    if(!c.source && task==='microduck-flat-walk')atomic(path.join(root,'workbench.json'),{...Object.fromEntries(Object.keys(defaults()).map(key=>[key,c[key]])),recipe:WALK_RECIPE});
     const job={id,ownerPid:process.pid,source:c.source||null,createdAt:new Date().toISOString(),phase:'preparing',config,metrics:[],manifest:null};
     write(job);
     const configFile=path.join(root,'jobs',`${id}.input.json`); atomic(configFile,config);
@@ -218,13 +232,34 @@ function createLabJobs(options = {}) {
     let frame=null;try{frame=JSON.parse(fs.readFileSync(path.join(root,'jobs',`${id}.live.json`),'utf8'));}catch{}
     return {phase:job.phase,frame,supported:true};
   }
+  function previewClips(id, iteration) {
+    const directory=path.join(weights,jobId(id),'previews');
+    if(iteration!==undefined){
+      if(!Number.isSafeInteger(iteration)||iteration<=0)throw new Error('Invalid preview iteration');
+      return JSON.parse(fs.readFileSync(path.join(directory,`iteration-${iteration}.json`),'utf8'));
+    }
+    try{return fs.readdirSync(directory).map(name=>/^iteration-([1-9]\d*)\.json$/.exec(name)).filter(Boolean)
+      .map(match=>Number(match[1])).filter(value=>Number.isSafeInteger(value)).sort((a,b)=>a-b);}
+    catch(error){if(error.code==='ENOENT')return [];throw error;}
+  }
   function actions() {
     const entries=readState(path.join(root,'actions.json'),[]);
     if(!Array.isArray(entries))return [];
-    return entries.filter(entry=>{try {const job=read(entry.id);artifact(entry.id);return job.manifest.role==='action'&&job.manifest.contract==='duck-lab-action-v1'&&job.manifest.duration===8&&job.manifest.native_evaluation_passed;}catch{return false;}});
+    return entries.filter(entry=>{try {const job=read(entry.id);artifact(entry.id);if(isRouladeAction(job))return entry.task==='microduck-roulade'&&entry.duration===5&&entry.contract==='duck-lab-action-v1'&&entry.admission==='user-confirmed-v1'&&entry.policy_sha256===job.manifest.policy_sha256;return job.manifest.role==='action'&&job.manifest.contract==='duck-lab-action-v1'&&job.manifest.duration===8&&job.manifest.native_evaluation_passed;}catch{return false;}});
+  }
+  function isRouladeAction(job) {
+    const m=job.manifest;
+    return job.config?.task==='microduck-roulade'&&m?.task==='microduck-roulade'&&m.contract===CONTRACT&&m.duration===5&&m.policy_observations==='official-zero-commands-v1'&&Number.isFinite(m.onnx_export_max_error)&&m.onnx_export_max_error<0.001;
   }
   function addAction(id, name, evaluation) {
     const job=read(id);artifact(id);
+    if(isRouladeAction(job)) {
+      if(evaluation?.runId!==id||evaluation?.user_confirmed!==true)throw new Error('请先试播前滚翻并确认加入桌宠试用；人工确认不等于自动验收通过');
+      const label=String(name||'向前滚翻').trim();if(!label||label.length>40||/[\x00-\x1f]/.test(label))throw new Error('动作名称需要 1–40 个字符');
+      const entries=actions().filter(entry=>entry.id!==id);
+      entries.push({id,name:label,contract:'duck-lab-action-v1',duration:5,task:'microduck-roulade',policy_observations:job.manifest.policy_observations,admission:'user-confirmed-v1',policy_sha256:job.manifest.policy_sha256,native_evaluation_passed:job.manifest.native_evaluation_passed});
+      atomic(path.join(root,'actions.json'),entries);return entries;
+    }
     if(job.manifest.role!=='action'||job.manifest.contract!=='duck-lab-action-v1'||job.manifest.duration!==8||!job.manifest.native_evaluation_passed)throw new Error('动作尚未通过训练端的完成动作与站立检查');
     if(!evaluation||evaluation.runId!==id||evaluation.nonFinite!==false||!Number.isInteger(evaluation.steps)||evaluation.steps<400||evaluation.success!==true||!Number.isFinite(evaluation.inverted_seconds)||evaluation.inverted_seconds<0.4||!Number.isInteger(evaluation.inverted_hops)||evaluation.inverted_hops<1||evaluation.standing!==true)throw new Error('请先完成桌宠仿真中的整段动作检查');
     const label=String(name||'').trim();if(!label||label.length>40||/[\x00-\x1f]/.test(label))throw new Error('动作名称需要 1–40 个字符');
@@ -238,6 +273,7 @@ function createLabJobs(options = {}) {
     return state && typeof state==='object' && !Array.isArray(state) ? state : {current:null,previous:null};
   }
   function apply(id, evaluation) {
+    if(read(id).config?.task==='microduck-roulade')throw new Error('前滚翻测试版尚未开放桌宠应用');
     const job=read(id);artifact(id);
     if(job.manifest.role==='action'||job.manifest.contract!==CONTRACT||!job.manifest.native_evaluation_passed) throw new Error('Native evaluation or compatibility check did not pass');
     const validMetrics = m => m && Number.isInteger(m.steps) && m.steps>=250 && m.nonFinite===false && Number.isFinite(m.fall_rate) && m.fall_rate>=0 && m.fall_rate<=1 && Number.isFinite(m.velocity_mae) && m.velocity_mae>=0;
@@ -248,6 +284,12 @@ function createLabJobs(options = {}) {
   }
   function rollback() {const old=activation();if(old.previous)artifact(old.previous);const next={current:old.previous||null,previous:null,updatedAt:new Date().toISOString()};atomic(path.join(root,'active-policy.json'),next);return next;}
   function dispose() {environmentController?.abort();for(const id of preparing.keys())cancel(id);for(const {child,job} of children.values()) {fs.writeFileSync(job.config.cancel_file,'shutdown');child.kill();}children.clear();}
-  return {python:()=>process.env.DUCK_LAB_PYTHON||defaults().pythonPath||environmentState.pythonPath||setupRuntime.managedPython(setupModule.defaultDevice(options.platform,options.arch)),setup,environment:()=>({...environmentState}),defaults,actionDefaults,headstandDefaults,holdDefaults,start,resume,list,get:id=>summary(read(id)),cancel,artifact,preview,actions,addAction,removeAction,activation,apply,rollback,dispose};
+  function rouladeDefaults() {
+    return {...defaults(),task:'microduck-roulade',action_name:'向前滚翻',target_speed:0,
+      policy_initialization:'random',ppo_profile:WALK_RECIPE,iterations:10000,environments:4096,
+      rollout_steps:24,learning_rate:0.001,seed:42,
+      reward:fs.readFileSync(path.join(__dirname,'training/roulade-official-reward.py'),'utf8')};
+  }
+  return {rouladeDefaults,previewClips,python:()=>process.env.DUCK_LAB_PYTHON||defaults().pythonPath||environmentState.pythonPath||setupRuntime.managedPython(setupModule.defaultDevice(options.platform,options.arch)),setup,environment:()=>({...environmentState}),defaults,actionDefaults,headstandDefaults,holdDefaults,start,resume,list,get:id=>summary(read(id)),cancel,artifact,preview,actions,addAction,removeAction,activation,apply,rollback,dispose};
 }
 module.exports={createLabJobs};

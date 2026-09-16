@@ -25,12 +25,31 @@ function stiltsDirectory(homeDir = os.homedir()) {
   return path.join(homeDir, ".cache", "huggingface", "hub", STILTS_REPO, "snapshots", STILTS_COMMIT);
 }
 
+// Action-market policies the user downloaded, keyed by repository and revision:
+// pet-model://policy/market%2F<owner>%2F<repo>%2F<revision>%2Fpolicy.onnx
+// Unlike the pinned policies above these are never fetched on demand -- the
+// market downloads them itself, verified against the Hub's LFS digest, so a
+// path that is not on disk is a miss rather than a download trigger.
+const MARKET_NAME = "[A-Za-z0-9][A-Za-z0-9._-]{0,95}";
+const MARKET_POLICY = new RegExp(`^market/(${MARKET_NAME})/(${MARKET_NAME})/([a-f0-9]{40})/policy\\.onnx$`);
+
+function marketDirectory(homeDir = os.homedir()) {
+  return path.join(homeDir, ".cache", "huggingface", "duck-market");
+}
+
 function resolvePolicyRequest(url, { homeDir = os.homedir(), exists = fs.existsSync, bundledDir = null, resolveLabPolicy = null } = {}) {
   let name;
   try { name = decodeURIComponent(new URL(url).pathname.split("/").pop() || ""); } catch { return { status: 404 }; }
   const lab = /^lab\/(run_[a-f0-9-]{36})\/policy\.onnx$/.exec(name);
   if (lab && resolveLabPolicy) {
     try { return {status:200,file:resolveLabPolicy(lab[1])}; } catch { return {status:404}; }
+  }
+  const market = MARKET_POLICY.exec(name);
+  if (market) {
+    const file = path.join(marketDirectory(homeDir), market[1], market[2], market[3], "policy.onnx");
+    return exists(file)
+      ? { status: 200, file, market: true }
+      : { status: 404, reason: "market policy has not been downloaded" };
   }
   let cached;
   let rel;
@@ -54,6 +73,9 @@ const pendingDownloads = new Map();
 async function ensureCachedPolicy(url, { homeDir = os.homedir(), fetchImpl = fetch, signal } = {}) {
   const target = resolvePolicyRequest(url, { homeDir, exists: () => true });
   if (target.status !== 200 || fs.existsSync(target.file)) return;
+  // Market policies are installed explicitly, after the Hub's LFS digest has
+  // been checked; never pull one in as a side effect of a renderer request.
+  if (target.market) return;
   if (pendingDownloads.has(target.file)) return pendingDownloads.get(target.file);
   const name = decodeURIComponent(new URL(url).pathname.split('/').pop());
   const source = name.startsWith('stilts/')
@@ -73,4 +95,4 @@ async function ensureCachedPolicy(url, { homeDir = os.homedir(), fetchImpl = fet
   try { await operation; } finally { pendingDownloads.delete(target.file); }
 }
 
-module.exports = { SCHEME, POLICY_COMMIT, POLICY_NAMES, STILTS_COMMIT, STILT_HEIGHTS_CM, policyDirectory, stiltsDirectory, resolvePolicyRequest, ensureCachedPolicy };
+module.exports = { SCHEME, POLICY_COMMIT, POLICY_NAMES, STILTS_COMMIT, STILT_HEIGHTS_CM, MARKET_POLICY, policyDirectory, stiltsDirectory, marketDirectory, resolvePolicyRequest, ensureCachedPolicy };

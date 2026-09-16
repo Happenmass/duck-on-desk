@@ -6,6 +6,7 @@ import ortWasmUrl from "onnxruntime-web/ort-wasm-simd-threaded.wasm?url";
 import { buildRig, geometryToBinaryStl, loadGlbGeometries, loadKinematics, MODEL_DIR, setJawOpen, setJoint } from "./duck.js";
 import { DEFAULT_VARIANT, materialHookFor, VARIANTS, applyVariant } from "./variants.js";
 import { ActionSequence } from "./action-sequence.js";
+import { normalizeActionCatalog } from "./action-catalog.js";
 import holdReference from '../../../mcp/robot-lab/training/headstand-hold.json';
 import { MotionLeases } from "./motion-leases.js";
 import { normalizeStilts, STILT_BLEND, STILT_MAX_FORWARD, STILT_MAX_TURN, STILT_SERVO_GAIN, stiltFraming, stiltMassKg, stiltMeshData, stiltPolicyFile } from "./stilts.js";
@@ -18,6 +19,7 @@ import {
   cameraLiftDecay, FACING_HALF_CONE, footLanding, GROUND_PICK, HEAD_ALPHA, HEAD_KEYS, HEAD_MAX, HEADING_ENGAGE, HEADING_MIN_FORWARD, headingTurn, landingImpact, pickJawOpenness,
   quackJawOpenness, wrapAngle,
 } from "./gestures.js";
+import { frameBlend } from "./pose-interpolation.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -116,6 +118,7 @@ class DuckRuntime {
   #actionSequence = null;
   #actionSession = null;
   #actionCatalog = [];
+  #trial = null;
   #actionGeneration = 0;
   #actionLoading = false;
   #quackAt = -Infinity;
@@ -139,6 +142,7 @@ class DuckRuntime {
   #renderFrames = 0;
   #renderT0 = performance.now();
   #lastRenderAt = 0;
+  #labRenderPose = null;
   #appearance = DEFAULT_VARIANT;
   #resizeObserver;
   #renderFrame;
@@ -536,8 +540,13 @@ class DuckRuntime {
   actions() { return [{ id: 'peck', name: '啄地', duration: 2.8 }, ...this.#actionCatalog]; }
 
   setActions(actions) {
-    this.#actionCatalog = (Array.isArray(actions) ? actions : []).filter(a => a && /^run_[a-f0-9-]{36}$/.test(a.id) && a.contract === 'duck-lab-action-v1' && a.duration === 8 && typeof a.url === 'string').map(a=>({...a,officialObservations:a.policy_observations==='official-zero-commands-v1'}));
+    this.#actionCatalog = normalizeActionCatalog(actions);
   }
+
+  // What the last market playback actually did, for the laboratory to show
+  // before the user decides whether to accept it. Never produced from the
+  // author's own claims.
+  actionTrial() { return this.#trial ? { ...this.#trial } : null; }
 
   async playAction(id) {
     if (id === 'peck') { this.#peck(); return this.snapshot(); }
@@ -561,6 +570,8 @@ class DuckRuntime {
   #canAct() { return this.#ready && !this.#disposed && !this.#rebuilding && !this.#actionLoading && !this.#actionSequence && this.#mode === 'walk' && !this.#grabbed && !this.#recovery && !this.#suspended && this.#stilts === 0 && !this.#rollers(); }
 
   #beginAction(action) {
+    // A market policy's trial is measured here, from the steps it actually ran.
+    if (action.market) this.#trial = { id: action.id, steps: 0, outputs: 0, nonFinite: false, completed: false };
     this.#actionSequence = new ActionSequence(action);
     this.#strideRemaining = 0; this.#displacement.x = this.#displacement.y = 0;
     this.#headTarget.fill(0); this.#headSmooth.fill(0); this.#lastAction.fill(0); this.#emit();
@@ -586,6 +597,9 @@ class DuckRuntime {
     if (this.#lab && sequence.action.practice && previous==='playing' && phase==='returning') {
       this.#cancelAction(); this.#labPaused=true; return;
     }
+    // The clip reached its declared end under its own steam; a run that failed
+    // to settle, or was cancelled, never sets this.
+    if (this.#trial && previous === 'playing' && phase !== 'playing') this.#trial.completed = true;
     if (previous !== phase) { this.#lastAction.fill(0); this.#emit(); }
     if (phase === 'done' || phase === 'failed') {
       this.#cancelAction();
@@ -625,10 +639,14 @@ class DuckRuntime {
     this.#mujoco.mj_forward(this.#model,this.#data);
   }
 
-  async previewActionPolicy(url, id, {practice=false,nearStart=false,officialObservations=false} = {}) {
+  async previewActionPolicy(url, id, {practice=false,nearStart=false,officialObservations=false,task,market=false,duration=null} = {}) {
     if (!this.#lab) throw new Error('Candidate actions can only be previewed in the laboratory');
     await this.labControl('pause'); await this.labControl('reset'); this.#labCommand.fill(0);
-    if (id !== 'peck') this.setActions([{id,url,name:'候选动作',contract:'duck-lab-action-v1',duration:8}]);
+    this.#trial = null;
+    if (id !== 'peck') this.setActions([market
+      ? {id,url,name:'商城动作',contract:'microduck-policy-v1',commandMode:'zero-commands',duration}
+      : {id,url,name:'候选动作',contract:'duck-lab-action-v1',duration:task==='microduck-roulade'?5:8,task,policy_observations:officialObservations?'official-zero-commands-v1':undefined}]);
+    if (market && !this.#actionCatalog.length) throw new Error('这个动作缺少可播放所需的声明');
     await this.playAction(id); if(!this.#actionSequence)throw new Error('当前状态无法开始动作试播');
     this.#actionSequence.action.practice=practice;
     this.#actionSequence.action.officialObservations=officialObservations;
@@ -912,6 +930,7 @@ class DuckRuntime {
     this.#suspended = false;
     this.#mujoco.mj_resetDataKeyframe(this.#model, this.#data, this.#standKeyId);
     this.#mujoco.mj_forward(this.#model, this.#data);
+    this.#labRenderPose = null;
     this.#lastAction.fill(0);
     this.#labPolicySample = false;
     this.#emit();
@@ -1111,7 +1130,11 @@ class DuckRuntime {
     } else if (this.#recovery?.state !== "fallen") {
       const output = await session.run({ obs: new this.#ort.Tensor("float32", this.#buildObs(), [1, OBS_SIZE]) });
       const action = output.actions.data;
-      if (action.length !== NUM_JOINTS || !Array.from(action).every(Number.isFinite)) { this.#cancelAction(); throw new Error('Non-finite policy output'); }
+      if (action.length !== NUM_JOINTS || !Array.from(action).every(Number.isFinite)) {
+        if (this.#trial && actionPlaying) { this.#trial.nonFinite = true; this.#trial.outputs = action.length; }
+        this.#cancelAction(); throw new Error('Non-finite policy output');
+      }
+      if (this.#trial && actionPlaying) { this.#trial.steps += 1; this.#trial.outputs = action.length; }
       this.#lastAction.set(action);
       if (this.#lab) this.#labPolicySample = true;
       for (let joint = 0; joint < NUM_JOINTS; joint++) {
@@ -1314,12 +1337,24 @@ class DuckRuntime {
         this.#camera.position.y += this.#cameraLift;
         this.#camera.lookAt(0, this.#lookY + this.#cameraLift, 0);
         }
-        this.#trunk.position.set(qpos[0], qpos[1], qpos[2]);
-        this.#trunk.quaternion.set(qpos[4], qpos[5], qpos[6], qpos[3]);
-        for (let joint = 0; joint < NUM_JOINTS; joint++) {
-          setJoint(this.#rig, JOINT_NAMES[joint], qpos[this.#qposAdr[joint]]);
+        if (this.#lab) {
+          if (!this.#labRenderPose) this.#labRenderPose = {
+            position: new THREE.Vector3(qpos[0], qpos[1], qpos[2]), quaternion: new THREE.Quaternion(qpos[4], qpos[5], qpos[6], qpos[3]),
+            joints: Float32Array.from(this.#qposAdr, adr => qpos[adr]), wheels: Float32Array.from(this.#wheels, wheel => qpos[wheel.adr]),
+            targetPosition: new THREE.Vector3(), targetQuaternion: new THREE.Quaternion(),
+          };
+          const pose=this.#labRenderPose,alpha=frameBlend(sinceLastRender);
+          pose.targetPosition.set(qpos[0],qpos[1],qpos[2]);pose.targetQuaternion.set(qpos[4],qpos[5],qpos[6],qpos[3]);
+          pose.position.lerp(pose.targetPosition,alpha);pose.quaternion.slerp(pose.targetQuaternion,alpha).normalize();
+          this.#trunk.position.copy(pose.position);this.#trunk.quaternion.copy(pose.quaternion);
+          for(let joint=0;joint<NUM_JOINTS;joint++){pose.joints[joint]+=alpha*(qpos[this.#qposAdr[joint]]-pose.joints[joint]);setJoint(this.#rig,JOINT_NAMES[joint],pose.joints[joint]);}
+          for(let i=0;i<this.#wheels.length;i++){const wheel=this.#wheels[i];pose.wheels[i]+=alpha*(qpos[wheel.adr]-pose.wheels[i]);setJoint(this.#rig,wheel.name,pose.wheels[i]);}
+        } else {
+          this.#trunk.position.set(qpos[0], qpos[1], qpos[2]);
+          this.#trunk.quaternion.set(qpos[4], qpos[5], qpos[6], qpos[3]);
+          for (let joint = 0; joint < NUM_JOINTS; joint++) setJoint(this.#rig, JOINT_NAMES[joint], qpos[this.#qposAdr[joint]]);
+          for (const wheel of this.#wheels) setJoint(this.#rig, wheel.name, qpos[wheel.adr]);
         }
-        for (const wheel of this.#wheels) setJoint(this.#rig, wheel.name, qpos[wheel.adr]);
         setJawOpen(this.#rig, Math.min(1, pickJawOpenness(this.#pick?.phase) + quackJawOpenness(now - this.#quackAt)));
         this.#labVisuals?.update();
       }

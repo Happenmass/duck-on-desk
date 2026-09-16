@@ -304,3 +304,4 @@ main{padding:16px 24px 12px}
 .reward-breakdown{margin-top:16px;border:1px solid #274149;border-radius:7px;padding:12px}.reward-breakdown summary{cursor:pointer;color:#b4decf;font-size:13px}.reward-breakdown table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}.reward-breakdown th,.reward-breakdown td{padding:8px 0;border-bottom:1px solid #20333e;overflow-wrap:anywhere}.reward-breakdown th{text-align:left;font-weight:400;color:#94b3bd}.reward-breakdown td{text-align:right;font-variant-numeric:tabular-nums;color:#c8e6e0}
 
 .resume-training{margin:16px 0;padding:16px;border:1px solid var(--border,#294350);border-radius:10px;background:#10212a}.resume-training .field{max-width:260px}.resume-training button{margin-top:8px}
+.library-heading{font:9px var(--mono);letter-spacing:.14em;color:#678d9f;font-weight:400;margin:18px 0 6px}

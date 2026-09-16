@@ -241,6 +241,7 @@ module.exports = function initMenu(ctx) {
             click: () => ctx.playDuckAction?.(action.id),
           })),
           { type: 'separator' },
+          { label: t('menuDuckActionMarket'), enabled: typeof ctx.openActionMarket === 'function', click: () => ctx.openActionMarket?.() },
           { label: t('menuDuckTrainAction'), enabled: typeof ctx.openActionLab === 'function', click: () => ctx.openActionLab?.() },
         ],
       }] : []),

@@ -13,7 +13,12 @@ test('Robot Lab creates an isolated normal window lazily and rejects other IPC s
   await assert.rejects(handler({sender:{}},{action:'bootstrap'}),/laboratory/);
   await assert.rejects(handler({sender:window.webContents,senderFrame:{}},{action:'bootstrap'}),/laboratory/);
   const event={sender:window.webContents,senderFrame:window.webContents.mainFrame};
-  assert.deepEqual((await handler(event,{action:'bootstrap'})).jobs,[]);
+  // bootstrap carries defaults and the active policy only; the job list is
+  // fetched separately so the lab can ask for the compact form.
+  const boot=await handler(event,{action:'bootstrap'});
+  assert.deepEqual(boot.defaults,{});assert.deepEqual(boot.active,{current:null});
+  assert.equal('jobs' in boot,false);
+  assert.deepEqual(await handler(event,{action:'list',payload:{compact:true}}),[]);
   await handler(event,{action:'apply',payload:{id:'x'}});assert.match(applied,/pet-model:\/\/policy\/lab%2Frun_x/);
   await handler(event,{action:'rollback'});assert.equal(applied,null);
   window.destroy();assert.equal(lab.getWindow(),null);await assert.rejects(handler(event,{action:'list'}));lab.dispose();

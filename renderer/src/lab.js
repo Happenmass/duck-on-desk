@@ -4,6 +4,7 @@ import {createJointConsole} from './lab-controls.js';
 import {createTrainingCharts} from './lab-training-charts.js';
 import {createLivePreview} from './lab-live-preview.js';
 import {createLessons} from './lab-lessons.js';
+import {createRouladeRewardGuide} from './lab-roulade-rewards.js';
 const el=id=>document.getElementById(id);
 const request=async(action,payload)=>{
   const result=window.robotLabAPI ? await window.robotLabAPI.request(action,payload)
@@ -15,12 +16,15 @@ let runtime, jointConsole, selected=null, evaluation=null, currentJob=null, clos
 const trainingCharts=createTrainingCharts(el('training-charts'));
 const livePreview=createLivePreview({request,notice});
 const lessons=createLessons({notice});
+const rouladeRewardGuide=createRouladeRewardGuide(el('reward'));
 const isHoldJob=job=>job?.settings?.task==='microduck-headstand-hold';
+const isRouladeJob=job=>job?.settings?.task==='microduck-roulade';
 const usesOfficialObservations=job=>job?.manifest?.policy_observations==='official-zero-commands-v1';
 const isHeadstandJob=job=>isHoldJob(job)||job?.settings?.task==='microduck-headstand';
-const isActionJob=job=>isHeadstandJob(job)||job?.settings?.task==='microduck-headstand-dance';
+const isActionJob=job=>isRouladeJob(job)||isHeadstandJob(job)||job?.settings?.task==='microduck-headstand-dance';
 const formFields={'reset-seconds':'hold_episode_steps','ppo-profile':'ppo_profile','policy-initialization':'policy_initialization','training-device':'training_device','inference-device':'inference_device',iterations:'iterations',environments:'environments','rollout-steps':'rollout_steps','target-speed':'target_speed','learning-rate':'learning_rate',seed:'seed',reward:'reward',strategy:'strategy',python:'pythonPath'};
 function updateSamplingSummary(){
+  if(trainingTask==='microduck-roulade'){el('sampling-summary').textContent=`官方前滚翻环境 · ${el('environments').value} × ${el('rollout-steps').value} 步 / 轮 · 每回合 5 秒。官方随机初始化、在线归一化；站立与翻转中途混合起步，验收和回放只从站立出发。`;return;}
   const n=Number(el('environments').value), steps=Number(el('rollout-steps').value);
   el('sampling-summary').textContent=`每轮收集 ${n} × ${steps} = ${(n*steps).toLocaleString()} 条样本。每只机器人累计模拟 ${(steps*.02).toFixed(2)} 秒，再更新模型；${trainingTask==='microduck-headstand-hold'?(Number(el('reset-seconds').value)>0?`每 ${Number(el('reset-seconds').value)} 秒模拟时间重置到近倒立初态，失稳时继续尝试恢复`:'不按时间重置，失稳时继续尝试恢复'):'行走回合跨轮继续，到达时限或失稳时重置'}。官方 4096 × 24 = 98,304 条，可按设备调整环境数和采样步数。`;
 }
@@ -31,22 +35,111 @@ function fillDraft(d){for(const [id,key] of Object.entries(formFields))el(id).va
 el('training-task').addEventListener('change',async()=>{
   const next=el('training-task').value;el('training-task').disabled=true;
   taskDrafts[trainingTask]=Object.fromEntries(Object.entries(formFields).map(([id,key])=>[key,key==='hold_episode_steps'?Number(el(id).value)*50:el(id).value]));
-  try{const d=taskDrafts[next]||await request('action-defaults',{task:next});fillDraft(d);trainingTask=next;updateSamplingSummary();selected=null;evaluation=null;lessons.setTask(next);lessons.go(0);await refresh();}
+  try{const d=taskDrafts[next]||await request('action-defaults',{task:next});fillDraft(d);trainingTask=next;updateSamplingSummary();selected=null;evaluation=null;lessons.setTask(next);rouladeRewardGuide.setTask(next);lessons.go(0);await refresh();}
   catch(error){el('training-task').value=trainingTask;notice(error.message,true);}finally{el('training-task').disabled=false;}
 });
+// Downloaded market policies: tried here, and promoted to the pet only from a
+// trial this runtime actually produced -- never from the author's own numbers.
+async function showMarketLibrary(){
+  const list=el('market-library-list');
+  if(!list)return;
+  let entries=[];
+  try{entries=await request('market-actions');}catch{list.replaceChildren();return;}
+  if(!entries.length){
+    const empty=document.createElement('p');empty.className='hint';
+    empty.textContent='还没有从动作商城下载的动作。在设置菜单的「动作 → 动作商城」里下载后，会出现在这里。';
+    list.replaceChildren(empty);return;
+  }
+  list.replaceChildren(...entries.map(entry=>{
+    const row=document.createElement('div');row.className='action-library-row';
+    const name=document.createElement('strong');name.textContent=entry.name;
+    const state=document.createElement('span');state.className='hint';
+    // A perpetual gait is not an action: it has no end, and it is driven by the
+    // walking command rather than played once and finished. It is tried by
+    // loading it as this laboratory's walking policy.
+    const gait=entry.kind==='perpetual';
+    if(gait){
+      state.textContent='持续步态 · 速度指令';
+      const tryGait=document.createElement('button');tryGait.textContent='作为行走策略试用';tryGait.disabled=!runtime||busy;
+      tryGait.onclick=async()=>{
+        try{
+          if(busy)return;
+          await runtime.labControl('pause');
+          // setLabPolicy, not loadWalkPolicy: it records the override so that
+          // "恢复原策略" below actually puts the original one back.
+          await runtime.setLabPolicy(entry.url);
+          await runtime.labControl('reset');
+          el('forward').value=0.15;el('turn').value=0;
+          await runtime.labControl('velocity',{forward:0.15,turn:0});
+          el('control-tab').click();
+          notice(`已载入「${entry.name}」作为行走策略，目标速度 0.15 米 / 秒。点「运行仿真」观察，改上方速度可以调。`);
+        }catch(error){notice(error.message,true);}
+      };
+      const restore=document.createElement('button');restore.textContent='恢复原策略';restore.className='subtle';
+      restore.onclick=async()=>{try{await runtime.setLabPolicy(null);notice('已恢复原来的行走策略。');}catch(error){notice(error.message,true);}};
+      const why=document.createElement('span');why.className='hint';
+      why.textContent='步态策略暂不能加入桌宠，只能在实验室试用。';
+      const drop=document.createElement('button');drop.textContent='删除';
+      drop.onclick=async()=>{try{await request('market-forget',{id:entry.id});await showMarketLibrary();}catch(error){notice(error.message,true);}};
+      row.append(name,state,tryGait,restore,why,drop);
+      return row;
+    }
+    state.textContent=entry.state==='admitted'?`已加入桌宠 · ${entry.duration} 秒`:`待试播 · ${entry.duration} 秒`;
+    const play=document.createElement('button');play.textContent='在实验室试播';play.disabled=!runtime||busy;
+    const admit=document.createElement('button');admit.textContent='动作可以接受，加入桌宠';
+    admit.disabled=true;admit.hidden=entry.state==='admitted';
+    play.onclick=async()=>{
+      try{
+        if(busy)return;
+        await runtime.previewActionPolicy(entry.url,entry.id,{market:true,duration:entry.duration});
+        el('control-tab').click();
+        notice(`正在试播「${entry.name}」：停下站稳 → 动作 → 回到站立。看完再决定是否加入。`);
+        admit.disabled=true;
+        // The button unlocks only once the clip has actually run to its end.
+        const started=Date.now();
+        const watch=setInterval(()=>{
+          const trial=runtime?.actionTrial?.();
+          if(!trial||trial.id!==entry.id){if(Date.now()-started>60000)clearInterval(watch);return;}
+          if(trial.completed&&!trial.nonFinite&&trial.outputs===14&&trial.steps>=50){
+            clearInterval(watch);admit.disabled=false;
+            state.textContent=`试播完成 · ${trial.steps} 个控制步`;
+            notice('试播结束。确认动作可以接受后，再点「加入桌宠」。');
+          }else if(trial.nonFinite){clearInterval(watch);notice('这个策略输出了非有限数值，已停止，不能加入。',true);}
+          else if(Date.now()-started>60000)clearInterval(watch);
+        },250);
+      }catch(error){notice(error.message,true);}
+    };
+    admit.onclick=async()=>{
+      const trial=runtime?.actionTrial?.();
+      if(!trial||trial.id!==entry.id){notice('请先试播这个动作。',true);return;}
+      try{
+        await request('market-admit',{id:entry.id,trial:{...trial,sha256:entry.sha256,userConfirmed:true}});
+        notice(`「${entry.name}」已加入桌宠动作库，可在右键菜单播放。`);
+        await showMarketLibrary();
+      }catch(error){notice(error.message,true);}
+    };
+    const remove=document.createElement('button');remove.textContent='删除';
+    remove.onclick=async()=>{try{await request('market-forget',{id:entry.id});await showMarketLibrary();}catch(error){notice(error.message,true);}};
+    row.append(name,state,play,admit,remove);
+    return row;
+  }));
+}
+
 async function showLibrary(){
   const entries=await request('actions');
+  void showMarketLibrary();
   el('action-library-list').replaceChildren(...[{id:'peck',name:'啄地（预置）'},...entries].map(entry=>{
     const row=document.createElement('div');row.className='action-library-row';
     const name=document.createElement('strong');name.textContent=entry.name;
     const play=document.createElement('button');play.textContent='在实验室试播';play.disabled=!runtime||busy;
-    play.onclick=async()=>{try{if(busy)return;await runtime.previewActionPolicy(entry.id==='peck'?null:await candidateUrl(entry.id),entry.id,{officialObservations:entry.policy_observations==='official-zero-commands-v1'});el('control-tab').click();notice('正在播放：停下站稳 → 动作 → 回到站立。');}catch(error){notice(error.message,true);}};
+    play.onclick=async()=>{try{if(busy)return;await runtime.previewActionPolicy(entry.id==='peck'?null:await candidateUrl(entry.id),entry.id,{task:entry.task,officialObservations:entry.policy_observations==='official-zero-commands-v1'});el('control-tab').click();notice('正在播放：停下站稳 → 动作 → 回到站立。');}catch(error){notice(error.message,true);}};
     row.append(name,play);
     if(entry.id!=='peck'){const remove=document.createElement('button');remove.textContent='移出动作库';remove.onclick=async()=>{try{await request('remove-action',{id:entry.id});await showLibrary();}catch(error){notice(error.message,true);}};row.append(remove);}
     return row;
   }));
 }
 function actionResult(result){
+  if(result.goal==='roulade')return `前滚翻成功 ${result.success_count} / ${result.environments}；最长站稳 ${result.max_hold_seconds.toFixed(2)} 秒。`;
   if(result.goal==='headstand-hold'){
     const duration=`近倒立初态测试：最长连续倒立 ${result.longest_hold_seconds.toFixed(2)} 秒 · 结尾保持 ${result.hold_seconds.toFixed(2)} 秒。`;
     if(result.evaluation_version!=='headstand-hold-v1'||result.initialization!=='near-headstand')return duration+'历史保持规则，请重新检查。';
@@ -92,13 +185,22 @@ function showJob(job){
   if(job.error)el('evaluation').textContent=job.error;
   else if(done&&!evaluation){const m=job.manifest;el('evaluation').textContent=actionJob?`训练端三段测试：${actionResult(m.candidate)}`:`训练前 → 训练后：平均速度误差 ${(m.baseline.velocity_mae*100).toFixed(2)} → ${(m.candidate.velocity_mae*100).toFixed(2)} 厘米 / 秒（越小越好），跌倒比例 ${(m.baseline.fall_rate*100).toFixed(0)}% → ${(m.candidate.fall_rate*100).toFixed(0)}%。${m.native_evaluation_passed?'已通过训练端初检；点击“对比训练前后”，再检查桌宠使用的仿真环境。':'未通过不退步检查，暂不能应用。可以调整奖励后重试。'}`;}
   else if(!done&&!busy)el('evaluation').textContent=job.phase==='cancelled'?(job.resume?.available?'已停止并保存进度。点击“继续这次训练”接着练；完成后再导出或检查动作。':'已停止，尚无可恢复的完整训练轮。请新建训练。'):'这次练习还在进行，完成后会显示训练前后的对比结果。';
+  if(isRouladeJob(job)){
+    el('policy-run-note').textContent=job.roulade_recipe==='official-v1'?'官方 Roulade 配方 · 随机初始化 · 在线归一化；修改参数后为自定义实验。':'历史实验 · 步态权重微调；续训沿用实验规则，不是官方基线。';
+    el('apply').disabled=!done||busy;el('apply').textContent='确认效果并加入桌宠试用';el('evaluate').disabled=true;
+    el('evaluate').textContent='训练结束自动验收';el('action-name-field').hidden=true;
+    el('preview').disabled=!done||busy||!runtime;el('export').disabled=!done||busy;
+    if(done){const c=job.manifest.candidate,b=job.manifest.baseline;el('evaluation').textContent=`站立起步 20 段测试：成功 ${b.success_count} → ${c.success_count} / 20；最长站稳 ${c.max_hold_seconds.toFixed(2)} 秒。${c.success?'通过训练端初检':'尚未达标'}。前 5 秒内完成翻转并站稳 1 秒，后 5 秒观察收尾。点击预览查看原生仿真回放。`;}
+  }
 }
+let refreshing=false;
 async function refresh(){
-  if(closed)return;
+  if(closed||refreshing)return;
+  refreshing=true;
   try{if(checkingEnvironment){const state=await request('environment');el('environment-status').textContent=state.message;checkingEnvironment=state.phase==='preparing';el('setup-environment').disabled=checkingEnvironment;}
-    const list=(await request('list')).filter(job=>(job.settings?.task||'microduck-flat-walk')===trainingTask);
+    const list=(await request('list',{compact:true})).filter(job=>(job.settings?.task||'microduck-flat-walk')===trainingTask);
     const ids=Array.from(el('runs').options).map(o=>o.value).filter(Boolean).join(',');
-    if(ids!==list.map(j=>j.id).join(',')){el('runs').replaceChildren(...list.map(j=>new Option(`${new Date(j.createdAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})} · ${isHoldJob(j)?'倒立保持':isHeadstandJob(j)?'历史翻转练习':isActionJob(j)?'倒立跳街舞':'行走'} · ${j.settings?.iterations??'—'} 轮 · ${(j.settings?.training_device||'未知设备').toUpperCase()}`,j.id)));}
+    if(ids!==list.map(j=>j.id).join(',')){el('runs').replaceChildren(...list.map(j=>new Option(`${new Date(j.createdAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})} · ${isRouladeJob(j)?'前滚翻':isHoldJob(j)?'倒立保持':isHeadstandJob(j)?'历史翻转练习':isActionJob(j)?'倒立跳街舞':'行走'} · ${j.settings?.iterations??'—'} 轮 · ${(j.settings?.training_device||'未知设备').toUpperCase()}`,j.id)));}
     if(!selected&&list.length)selected=list[0].id;
     if(!list.length){
       selected=null;currentJob=null;evaluation=null;livePreview.setJob(null);trainingCharts.update(null);el('policy-run-note').textContent='新训练按所选起点初始化；继续训练恢复历史检查点。';
@@ -107,12 +209,15 @@ async function refresh(){
       for(const id of ['preview','evaluate','export','apply','cancel','resume'])el(id).disabled=true;
       el('resume-status').textContent='选择一条有检查点的记录后，可继续训练。';el('train').disabled=false;el('action-name-field').hidden=trainingTask!=='microduck-headstand-dance';
     }
-    if(selected){el('runs').value=selected;const job=list.find(j=>j.id===selected);if(job)showJob(job);}
-  }catch(error){notice(error.message,true);}
+    if(selected){el('runs').value=selected;const job=list.find(j=>j.id===selected);if(job){
+      if(currentJob?.id===job.id&&currentJob.revision===job.revision)showJob(currentJob);
+      else {const detail=await request('get',{id:job.id});if(selected===job.id)showJob({...detail,revision:job.revision});}
+    }}
+  }catch(error){notice(error.message,true);}finally{refreshing=false;}
 }
 el('runs').addEventListener('change',()=>{selected=el('runs').value;evaluation=null;refresh();});
 action('setup-environment',async()=>{showEnvironmentSetup=true;el('setup-environment').disabled=true;try{const state=await request('setup',{pythonPath:el('python').value.trim(),training_device:el('training-device').value,inference_device:el('inference-device').value});checkingEnvironment=state.phase==='preparing';el('environment-status').textContent=state.message;}finally{el('setup-environment').disabled=checkingEnvironment;}});
-action('recommended-training',async()=>{if(trainingTask==='microduck-flat-walk'){const cuda=el('training-device').value==='cuda';el('environments').value=cuda?4096:256;el('rollout-steps').value=24;el('learning-rate').value=0.001;updateSamplingSummary();notice(cuda?'已填入官方 mjlab 参数：4096 × 24，学习率 0.001。':'已填入 Mac 版官方参数：环境数缩到 256，其余与官方一致。');return;}el('environments').value=32;el('rollout-steps').value=64;el('learning-rate').value=trainingTask==='microduck-headstand-hold'?0.0003:0.0001;el('ppo-profile').value='local-ppo-v2';updateSamplingSummary();notice('已填入本机新版参数；奖励脚本、起始权重和历史训练保留。');});
+action('recommended-training',async()=>{if(trainingTask==='microduck-roulade'){el('environments').value=4096;el('rollout-steps').value=24;el('learning-rate').value=.001;updateSamplingSummary();notice('已填入官方前滚翻参数：4096 × 24，学习率 0.001；保留奖励草稿。');return;}if(trainingTask==='microduck-flat-walk'){const cuda=el('training-device').value==='cuda';el('environments').value=cuda?4096:256;el('rollout-steps').value=24;el('learning-rate').value=0.001;updateSamplingSummary();notice(cuda?'已填入官方 mjlab 参数：4096 × 24，学习率 0.001。':'已填入 Mac 版官方参数：环境数缩到 256，其余与官方一致。');return;}el('environments').value=32;el('rollout-steps').value=64;el('learning-rate').value=trainingTask==='microduck-headstand-hold'?0.0003:0.0001;el('ppo-profile').value='local-ppo-v2';updateSamplingSummary();notice('已填入本机新版参数；奖励脚本、起始权重和历史训练保留。');});
 action('train',async()=>{showEnvironmentSetup=false;if(trainingTask==='microduck-headstand-hold'&&(!el('reset-seconds').value.trim()||!el('reset-seconds').reportValidity())){notice('重置时间请输入 0～1000 的整数秒。',true);return;}el('train').disabled=true;try{const job=await request('start',{task:trainingTask,...(trainingTask==='microduck-headstand-hold'?{hold_episode_steps:Number(el('reset-seconds').value)*50}:{}),ppo_profile:el('ppo-profile').value,policy_initialization:el('policy-initialization').value,...(trainingTask==='microduck-headstand-dance'?{action_name:el('action-name').value}:{}),pythonPath:el('python').value.trim(),training_device:el('training-device').value,inference_device:el('inference-device').value,
   iterations:Number(el('iterations').value),environments:Number(el('environments').value),rollout_steps:Number(el('rollout-steps').value),target_speed:Number(el('target-speed').value),learning_rate:Number(el('learning-rate').value),seed:Number(el('seed').value),reward:el('reward').value,strategy:el('strategy').value});selected=job.id;evaluation=null;lessons.go(2);await refresh();}catch(error){el('train').disabled=false;throw error;}});
 action('resume',async()=>{showEnvironmentSetup=false;
@@ -137,7 +242,7 @@ async function candidateUrl(id=selected){const result=await request('policy',{id
 action('preview',async()=>{
   busy=true;showJob(currentJob);
   try {
-    if(isActionJob(currentJob)){await runtime.previewActionPolicy(await candidateUrl(),selected,{practice:isHeadstandJob(currentJob),nearStart:isHoldJob(currentJob),officialObservations:usesOfficialObservations(currentJob)});el('control-tab').click();notice(isHoldJob(currentJob)?'从预置的近倒立姿态试播保持能力；这不是自主翻转。':'候选动作试播中。这只是预览，尚未加入桌宠。');}
+    if(isActionJob(currentJob)){await runtime.previewActionPolicy(await candidateUrl(),selected,{task:currentJob.settings.task,practice:isHeadstandJob(currentJob),nearStart:isHoldJob(currentJob),officialObservations:usesOfficialObservations(currentJob)});el('control-tab').click();notice(isHoldJob(currentJob)?'从预置的近倒立姿态试播保持能力；这不是自主翻转。':'候选动作试播中。这只是预览，尚未加入桌宠。');}
     else {await runtime.labControl('pause');await runtime.loadWalkPolicy(await candidateUrl());await runtime.labControl('reset');el('forward').value=currentJob.settings.target_speed;el('turn').value=0;await runtime.labControl('velocity',{forward:currentJob.settings.target_speed,turn:0});el('control-tab').click();notice(`候选策略已载入，目标速度 ${currentJob.settings.target_speed} 米 / 秒。点击“运行仿真”查看动作。`);}
   }finally{busy=false;showJob(currentJob);}
 });
@@ -151,6 +256,11 @@ action('evaluate',async()=>{
   }finally{busy=false;showJob(currentJob);}
 });
 action('apply',async()=>{
+  if(isRouladeJob(currentJob)){
+    const count=currentJob.manifest.candidate.success_count;
+    if(!window.confirm(`自动验收 ${count} / 20 次成功。请先在“认识与控制”中试播。确认效果并加入桌宠试用？这不会改变自动验收结果，也不会替换行走模型。`))return;
+    await request('add-action',{id:selected,name:'向前滚翻',evaluation:{runId:selected,user_confirmed:true}});await showLibrary();notice('前滚翻已加入桌宠动作库（人工确认试用）。');return;
+  }
   if(isActionJob(currentJob)){await request('add-action',{id:selected,name:el('action-name').value,evaluation});await showLibrary();notice('已加入动作库，可从 Duck 右键菜单播放，也会参与行走时的随机动作。');}
   else {displayActive(await request('apply',{id:selected,evaluation}));notice('已应用候选策略；桌宠普通脚行走将使用新策略。');}
 });
@@ -174,7 +284,7 @@ window.addEventListener('beforeunload',()=>{closed=true;clearInterval(poll);clea
 function openActionLesson(){
   if(busy)return;
   el('training-tab').click();document.querySelector('.action-library').open=true;
-  if(trainingTask!=='microduck-headstand-hold'){el('training-task').value='microduck-headstand-hold';el('training-task').dispatchEvent(new Event('change'));}
+  if(trainingTask!=='microduck-headstand-hold'){el('training-task').value='microduck-roulade';el('training-task').dispatchEvent(new Event('change'));}
 }
 window.robotLabAPI?.onLesson?.(lesson=>{if(lesson==='actions')openActionLesson();});
 if(location.hash==='#actions')openActionLesson();

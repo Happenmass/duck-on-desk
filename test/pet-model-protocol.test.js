@@ -82,3 +82,46 @@ test('packaged protocol resolves shared cache beside app.asar without relying on
  const sandbox={__dirname:directory,require,module:{exports:{}}};vm.runInNewContext(source,sandbox);
  assert.equal(sandbox.module.exports.fixture,true);
 });
+
+// ── action market route ──
+test('market policies resolve from the market cache only once downloaded', () => {
+  const home = '/home/someone';
+  const sha = 'c'.repeat(40);
+  const name = `market/joanfox/microduck-happy-hop/${sha}/policy.onnx`;
+  const url = `pet-model://policy/${encodeURIComponent(name)}`;
+  const expected = path.join(home, '.cache', 'huggingface', 'duck-market', 'joanfox', 'microduck-happy-hop', sha, 'policy.onnx');
+
+  const present = resolvePolicyRequest(url, { homeDir: home, exists: (file) => file === expected });
+  assert.equal(present.status, 200);
+  assert.equal(present.file, expected);
+  assert.equal(present.market, true);
+
+  const absent = resolvePolicyRequest(url, { homeDir: home, exists: () => false });
+  assert.equal(absent.status, 404);
+  assert.match(absent.reason, /downloaded/);
+});
+
+test('a market path cannot escape the market cache', () => {
+  const home = '/home/someone';
+  const sha = 'c'.repeat(40);
+  for (const name of [
+    `market/../../etc/x/${sha}/policy.onnx`,
+    `market/owner/repo/main/policy.onnx`,
+    `market/owner/repo/${sha}/checkpoint.pt`,
+    `market/owner/repo/${sha}/../policy.onnx`,
+    `market/owner/${sha}/policy.onnx`,
+    `market/ow ner/repo/${sha}/policy.onnx`,
+  ]) {
+    const resolved = resolvePolicyRequest(`pet-model://policy/${encodeURIComponent(name)}`, { homeDir: home, exists: () => true });
+    assert.equal(resolved.status, 404, name);
+  }
+});
+
+test('a missing market policy is never auto-downloaded', async () => {
+  const { ensureCachedPolicy } = require("../src/robots/duck/pet-model-protocol");
+  let fetched = 0;
+  const sha = 'c'.repeat(40);
+  const url = `pet-model://policy/${encodeURIComponent(`market/a/b/${sha}/policy.onnx`)}`;
+  await ensureCachedPolicy(url, { homeDir: '/home/someone', fetchImpl: async () => { fetched += 1; throw new Error('should not fetch'); } });
+  assert.equal(fetched, 0, 'the market installs its own weights, digest-checked first');
+});

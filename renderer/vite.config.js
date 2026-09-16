@@ -11,6 +11,7 @@ const POLICY_DIR = path.resolve(here, "models/policies");
 // Dev-only: serve ONNX policies from the global cache symlink. The packaged app uses pet-model:// instead.
 function localPolicyPlugin() {
   const jobs = process.env.DUCK_LAB_DEV === "1" ? require("../mcp/robot-lab/jobs.cjs").createLabJobs() : null;
+  let marketCatalog = null;
   return {
     name: "local-policy-cache",
     configureServer(server) {
@@ -22,8 +23,8 @@ function localPolicyPlugin() {
             let body = ""; for await (const chunk of req) { body += chunk; if (body.length > 150000) throw new Error("Request too large"); }
             const {action,payload={}} = JSON.parse(body); let result;
             switch(action) {
-              case "bootstrap": result={defaults:jobs.defaults(),jobs:jobs.list(),active:jobs.activation()};break;
-              case "action-defaults": result=payload.task==='microduck-flat-walk'?jobs.defaults():payload.task==='microduck-headstand-hold'?jobs.holdDefaults():payload.task==='microduck-headstand'?jobs.headstandDefaults():jobs.actionDefaults();break;
+              case "bootstrap": result={defaults:jobs.defaults(),active:jobs.activation()};break;
+              case "action-defaults": result=payload.task==='microduck-roulade'?jobs.rouladeDefaults():payload.task==='microduck-flat-walk'?jobs.defaults():payload.task==='microduck-headstand-hold'?jobs.holdDefaults():payload.task==='microduck-headstand'?jobs.headstandDefaults():jobs.actionDefaults();break;
               case "actions": result=jobs.actions();break;
               case "add-action": result=jobs.addAction(payload.id,payload.name,payload.evaluation);break;
               case "remove-action": result=jobs.removeAction(payload.id);break;
@@ -31,10 +32,11 @@ function localPolicyPlugin() {
               case "environment": result=jobs.environment();break;
               case "start": result=jobs.start(payload);break;
               case "resume": result=jobs.resume(payload.id,payload);break;
-              case "list": result=jobs.list();break;
+              case "list": result=jobs.list({compact:payload.compact===true});break;
               case "get": result=jobs.get(payload.id);break;
               case "cancel": result=jobs.cancel(payload.id);break;
               case "live-preview": result=jobs.preview(payload.id,payload.enabled);break;
+              case "preview-clips": result=jobs.previewClips(payload.id,payload.iteration);break;
               case "policy": case "export": jobs.artifact(payload.id);result={url:`/policies/${encodeURIComponent(`lab/${payload.id}/policy.onnx`)}`};break;
               case "apply": result=jobs.apply(payload.id,payload.evaluation);break;
               case "rollback": result=jobs.rollback();break;
@@ -45,6 +47,20 @@ function localPolicyPlugin() {
         });
         server.httpServer?.once("close", () => jobs.dispose());
       }
+      // Dev-only: the market window's IPC, over HTTP. Packaged builds go through
+      // market:request instead, and media through pet-market://.
+      server.middlewares.use("/__market/request", async (req, res) => {
+        res.setHeader("Content-Type", "application/json");
+        if (req.method !== "POST" || (req.headers.origin && new URL(req.headers.origin).host !== req.headers.host)) { res.statusCode = 403; res.end('{}'); return; }
+        try {
+          let body = ""; for await (const chunk of req) { body += chunk; if (body.length > 150000) throw new Error("Request too large"); }
+          const { action, payload = {} } = JSON.parse(body);
+          const { createMarketCatalog } = require("../src/market/catalog.js");
+          marketCatalog = marketCatalog || createMarketCatalog();
+          if (action !== "list") throw new Error("Unknown market action");
+          res.end(JSON.stringify(await marketCatalog.list({ force: payload.force === true })));
+        } catch (error) { res.end(JSON.stringify({ error: error.message })); }
+      });
       server.middlewares.use("/policies", (req, res, next) => {
         let name;
         try { name = decodeURIComponent(path.basename(new URL(req.url, "http://local").pathname)); }
@@ -69,5 +85,5 @@ export default defineConfig({
   base: "./",
   plugins: [localPolicyPlugin()],
   server: { port: 5176, strictPort: true },
-  build: { rollupOptions: { input: { pet: path.join(here, "index.html"), lab: path.join(here, "lab.html") } }, outDir: path.resolve(here, "../renderer-dist"), emptyOutDir: true, assetsDir: "bundle", chunkSizeWarningLimit: 1500 },
+  build: { rollupOptions: { input: { pet: path.join(here, "index.html"), lab: path.join(here, "lab.html"), market: path.join(here, "market.html") } }, outDir: path.resolve(here, "../renderer-dist"), emptyOutDir: true, assetsDir: "bundle", chunkSizeWarningLimit: 1500 },
 });

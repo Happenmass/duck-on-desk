@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: pet-market:; media-src 'self' pet-market:; connect-src 'self' http://127.0.0.1:*;">
+<title>动作商城 · Duck on Desk</title></head><body>
+<header class="topbar">
+  <div class="identity"><span class="brand-mark">D<span>·</span></span><div><span class="brand">DUCK ON DESK</span><h1>动作商城 <small>ACTION MARKET</small></h1></div></div>
+  <nav class="workspace-nav" id="filters" aria-label="按可用状态筛选">
+    <button data-filter="all" class="active" aria-selected="true">全部 <b id="count-all">—</b></button>
+    <button data-filter="ready" aria-selected="false">可直接使用 <b id="count-ready">—</b></button>
+    <button data-filter="manual" aria-selected="false">需要手动映射 <b id="count-manual">—</b></button>
+    <button data-filter="unverifiable" aria-selected="false">未声明契约 <b id="count-unverifiable">—</b></button>
+  </nav>
+  <div class="status"><i></i><span id="market-status">正在读取社区目录…</span><button id="refresh" class="subtle">刷新</button></div>
+</header>
+<main>
+  <div class="intro">
+    <div>
+      <span class="eyebrow">COMMUNITY MICRODUCK POLICIES</span>
+      <h2>来自社区的动作与步态，先看清楚再用。</h2>
+      <p>目录来自 Hugging Face 上带 <code>microduck-policy</code> 标签的仓库。标签只用于发现，不代表已验证；下载与启用会在后续版本开放。</p>
+    </div>
+    <span class="lab-stamp">HUGGING FACE <b id="total-count">—</b><small>microduck-policy</small></span>
+  </div>
+  <p id="stale-note" class="stale-note" hidden></p>
+  <div id="grid" class="market-grid" aria-live="polite"></div>
+  <p id="empty" class="empty-note" hidden></p>
+</main>
+<aside id="detail" class="detail" hidden aria-label="策略详情"></aside>
+<div id="notice" role="status" hidden></div>
+<script type="module" src="./src/market.js"></script>
+</body></html>

@@ -112,7 +112,12 @@ app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 // MUST be registered before app.whenReady(); the handler is installed inside it.
 const { pathToFileURL } = require("url");
 const petModelProtocol = require("./robots/duck/pet-model-protocol");
-petModelProtocol.registerScheme(protocol);
+// pet-market:// proxies action-market preview media so the market window keeps a
+// self-only CSP instead of being allowed to reach huggingface.co directly.
+const petMarketProtocol = require("./market/media-protocol");
+// Both schemes go out in one call; a second call would strip the first one's
+// fetch/cors privileges. See src/shell/privileged-schemes.js.
+require("./shell/privileged-schemes").registerPrivilegedSchemes(protocol);
 
 const isMac = process.platform === "darwin";
 const isLinux = process.platform === "linux";
@@ -634,15 +639,48 @@ function getLabJobs() {
   return labJobs;
 }
 function duckActionCatalog() {
-  return getLabJobs().actions().map(action => ({ ...action, url: `pet-model://policy/${encodeURIComponent(`lab/${action.id}/policy.onnx`)}` }));
+  const lab = getLabJobs().actions().map(action => ({ ...action, url: `pet-model://policy/${encodeURIComponent(`lab/${action.id}/policy.onnx`)}` }));
+  // Market policies reach the pet only once the user has watched one run in the
+  // laboratory and accepted it; `admitted()` is the store's own gate.
+  let market = [];
+  try {
+    const store = require("./market/store");
+    market = getMarketStore().admitted().map(entry => ({
+      id: entry.id, name: entry.name, contract: 'microduck-policy-v1',
+      commandMode: entry.commandMode, duration: entry.duration,
+      url: store.policyUrl(entry.repo, entry.revision),
+    }));
+  } catch { market = []; }
+  return [...lab, ...market];
+}
+// Action market: the catalogue, the verified downloader and the record of what
+// the user installed. All three are lazy -- none of them is touched unless the
+// market or the laboratory is actually opened.
+let _marketCatalog = null, _marketInstaller = null, _marketStore = null;
+function getMarketCatalog() {
+  if (!_marketCatalog) _marketCatalog = require("./market/catalog").createMarketCatalog();
+  return _marketCatalog;
+}
+function getMarketInstaller() {
+  if (!_marketInstaller) _marketInstaller = require("./market/install").createInstaller();
+  return _marketInstaller;
+}
+function getMarketStore() {
+  if (!_marketStore) _marketStore = require("./market/store").createMarketStore();
+  return _marketStore;
 }
 const robotLabRuntime = require("./shell/robot-lab-window").createRobotLabWindow({
-  app, BrowserWindow, ipcMain, dialog, getJobs: getLabJobs,
+  app, BrowserWindow, ipcMain, dialog, getJobs: getLabJobs, getMarketStore,
   onWindowChanged: () => applyDockVisibility(),
   onActionsChange: () => { sendToRenderer('duck-actions-change', duckActionCatalog()); rebuildAllMenus(); },
   onApply: async (url) => {
     if (win && !win.isDestroyed()) win.webContents.send("duck-walk-policy-change", url);
   },
+});
+const actionMarketRuntime = require("./shell/market-window").createMarketWindow({
+  app, BrowserWindow, ipcMain, shell,
+  getCatalog: getMarketCatalog, getInstaller: getMarketInstaller, getStore: getMarketStore,
+  openLab: () => robotLabRuntime.open({ lesson: 'actions' }),
 });
 _settingsController.subscribeKey("developerMode", (enabled) => {
   if (enabled) robotLabRuntime.open();
@@ -2721,6 +2759,8 @@ const _menuCtx = {
     if (id === 'peck' || duckActionCatalog().some(action => action.id === id)) sendToRenderer('duck-play-action', id);
   },
   openActionLab: () => { robotLabRuntime.open({lesson:'actions'}); _settingsController.applyUpdate('developerMode', true); },
+  // The market is for everyone; unlike the lab it does not turn on developer mode.
+  openActionMarket: () => actionMarketRuntime.open(),
   settings: _settingsController,
   syncHitWin,
   getPetWindowBounds,
@@ -3803,6 +3843,7 @@ if (!gotTheLock) {
       // user's Hugging Face cache still wins when it has them.
       bundledDir: app.isPackaged ? path.join(process.resourcesPath, "policies") : path.join(__dirname, "..", "models", "bundled"),
     });
+    petMarketProtocol.installHandler(protocol, net);
     // Older macOS and development builds retain the padded runtime icon from
     // #416. Packaged Tahoe+ leaves the Dock untouched so macOS can apply the
     // user's Default/Dark/Clear/Tinted treatment to the bundle icon (#941).

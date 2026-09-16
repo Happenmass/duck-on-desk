@@ -18,7 +18,41 @@ function setup(t) {
   return {jobs,completed,root,weights};
 }
 const metrics={steps:250,nonFinite:false,fall_rate:0,velocity_mae:.14};
+test('roulade can be admitted by explicit user confirmation without falsifying native evaluation',t=>{
+  const {jobs,completed,root,weights}=setup(t);
+  const id=completed({task:'microduck-roulade',role:'practice',duration:5,policy_observations:'official-zero-commands-v1',onnx_export_max_error:1e-6,native_evaluation_passed:false});
+  const file=path.join(root,'jobs',id+'.json'),job=JSON.parse(fs.readFileSync(file));job.config.task='microduck-roulade';fs.writeFileSync(file,JSON.stringify(job));
+  assert.throws(()=>jobs.addAction(id,'翻滚',{}),/确认/);
+  assert.throws(()=>jobs.addAction(id,'翻滚',{runId:'other',user_confirmed:true}),/确认/);
+  const entries=jobs.addAction(id,'前滚翻',{runId:id,user_confirmed:true});
+  assert.equal(entries[0].duration,5);assert.equal(entries[0].admission,'user-confirmed-v1');assert.equal(entries[0].native_evaluation_passed,false);
+  assert.equal(jobs.actions().length,1);assert.equal(jobs.get(id).manifest.role,'practice');
+  assert.throws(()=>jobs.apply(id,{}),/前滚翻/);
+  fs.appendFileSync(path.join(weights,id,'policy.onnx'),'changed');assert.equal(jobs.actions().length,0);
+});
+test('periodic clips are sorted, independent of completion, and path restricted',t=>{
+  const {jobs,completed,weights}=setup(t),id=completed(),dir=path.join(weights,id,'previews');
+  assert.deepEqual(jobs.previewClips(id),[]);fs.mkdirSync(dir);
+  for(const n of [400,200])fs.writeFileSync(path.join(dir,`iteration-${n}.json`),JSON.stringify({iteration:n}));
+  fs.writeFileSync(path.join(dir,'iteration-600.json.tmp'),'partial');
+  assert.deepEqual(jobs.previewClips(id),[200,400]);assert.equal(jobs.previewClips(id,200).iteration,200);
+  assert.throws(()=>jobs.previewClips('../escape'));assert.throws(()=>jobs.previewClips(id,'../escape'));assert.throws(()=>jobs.previewClips(id,0));
+});
 const evaluation=id=>({...metrics,runId:id,baseline:{...metrics,velocity_mae:.15}});
+
+test('compact polling keeps full history in get and invalidates changed records',t=>{
+  const {jobs,completed,root}=setup(t),id=completed();
+  const target=path.join(root,'jobs',id+'.json'),job=JSON.parse(fs.readFileSync(target,'utf8'));
+  job.metrics=Array.from({length:10000},(_,i)=>({iteration:i+1,mean_reward:i}));
+  fs.writeFileSync(target,JSON.stringify(job));
+  const first=jobs.list({compact:true})[0];
+  assert.equal(first.metrics.length,1);assert.equal(first.metrics[0].iteration,10000);
+  assert.equal(jobs.get(id).metrics.length,10000);
+  assert.strictEqual(jobs.list({compact:true})[0],first);
+  job.metrics.push({iteration:10001,mean_reward:3});fs.writeFileSync(target,JSON.stringify(job));
+  const changed=jobs.list({compact:true})[0];
+  assert.notEqual(changed.revision,first.revision);assert.equal(changed.metrics[0].iteration,10001);
+});
 test('fresh workbench uses the official mjlab walking recipe, including both scripts',t=>{
   const {jobs}=setup(t),d=jobs.defaults();
   const preset=path.join(__dirname,'../mcp/robot-lab/presets/mjlab-velocity');
@@ -238,6 +272,16 @@ test('walking always runs the official mjlab driver with the fixed official reci
   const child=jobs.resume(walk.id,{additional_iterations:2});
   const resumed=JSON.parse(fs.readFileSync(path.join(root,'jobs',child.id+'.input.json'),'utf8'));
   assert.equal(resumed.training_method,'mjlab-official-v1');assert.equal(resumed.resume_iteration,3);assert.match(spawned[2],/train_mjlab\.py$/);
+  const roll=jobs.start({task:'microduck-roulade',iterations:2});
+  const rollConfig=JSON.parse(fs.readFileSync(path.join(root,'jobs',roll.id+'.input.json'),'utf8'));
+  assert.equal(rollConfig.policy_initialization,'random');assert.equal(rollConfig.roulade_recipe,'official-v1');assert.equal(rollConfig.target_speed,0);
+  assert.equal(rollConfig.training_method,'mjlab-official-v1');
+  assert.match(rollConfig.reward, /'roulade_progress': 8\.0/);
+  assert.match(rollConfig.reward, /reward_schedules = \{/);
+  assert.equal([...rollConfig.reward.matchAll(/^\s*'([^']+)':\s*(-?[\d.]+),\s*#/gm)].length,20);
+  assert.equal(rollConfig.learning_rate,.001);assert.match(spawned[3],/train_mjlab\.py$/);
+  assert.equal(fs.existsSync(path.join(root,'workbench.json')),false);
+  assert.throws(()=>jobs.apply(roll.id,{}),/尚未开放/);assert.throws(()=>jobs.addAction(roll.id,'翻滚',{}),/Training has not completed/);
  }finally{jobs.dispose();}
 });
 

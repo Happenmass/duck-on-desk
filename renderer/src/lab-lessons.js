@@ -81,6 +81,18 @@ export function createLessons({notice}) {
     guideNodes.forEach((node,i)=>node.textContent=(isHold?['第 4 步 / 验收倒立循环','看循环','由环境提供近倒立初态，模型接手后试播 8 秒。','查恢复','看头部贴地的时间占比，以及掉下去之后回来的次数。','下一阶段','循环稳定后再练从站立进入，随后练恢复正立，最后才是街舞。','它是掉下去就躺着不动，还是能用脚蹬回来？先看躺地占比，再看恢复次数。']:isHeadstand?['第 4 步 / 只验收倒立保持','看尝试','从站立开始试播，8 秒结束后停在当前姿态。','查支撑','排除倒地、短暂翻滚和腾空，检查连续保持 2 秒。','下一阶段','通过后再练恢复正立、站稳收尾；街舞后置。当前只保留为练习模型。','如果只学会趴下或倾斜，先调整进入倒立的探索方式；奖励升高不代表已经倒立。']:isAction?actionGuide:walkGuide)[i]);
     el('reward-script-status').textContent='这是本课的奖励草稿，切换课程会保留各自的修改。';
     el('rollback').hidden=isAction;el('active-policy').hidden=isAction;
+    if(task==='microduck-roulade'){
+      for(const node of document.querySelectorAll('[data-walk-only],[data-action-only],[data-headstand-only],[data-dance-only]'))node.hidden=true;
+      const copy=['从站立出发，向前翻一圈，再站稳。','第二课使用官方 Roulade 接地模型和训练环境。直接复用官方源码、随机初始化与在线归一化；这是贴地前滚翻，不是腾空前空翻。',
+        '看懂每一项评分，再决定改哪里。','下方完整列出 20 项官方奖励的配置名、中文作用和初始权重。reward_schedules 展示 4 项动态权重的全部阶段；默认数值与官方一致，修改后属于自定义实验。',
+        '按官方配方开始训练，观察真实进展。','默认 4096 个环境 × 24 步，学习率 0.001，探索标准差 1.0，10000 轮。站立与翻转中途混合起步；中途起步只是练习收尾，不计作完整成功。参数可调整；改变官方默认值后属于自定义实验，不保证学成。',
+        '只从站立验收，检查完整前滚翻。','20 段独立扰动测试：前 5 秒内向前翻转约一圈、越过头顶，再站稳至少 1 秒；18 段成功才通过初检。每 200 轮及训练结束保存 10 秒回放，后 5 秒观察收尾。首版不开放桌宠动作库。'];
+      copyNodes.forEach((node,i)=>node.textContent=copy[i]);
+      guideNodes.forEach((node,i)=>node.textContent=['第 4 步 / 验收前滚翻','看回放','点击预览查看原生仿真 10 秒回放。','查成功率','区分半途起步训练与完整站立起步验收。','测试版','保留独立模型，不替换行走策略。','观察低头、越过头顶、起身和站稳，分数变高不代表已经完成。'][i]);
+      el('concept-detail').textContent='官方随机初始化，直接复用官方前滚翻环境、奖励、PPO 和重置课程表；阶段由身体状态决定，不按固定时间强制切换。';
+      el('reward-script-status').textContent='20 项奖励均可编辑。动态项须同步修改课程表首项；删除该项课程表才会固定权重。正在运行的任务不受草稿修改影响。';
+      el('rollback').hidden=true;el('active-policy').hidden=true;
+    }
   }
   return {go,setTask,update(job){const phase={preparing:job.preparation||'首次训练：正在准备模型与 Python 环境。',starting:'正在准备训练环境。',evaluating_baseline:'先记录训练前的表现，稍后用来对比。',training:`正在练习：已完成 ${job.metrics.at(-1)?.iteration||0} / ${job.settings?.iterations||'—'} 轮。`,evaluating_candidate:'练习结束，正在检验候选模型。',completed:'这次练习已完成。进入第 4 步，看看结果。',failed:'练习没有完成。请查看错误说明与训练环境。',cancelled:'这次练习已停止，可以调整设置后重试。'};el('lesson-run-message').textContent=job.phase==='failed'?`练习未完成：${job.error||'请检查训练环境与脚本。'}`:phase[job.phase]||job.phase;}};
 }

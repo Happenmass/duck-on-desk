@@ -6,12 +6,11 @@ const sourceCache = path.join(__dirname, "policy-cache.js");
 const cache = require(require("node:fs").existsSync(sourceCache)
   ? sourceCache : path.resolve(__dirname, "../../../../robot-lab-mcp/policy-cache.cjs"));
 const { SCHEME, resolvePolicyRequest, ensureCachedPolicy } = cache;
-// Electron wiring: call registerScheme() before app.whenReady(), installHandler() inside it.
-function registerScheme(protocol) {
-  protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: {
-    standard: true, secure: true, supportFetchAPI: true, corsEnabled: true,
-  } }]);
-}
+// Declared here, registered by src/shell/privileged-schemes.js -- every privileged
+// scheme in the app must go out in a single registerSchemesAsPrivileged() call.
+const PRIVILEGED_SCHEME = { scheme: SCHEME, privileges: {
+  standard: true, secure: true, supportFetchAPI: true, corsEnabled: true,
+} };
 
 function installHandler(protocol, net, pathToFileURL, { bundledDir = null, resolveLabPolicy = null } = {}) {
   protocol.handle(SCHEME, async (request) => {
@@ -26,4 +25,4 @@ function installHandler(protocol, net, pathToFileURL, { bundledDir = null, resol
   });
 }
 
-module.exports = { ...cache, registerScheme, installHandler };
+module.exports = { ...cache, PRIVILEGED_SCHEME, installHandler };

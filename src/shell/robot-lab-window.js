@@ -1,7 +1,7 @@
 'use strict';
 const path = require('node:path');
 
-function createRobotLabWindow({app, BrowserWindow, ipcMain, dialog, getJobs, onApply = async () => {}, onActionsChange = () => {}, onWindowChanged = () => {}, devUrl = null}) {
+function createRobotLabWindow({app, BrowserWindow, ipcMain, dialog, getJobs, getMarketStore = null, onApply = async () => {}, onActionsChange = () => {}, onWindowChanged = () => {}, devUrl = null}) {
   let window = null;
   function showAndFocus() {
     if (!window || window.isDestroyed()) return;
@@ -17,24 +17,32 @@ function createRobotLabWindow({app, BrowserWindow, ipcMain, dialog, getJobs, onA
   app.on?.('activate',onActivate);
   const jobs = () => getJobs();
   const policyUrl = id => id ? `pet-model://policy/${encodeURIComponent(`lab/${id}/policy.onnx`)}` : null;
+  // Market policies are downloaded by the market window; the lab is where they
+  // are tried, and only a trial run here can promote one to the pet.
+  const marketStore = () => { if (!getMarketStore) throw new Error('动作商城未启用'); return getMarketStore(); };
+  const marketUrl = (repo, revision) => require('../market/store').policyUrl(repo, revision);
   const trusted = event => window && !window.isDestroyed() && event.sender === window.webContents && event.senderFrame === event.sender.mainFrame;
   ipcMain.handle('robot-lab:request', async (event, {action, payload = {}} = {}) => {
     if (!trusted(event)) throw new Error('Robot Lab requests require the laboratory window');
     try {
       switch(action) {
-        case 'bootstrap': return {defaults:jobs().defaults(), jobs:jobs().list(), active:jobs().activation()};
-        case 'action-defaults': return payload.task==='microduck-flat-walk'?jobs().defaults():payload.task==='microduck-headstand-hold'?jobs().holdDefaults():payload.task==='microduck-headstand'?jobs().headstandDefaults():jobs().actionDefaults();
+        case 'bootstrap': return {defaults:jobs().defaults(), active:jobs().activation()};
+        case 'action-defaults': return payload.task==='microduck-roulade'?jobs().rouladeDefaults():payload.task==='microduck-flat-walk'?jobs().defaults():payload.task==='microduck-headstand-hold'?jobs().holdDefaults():payload.task==='microduck-headstand'?jobs().headstandDefaults():jobs().actionDefaults();
         case 'actions': return jobs().actions();
+        case 'market-actions': return marketStore().list().map(entry => ({...entry, url: marketUrl(entry.repo, entry.revision)}));
+        case 'market-admit': { const result=marketStore().admit(payload.id,payload.trial);await onActionsChange();return result; }
+        case 'market-forget': { const result=marketStore().forget(payload.id);await onActionsChange();return result; }
         case 'add-action': { const result=jobs().addAction(payload.id,payload.name,payload.evaluation);await onActionsChange();return result; }
         case 'remove-action': { const result=jobs().removeAction(payload.id);await onActionsChange();return result; }
         case 'setup': return jobs().setup(payload);
         case 'environment': return jobs().environment();
         case 'start': return jobs().start(payload);
         case 'resume': return jobs().resume(payload.id,payload);
-        case 'list': return jobs().list();
+        case 'list': return jobs().list({compact:payload.compact===true});
         case 'get': return jobs().get(payload.id);
         case 'cancel': return jobs().cancel(payload.id);
         case 'live-preview': return jobs().preview(payload.id,payload.enabled);
+        case 'preview-clips': return jobs().previewClips(payload.id,payload.iteration);
         case 'policy': jobs().artifact(payload.id); return {url:policyUrl(payload.id)};
         case 'apply': { const result=jobs().apply(payload.id,payload.evaluation); await onApply(policyUrl(result.current));return result; }
         case 'rollback': { const result=jobs().rollback();await onApply(policyUrl(result.current));return result; }

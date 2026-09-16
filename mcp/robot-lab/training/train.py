@@ -20,7 +20,7 @@ import onnxruntime as ort
 from environment import Environments, CONTRACT, DT
 from policy import official_finetune_policy, randomize_policy
 from action_environment import ActionEnvironments, evaluate_action, HeadstandEnvironments, evaluate_headstand, HeadstandHoldEnvironments, evaluate_headstand_hold, HOLD_REFERENCE, DURATION
-from preview import LivePreview
+from preview import LivePreview, save_periodic_preview
 from reward_metrics import reward_breakdown
 
 
@@ -207,6 +207,12 @@ def main():
         posture_metrics = {'headstand_max_hold_seconds':max_hold,
                            'headstand_valid_percent':100*valid_postures/(config['environments']*config['rollout_steps'])} if is_headstand else {}
         completed_iteration = iteration + 1
+        save_periodic_preview(config, completed_iteration, lambda: actor,
+            lambda: env_type(config['asset_dir'], 1, 1001, config['target_speed'],
+                             **({'official_observations': True} if is_action else {}),
+                             **({'reset_on_pose_loss': config.get('reset_on_pose_loss', True),
+                                 'episode_steps': config.get('hold_episode_steps', 400),
+                                 'random_start': config.get('hold_random_start', False)} if is_hold else {})), stop_requested)
         if completed_iteration % 10 == 0 or completed_iteration == target_iteration or stop_requested():
             save_checkpoint()
         emit({'phase':'training','iteration':iteration+1,'iterations':target_iteration,'environment_steps':total_steps,
